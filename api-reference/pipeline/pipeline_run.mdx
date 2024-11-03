@@ -1,0 +1,14 @@
+---
+title: 'Pipeline Run'
+openapi: 'POST /v1/pipeline/run'
+---
+
+### Description
+
+Any pipeline can be called and accessed externally through an API.
+First, you need to set the target version of the pipeline, and then the target pipeline version will be exposed as an endpoint.
+
+You can send request with various inputs. Inputs can be of type string, or ChatMessage.
+
+The response is an object. It contains `runId` and `outputs`. `outputs` is an object which has output node names as keys.
+Each value is an object, with a key `value`, and the value is the actual value.

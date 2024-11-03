@@ -1,0 +1,105 @@
+---
+title: 'Navigating the page'
+description: "Tips and basics of getting around Laminar's pipeline page"
+---
+
+## Flow
+
+Flow builder is the main part in the middle of the page, where you can build your pipeline.
+
+### Adding nodes
+
+Drag and drop a node from the right sidebar to add it to the flow.
+
+### Removing nodes
+
+Click the node, and then click the wastebin icon that appears above the node to delete it. Alternatively, click on a node and press "Delete" on your keyboard.
+Be careful, this action will not trigger an "are you sure" dialog and cannot be undone.
+
+### Connecting nodes
+
+Drag and drop from the output handle of one node to the input handle of the other node to connect two nodes. [Read more](/pipeline/working-with-nodes#connecting-nodes-handles).
+
+### Removing connections
+
+Hover over a connection (edge) and click a red cross in its center to delete it. Alternatively, disconnect the edge by dragging one of its ends away from a node handle.
+
+### Changing prompts / node settings
+
+Click on a node and then on a gear icon above it to edit it. Here you can change the node's name, work on the prompts,
+and set the node's settings. For a better idea of what you can configure on an LLM node,
+[Read more](/nodes/LLM).
+
+### Navigating the flow
+
+Click and hold anywhere and move your mouse to move the view. Scroll with the mouse to zoom in and out.
+
+### Loops and cyclic connections
+
+Our flow also supports loops. Any node's output handle can be connected to another node's input handle to create loops.
+
+### Node information
+
+The information icon on top of each node will take you to the relevant docs page.
+
+## Header
+
+In the top of the page, there is a header with all the crucial navigation info.
+
+### Navigation info
+
+In the very left, path to the pipeline in the format `project_name / pipelines /  pipeline_name` is shown.
+If you click the word "pipelines", you will be redirected back to the page with all the pipelines within the project.
+
+<img src="/images/pipeline-builder/header-nav.png" alt="screenshot of pipeline header navigation"/>
+
+### Version control
+
+To the right of navigation info, there is a menu for version control. Here you can find:
+
+- Version dropdown to select a version
+- "Commit" button to [create a new commit](/pipeline/run-save-deploy#commit-a-new-version).
+- "Set as Target" button to [set a commit version as target](/pipeline/run-save-deploy#deploying-a-pipeline-version).
+- "Overwrite workshop" button to clone the currently seen commit to the workshop version of this pipeline, in order to make changes
+
+<img src="/images/pipeline-builder/header-version-control.png" alt="screenshot of pipeline header navigation"/>
+<img src="/images/pipeline-builder/header-version-control-commit.png" alt="screenshot of pipeline header navigation for a commited version"/>
+
+In addition, here you can control quick access to the [env variables](/pipeline/env-variables) required for execution.
+
+## Left sidebar
+
+The left sidebar contains basic version info and the inputs control.
+
+### Pipeline version info
+
+Contains the version name, and the (commit) version uuid for debugging purposes.
+
+### Execution inputs control
+
+This menu contains fields for the inputs of the pipeline execution. Every input field here corresponds to every input node in the flow.
+
+Fill the inputs in and click run or press Ctrl/Cmd + Enter.
+
+If your input is of type "ChatMessageList", you can manually upload the chat history here. Click "Add message" to append a new message.
+Click on the "USER" or "ASSISTANT" label to toggle the role. "SYSTEM" message is sent to LLMs throught the "prompt" field on LLM node.
+Click the "-" sign to the right of each message to remove it.
+
+<img src="/images/pipeline-builder/chat-message-input.png" alt="screenshot of example chat message list input"/>
+
+## Right sidebar
+
+Right sidebar contains the list of all possible nodes that you can add to the flow. To add a node to the flow, drag it from here and drop it to the flow view in the middle.
+
+## View controls
+
+The icons in the top-right allow you to hide/show the left and right sidebars.
+
+<img src="/images/pipeline-builder/view-controls.png" alt="screenshot of the pipeline view controls buttons"/>
+
+## Bottom drawer
+
+The bottom drawer shows the execution outputs. This shows the output of the current run in real time.
+
+The bottom drawer pulls up once the execution of the pipeline starts. You can, however, resize it either using the handle
+in the middle or the fullscreen button in the top of the drawer.

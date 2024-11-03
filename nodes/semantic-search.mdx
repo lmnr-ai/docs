@@ -1,0 +1,102 @@
+---
+title: "Semantic Search"
+---
+
+## Semantic Search node
+
+Semantic search allows you to search over uploaded files or over the datasets you create.
+
+## Details
+
+Embeddings for datapoints are done using Cohere's `embed-multilingual-v3.0` [model](https://huggingface.co/Cohere/Cohere-embed-multilingual-v3.0).
+
+## Configuration
+
+### Threshold
+
+`Threshold` represents minimal semantic similarity between the query and the search result for it to be selected. Valid range: `0.0` - `1.0`.
+For example, if the threshold is set at `0.42`, only the contents with similarity above or equal to `0.42` to the search query will be selected
+
+### Limit
+
+`Limit` is the maximum number of contents with similarity over threshold to be returned. Valid range: non-negative integers.
+
+### Template
+
+You can control the output through a template where keys are placed into `{{mustache_syntax}}`.
+This template is applied to every content retrieved by semantic search. 
+
+All retrieved contents, rendered according to template, are joined via a newline character `\n`.
+
+Read more about variable requirements in: [String template node](/nodes/string-template) and [JSON extractor node](/nodes/json-extractor)
+
+#### Reserved keys
+
+- `relevance_index` - An index, which starts from 1, representing the order in the list of retrieved contents ordered by similarity to the query. 1 means this content is the most semantically similar.
+- Additionally, you can select any key name from your dataset `"data"` as a key.
+
+### Datasources
+
+You can click "Add datasource" button and add as many datasources as you want. It means the semantic search will search for the most semantically similar texts among all datasources.
+
+Datasources of semantic search nodes are simply datasets. You can go to "datasets" page, create a dataset, add datapoints, index them, and then use it here [(Read more)](/datasets/introduction#indexing).
+If datapoints are not indexed, then there will be no entries in our vector database to search through.
+
+## Output
+
+The output of a semantic search node is a single string of all rendered (with each key replaced by its value) templates joined via a newline character `\n`.
+
+## Examples
+
+### Example template for searching over files
+
+### Template
+
+```
+[{{relevance_index}}]
+
+{{content}}
+
+---
+
+```
+
+#### Rendered output
+
+```
+[1]
+
+This portion of the file is the most relevant
+
+---
+
+[2]
+
+This portion of the file is a little bit less relevant
+
+---
+
+```
+
+### Example template for searching over datasets.
+
+This will search over a dataset that has keys `short_description` and `price` for a list of products.
+
+#### Template
+
+```
+{{relevance_index}}. {{short_description}}
+Price: {{price}}
+
+```
+
+#### Output
+
+```
+1. This is the best frying pan you can find in household shops.
+Price: $25.99
+
+2. The frying pan everyone must get!
+Price: $14.49
+
+```

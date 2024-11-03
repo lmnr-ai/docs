@@ -1,0 +1,197 @@
+---
+title: Introduction
+description: OpenTelemetry-based tracing with Laminar
+---
+
+import LaminarInstall from '/snippets/laminar-install.mdx';
+import LaminarInitialize from '/snippets/laminar-initialize.mdx';
+import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
+
+## Glossary
+
+- **Span** – Think of this as one step in your LLM application's process. It could be a function call or an API request.
+  - **Span attributes** – Extra information about the span, like input parameters or results
+  - **Span path** – Shows where the span came from in your code. For example: `get_user.validate.api_call`
+
+- **Trace** – A collection of spans, where each span can have parent and child spans. For example, when function A calls function B, function A is the parent span and function B is the child span. This creates a hierarchical view showing how different parts of your code interact with each other.
+
+- **Session** – A group of related traces that belong to the same user or conversation.
+
+<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
+<img src="/images/traces/trace-example.png" alt="Screenshot of observability dashboard" style={{ margin: '0px' }}/>
+</div>
+
+Tree on the left shows a trace of an example LLM application. Function `answer_question` calls `fetch_page_and_check`, which in turn calls `check_presence`, which calls `OpenAI`. 
+
+## Tracing overview
+
+Laminar offers comprehensive tracing of your entire application.
+For every run, the entire execution trace is logged, so the information you can see in the traces includes:
+
+- Inputs and outputs of each span
+- Total execution time
+- Total execution tokens and cost
+- Span-level execution time and token counts
+
+<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
+<img src="/images/traces/trace-attr.png" alt="Screenshot of trace attributes" style={{ margin: '0px' }}/>
+</div>
+
+## Getting started
+
+### Installation
+
+<LaminarInstall />
+
+### Project API key
+
+<GetProjectApiKey />
+
+### Add 2 lines to start tracing your entire application
+
+<LaminarInitialize />
+
+For example, calling OpenAI after initializing Laminar like this
+will create the following span in Laminar dashboard:
+<Tabs>
+<Tab title="Python">
+
+```python
+from openai import OpenAI
+
+client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+response = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[{"role": "user", "content": "What is the capital of France?"}],
+)
+```
+</Tab>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { OpenAI } from 'openai';
+
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const response = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: "What is the capital of France?" }],
+});
+```
+
+</Tab>
+</Tabs>
+
+<Note>
+Laminar automatically records latency, cost, and tokens for LLM spans, taking into account the model and the number of tokens in the response.
+</Note>
+
+<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
+  <img src="/images/traces/trace-openai.png" alt="OpenAI span" style={{ margin: '0px' }}/>
+</div>
+
+### Tracing specific functions with `observe` and adding children spans
+
+<Tabs>
+<Tab title="Python">
+
+You can instrument specific functions by adding the `@observe()` decorator.
+This is especially helpful when you want to trace functions, or group
+separate functions into a single trace.
+
+```python
+from lmnr import observe
+
+@observe()  # annotate all functions you want to trace
+def my_function():
+    res = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": "What is the capital of France?"}],
+    )
+    return res.choices[0].message.content
+
+my_function()
+```
+
+</Tab>
+<Tab title="JavaScript/TypeScript">
+
+You can instrument specific functions by wrapping them in `observe()`. 
+This is especially helpful when you want to trace functions, or group
+separate functions into a single trace.
+
+```javascript
+import { observe } from '@lmnr-ai/lmnr';
+
+const myFunction = observe(async () => {
+  const response = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: "What is the capital of France?" }],
+  });
+  return response.choices[0].message.content;
+});
+
+await myFunction();
+```
+
+</Tab>
+</Tabs>
+
+We are now recording `my_function` *and* the OpenAI call, which is nested inside it, in the same trace. Notice that the OpenAI span is a child of `my_function`. Parent-child relationships are automatically detected and visualized with tree hierarchy.
+
+<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
+  <img src="/images/traces/trace-observe.png" alt="OpenAI span as a child" style={{ margin: '0px' }}/>
+</div>
+
+<Tip>
+You can nest as many spans as you want inside each other. By observing functions and LLM/vector DB calls you can have better visualization of execution flow which is useful for debugging and better understanding of the application.
+</Tip>
+
+### Sending traces to a self-hosted Laminar instance
+
+By default, Laminar client packages send traces to the Laminar cloud at api.lmnr.ai.
+
+If you want to send traces to your own self-hosted Laminar instance, you can set the base URL and port numbers at
+initialization. Default settings in our repo are gRPC port 8001 and HTTP port 8000.
+
+<Tabs>
+<Tab title="Python">
+
+```python
+from lmnr import Laminar
+Laminar.initialize(
+    project_api_key="<your-project-api-key>",
+    base_url="http://localhost", # do not include ports or trailing slash here
+    http_port=8000,
+    grpc_port=8001
+)
+```
+
+</Tab>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+import { Laminar } from '@lmnr-ai/lmnr';
+Laminar.initialize({
+    project_api_key: "<your-project-api-key>",
+    baseUrl: "http://localhost", // do not include ports or trailing slash here
+    httpPort: 8000,
+    grpcPort: 8001
+});
+```
+
+</Tab>
+</Tabs>
+
+## OpenTelemetry compatibility
+
+Laminar's manual and automatic instrumentation is compatible with [OpenTelemetry](https://opentelemetry.io/docs/specs/otel/).
+Our Rust backend is an OpenTelemetry-compatible ingestion endpoint and processes traces using gRPC. This ensures long-lived connections and extremely fast ingestion.
+
+Instrumentations for LLM and vector DB libraries are provided by [OpenLLMetry](https://github.com/traceloop/openllmetry).
+
+This means that you can use OpenTelemetry SDKs to send traces to Laminar, and they will be displayed in the Laminar UI.
+
+To get started, in your application, set the OpenTelemetry exporter to the Laminar gRPC endpoint:
+`https://api.lmnr.ai:8443/v1/traces`.
+
+Read on to the [Otel section](/tracing/otel) to learn more about the OpenTelemetry
+objects and attributes that Laminar uses in more detail.

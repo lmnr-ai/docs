@@ -1,0 +1,53 @@
+---
+title: 'Env variables'
+description: 'Set environment variables for current project'
+---
+
+## Reason
+
+If you use LLM node, for authentication, you will need to specify
+your own API keys to Laminar, so that Laminar can make calls to these APIs.
+For example, if you use LLM node with "gpt-4o-mini" model, then you'll need to specify `OPENAI_API_KEY` in "env variables" page.
+
+## Setting up
+
+### Quick set up
+
+If your current pipeline requires env variables, you can set up just the required ones in
+the [pipeline page](/pipeline/page-navigation) itself.
+
+### Full set up
+
+First, navigate to "env variables" page, using the navigation on the left of the screen.
+
+<Frame caption="env variables page">
+<img height="200" src="/images/pipeline-builder/env-variables.png" />
+</Frame>
+
+To add a key do the following:
+1. Press "Add variable"
+2. Select a [pre-defined variable](/pipeline/env-variables#pre-defined-env-variables) name or add a custom one.
+3. Enter the value.
+4. Press "Add" in the dialog.
+
+Note that some nodes, such as, for example, LLM node, have pre-defined env variables.
+For other nodes, if there's an option in a pipeline builder's particular node to set a name for env variable, you can set it
+on the node and add a custom variable with such name.
+
+<Frame caption="Dialog for selecting env variable name and filling out its value">
+<img width="300" src="/images/pipeline-builder/env-variable-select.png" />
+</Frame>
+
+## Pre-defined env variables
+
+`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `MISTRAL_API_KEY`, `GROQ_API_KEY`, etc.
+
+## Safety
+
+Laminar never stores your env variables.
+The keys are stored in your browser's storage and are used for pipeline runs in the "pipelines"
+page and evaluation jobs, triggered manually by the user.
+
+When you call an Endpoint, the variables set in this page are not used. When you call pipeline as an API endpoint,
+you'll need to pass `env` in the payload.
+See [api reference](/api-reference/pipeline/pipeline_run) for more information.

@@ -1,0 +1,145 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "laminar docs",
+  "logo": "/logo/logo.png",
+  "favicon": "/favicon.png",
+  "colors": {
+    "background": {
+      "dark": "#0F0F0F"
+    },
+    "primary": "#ED6E40",
+    "light": "#ED6E40",
+    "dark": "#ED6E40",
+    "anchors": "#5562ea"
+  },
+  "primaryTab": {
+    "name": "Documentation"
+  },
+  "theme": "venus",
+  "modeToggle": {
+    "default": "dark",
+    "isHidden": true
+  },
+  "openapi": [
+    "/api-reference/openapi.json"
+  ],
+  "topbarLinks": [
+    {
+      "name": "Contact support",
+      "url": "mailto:founders@lmnr.ai"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Dashboard",
+    "url": "https://www.lmnr.ai/projects"
+  },
+  "tabs": [
+    {
+      "name": "API Reference",
+      "url": "api-reference"
+    }
+  ],
+  "anchors": [
+    {
+      "name": "Community",
+      "icon": "discord",
+      "url": "https://discord.gg/nNFUUDAKub"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "Overview",
+      "pages": [
+        "overview"
+      ]
+    },
+    {
+      "group": "Tracing",
+      "pages": [
+        "tracing/introduction",
+        {
+          "group": "Instrumentation",
+          "pages": [
+            "tracing/automatic-instrumentation",
+            "tracing/manual-instrumentation"
+          ]
+        },
+        "tracing/sessions",
+        "tracing/nextjs",
+        "tracing/otel",
+        "tracing/troubleshooting"
+      ]
+    },
+    {
+      "group": "Evaluations",
+      "pages": [
+        "evaluations/introduction",
+        "evaluations/examples",
+        "evaluations/online-evaluations"
+      ]
+    },
+    {
+      "group": "Labels",
+      "pages": [
+        "labels/introduction",
+        "labels/manually-label"
+      ]
+    },
+    {
+      "group": "Datasets",
+      "pages": [
+        "datasets/introduction",
+        "datasets/adding-data"
+      ]
+    },
+    {
+      "group": "Pipeline builder",
+      "pages": [
+        {
+          "group": "Overview",
+          "pages": [
+            "pipeline/introduction",
+            "pipeline/run-save-deploy",
+            "pipeline/env-variables",
+            "pipeline/page-navigation"
+          ]
+        },
+        {
+          "group": "Nodes",
+          "pages": [
+            "pipeline/working-with-nodes",
+            "nodes/input-output",
+            "nodes/string-template",
+            "nodes/LLM",
+            "nodes/semantic-search",
+            "nodes/semantic-switch",
+            "nodes/switch",
+            "nodes/json-extractor",
+            "nodes/semantic-similarity"
+          ]
+        }
+      ]
+    },
+    {
+      "group": "API Documentation",
+      "pages": [
+        "api-reference/introduction"
+      ]
+    },
+    {
+      "group": "Pipelines - API",
+      "pages": [
+        "api-reference/pipeline/pipeline_run"
+      ]
+    }
+  ],
+  "footerSocials": {
+    "discord": "https://discord.gg/nNFUUDAKub"
+  },
+  "analytics": {
+    "posthog": {
+      "apiKey": "phc_dUMdjfNKf11jcHgtn7juSnT4P1pO0tafsPUWt4PuwG7",
+      "apiHost": "https://p.lmnr.ai"
+    }
+  }
+}

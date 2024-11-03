@@ -1,0 +1,147 @@
+---
+title: 'Introduction'
+description: "Get started with laminar's pipeline builder."
+---
+
+## Overview
+
+Laminar allows you to store and version your prompts and chains of prompts.
+
+Our pipeline builder lets you quickly iterate on each prompt in your app, but also shape of your LLM logic
+by chaining prompts together, adding parallel executions, and even self-reflection loops.
+
+<Frame caption = "A sample Mixture of agents pipeline">
+![Screenshot of a pipeline implementing a mixture of agents](/images/pipeline-builder/moa.png)
+</Frame>
+
+## Glossary
+
+**Pipeline** – an instance of a complete workflow or a chain of prompts.
+
+**Commit** – an immutable saved snapshot of a pipeline, similar to a git commit.
+Commit versions can be deployed as targets and called via an API.
+
+**Workshop version** - a draft version. Every pipeline has exactly one workshop version. Think of it as a git HEAD.
+
+**Node** – a core component of a pipeline that performs data transformation and passes the result downstream.
+
+**Handle** – an input or output point of a node. Input handles of one node can be connected to output handles of another one.
+
+**Env variable** - an environment variable for the project's scope, which is used for the nodes that require it, for example your model provider API key. [Learn more](/pipeline/env-variables).
+
+## Proxy and version control
+
+Laminar pipeline can act as a proxy to your LLM calls and their prompts.
+The idea here is that you don't have to store your prompts in code and anybody from your team can access them on Laminar.
+Also people can collaborate on prompts in real-time.
+
+For example, if you want to switch models or if something is wrong in the prompt, you can simply 
+
+1. edit the prompt,
+1. commit the new version, and set it as target,
+1. Voilà! Laminar will redirect your calls to this new pipeline target version.
+
+You don't have to go through another deployment of your entire codebase for every small change.
+
+## Getting started
+
+### 1. Experimenting and building
+
+Head to the pipelines page in your project and click "New pipeline".
+
+You can start from a template or create a blank pipeline.
+
+Connect nodes by dragging from the output handle of one node to the input handle of another node. Edit
+the prompt, model parameters, and structured output schema of an LLM node by clicking on the gear icon above the node.
+
+Click "Run" to test the pipeline execution. You can also add breakpoints and inspect the output of each node.
+
+### 2. Saving and deploying
+
+Once you are happy with your pipeline, click "Commit" to save the current version.
+Then go to the newly created commit by selecting it in the dropdown in the top-left corner of the pipeline builder.
+
+Then, click "Set as Target" button.
+This will make the pipeline available for external calls through API or using Laminar's JS and Python SDKs.
+
+### 3. Calling the pipelines
+
+Below, we describe use-cases for calling the pipelines.
+
+Also, check our [Python SDK](https://github.com/lmnr-ai/lmnr-python)
+and [JavaScript/TypeScript SDK](https://github.com/lmnr-ai/lmnr-ts)
+for more details.
+
+#### Use as evaluator for a semantic event
+
+Simply pass the name of the pipeline as a value for the `evaluator` parameter in the `evaluate_event` function.
+
+<Warning>
+Double check that your pipeline has only one output node. If you need to cast the output to a different type,
+set the desired cast type on the `Output` node.
+
+Additionally, don't forget to pass `env` parameter to `evaluate_event`.
+</Warning>
+
+#### Calling the pipeline via API
+
+You can also call Laminar pipeline from the code of your application.
+
+For a quick start, once you've set the version as a target, 
+click the "Use API" button in the commit page. This will show you the code snippet to call the pipeline from your code.
+
+Here's an example of how to call the pipeline from:
+
+<Tabs>
+<Tab title = "Python">
+```python
+from lmnr import Laminar
+
+Laminar.initialize(project_api_key='<YOUR_PROJECT_API_KEY>')
+  
+result = Laminar.run(
+    pipeline = 'my_pipeline',
+    inputs = {
+        "input_node_name": "input_value"
+        "chat_message_input_node_name": [
+            {"role": "user", "content": "Hello"},
+            {"role": "assistant", "content": "Hi"},
+            {"role": "user", "content": "What is laminar flow?"},
+        ]
+    },
+    env = {"OPENAI_API_KEY": "<YOUR_OPENAI_API_KEY>"},
+    metadata={},
+)
+print(result)
+```
+</Tab>
+
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { Laminar } from '@lmnr-ai/lmnr';
+
+Laminar.initialize({ projectApiKey: '<YOUR_PROJECT_API_KEY>' });
+
+const result = await Laminar.run({
+  pipeline: 'myPipeline',
+  inputs: {
+        input_node_name: "input_value"
+        chat_message_input_node_name: [
+            { role: "user", content: "Hello" },
+            { role: assistant, content: "Hi" }, 
+            { role: "user", content: "What is laminar flow?" },
+        ]
+    },
+  env: { OPENAI_API_KEY: "<YOUR_OPENAI_API_KEY>" },
+  metadata: {},
+});
+console.log(result);
+```
+</Tab>
+</Tabs>
+
+## Next steps
+
+- [Working with nodes](/pipeline/working-with-nodes)
+- [LLM node in detail](/nodes/LLM)
+- Learn how to add control flow to your pipeline in the [Control flow tutorial](/tutorials/control-flow-with-LLM)

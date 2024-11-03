@@ -1,0 +1,42 @@
+---
+title: Introduction
+---
+
+## Overview
+
+Datasets can be used as data collections. One way to add data to a dataset is by
+exporting spans from both production traces and evaluation traces.
+
+To help you filter traces and export only relevant ones to datasets, you can add
+labels to spans. Laminar provides you with a UI for labeling. This page explains label
+types.
+
+## Label classes
+
+Every label on a span has a class. The class defines the type of the label,
+the possible values, and the name of the label. For example `sentiment` can be
+a class of a categorical label with possible values `positive`, `negative`, and
+`neutral`.
+
+Every user can assign one label value per label class per span.
+
+## Label description
+
+Label descriptions are optional and can be used to provide more context about the label.
+We recommend setting them for better alignment between labelers, both human and
+LLM-as-a-judge labelers.
+
+## Span label types
+
+Supported span label types are `Boolean` and `Categorical`.
+
+### Boolean
+
+Boolean span can take a `true` or `false` value. This is useful if you want to
+tag spans with a binary label.
+
+### Categorical
+
+Categorical labels can take one of the predefined values. One way to think about
+this is to consider the categorical label as a tag. For example, you can tag
+spans with `positive`, `negative`, or `neutral` sentiment.

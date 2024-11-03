@@ -1,0 +1,45 @@
+---
+title: Human labeling
+description: How to manually label spans
+---
+
+To manually label spans, open the trace and click on the span you want to label.
+Then, click on the "Add label" button in the top right corner. Here you can choose
+one of the existing label classes or create a new one, and then assign a value to
+the span.
+
+### Creating a new label class
+
+To create a new label class, click on the "New label" button.
+
+When you create a new label class, you can choose between `Boolean` and `Categorical` label types.
+
+For boolean labels, the possible values are `true` and `false`. For categorical labels, you can
+define the possible values.
+
+<Frame title="Create new categorical values">
+  <img src="/images/labels/add-label-class.png" alt="Screenshot of the add label class modal" />
+</Frame>
+
+You can also add a description to the label class here.
+
+### Labeling spans
+
+To label a span, click on the "Add label" button in the top right corner of the span view.
+
+In the row that corresponds to the label class you want to assign a value to, clicke on the 
+"Add" dropdown and select the value you want to assign.
+
+<Frame title="Label a span">
+  <img src="/images/labels/add-label-instance.png" alt="Screenshot of labeling a span" />
+</Frame>
+
+### Viewing labels
+
+Once a span has been labeled, you can view all the labels assigned to it by clicking on the span.
+
+You will be able to see the label class, label value, and the email of the labeler.
+
+<Frame title="Example labels">
+  <img src="/images/labels/view-labels.png" alt="Screenshot of viewing labels" />
+</Frame>

@@ -1,0 +1,202 @@
+---
+title: Troubleshooting
+description: Troubleshooting common issues with Laminar tracing
+---
+
+## My JS traces are not showing up in the Laminar UI.
+
+### Problem
+
+I have instrumented my JavaScript code with Laminar, but I don't see any traces in the Laminar UI.
+
+### Cause
+
+This often happens in Edge runtimes, Lambda functions, or in one-off scripts that are not running in a long-lived process.
+
+JavaScript's OpenTelemetry batch span processor runs in a background async function, and, if the process exits before the function has a chance to
+send the traces, they will be lost. In theory, there is a way to force flush the pending spans `onShutdown`, but it is not implemented in the
+OpenTelemetry JS SDK. Apparently, doing that may cause the consequent incoming spans to block the process.
+
+See [originating commit](https://github.com/open-telemetry/opentelemetry-js/commit/23db7f0ba383a3043964eb03be11c09df3f7453a) where `onShutdown` was only implemented for the browser contexts,
+but not for Node.js.
+
+### Solution
+
+Use Laminar's `shutdown()` function to ensure that the traces are sent before the process exits.
+
+```javascript
+import { Laminar} from '@lmnr-ai/lmnr';
+
+Laminar.initialize({ projectApiKey: process.env.LMNR_PROJECT_API_KEY });
+
+// your code here
+
+// at the end of your script, when you are done tracing
+await Laminar.shutdown(); // NOTE: don't forget to await
+```
+
+## I can see my trace in the Laminar UI, but it is not showing the spans.
+
+### Problem
+
+Our UI relies on the presence of a "parent" span in every trace. If the parent span is missing, the trace will not be correctly displayed.
+
+### Cause
+
+Parent span may have not been sent correctly from the SDK.
+This typically happens when an exception occurs before the parent span is properly ended. It could also be that everything is sent correctly,
+and you are just looking at the trace too early, before the parent span is sent.
+
+Common causes:
+- `observe()` function is not awaited in JS
+- Node process exits before the last span to finish (commonly, parent span)
+is sent. See [My JS traces are not showing up in the Laminar UI](#my-js-traces-are-not-showing-up-in-the-laminar-ui).
+- span is [created manually](/tracing/introduction#manually-creating-spans) in Python, but a
+`with` statement is not used, or the span is not ended properly in the `finally` block.
+
+If this happens elsewhere, especially in the Python's `@observe` decorator, it is likely a bug in the SDK.
+
+### Solution
+
+If the trace is very recent (and possibly very nested and large), wait a few seconds and refresh the page.
+
+If the problem still persists, make sure that the `observe()` function is awaited in JavaScript, and that the `with` statement is used in Python for manual span creation.
+
+If you are sure that the spans are created correctly, but the issue persists, please report it in our [Discord server](https://discord.gg/nNFUUDAKub).
+
+## I can see traces and spans in the UI, but they are not showing inputs and/or outputs.
+
+### Problem
+
+I see traces and spans in the Laminar UI, but they are not showing the inputs and/or outputs. They have attributes and duration, but no inputs or outputs.
+
+### Cause
+
+One possible reason is that we send span inputs and outputs as span attributes, and OpenTelemetry has a limited set of possible attribute types, namely
+`string`, `number`, `boolean`, and `array` of each. If the input or output is not one of these types, it will not be sent as an attribute.
+
+To work around this, we serialize the input and output to JSON and send it as a string. We do our best to serialize the inputs and outputs, but it may be
+that the serialization fails.
+
+### Solution
+
+Make sure inputs and outputs to your functions or spans are serializable to JSON. If you are using custom objects, make sure their fields are serializible.
+In Python, that may mean having to implement `default()` method on some of them, or on the parent object.
+
+## Many of my JS route requests are instrumented in the Laminar UI, even though I don't want that.
+
+### Problem
+
+I see many traces and spans in the UI, but most of them are just noise, they merely are route requests.
+
+Some examples of noise spans:
+- `GET /my/route`
+- `POST /my/other/route`
+- `dns.lookup`
+- `middleware - query`
+- `tcp - connect`
+- `fs statSync`
+
+### Cause
+
+Even though Laminar only enables OpenLLMetry-specific instrumentations, i.e. just model calls, some other dependency in your code
+may have enabled other instrumentations for Node libraries. In particular, we have seen this issue when such initialization is done
+_before_ Laminar's initialization. For example:
+
+```javascript
+const { NodeSDK } = require('@opentelemetry/sdk-node');
+const { getNodeAutoInstrumentations } = require(
+  '@opentelemetry/auto-instrumentations-node'
+);
+const { BatchSpanProcessor, SamplingDecision } = require(
+  '@opentelemetry/sdk-trace-base'
+);
+
+// this can also be not raw OpenTelemetry, but some other observability library
+const sdk = new NodeSDK({
+  instrumentations: [getNodeAutoInstrumentations()],
+  spanProcessors: new BatchSpanProcessor(exporter),
+});
+
+const { Laminar } = require('@lmnr-ai/lmnr');
+Laminar.initialize({ projectApiKey: "...", });
+```
+
+[Read more](https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/metapackages/auto-instrumentations-node#usage-auto-instrumentation) on OpenTelemetry's Node.js auto-instrumentations in OpenTelemetry.
+
+### Solution
+
+The most effective solution is to disable the unwanted instrumentations by exporting `OTEL_NODE_DISABLED_INSTRUMENTATIONS` environment variable.
+
+The most noisy ones are `fs`, `http`, `dns`, `undici` (GET/POST requests), `express` (if you are using Express JS).
+
+```sh
+export OTEL_NODE_DISABLED_INSTRUMENTATIONS="fs,http,dns,undici,express"
+```
+
+For Next JS in particular, you can also disable most of the noise by setting `NEXT_OTEL_FETCH_DISABLED=1`. [Read more](/tracing/nextjs#2-initialize-laminar).
+
+However, if you still want to use the basic instrumentations above, you could:
+
+- Initialize Laminar first, and then the OpenTelemetry SDK.
+- Explicitly enable only the instrumentations you need in the OpenTelemetry SDK.
+
+## Observe decorator is not working in Python with async generators, i.e. model stream responses
+
+### Problem
+
+`@observe` decorator in Python is not correctly capturing the spans when I use async generators, e.g. when I am streaming responses from a model.
+
+### Cause
+
+Async generators only end when they are exhausted, i.e. when the `async for` loop is done.
+Given the nature of Python's async, the chance of the interruptions within stream, and the
+way OpenTelemetry's contexts work, there is no way to ensure that `@observe` works in 100% of the cases.
+
+### Solution
+
+One possible workaround is to observe only the outer functions that are calling the async generator, 
+and handle the final result, not the generator itself.
+
+However, if you want to track partial stream results as well, you can create the spans manually.
+Refer to [manually creating spans](/tracing/introduction#manually-creating-spans) for more information.
+
+## ERR_BUFFER_OUT_OF_BOUNDS in Node.js
+
+### Problem
+
+I see the following error in my Node.js application:
+
+```sh
+node:internal/buffer:1066
+      throw new ERR_BUFFER_OUT_OF_BOUNDS('length');
+      ^
+```
+<Expandable title="full error trace">
+```sh
+RangeError [ERR_BUFFER_OUT_OF_BOUNDS]: "length" is outside of buffer bounds
+    at proto.utf8Write (node:internal/buffer:1066:13)
+    at Op.writeStringBuffer [as fn] (/Users/sebastianscheibe/Code/XXX/node_modules/protobufjs/src/writer_buffer.js:61:13)
+    at BufferWriter.finish (/Users/sebastianscheibe/Code/XXX/node_modules/protobufjs/src/writer.js:453:14)
+    at /Users/sebastianscheibe/Code/XXX/node_modules/@grpc/proto-loader/build/src/index.js:177:109
+    at Array.map (<anonymous>)
+    at createPackageDefinition (/Users/sebastianscheibe/Code/XXX/node_modules/@grpc/proto-loader/build/src/index.js:177:39)
+    at Object.fromJSON (/Users/sebastianscheibe/Code/XXX/node_modules/@grpc/proto-loader/build/src/index.js:230:12)
+    at GrpcClient.loadProtoJSON (/Users/sebastianscheibe/Code/XXX/node_modules/google-gax/build/src/grpc.js:228:51)
+    at new ImageAnnotatorClient (/Users/sebastianscheibe/Code/XXX/node_modules/@google-cloud/vision/build/src/v1/image_annotator_client.js:148:38)
+    at Object.<anonymous> (/Users/sebastianscheibe/Code/XXX/test.js:5:16) {
+  code: 'ERR_BUFFER_OUT_OF_BOUNDS'
+}
+
+Node.js v22.7.0
+```
+</Expandable>
+
+### Cause
+
+This is most likely due to a bug in NodeJS versions 22.6 and 22.7 with
+handling utf-8 buffers. See more in the [Node.js issue](https://github.com/nodejs/node/issues/54518#issuecomment-2307035124).
+
+### Solution
+
+Upgrade to Node.js version 22.8.0 or higher. You can also downgrade to 22.5.

@@ -1,0 +1,24 @@
+---
+title: 'Input, Output'
+---
+
+## Input and Output nodes
+
+Input and Output nodes are special. They "define" the API once you deploy the pipeline. That is, your request
+to a [Laminar pipeline](/api-reference/pipeline/pipeline_run) API must send all inputs in a map following
+the pattern `"inputNodeName": "inputValue"`. Similarly, the response message contains a map from each output
+node's name to the output result of that node. Read more in [api reference](/api-reference/pipeline/pipeline_run).
+
+In addition, whenever you drag and drop a new input node, an input field will appear in the sidebar on the left.
+You must fill this field in order to run the pipeline.
+
+For your convenience, upon new connection, an unconnected input node changes its name to match the handle it is being connected to.
+
+### Input types
+
+An input node has a type, which defines the type of output it produces and the type for its output handle as well.
+For example, `String` input node produces a `String` output and can be connected only to input handles expecting `String`
+value, e.g. Semantic Search's `query` handle.
+
+For your convenience, upon new connection, an unconnected input node changes its type and name to follow the type and name
+of a handle it is being connected to.

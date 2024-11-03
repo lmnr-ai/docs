@@ -1,0 +1,695 @@
+---
+title: Configuration and examples
+description: Examples of evaluations in Laminar
+---
+
+## Configuring evaluations
+
+Evaluations in Laminar are configured using the `evaluate` function. The function takes the following arguments:
+- `data`: Either (1) A list of dictionaries, where each dictionary contains the data and target for a single evaluation; or
+(2) An instance of `LaminarDataset` – read more in [the dedicated section](#using-a-laminar-dataset-for-evaluations) below.
+- `executor`: An optionally async function that takes a single argument, the data dictionary, and returns the output.
+- `evaluators`: A dictionary of async functions that take the output and target as arguments and return a score. Keys in the dictionary are the names of the evaluators.
+- `name` (optional): Evaluation name, so it is easier to identify the evaluation in the UI. If not provided, a random name is assigned.
+- `group_id`/`groupId` (optional): An optional string that groups evaluations together. Only evaluations with the same `group_id` can be visually compared.
+
+Additional optional configuration parameters are passed directly to `evaluate` in Python and as a `config` object in JavaScript/TypeScript.
+
+<Tabs>
+<Tab title="Python">
+- `project_api_key`: The API key of the project where the evaluation results will be stored.
+Required, unless you set the `LMNR_PROJECT_API_KEY` environment variable.
+- `batch_size`: The number of evaluations to run in parallel. Default is `5`.
+- `base_url`: The base URL of the Laminar instance. Do NOT include port here. Default is `https://api.lmnr.ai`.
+- `http_port`: The port of the Laminar instance for HTTP. Used to send evaluation results and metadata.
+Default is 443. For local self-hosted Laminar, use 8000.
+- `grpc_port`: The port of the Laminar instance for gRPC. Used to send traces via OTel gRPC exporter.
+Default is 8443. For local self-hosted Laminar, use 8001.
+- `instrument_modules`: A set of modules to instrument.
+Read more in the [instrumentation guide](/tracing/automatic-instrumentation#instrument-specific-modules-only).
+</Tab>
+<Tab title="JavaScript/TypeScript">
+- `projectApiKey`: The API key of the project where the evaluation results will be stored.
+Required, unless you set the `LMNR_PROJECT_API_KEY` environment variable.
+- `batchSize`: The number of evaluations to run in parallel. Default is `5`.
+- `baseUrl`: The base URL of the Laminar instance. Do NOT include port here. Default is `https://api.lmnr.ai`.
+- `httpPort`: The port of the Laminar instance for HTTP. Used to send evaluation results and metadata.
+Default is 443. For local self-hosted Laminar, use 8000.
+- `grpcPort`: The port of the Laminar instance for gRPC. Used to send traces via OTel gRPC exporter.
+Default is 8443. For local self-hosted Laminar, use 8001.
+- `instrumentModules`: An object with modules to instrument.
+Read more in the [instrumentation guide](/tracing/automatic-instrumentation#instrument-specific-modules-only).
+</Tab>
+</Tabs>
+
+## Using a Laminar dataset for evaluations
+
+### Prerequisite
+
+Have a dataset uploaded to Laminar, or collected from traces. See [datasets](/datasets/introduction) for more information.
+
+### Defining data
+
+Running an evaluation with Laminar dataset is no different to running an evaluation with your local data,
+except that you pass the dataset object as `data` instead of a list of dictionaries.
+
+Use `LaminarDataset` to create a dataset object. The dataset name should match the name of the dataset in Laminar.
+The constructor also takes an optional `fetch_size`/`fetchSize` parameter, which specifies the number of datapoints to fetch at once.
+The default value is 25. We strongly recommend setting this value to a number that is a multiple of the batch size for best performance.
+
+<Tabs>
+<Tab title="Python">
+```python
+from lmnr import evaluate, LaminarDataset
+data = LaminarDataset("name_of_your_dataset")
+evaluate(
+    data=data,
+    executor=your_executor_function,
+    evaluators=your_evaluators,
+    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
+    # ... other optional parameters
+)
+
+```
+</Tab>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { evaluate, LaminarDataset } from '@lmnr-ai/lmnr';
+const data = new LaminarDataset("name_of_your_dataset");
+evaluate({
+    data,
+    executor: yourExecutorFunction,
+    evaluators: yourEvaluators,
+    config: {
+        projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+        // ... other optional parameters
+    }
+})
+```
+</Tab>
+</Tabs>
+
+### Technical details and extension
+
+`LaminarDataset` is an implementation of an abstract class `EvaluationDataset` which defines 2 methods besides initialization:
+- `__len__` (`size` in JS): Returns the number of datapoints in the dataset.
+- `__getitem__` (`get` in JS): Returns a single datapoint by index.
+
+We also implement a concrete `slice` method to make slicing easier than using `__getitem__` directly.
+
+This is inspired by the PyTorch `Dataset` [class](https://pytorch.org/tutorials/beginner/basics/data_tutorial.html#creating-a-custom-dataset-for-your-files),
+and is designed to be used in a similar way.
+
+You can re-use the `EvaluationDataset` class to create your own dataset classes, for example, to fetch data from a database or an API.
+
+<Tabs>
+<Tab title="Python">
+```python
+from lmnr import EvaluationDataset
+class MyCustomDataset(EvaluationDataset):
+    def __init__(self, custom_property):
+        super().__init__()
+        # Your custom initialization code here
+    
+    def __len__(self):
+        # Your custom implementation here
+        return 0
+    
+    def __getitem__(self, index):
+        # Your custom implementation here
+        return Datapoint(data={}, target={})
+
+    # Optionally, you can implement other custom methods here
+```
+</Tab>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { EvaluationDataset } from '@lmnr-ai/lmnr';
+
+class MyCustomDataset extends EvaluationDataset {
+    constructor(customProperty) {
+        super();
+        // Your custom initialization code here
+    }
+
+    public async size() {
+        // Your custom implementation here
+        return 0;
+    }
+
+    public async get(index: number) {
+        // Your custom implementation here
+        return { data: {}, target: {} };
+    }
+
+    // Optionally, you can implement other custom methods here
+}
+```
+</Tab>
+</Tabs>
+
+## Example. Comparing evaluations side-by-side
+
+Laminar allows you to compare evaluations side-by-side in the UI.
+
+<Frame caption = "Example comparison of two evaluation runs.">
+    <img
+        height="300"
+        src="/images/evaluations/compare-evals.png"
+        alt="Screenshot of the comparison of two evaluation runs."
+    />
+</Frame>
+
+To do this, you need to group evaluations together. This can be achieved by passing the `group_id` parameter to the `evaluate` function.
+
+<Tabs>
+<Tab title="Python">
+```python
+from lmnr import evaluate, LaminarDataset
+import os
+
+evaluate(
+    data=LaminarDataset("name_of_your_dataset"),
+    executor=your_executor_function,
+    evaluators={"evaluator_name": your_evaluator},
+    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
+    group_id="evals_group_1",
+    # ... other optional parameters
+)
+```
+</Tab>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { evaluate, LaminarDataset } from '@lmnr-ai/lmnr';
+
+evaluate({
+    data: new LaminarDataset("name_of_your_dataset"),
+    executor: yourExecutorFunction,
+    evaluators: {evaluatorName: yourEvaluator},
+    groupId: "evals_group_1",
+    config: {
+        projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+        // ... other optional parameters
+    }
+});
+```
+</Tab>
+</Tabs>
+
+## Example. Basic correctness evaluation.
+
+In this example our executor function calls an LLM to get the capital of a country. 
+We then evaluate the correctness of the prediction by comparing it to the target capital.
+The evaluator function returns 1 if the prediction is correct and 0 otherwise.
+
+### 1. Define an executor function
+
+An executor function calls OpenAI to get the capital of a country.
+The prompt also asks to only name the city and nothing else. In a real scenario,
+you will likely want to use structured output to get the city name only.
+
+<Tabs>
+<Tab title = "Python">
+```python
+from openai import AsyncOpenAI
+
+openai_client = AsyncOpenAI(api_key=os.environ["OPENAI_API_KEY"])
+
+async def get_capital(data):
+    country = data["country"]
+    response = await openai_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {
+                "role": "user",
+                "content": f"What is the capital of {country}? Just name the "
+                "city and nothing else",
+            },
+        ],
+    )
+    return response.choices[0].message.content.strip()
+
+```
+</Tab>
+<Tab title = "JavaScript/TypeScript">
+```javascript
+import OpenAI from 'openai';
+
+const openai = new OpenAI({apiKey: process.env.OPENAI_API_KEY});
+
+const getCapital = async ({country}: {country: string}): Promise<string> => {
+    const response = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+            {
+                role: 'system',
+                content: 'You are a helpful assistant.'
+            }, {
+                role: 'user',
+                content: `What is the capital of ${country}?` +
+                ' Just name the city and nothing else'
+            }
+        ],
+    });
+    return response.choices[0].message.content ?? ''
+}
+
+```
+</Tab>
+</Tabs>
+
+### 2. Define an evaluator function
+
+<Tabs>
+<Tab title = "Python">
+```python
+def evaluator(output, target):
+    return 1 if output == target["capital"] else 0
+```
+</Tab>
+<Tab title = "JavaScript/TypeScript">
+
+```javascript
+
+const evaluator = async (output, target) =>
+        (await output) === target.capital ? 1 : 0
+```
+
+</Tab>
+</Tabs>
+
+### 3. Define data and run the evaluation
+
+<Tabs>
+<Tab title = "Python">
+```python
+from lmnr import evaluate
+import os
+
+data = [
+    {"data": {"country": "Germany"}, "target": {"capital": "Berlin"}},
+    {"data": {"country": "Canada"}, "target": {"capital": "Ottawa"}},
+    {"data": {"country": "Tanzania"}, "target": {"capital": "Dodoma"}},
+]
+
+evaluate(
+    data=data,
+    executor=get_capital,
+    evaluators={'check_capital_correctness': evaluator},
+    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
+)
+
+```
+</Tab>
+<Tab title = "JavaScript/TypeScript">
+
+```javascript
+import { evaluate } from '@lmnr-ai/lmnr';
+
+const evaluationData = [
+    { data: { country: 'Canada' }, target: { capital: 'Ottawa' } },
+    { data: { country: 'Germany' }, target: { capital: 'Berlin' } },
+    { data: { country: 'Tanzania' }, target: { capital: 'Dodoma' } },
+]
+
+evaluate({
+    data: evaluationData,
+    executor: async (data) => await getCapital(data),
+    evaluators: { checkCapitalCorrectness: evaluator },
+    config: {
+        projectApiKey: process.env.LMNR_PROJECT_API_KEY
+    }
+})
+```
+</Tab>
+</Tabs>
+
+## Example. Running evaluations on a previously collected dataset
+
+It is quite common to run evaluations on datasets that were previously collected and
+may contain LLM inputs, LLM outputs, and additional custom data, e.g. human labels.
+
+The interesting bit here is that you have to define the executor function to extract the LLM output from the dataset.
+
+Let's assume we have a dataset with the following structure:
+
+```json
+[
+    {
+        "data": {
+            "country": "Germany",
+            "llm_output": "Berlin",
+            "llm_input": "What is the capital of Germany?",
+            "human_label": "correct"
+        },
+        "target": {
+            "capital": "Berlin"
+        }
+    },
+    {
+        "data": {
+            "country": "Canada",
+            "llm_output": "Ottawa",
+            "llm_input": "What is the capital of Canada?",
+            "human_label": "correct"
+        },
+        "target": {
+            "capital": "Ottawa"
+        }
+    },
+    {
+        "data": {
+            "country": "Kazakhstan",
+            "llm_output": "Nur-Sultan",
+            "llm_input": "What is the capital of Kazakhstan?",
+            "human_label": "incorrect"
+        },
+        "target": {
+            "capital": "Astana"
+        }
+    }
+]
+```
+
+\* It is common for LLMs of generation of approximately gpt-4 and claude-3 to name the capital
+of Kazakhstan as "Nur-Sultan" instead of "Astana",
+because, for a few years prior to their data cut-off, the capital was indeed called Nur-Sultan.
+
+### 1. Define an executor function
+
+Since the dataset already contains the LLM output, we can simply extract it from the dataset instead of calling the LLM.
+
+<Tabs>
+<Tab title = "Python">
+```python
+from openai import AsyncOpenAI
+
+async def get_capital(data):
+    return data["llm_output"]
+
+```
+</Tab>
+<Tab title = "JavaScript/TypeScript">
+```javascript
+const getCapital = async (data: Record<string, string>): Promise<string> => {
+    return data.llm_output
+}
+
+```
+</Tab>
+</Tabs>
+
+### 2. Define an evaluator function
+
+<Tabs>
+<Tab title = "Python">
+```python
+def evaluator(output, target):
+    return 1 if output == target["capital"] else 0
+```
+</Tab>
+<Tab title = "JavaScript/TypeScript">
+
+```javascript
+
+const evaluator = async (output, target) =>
+        (await output) === target.capital ? 1 : 0
+```
+
+</Tab>
+</Tabs>
+
+### 3. Define data and run the evaluation
+
+<Tabs>
+<Tab title = "Python">
+```python
+from lmnr import evaluate
+import os
+
+data = [
+    {"data": {"country": "Germany"}, "target": {"capital": "Berlin"}},
+    {"data": {"country": "Canada"}, "target": {"capital": "Ottawa"}},
+    {"data": {"country": "Tanzania"}, "target": {"capital": "Dodoma"}},
+]
+
+evaluate(
+    data=data,
+    executor=get_capital,
+    evaluators={'check_capital_correctness': evaluator},
+    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
+)
+
+```
+</Tab>
+<Tab title = "JavaScript/TypeScript">
+
+```javascript
+import { evaluate } from '@lmnr-ai/lmnr';
+
+const evaluationData = [
+    { data: { country: 'Canada' }, target: { capital: 'Ottawa' } },
+    { data: { country: 'Germany' }, target: { capital: 'Berlin' } },
+    { data: { country: 'Tanzania' }, target: { capital: 'Dodoma' } },
+]
+
+evaluate({
+    data: evaluationData,
+    executor: async (data) => await getCapital(data),
+    evaluators: { checkCapitalCorrectness: evaluator },
+    config: {
+        projectApiKey: process.env.LMNR_PROJECT_API_KEY
+    }
+})
+```
+
+</Tab>
+</Tabs>
+
+## Example. LLM as a judge offline evaluation.
+
+In this example, our executor will write short summaries of news articles,
+and the evaluator will check if the summary is correct, and grade them from 1 to 5.
+
+### 1. Prepare your data
+
+The trick here is that the evaluator function needs to see the original article to evaluate the summary.
+That is why, we will have to duplicate the article from `data` into `target` prior to running the evaluation.
+
+The data may look something like the following:
+
+```json
+[
+    {
+        "data": {
+            "article": "Laminar has released a new feature. ...",
+        },
+        "target": {
+            "article": "Laminar has released a new feature. ...",
+        }
+    }
+]
+```
+
+### 2. Define an executor function
+
+An executor function calls OpenAI to summarize a news article. It returns a single string, the summary.
+
+<Tabs>
+<Tab title = "Python">
+```python
+from openai import AsyncOpenAI
+
+openai_client = AsyncOpenAI(api_key=os.environ["OPENAI_API_KEY"])
+
+async def get_summary(data: dict[str, str]) -> str:
+    response = await openai_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {
+                "role": "system",
+                "content": "Summarize the articles that the user sends you"
+            }, {
+                "role": "user",
+                "content": data["article"],
+            },
+        ],
+    )
+    return response.choices[0].message.content.strip()
+
+```
+</Tab>
+<Tab title = "JavaScript/TypeScript">
+```javascript
+import OpenAI from 'openai';
+
+const openai = new OpenAI({apiKey: process.env.OPENAI_API_KEY});
+
+const getSummary = async (data: {article: string}): Promise<string> => {
+    const response = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+            {
+                role: "system",
+                content: "Summarize the articles that the user sends you"
+            }, {
+                role: "user",
+                content: data.article,
+            },
+        ],
+    });
+    return response.choices[0].message.content ?? ''
+}
+
+```
+</Tab>
+</Tabs>
+
+### 3. Define an evaluator function
+
+An evaluator function grades the summary from 1 to 5. It returns an integer.
+We've simply asked OpenAI to respond in JSON, but you may want to use
+structured output or BAML instead.
+
+We also ask the LLM to give a comment on the summary. Even though we don't use it in the evaluation,
+it may be useful for debugging or further analysis. In addition, LLMs are known to perform better
+when given a chance to explain their reasoning.
+
+<Tabs>
+<Tab title = "Python">
+```python
+import json
+async def grade_summary(summary: str, target: dict[str, str]) -> int:
+    response = await openai_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{
+            "role": "user",
+            "content": "Given an article and its summary, grade the " +
+                "summary from 1 to 5. Answer in json format. For example: " +
+                '{"grade": 3, "comment": "The summary is missing key points"}' +
+                f"Article: {target['article']}. Summary: {summary}"
+            },
+        ],
+    )
+    return int(json.loads(response.choices[0].message.content.strip())["grade"])
+
+```
+</Tab>
+<Tab title = "JavaScript/TypeScript">
+```javascript
+import OpenAI from 'openai';
+
+const openai = new OpenAI({apiKey: process.env.OPENAI_API_KEY});
+
+const gradeSummary = async (
+    summary: string,
+    data: {article: string}
+): Promise<number> => {
+    const response = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [{
+            role: "user",
+            content: "Given an article and its summary, grade the " +
+                "summary from 1 to 5. Answer in json format. For example: " +
+                '{"grade": 3, "comment": "The summary is missing key points"}' +
+                `Article: ${target['article']}. Summary: ${summary}`
+        }],
+    });
+    return JSON.parse(response.choices[0].message.content ?? '')["grade"]
+}
+```
+</Tab>
+</Tabs>
+
+### 4. Run the evaluation
+
+<Tabs>
+<Tab title = "Python">
+```python
+from lmnr import evaluate
+import os
+
+data = [
+    { "data": { "article": '...' }, "target": { "article": '...' } },
+    { "data": { "article": '...' }, "target": { "article": '...' } },
+    { "data": { "article": '...' }, "target": { "article": '...' } },
+]
+
+evaluate(
+    data=data,
+    executor=get_summary,
+    evaluators={'grade_summary': grade_summary},
+    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
+)
+
+```
+</Tab>
+<Tab title = "JavaScript/TypeScript">
+
+```javascript
+import { evaluate } from '@lmnr-ai/lmnr';
+
+const evaluationData = [
+    { data: { article: '...' }, target: { article: '...' } },
+    { data: { article: '...' }, target: { article: '...' } },
+    { data: { article: '...' }, target: { article: '...' } },
+]
+
+evaluate({
+    data: evaluationData,
+    executor: async (data) => await getSummary(data),
+    evaluators: { gradeSummary: gradeSummary },
+    config: {
+        projectApiKey: process.env.LMNR_PROJECT_API_KEY
+    }
+})
+```
+
+</Tab>
+</Tabs>
+
+## Configuring the evaluation to report results to locally self-hosted Laminar
+
+In this example, we configure the evaluation to report results to a locally self-hosted Laminar instance.
+
+Evaluations send data to Laminar over both HTTP and gRPC. HTTP is used to create an evaluation and report
+the datapoints, stats, and trace ids. OpenTelemetry traces themselves are sent over gRPC.
+
+Assuming you have configured Laminar to run on ports 8000 and 8001 on your `localhost`, you will need to
+pass these values to the `evaluate` function.
+
+<Tabs>
+<Tab title = "Python">
+```python
+from lmnr import evaluate
+evaluate(
+    data=data,
+    executor=get_capital,
+    evaluators={'check_capital_correctness': evaluator},
+    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
+    base_url="http://localhost",
+    http_port=8000,
+    grpc_port=8001,
+)
+```
+</Tab>
+<Tab title = "JavaScript/TypeScript">
+```javascript
+import { evaluate } from '@lmnr-ai/lmnr';
+evaluate({
+    data: evaluationData,
+    executor: async (data) => await getCapital(data),
+    evaluators: [evaluator],
+    config: {
+        projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+        baseUrl: 'http://localhost',
+        httpPort: 8000,
+        grpcPort: 8001,
+    }
+})
+```
+</Tab>
+</Tabs>
+
+Run this file either by executing it, or by running it with `lmnr eval` CLI.

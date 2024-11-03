@@ -1,0 +1,7 @@
+The {node_type} node follows the standard practice of sending messages to an LLM's chat completion (or similar) API, where the first message
+is the (optional) `"system"` message and the rest of the messages alternate between messages with `"user"` and `"assistant"` roles.
+
+Message with `"system"` role will come from the "Prompt" on the node.
+
+For sending `"user"` and `"assistant"` messages, you can enable the "Chat messages" and connect a node, which has output of "ChatMessageList" type. "ChatMessageList" is
+expected to contain a messages with `"user"` and `"assistant"` roles. [(Read more)](/pipeline/working-with-nodes#handle-types)

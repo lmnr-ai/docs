@@ -1,0 +1,21 @@
+---
+title: 'Semantic similarity node'
+description: 'Compares two strings based on their semantic (cosine) similarity in the embedding space.'
+---
+
+### Scoring
+
+Cosine similarity between two embedding vectors for the input normalized to the range of `0.0` - `1.0`.
+To be more specific, it computes the cosine of the "angle" between two embedding vectors, adds 1 and divides the result by 2.
+
+The score is then averaged for all outputs of the pipeline.
+
+### Examples
+
+These are two `gpt-3.5-turbo`-generated haikus about cheese, and one example of dissimilar strings
+
+| First            | Second         | score
+|------------------|----------------|------
+|`"In creamy embrace,\nMelted dreams upon my tongue,\nCheese, my mouth's delight"` | `"Milky moon unfolds,\nCascading curds, divine treat,\nCheese dreams weave their spell"` | `0.803100049495697`
+|`"Soft as clouds, it rests,\nGouda melts on eager tongue,\nCheese dreams come alive."` | `"Melted on bread's crust,\nSavoring bliss, taste transcends,\nCheese's golden touch."` | `0.7639690637588501`
+|`"Roses are red"` | `"Are you gonna buy a flight ticket?"` | `0.4335864782333374`

@@ -1,0 +1,5 @@
+The prompt can be templated, by adding [dynamic input](/pipeline/working-with-nodes#dynamic-inputs) variables inside the double-curly braces.
+
+Any node can be connected to the template variable's handle, if its output is of string type.
+
+For example, prompt can be `"Name a random flower"` (without any dynamic inputs) or `"Write a poem about {{subject}}, use the following words in a poem: {{words}}"` (with `subject` and `words` as dynamic inputs).

@@ -1,0 +1,223 @@
+---
+title: Automatic instrumentation
+description: Automatic code instrumentation and best practices for tracing with Laminar
+---
+
+import AutoInstrumentableJSModules from "/snippets/autoinstrumentable-js-modules.mdx"
+
+By default, `Laminar.initialize()` will automatically instrument majority of common LLM and VectorDB libraries for tracing.
+This includes OpenAI, Anthropic, Langchain, Pinecone, and many more.
+
+## Instrument all available libraries
+
+<Tabs>
+<Tab title="Python">
+
+```python
+from lmnr import Laminar
+import os
+from openai import OpenAI
+# ...
+Laminar.initialize(project_api_key=os.environ["LMNR_PROJECT_API_KEY"])
+```
+
+</Tab>
+<Tab title="JavaScript/TypeScript">
+
+<Tip> For automatic instrumentation, import **AND** initialize Laminar before importing any instrumentable modules. 
+This is because JavaScript binds the imported module to its name at import time, so introducing
+instrumentation afterwards statically is not possible. </Tip>
+
+```javascript
+import { Laminar } from '@lmnr-ai/lmnr';
+Laminar.initialize({ projectApiKey: process.env.LMNR_PROJECT_API_KEY });
+// and then import the instrumentable modules
+import { OpenAI } from 'openai';
+// ...
+```
+
+<Warning> If you are using Next.js, you may need to manually pass all libraries which you want Laminar to auto-instrument.
+Check [the section](#instrument-specific-modules-only) on specific modules instrumentation </Warning>
+
+</Tab>
+</Tabs>
+
+See all available auto-instrumentable modules [here](#available-instruments).
+
+## Disable automatic instrumentation
+
+<Tabs>
+<Tab title="Python">
+
+`initialize()` accepts an optional `instruments` parameter. 
+If you explicitly pass an empty set, no automatic instrumentations will be applied.
+
+```python
+from lmnr import Laminar
+import os
+from openai import OpenAI
+
+Laminar.initialize(
+    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
+    instruments=set()
+)
+
+# When you call OpenAI, it will NOT be instrumented
+```
+
+</Tab>
+<Tab title="JavaScript/TypeScript">
+
+`initialize()` accepts an optional `instrumentModules` parameter.
+If you explicitly pass an empty object, no automatic instrumentations will be applied.
+
+```javascript
+import { Laminar } from '@lmnr-ai/lmnr';
+import { OpenAI } from 'openai';
+
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+  instrumentModules: {}
+});
+
+// When you call OpenAI, it will NOT be instrumented
+```
+</Tab>
+</Tabs>
+
+## Instrument specific modules only
+
+You can also enable instrumentation for specific modules only.
+
+This is useful if you either want more control over what is being instrumented.
+Also, use this if you are using Next.js and having issues with automatic instrumentation – [learn more](/tracing/nextjs).
+
+Let's say, for example, we call OpenAI and Anthropic models to perform the same task, and 
+we only want to instrument the Anthropic calls, but not OpenAI.
+
+<Tabs>
+<Tab title="Python">
+
+`initialize()` accepts
+an optional `instruments` parameter. Pass a set of instruments you want to enable.
+In this case we only want to pass `Instruments.ANTHROPIC`.
+
+See available instruments in [the next subsection](/tracing/automatic-instrumentation#available-instruments).
+
+```python
+import os
+from anthropic import Anthropic
+from openai import OpenAI
+
+from lmnr import observe, Laminar, Instruments
+
+Laminar.initialize(
+    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
+    instruments={ Instruments.ANTHROPIC }  # only enable anthropic, not openai
+)
+
+openai_client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+anthropic_client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+
+def poem_writer(topic="turbulence"):
+    prompt = f"write a poem about {topic}"
+    messages = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": prompt},
+    ]
+
+    # OpenAI calls are NOT instrumented
+    openai_response = openai_client.chat.completions.create(
+        model="gpt-4o",
+        messages=messages,
+    )
+
+    # Anthropic calls are instrumented
+    anthropic_response = anthropic_client.messages.create(
+        max_tokens=1024,
+        messages=messages,
+        model="claude-3-5-sonnet-20240620",
+    )
+
+    openai_poem = openai_response.choices[0].message.content
+    anthropic_poem = anthropic_response.content[0].text
+
+    return {"o": openai_poem, "a": anthropic_poem}
+
+if __name__ == "__main__":
+    print(poem_writer(topic="laminar flow"))
+```
+
+</Tab>
+<Tab title="JavaScript/TypeScript">
+
+`initialize()` accepts
+an optional `instrumentModules` parameter. It takes in an object with string keys
+and values are the entire modules you have imported. In this case we only want to pass `anthropic`.
+
+See available instruments in [the next subsection](/tracing/automatic-instrumentation#available-instruments).
+
+```javascript
+import { OpenAI } from 'openai';
+import * as anthropic from '@anthropic-ai/sdk';
+import { Laminar, observe } from '@lmnr-ai/lmnr';
+
+Laminar.initialize(
+  { projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+    instrumentModules: {
+      anthropic: anthropic // only enable anthropic, not openai
+    }
+  }
+);
+
+const openAIClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const anthropicClient = new anthropic.Anthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY
+});
+
+const poemWriter = async (topic = "turbulence") => {
+  const prompt = `write a poem about ${topic}`;
+  const messages = [
+    { role: "system", content: "You are a helpful assistant." },
+    { role: "user", content: prompt }
+  ];
+
+  // openai calls are NOT instrumented
+  const openAIResponse = await openAIClient.chat.completions.create({
+    model: "gpt-4o",
+    messages,
+  });
+  
+  // anthropic calls are instrumented
+  const anthropicResponse = await anthropicClient.messages.create({
+    max_tokens: 1024,
+    messages,
+    model: "claude-3-5-sonnet-20240620",
+  })
+
+  const openAIPoem = response.choices[0].message.content;
+  const anthropicPoem = anthropicResponse.content[0].text;
+  return {o: openAIPoem, a: anthropicPoem};
+}
+```
+
+</Tab>
+</Tabs>
+
+## Available instruments
+
+<Tabs>
+<Tab title="Python">
+See available instruments by importing `Instruments` from `lmnr`
+or [view source](https://github.com/lmnr-ai/lmnr-python/blob/main/src/lmnr/traceloop_sdk/instruments.py).
+
+All modules from this list are auto-instrumented, if you do not pass `instruments` to `Laminar.initialize()`.
+
+</Tab>
+<Tab title="JavaScript/TypeScript">
+
+<Expandable title="full list of modules that you can instrument in JS">
+<AutoInstrumentableJSModules />
+</Expandable>
+</Tab>
+</Tabs>

@@ -1,0 +1,122 @@
+---
+title: "LLM"
+description: "Specifications for LLM node"
+---
+
+import LLMNodeDescriptionSnippet from '/snippets/llm-node-description-snippet.mdx'
+import LLMNodePromptTemplatingSnippet from '/snippets/llm-node-prompt-templating-snippet.mdx'
+
+## LLM node
+
+LLM node executes a prompt and optional chat messages against a selected model (e.g. `gpt-3.5-turbo`).
+
+<LLMNodeDescriptionSnippet node_type="LLM" />
+
+<Frame caption="LLM node with Chat messages">
+<img height="300" src="/images/pipeline-builder/llm-with-chat-messages.png" alt="LLM node"/>
+</Frame>
+
+## Prompt
+
+<LLMNodePromptTemplatingSnippet />
+
+<Frame>
+  <img
+    height="300"
+    src="/images/pipeline-builder/llm-write-poem.png" alt="LLM node with two template inputs in doubly curly braces"/>
+</Frame>
+
+## Supported models
+
+Below is the list of supported models. However, you can 
+set "Supply model name as an input" and pass any model for any of these providers in the format `provider:model`.
+
+### OpenAI (`openai`)
+
+- `gpt-3.5-turbo`
+- `gpt-4-turbo-preview`
+- `gpt-4o`
+- `gpt-4o-mini`
+- `o1-preview`
+- `o1-mini`
+
+### Anthropic (`anthropic`)
+
+- `claude-3-haiku` (20240307)
+- `claude-3-sonnet` (20240229)
+- `claude-3-opus` (20240229)
+- `claude-3-5-sonnet` (20240620)
+
+### Groq (`groq`)
+
+- `groq-llama3-8b-8192`
+- `groq-llana3-70b-8192`
+- `groq-mixtral-8x7b-32768`
+- `groq:gemma-7b-it`
+
+### Mistral (`mistral`)
+
+- `mistral-small`
+- `mistral-tiny`
+
+### Amazon Bedrock (`bedrock`)
+
+- `bedrock-anthropic.claude-v2`
+- `bedrock-anthropic.claude-v2:1`
+- `bedrock-anthropic.claude-3-sonnet-20240229-v1:0`
+- `bedrock-anthropic.claude-3-5-sonnet-20240620-v1:0`
+- `bedrock-anthropic.claude-3-haiku-20240307-v1:0`
+- `bedrock-anthropic.claude-3-opus-20240229-v1:0`
+- `bedrock-anthropic.claude-instant-v1`
+
+Because we are focused on Bedrock for Anthropic, if system message only is specified with no chat history,
+the system message will be converted to a chat message with the role `user`, because Anthropic requires at least one user message.
+
+### Gemini (`gemini`)
+
+- `gemini-1.5-flash`
+- `gemini-1.5-pro`
+
+### OpenAI Azure (`openai-azure`)
+
+Any Custom GPT deployment
+
+## Model params
+
+A JSON input for all additional model params supported by the provider. This could include things like `top_p` and `temperature`.
+Currently, tools must also be specified here (not supported for Bedrock).
+
+## Chat message input and output
+
+If you want to specify history of chat messages as input, turn on the "Chat messages input" toggle.
+If you want the result to be a chat message list, turn on the "Chat messages output" toggle.
+
+## Structured output
+
+For models that do not inherently support JSON structured output format, we offer the functionality on top of it.
+
+In essence, we prompt the model in a special way to give it the definition of the answer schema. We also parse the output to,
+for example, remove any words before or after the JSON we are interested in. If the model fails to respond correctly,
+we add an error message to the chat messages and let the model try again. You can control the number of retry attempts.
+
+To start using the structured output, you must specify the schema in the BAML format and a target for it.
+
+The target must be a enum or a class. Enums are useful to make sure the model answers with just one word, which is helpful in conditional routing.
+
+Classes are useful to specify the JSON. You can nest classes and add enums inside classes.
+
+<Frame>
+  <img
+    height="300"
+    src="/images/pipeline-builder/llm-structured-output.png" alt="LLM node with structured output example"/>
+</Frame>
+
+Read more about BAML syntax here: https://docs.boundaryml.com/docs/snippets/class
+
+## Stream
+
+This switch is used to select which LLM nodes' content to stream during [endpoint call](/api-reference/pipeline/pipeline_run).
+When call to endpoint is made, set "stream" to true in request params, so that LLM nodes which have "stream" enabled are streamed using server-sent events.
+
+Note that, when running pipelines in pipeline builder, LLM node will be streamed whenever possible regardless of this flag.
+

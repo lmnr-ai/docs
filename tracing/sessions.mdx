@@ -1,0 +1,64 @@
+---
+title: Sessions
+description: Grouping your traces into sessions
+---
+
+## Introduction
+
+Sessions are a way to group your traces together. 
+They are useful when you want to group traces that are related to a single user interaction or a single request.
+
+For example, imagine a conversational chatbot that at every turn in the conversation
+does several things, such as processing the user input, calling the database, and generating a response.
+In such case, we may want to represent each turn in the conversation as a trace, and the whole conversation as a session.
+
+## Sending sessions
+
+### Prerequisites
+
+Make sure to install the package and get your API key from the Laminar dashboard.
+Read more in [Installation](/overview#installation).
+
+### Associate a trace with a session
+
+<Tabs>
+<Tab title="Python">
+
+Simply call the `Laminar.set_session(session_id="session123")` within or outside any span context.
+All the subsequent spans will be associated with the session.
+
+```python
+from lmnr import Laminar, observe
+
+Laminar.initialize(project_api_key=os.environ["LMNR_PROJECT_API_KEY"])
+
+@observe()
+def my_function():
+    Laminar.set_session(session_id="session123")
+    # your code here
+
+    # optionally, at the end of the session, you can clear the session id
+    Laminar.clear_session()
+```
+</Tab>
+<Tab title="JavaScript/TypeScript">
+
+Use the `Laminar.contextWithSession` within to create a context with a sessionId.
+All the spans within the context will be associated with the session.
+
+```javascript
+import { Laminar } from "@lmnr-ai/lmnr";
+import { context as contextApi } from '@opentelemetry/api';
+
+const context = Laminar.contextWithSession({ sessionId: "session123"});
+contextApi.with(context, () => {
+    // Your code here
+});
+```
+</Tab>
+</Tabs>
+
+## Viewing sessions
+
+Go to Laminar traces page and switch the tab to sessions.
+Click on the session to view all the traces associated with the session.

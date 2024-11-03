@@ -1,0 +1,33 @@
+---
+title: 'Otel objects'
+description: 'Details on Events and attributes in OpenTelemetry-compatible tracing with Laminar'
+---
+
+Laminar events are fully-compatible with OpenTelemetry events. They are stored in the `events` field of the span object.
+
+This page is solely for information purposes. As a user of Laminar, you don't have to deal with the internals of OpenTelemetry.
+
+## Event object
+
+| Attribute | Description | Type | Laminar representation (if different) | Example |
+| --- | --- | --- | --- | --- |
+| name | Name of the event | string | | `my_event` |
+| time_unix_nano | Timestamp of the events in nanoseconds [1] | number | timestamp with Utc timezone | `1630000000000000000` |
+| attributes | Attributes associated with the event. See below | Key-value pair. Value must be of `AttributeType` [2] | | `{"gen_ai.usage.output_tokens": 369}` |
+
+[1] In most OpenTelemetry client implementations, you don't have to convert the timestamp to nanoseconds manually.
+You can simply pass the `Date` / `datetime` object and the client will convert it to nanoseconds.
+
+[2] `AttributeType` is a union of `string`, `number`, `boolean`, `Array<string>`, `Array<number>`, `Array<boolean>`
+
+## Event attributes
+
+| Attribute | Description | Type | Example |
+| --- | --- | --- | --- |
+| `lmnr.event.type` | Type of the event. Must be `default` | string | `default` |
+
+### Event attributes
+
+| Attribute | Description | Type | Example |
+| --- | --- | --- | --- |
+| `lmnr.event.value` | Value of the event. Can be Boolean, String, or Number, or a sequence of each. | `AttributeType` | `369` |

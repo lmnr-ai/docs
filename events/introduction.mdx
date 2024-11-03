@@ -1,0 +1,67 @@
+---
+title: Introduction
+---
+
+## Why do we need events and events-based analytics?
+
+LLM applications generate thousands of logs and traces every day.
+Analyzing them manually and making sense of it is hard, if not impossible, considering the amount of data generated.
+
+That's where events-based analytics comes in.
+
+1. **Catch failures in real time**
+
+Use Laminar's Semantic Events to catch failures in your agents in real-time based on the online evaluations.
+
+2. **Evaluate and gather metrics on agent behavior**
+
+Use Laminar's events to gather metrics on the user or agent behavior.
+
+## Overview
+
+Events are the building blocks of the analytics in Laminar.
+
+Laminar Events are [OpenTelemetry-compatible](/events/otel).
+
+All events belong to a span. In other words, every event must be sent within a function
+[instrumented](/tracing/automatic-instrumentation) with Laminar.
+
+### Event properties
+
+Each event has the following properties:
+1. **Name**
+
+Name is needed to identify the event. Event name must be unique within the project.
+
+For example, name can be `user_sentiment`.
+
+2. **Value type**
+
+There are three types of event values:
+- `Boolean`
+- `String`
+- `Number`
+
+3. **Value**
+
+Based on the event value type, each event will have a value.
+
+For example, an event of `Boolean` value type will be `true` or `false`.
+
+4. **Timestamp**
+
+Timestamp is the time when the event has been created.
+If you don't specify the timestamp, the time at which the event was sent will be used.
+
+### Sending events
+
+You can send Laminar events and their values from code.
+
+Events are useful when you want to make assertions, record known actions which agent takes,
+or track metrics important for your use case.
+
+For example, you can record if the response matches regular expressions,
+if the chat assistant has found the answer to the user's question,
+or which tool has been used how many times.
+
+[Learn more](/events/sending-events) on how to send events and the use cases.

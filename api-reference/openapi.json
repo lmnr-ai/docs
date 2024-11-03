@@ -1,0 +1,270 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "laminar",
+    "description": "",
+    "license": {
+      "name": ""
+    },
+    "version": "0.1.0"
+  },
+  "servers": [
+    {
+      "url": "https://api.lmnr.ai"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/v1/pipeline/run": {
+      "post": {
+        "tags": [
+          "api::pipelines"
+        ],
+        "operationId": "run_pipeline_graph",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GraphRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Pipeline run result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["runId", "outputs"],
+                  "properties": {
+                    "runId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "outputs" : {
+                      "type": "object",
+                      "additionalProperties": {
+                        "$ref": "#/components/schemas/GraphRunOutput"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "LLMNodeMetaLog": {
+        "type": "object",
+        "properties": {
+          "semanticCacheEnabled": {
+            "type": "boolean"
+          },
+          "semanticCacheRetrieved": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "inputMessageCount": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "inputTokenCount": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "outputTokenCount": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totalTokenCount": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "approximate_cost": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "required": ["semanticCacheEnabled", "inputMessageCount", "inputTokenCount", "outputTokenCount", "totalTokenCount", "prompt"]
+      },
+      "MetaLog": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/LLMNodeMetaLog"
+          }
+        ]
+      },
+      "ChatMessage": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": ["role", "content"]
+      },
+      "ConditionedValue": {
+        "type": "object",
+        "properties": {
+          "condition": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": ["condition", "value"]
+      },
+      "NodeInput": {
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatMessage"
+            }
+          },
+          {
+            "$ref": "#/components/schemas/ConditionedValue"
+          }
+        ]
+      },
+      "GraphRequest": {
+        "type": "object",
+        "required": [
+          "pipeline",
+          "inputs",
+          "env"
+        ],
+        "properties": {
+          "pipeline": {
+            "type": "string",
+            "description": "Name of the pipeline to be called. Not to be confused with the pipeline version name. Target pipeline version for the pipeline is set in the UI."
+          },
+          "inputs": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/NodeInput"
+            }
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "The keys are env variables such as OPENAI_API_KEY, POSTGRES_URL, etc."
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Per-request metadata. Keys are arbitrary strings such as user_id, etc.",
+            "nullable": true
+          },
+          "stream": {
+            "type": "boolean",
+            "description": "If true, each node's output will be streamed. For some nodes, the whole execution will be streamed (e.g. LLM). Final value will be the run trace.",
+            "nullable": true
+          }
+        }
+      },
+      "Message": {
+        "type": "object",
+        "required": [
+          "id",
+          "value",
+          "inputs",
+          "inputMessages",
+          "startTime",
+          "endTime",
+          "nodeId",
+          "nodeName",
+          "nodeType"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "value": {
+            "$ref": "#/components/schemas/NodeInput"
+          },
+          "inputMessages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            },
+            "description": "all input messages to this node; accumulates previous messages too"
+          },
+          "inputs": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/NodeInput"
+            }
+          },
+          "metaLog": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MetaLog"
+              }
+            ],
+            "nullable": true
+          },
+          "nodeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nodeName": {
+            "type": "string"
+          },
+          "nodeType": {
+            "type": "string"
+          },
+          "startTime": {
+            "type": "string"
+          },
+          "endTime": {
+            "type": "string"
+          }
+        }
+      },
+      "GraphRunOutput": {
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "properties": {
+          "value": {
+            "$ref": "#/components/schemas/NodeInput"
+          }
+        }
+      }
+    }
+  }
+}

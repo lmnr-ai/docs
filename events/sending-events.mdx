@@ -1,0 +1,108 @@
+---
+title: Sending events
+description: Quickstart on how to send events to Laminar
+---
+
+import LaminarInstall from '/snippets/laminar-install.mdx';
+import LaminarInitialize from '/snippets/laminar-initialize.mdx';
+import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
+
+## Key concepts
+
+Event value is known at the code execution time. Events belong to a span.
+Events are timestamped when your code reports them, unless you explicitly specify a different time.
+
+## Value types
+
+The `value` of the event can be `Boolean`, `String`, or `Number`.
+
+You don't have to explicitly specify the value type - the value type is inferred based on the first value sent with the event.
+
+For example, if you send value named "is_calculator_tool_used" with value `true`, the event will be registered with the type `Boolean` in the current project.
+Next time, if you send a non-boolean value to "is_calculator_tool_used", it will be ignored.
+
+Note that the value type is project-specific. Events with the same name can have different types in different projects.
+
+In Laminar's SDKs, `value` is optional. If a value is not provided, it will be inferred to be `Boolean` and set to `true`.
+This is useful for events that are just a tag.
+
+## Sending regular events
+
+### Installation
+
+<LaminarInstall />
+
+### Project API key
+
+<GetProjectApiKey />
+
+### Example: Assertions
+
+Let's consider an example where you want to assert that LLM response never contains the
+name of a particular competitor. Each time the response does contain the competitor's name,
+you want to record an event.
+
+<Tabs>
+<Tab title = "Python">
+    
+```python
+from lmnr import Laminar, observe
+
+Laminar.initialize(project_api_key='<YOUR_PROJECT_API_KEY>')
+
+competitor_name = "The Greatest Hospital in the Bay Area"
+
+@observe()
+def generate_response():
+    response = openai.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": "<User question>"}],
+    )
+
+    if competitor_name in response:
+        Laminar.event("contains_competitor_name", True)
+        return "Sorry, I can't answer that."
+    
+    return response
+```
+
+</Tab>
+<Tab title = "JavaScript/TypeScript">
+    
+```javascript
+import { Laminar, observe } from '@lmnr-ai/lmnr';
+
+Laminar.initialize({projectApiKey: '<YOUR_PROJECT_API_KEY>'});
+
+const competitorName = "The Greatest Hospital in the Bay Area";
+
+await observe('myFunction', async () => {
+    const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: "<User question>" }],
+    });
+
+    if (response.includes(competitorName)) {
+        Laminar.event("contains_competitor_name", true);
+        return "Sorry, I can't answer that.";
+    }
+
+    return response;
+});
+```
+
+</Tab>
+</Tabs>
+
+<Warning>If an event is sent outside of span context, we will have nothing to associate it with, so it
+won't be recorded. Make sure to wrap the function where event is sent, or one of its parent functions, with `observe` or with a manual span context.</Warning>
+
+Other use-cases for events may include:
+- Record if the user's issue has been resolved by the assistant or not. Use `Boolean` value type.
+- Track how many times and which tool has been used. Use `Boolean` value type for each tool call occurrence or `Number` value type for the total number of tool calls per conversation.
+- Check if the assistant's response matches regular expressions. Use `Boolean` value type.
+
+## Event metrics
+
+All recorded events are available in the Laminar dashboard and in the events page.
+In the events page, if you select an event, you can go to the specific trace where it was sent.

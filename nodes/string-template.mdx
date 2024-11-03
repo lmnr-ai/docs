@@ -1,0 +1,26 @@
+---
+title: 'String Template'
+---
+
+## String Template node
+
+String template node allows you to create a templated string and dynamically fill it in at execution time.
+
+For example, if you create the following template:
+
+```
+Hello, dear {{name}}
+```
+
+A handle will appear on the left called `name`. Then, if you connect a node that passes the value `Alice` to that handle,
+the node will replace the template with the word, rendering the following:
+
+```
+Hello, dear Alice
+```
+
+### Features and restrictions:
+
+- You can add as many variables to the template.
+- You can repeat every variable multiple times
+- Variable names may contain alphanumeric (basic ASCII latin) characters, underscores `_`, dashes `-`, and dollar signs `$`.
