@@ -13,30 +13,28 @@ types.
 
 ## Label classes
 
-Every label on a span has a class. The class defines the type of the label,
-the possible values, and the name of the label. For example `sentiment` can be
-a class of a categorical label with possible values `positive`, `negative`, and
-`neutral`.
+Every label on a span has a class. The class defines the name of the label,
+and the possible values. For example `sentiment` can be a class
+with possible values `positive`, `negative`, and `neutral`.
 
 Every user can assign one label value per label class per span.
+
+### Internal representation
+
+Internally, each possible label value is represented by a number. This is helpful
+to be able to add label values alongside evaluation scores.
+
+### Creating a label class
+
+When you create a label class, you will need to assign a number to each possible
+label value. Make sure to use unique numbers for each possible label value.
+
+For example, if you have a label class `sentiment` with possible values `positive`,
+`negative`, and `neutral`, you can assign the numbers `1`, `2`, and `3` to each
+of them.
 
 ## Label description
 
 Label descriptions are optional and can be used to provide more context about the label.
 We recommend setting them for better alignment between labelers, both human and
 LLM-as-a-judge labelers.
-
-## Span label types
-
-Supported span label types are `Boolean` and `Categorical`.
-
-### Boolean
-
-Boolean span can take a `true` or `false` value. This is useful if you want to
-tag spans with a binary label.
-
-### Categorical
-
-Categorical labels can take one of the predefined values. One way to think about
-this is to consider the categorical label as a tag. For example, you can tag
-spans with `positive`, `negative`, or `neutral` sentiment.

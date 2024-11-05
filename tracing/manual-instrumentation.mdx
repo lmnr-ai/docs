@@ -1,6 +1,6 @@
 ---
 title: Manual instrumentation
-description:: Manual code instrumentation and best practices for tracing with Laminar
+description: Manual code instrumentation and best practices for tracing with Laminar
 ---
 
 ## Use `observe` to group separate LLM calls in one trace
@@ -191,6 +191,7 @@ await observe({ ...options }, async (param1, param2) => {
 - `traceType` (`'DEFAULT'|'EVENT'|'EVALUATION'`): Type of the trace. Unless it is within evaluation, it must be `'DEFAULT'`.
 - `spanType` (`'DEFAULT'|'LLM'`) - Type of the span. `'DEFAULT'` is used if not specified. If the type is `'LLM'`,
    you must manually specify some attributes. This translates to `lmnr.span.type` attribute on the span.
+- `traceId` (`string`): trace ID for the current trace. This is useful if you want to continue an existing trace. IMPORTANT: must be a valid UUID, i.e. has to include 8-4-4-4-12 hex digits.
 
 #### Inputs and outputs
 - Function parameters and their values are serialized to JSON and recorded as span input.
@@ -336,17 +337,70 @@ with Laminar.start_as_current_span(name="handler", input=user_message) as span:
     # your code here
     span.set_attribute("some_attribute", "some_value")
     Laminar.set_span_output(result) # this sets the output of the current span
-
-# [Not recommended] manual span ending
-span = None
-try:
-    span = Laminar.start_as_current_span(name="handler", input=user_message)
-    # your code here
-    Laminar.set_span_output(result) # this sets the output of the current span
-finally:
-    if span is not None:
-        span.end()
 ```
+
+## Setting trace ID
+
+When you manually instrument your code, sometimes you may want to continue an existing trace.
+For example, a trace may start in one API route, and you may want to continue it in a different API route.
+
+Laminar's trace IDs are UUIDs, so if you want to set a trace ID manually, you must pass a valid UUID.
+
+### Example
+<Tabs>
+<Tab title="Python">
+
+```python
+from lmnr import Laminar
+import os
+import uuid
+
+trace_id = None
+Laminar.initialize(project_api_key=os.environ['LMNR_PROJECT_API_KEY'])
+
+def foo():
+    with Laminar.start_as_current_span(name="foo", trace_id=trace_id):
+        # your code here
+        pass
+
+def bar():
+    with Laminar.start_as_current_span(name="bar", trace_id=trace_id):
+        # your code here
+        pass
+
+trace_id = uuid.uuid4()
+
+foo()
+bar()
+```
+Both spans, `foo` and `bar`, will be in the same trace, because they have the same trace ID.
+</Tab>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+import { Laminar } from '@lmnr-ai/lmnr';
+
+const foo = async () => {
+    await observe({ name: 'foo', traceId: traceId }, async () => {
+        // your code here
+    });
+}
+
+const bar = async () => {
+    await observe({ name: 'bar', traceId: traceId }, async () => {
+        // your code here
+    });
+}
+
+// if this is not available, use `v4()` from `uuid` package.
+const traceId = crypto.randomUUID();
+
+foo();
+bar();
+```
+Both spans, `foo` and `bar`, will be in the same trace, because they have the same trace ID.
+</Tab>
+</Tabs>
 
 ## Calling raw LLM APIs, reporting token usage
 

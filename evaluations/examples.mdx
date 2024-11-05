@@ -649,6 +649,59 @@ evaluate({
 </Tab>
 </Tabs>
 
+## Example. Registering human evaluators
+
+You can register human evaluators right from your code. To do this, you will need to
+first create a [labeling queue](/labels/manually-label), and then pass the queue name to the `evaluate` function.
+
+In this example, let's assume you have created labeling queues with names `my_queue` and `my_other_queue`.
+
+<Tabs>
+<Tab title = "Python">
+```python
+from lmnr import evaluate, HumanEvaluator
+import os
+
+evaluate(
+    data=data,
+    executor=get_capital,
+    evaluators={'check_capital_correctness': evaluator},
+    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
+    # note, this is new from `lmnr==0.4.29`
+    human_evaluators=[
+        HumanEvaluator(queue_name="my_queue"),
+        HumanEvaluator(queue_name="my_other_queue")
+    ],
+)
+```
+</Tab>
+<Tab title = "JavaScript/TypeScript">
+```javascript
+import { evaluate, HumanEvaluator } from '@lmnr-ai/lmnr';
+
+evaluate({
+    data: evaluationData,
+    executor: async (data) => await getCapital(data),
+    evaluators: { checkCapitalCorrectness: evaluator },
+    // note, this is new from `@lmnr-ai/lmnr==0.4.18`
+    humanEvaluators: [
+        HumanEvaluator("my_queue"),
+        HumanEvaluator("my_other_queue"),
+    ],
+})
+```
+</Tab>
+</Tabs>
+
+This will run your programmatic evaluator ("check capital correctness") and then
+send the `target` and `executor_output` to the queues `my_queue` and `my_other_queue`.
+
+When a label is added to an item in the queue, it will be added back to the evaluation alongside
+the programmatic evaluator scores.
+
+You can then visualize the human labeler scores in the UI, and compare them to the
+programmatic evaluator scores.
+
 ## Configuring the evaluation to report results to locally self-hosted Laminar
 
 In this example, we configure the evaluation to report results to a locally self-hosted Laminar instance.

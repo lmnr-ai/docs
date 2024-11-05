@@ -1,40 +1,43 @@
 ---
-title: Human labeling
-description: How to manually label spans
+title: Labeling queues
+description: A view for labeling spans
 ---
 
-To manually label spans, open the trace and click on the span you want to label.
-Then, click on the "Add label" button in the top right corner. Here you can choose
-one of the existing label classes or create a new one, and then assign a value to
-the span.
+You can always label a span right in the trace view.
 
-### Creating a new label class
+It is also useful to label spans in a separate places for multiple reasons:
+- You may want to only send a subset of spans to a labeler for labeling.
+- You may want to label spans later, when you have more context.
+- Other team members may need to review the labels, and they don't have to look at full traces.
 
-To create a new label class, click on the "New label" button.
+## Creating a labeling queue
 
-When you create a new label class, you can choose between `Boolean` and `Categorical` label types.
+Navigate to the labeling queues page by clicking on the "Labeling queues" tab in the left sidebar.
 
-For boolean labels, the possible values are `true` and `false`. For categorical labels, you can
-define the possible values.
+Create a new labeling queue by clicking on the "New queue" button.
 
-<Frame title="Create new categorical values">
-  <img src="/images/labels/add-label-class.png" alt="Screenshot of the add label class modal" />
-</Frame>
+We recommend creating separate queues for different team members, so that no more than one person labels the same span.
+You can create more than one queue per team member.
 
-You can also add a description to the label class here.
+## Labeling spans in a queue
 
-### Labeling spans
+You can move back and forth between spans in a queue by clicking on "Next" and "Previous".
 
-To label a span, click on the "Add label" button in the top right corner of the span view.
+<Tip>
+  Labels are not saved automatically.
+  Make sure to save them by clicking on the "Complete" button,
+  once you are done with labeling one entry.
+</Tip>
 
-In the row that corresponds to the label class you want to assign a value to, clicke on the 
-"Add" dropdown and select the value you want to assign.
+### Additional hooks
 
-<Frame title="Label a span">
-  <img src="/images/labels/add-label-instance.png" alt="Screenshot of labeling a span" />
-</Frame>
+Depending on the source of the data, some additional effects may be triggered when a span is labeled.
 
-### Viewing labels
+For now, this only works for evaluations. If the spans are added to a queue from evaluations,
+using the `HumanEvaluator` class, the resulting labels will be added back to the evaluation alongside
+the programmatic evaluator scores. See an example [here](/evaluations/examples#example-registering-human-evaluators).
+
+## Viewing labels
 
 Once a span has been labeled, you can view all the labels assigned to it by clicking on the span.
 
