@@ -67,6 +67,7 @@
         "tracing/sessions",
         "tracing/nextjs",
         "tracing/otel",
+        "tracing/vercel-ai-sdk",
         "tracing/troubleshooting"
       ]
     },
