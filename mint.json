@@ -27,11 +27,15 @@
     {
       "name": "Contact support",
       "url": "mailto:founders@lmnr.ai"
+    },
+    {
+      "name": "Dashboard",
+      "url": "https://www.lmnr.ai/projects"
     }
   ],
   "topbarCtaButton": {
-    "name": "Dashboard",
-    "url": "https://www.lmnr.ai/projects"
+    "type": "github",
+    "url": "https://github.com/lmnr-ai/lmnr"
   },
   "tabs": [
     {
