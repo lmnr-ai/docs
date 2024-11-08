@@ -25,9 +25,9 @@ to the existing one.
 ## Key concepts
 
 - Executor – the function being evaluated, often your prompt or (to-be-)production logic
-- Evaluator - the function evaluating the results
-- Dataset - collection of datapoints to run executors and evaluators against
-- Datapoint – two values: `data` and `target` each represented as JSON.
+- Evaluator – the function evaluating the results
+- Dataset – collection of datapoints to run executors and evaluators against
+- Datapoint – two values: `data` and `target` each represented as a free-form JSON.
   - `data` – data sent to the executor. Required.
   - `target` – data sent to the evaluator. Usually, contains the expected or target outputs of certain parts of your executor. Optional.
 
@@ -42,14 +42,6 @@ to the existing one.
 
 ## Flow overview
 
-<Frame caption="High-level overview of the evaluation flow">
-  <img
-    height="300"
-    src="/images/evaluations/evaluation-with-executor.png"
-    alt="High-level overview of the evaluation flow with the executor pipeline"
-  />
-</Frame>
-
 For every datapoint in the dataset, evaluation does the following:
 
 1. Pass the `data` as an argument to the executor.
@@ -58,6 +50,60 @@ For every datapoint in the dataset, evaluation does the following:
 1. Output of the executor and `target` are passed to the _evaluator_ function.
 1. Evaluator pipeline produces a numeric output or a json object with several numeric outputs.
 This is stored in the results of the evaluation.
+
+### Example:
+
+<Tabs>
+<Tab title = "Python">
+```python
+def write_poem(data: dict) -> str:
+    # ...
+
+def contains_poem(output: str, target: str) -> int:
+    # ...
+
+evaluate(
+    data=[{
+        "data": {"topic": "flowers"},
+        "target": "This is a good poem about flowers"
+    }],
+    executor=write_poem,
+    evaluators={"contains_poem": contains_poem}
+)
+```
+</Tab>
+<Tab title = "JavaScript/TypeScript">
+```javascript
+const writePoem = (data: {topic: string}) => {
+    // ...
+}
+
+const containsPoem = (output: string, target: string) => {
+    // ...
+}
+
+evaluate({
+    data: [{
+        data: { topic: 'flowers' },
+        target: { poem: 'This is a good poem about flowers' }
+    }],
+    executor: writePoem,
+    evaluators: { "contains_poem": containsPoem }
+})
+```
+</Tab>
+</Tabs>
+
+In this example, the `write_poem` function is the executor, and the `contains_poem` function is the evaluator.
+The score that is produced by the evaluator is stored in the results of the evaluation under the `contains_poem` key.
+
+<Frame caption="Example evaluation">
+  <img
+    height="300"
+    src="/images/evaluations/simple-eval-example.png"
+    alt="Example evaluation"
+  />
+</Frame>
 
 ## Quickstart
 
@@ -74,13 +120,12 @@ This is stored in the results of the evaluation.
 
 Create a file named `my-first-evaluation.py` and add the following code:
 
-```python
-# my-first-evaluation.py
+```python my-first-evaluation.py
 from lmnr import evaluate
 
-def write_poem(topic: str) -> str:
+def write_poem(data: dict) -> str:
     # replace this with your LLM call or custom logic
-    return f"This is a good poem about {topic}"
+    return f"This is a good poem about {data['topic']}"
 
 def contains_poem(output: str, target: str) -> int:
     return 1 if target in output else 0
@@ -89,15 +134,15 @@ evaluate(
     data=[
         {
             "data": {"topic": "flowers"},
-            "target": {"poem": "This is a good poem about flowers"}
+            "target": "This is a good poem about flowers"
         },
         {
             "data": {"topic": "cats"},
-            "target": {"poem": "I like cats"}
+            "target": "I like cats"
         },
     ],
     executor=write_poem,
-    evaluators={"containsPoem": contains_poem}
+    evaluators={"contains_poem": contains_poem}
 )
 ```
 
@@ -106,30 +151,31 @@ evaluate(
 
 Create a file named `my-first-evaluation.ts` and add the following code:
 
-```javascript
-// my-first-evaluation.ts
+```javascript my-first-evaluation.ts
 import { evaluate } from '@lmnr-ai/lmnr';
 
-const writePoem = ({topic}: {topic: string}) => {
+const writePoem = (data: {topic: string}) => {
     // replace this with your LLM call or custom logic
-    return `This is a good poem about ${topic}`
+    return `This is a good poem about ${data.topic}`
+}
+
+const containsPoem = (output: string, target: string) => {
+    return output.includes(target) ? 1 : 0
 }
 
 evaluate({
     data: [
         {
             data: { topic: 'flowers' },
-            target: { poem: 'This is a good poem about flowers' }
+            target: 'This is a good poem about flowers',
         },
         {
             data: { topic: 'cats' },
-            target: { poem: 'I like cats' }
+            target: 'I like cats',
         },
     ],
-    executor: (data) => writePoem(data),
-    evaluators: {
-        containsPoem: (output, target) => target.poem.includes(output) ? 1 : 0
-    }
+    executor: writePoem,
+    evaluators: { contains_poem: containsPoem }
 })
 ```
 </Tab>
@@ -166,7 +212,7 @@ run the file created in the previous step.
 Evaluator returns either a single numeric score or a JSON object / dict, with string keys and numeric values for multiple scores
 </Tip>
 
-## Viewing evaluation results and traces
+### Viewing evaluation results and traces
 
 When you run an evaluation from the CLI, Laminar will output the link to the dashboard
 where you can view the evaluation results.
@@ -174,3 +220,25 @@ where you can view the evaluation results.
 Laminar stores every evaluation result.
 A run for every datapoint is represented as a trace.
 You can view the results and corresponding traces in the evaluations page.
+
+<Frame caption="Example evaluation">
+  <img
+    height="300"
+    src="/images/evaluations/simple-eval-example.png"
+    alt="Example evaluation"
+  />
+</Frame>
+
+In this example, we can see that the score for the first datapoint is 1, and for the second one is 0.
+This is because our evaluator function `contains_poem` returns 1 if the target string is found in the output string, and 0 otherwise.
+
+We can also see the full execution trace for each datapoint. If you actually call an LLM in the executor,
+or the evaluator, you will also see the LLM spans in the trace.
+
+<Frame caption="Here the executor called OpenAI, and there are three evaluator functions.">
+  <img
+    height="300"
+    src="/images/evaluations/evaluation-trace.png"
+    alt="Example evaluation trace screenshot"
+  />
+</Frame>
