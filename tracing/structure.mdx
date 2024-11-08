@@ -33,9 +33,17 @@ It will make sense to group these spans into a single trace, as they belong to t
 
 ## Grouping spans into traces
 
+The most common way to group spans into traces is to create one parent span before making LLM calls.
+This parent span will contain all the child spans, each may be an LLM call, or a piece of code that you want to trace.
+
+The concept of such a parent span is sometimes called a "root span" or a "top-level span".
+
+The recommended way to create a parent span is to use the `observe` decorator (Python)
+or `observe` function wrapper (JavaScript/TypeScript).
+
 <ObserveExample />
 
-## Grouping traces
+## Grouping traces into sessions
 
 Sometimes, you may want to group traces into sessions. 
 Sessions are useful when you want to group traces that are related to a single user interaction or a single request.
@@ -82,6 +90,21 @@ contextApi.with(context, () => {
 ```
 </Tab>
 </Tabs>
+
+### Viewing sessions
+
+Head to the traces page and select the "Sessions" tab. You will see all the sessions,
+and if you click on each, it will expand to show all the traces within the session.
+
+<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
+  <img src="/images/traces/sessions.png" alt="Sessions" style={{ margin: '0px' }}/>
+</div>
+
+Each trace within a session is the same as if it were a standalone trace.
+
+<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
+  <img src="/images/traces/trace-in-session.png" alt="A trace in a session" style={{ margin: '0px' }}/>
+</div>
 
 ## Next Steps
 
