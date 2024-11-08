@@ -263,7 +263,7 @@ await observe({ name: 'mySpan' }, async () => {
 </Tab>
 </Tabs>
 
-## Trace specific parts of code
+## Trace specific parts of code (Python only)
 
 In Python, you can also use `Laminar.start_as_current_span` if you want to record a chunk of your code using `with` statement.
 
@@ -309,19 +309,9 @@ Laminar-specific attributes.
 - `span_type` (`Literal['DEFAULT'] | Literal['LLM']`): type of the span. If not specified, it will be `'DEFAULT'`.
 
 #### Returns
-- `Span`: the span object. It is a bare OpenTelemetry span, so you can use it to set attributes, etc.
+- `Span`: the span object. It is a bare OpenTelemetry span, so you can use it to set attributes.
 We still recommend using `Laminar.set_span_output` and `Laminar.set_span_attributes` to set attributes, unless you want
 to set some custom attributes.
-
-#### Usage
-`start_as_current_span` is a context manager, so it can be called with a `with` statement. It will automatically
-end the span when the context is exited. It can also be used without a `with` statement, but in this case you
-must manually end the span.
-
-We recommend against the manual call, as the code may not reach the 
-`span.end()` call if an exception is raised in between. In addition, accidentally mixing `with` and manual
-calls may lead to accidentally ending the span twice, which will break the OpenTelemetry API.
-If you absolutely have to use the manual call, we recommend at least wrapping it in a `try`/`finally` block.
 
 #### Examples
 
@@ -339,14 +329,79 @@ with Laminar.start_as_current_span(name="handler", input=user_message) as span:
     Laminar.set_span_output(result) # this sets the output of the current span
 ```
 
-## Setting trace ID
+## Continuing a trace
 
 When you manually instrument your code, sometimes you may want to continue an existing trace.
 For example, a trace may start in one API route, and you may want to continue it in a different API route.
 
+### Passing span object between functions (Recommended)
+
+It is helpful to pass the span object between functions, so that you can continue the same trace.
+
+#### Example
+<Tabs>
+<Tab title="Python">
+
+We will use to main methods here – `Laminar.start_span()` and `use_span`. You can import 
+`use_span` from `lmnr`, but it is just a re-export of `opentelemetry.trace.use_span`.
+
+```python
+from lmnr import Laminar, use_span
+import os
+
+Laminar.initialize(project_api_key=os.environ['LMNR_PROJECT_API_KEY'])
+
+def foo(span):
+    with use_span(span):
+        # your code here, e.g. an LLM call
+        pass
+
+def bar(span):
+    with use_span(span):
+        with Laminar.start_as_current_span(name="bar"):
+            # your code here
+            pass
+
+outer = Laminar.start_span(name="outer")
+foo(outer)
+bar(outer)
+# Don't forget to end the span!
+outer.end()
+```
+
+<Tip>
+Ending the span is required. If you don't end the span, the trace will not be recorded.
+You can also end the span in the last by passing `end_on_exit=True` to the last `use_span`.
+</Tip>
+
+</Tab>
+<Tab title="JavaScript/TypeScript">
+
+We are working hard on adding support for this in JavaScript/TypeScript. If you need this urgently,
+you can open an issue on GitHub and we will prioritize it.
+
+</Tab>
+</Tabs>
+
+As a result, you will get a nested trace with `outer` as the top level span,
+where any spans created with `use_span` will be children of `outer`.
+
+<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
+  <img src="/images/traces/manual-trace.png" alt="Manual trace example" />
+</div>
+
+In this example, `outer` is the top level span, `foo` called OpenAI, which got auto-instrumented,
+and `bar` is a custom span that we created manually.
+
+### Setting trace ID manually
+
+This is not completely compatible with OpenTelemetry, so use only when you have to.
+Please use the span object passing method above whenever possible.
+
+If there is no way for you to pass the span object between functions, you can set the trace ID manually.
 Laminar's trace IDs are UUIDs, so if you want to set a trace ID manually, you must pass a valid UUID.
 
-### Example
+#### Example
 <Tabs>
 <Tab title="Python">
 

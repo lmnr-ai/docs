@@ -26,7 +26,13 @@ Laminar.initialize({ projectApiKey: process.env.LMNR_PROJECT_API_KEY });
 </Tab>
 </Tabs>
 
-This will automatically instrument all major LLM provider SDKs, LLM frameworks including LangChain and LlamaIndex, and calls to vector databases.
+<Tip>
+Laminar should be initialized once in your application. This could be 
+at the server startup, or in the entry point of your application.
+</Tip>
+
+This will automatically instrument all major LLM provider SDKs, LLM frameworks including
+LangChain and LlamaIndex, and calls to vector databases.
 
 To disable or configure automatic instrumentation,
 see the section on [Automatic instrumentation](/tracing/automatic-instrumentation).

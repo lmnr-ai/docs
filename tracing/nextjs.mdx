@@ -19,8 +19,34 @@ We suggest to disable Next.js OpenTelemetry instrumentation to avoid excessive t
 export NEXT_OTEL_FETCH_DISABLED=1
 ```
 
-Then, choose the [app router](https://nextjs.org/docs/app) route you want to instrument
-and initialize Laminar at the top of your route file.
+### Observing entire application
+
+To instrument your entire Next.js app, place Laminar initialization in `instrumentation.ts` file.
+
+```javascript instrumentation.ts
+import { Laminar } from '@lmnr-ai/lmnr';
+
+export function register() {
+    Laminar.initialize({ projectApiKey: process.env.LMNR_PROJECT_API_KEY });
+}
+```
+
+<Note>
+`instrumentation.ts` is experimental in Next.js < 15.
+</Note>
+
+If you use Next.js < 15, add the following to your `next.config.js`:
+
+```javascript next.config.js
+module.exports = {
+    experimental: { instrumentationHook: true }
+};
+```
+
+### Observing specific routes
+
+If you want to instrument a specific [app router](https://nextjs.org/docs/app) route,
+initialize Laminar at the top of your route file.
 
 ```javascript
 import { Laminar } from '@lmnr-ai/lmnr';
@@ -28,12 +54,14 @@ import { Laminar } from '@lmnr-ai/lmnr';
 Laminar.initialize({ projectApiKey: process.env.LMNR_PROJECT_API_KEY });
 ```
 
+<Tip>
 Simple initialization may not work for all cases.
+</Tip>
 
 The best workaround is to selectively pass `instrumentModules` to `.initialize()`.
 The example below shows how to do this for OpenAI and Anthropic.
 
-```javascript
+```javascript app/.../route.ts
 import OpenAI from 'openai';
 import * as anthropic from '@anthropic-ai/sdk';
 import { Laminar } from '@lmnr-ai/lmnr';
@@ -48,14 +76,4 @@ If you want to try it quickly without manually importing and instrumenting all m
 you can do simple initialization, however, you will need to import _and_ initialize Laminar **before importing LLM client libraries**.
 This is because JavaScript binds the imported module to its name at import time, so introducing
 instrumentation afterwards statically is not possible.
-
-### Auto-instrumentable modules
-
-Here's the list of modules that you can instrument:
-
-<AutoInstrumentableJSModules />
-
-## 3. Add Laminar initialization to every API route
-
-Similarly to previous step, import and initialize Laminar at the top of every API route.
 

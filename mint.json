@@ -61,6 +61,7 @@
       "group": "Tracing",
       "pages": [
         "tracing/introduction",
+        "tracing/structure",
         {
           "group": "Instrumentation",
           "pages": [
@@ -68,7 +69,6 @@
             "tracing/manual-instrumentation"
           ]
         },
-        "tracing/sessions",
         "tracing/nextjs",
         "tracing/otel",
         "tracing/vercel-ai-sdk",
@@ -79,6 +79,7 @@
       "group": "Evaluations",
       "pages": [
         "evaluations/introduction",
+        "evaluations/configurations",
         "evaluations/examples",
         "evaluations/online-evaluations"
       ]

@@ -1,0 +1,55 @@
+<Tabs>
+<Tab title="Python">
+
+You can instrument specific functions by adding the `@observe()` decorator.
+This is especially helpful when you want to trace functions, or group
+separate functions into a single trace.
+
+```python
+from lmnr import observe
+
+@observe()  # annotate all functions you want to trace
+def my_function():
+    res = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": "What is the capital of France?"}],
+    )
+    return res.choices[0].message.content
+
+my_function()
+```
+
+</Tab>
+<Tab title="JavaScript/TypeScript">
+
+You can instrument specific functions by wrapping them in `observe()`. 
+This is especially helpful when you want to trace functions, or group
+separate functions into a single trace.
+
+```javascript
+import { observe } from '@lmnr-ai/lmnr';
+
+const myFunction = observe(async () => {
+  const response = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: "What is the capital of France?" }],
+  });
+  return response.choices[0].message.content;
+});
+
+await myFunction();
+```
+
+</Tab>
+</Tabs>
+
+We are now recording `my_function` *and* the OpenAI call, which is nested inside it, in the same trace. Notice that the OpenAI span is a child of `my_function`. Parent-child relationships are automatically detected and visualized with tree hierarchy.
+
+<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
+  <img src="/images/traces/trace-observe.png" alt="OpenAI span as a child" style={{ margin: '0px' }}/>
+</div>
+
+<Tip>
+You can nest as many spans as you want inside each other. By observing both the functions and the LLM/vector DB calls
+you can have better visualization of execution flow which is useful for debugging and better understanding of the application.
+</Tip>
