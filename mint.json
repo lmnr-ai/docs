@@ -70,8 +70,9 @@
           ]
         },
         "tracing/nextjs",
-        "tracing/otel",
         "tracing/vercel-ai-sdk",
+        "tracing/litellm",
+        "tracing/otel",
         "tracing/troubleshooting"
       ]
     },
