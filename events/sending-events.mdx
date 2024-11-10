@@ -76,7 +76,7 @@ Laminar.initialize({projectApiKey: '<YOUR_PROJECT_API_KEY>'});
 
 const competitorName = "The Greatest Hospital in the Bay Area";
 
-await observe('myFunction', async () => {
+await observe({name: 'myFunction'}, async () => {
     const response = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [{ role: "user", content: "<User question>" }],
