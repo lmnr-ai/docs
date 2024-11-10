@@ -288,14 +288,15 @@ await observe({ ...options }, async (param1, param2) => {
 }, arg1, arg2);
 ```
 
-#### Parameters
+#### Parameters (`ObserveOptions`)
 - `name` (`string`): name of the span. If not passed, and the function to observe is not an anonymous arrow function, the function name will be used.
 - `sessionId` (`string`): session ID for the current trace. If you know the session ID staticallly, you can pass it here.
 - `userId` (`string`): user ID for the current trace. If you know the user ID staticallly, you can pass it here.
 - `traceType` (`'DEFAULT'|'EVENT'|'EVALUATION'`): Type of the trace. Unless it is within evaluation, it must be `'DEFAULT'`.
 - `spanType` (`'DEFAULT'|'LLM'`) - Type of the span. `'DEFAULT'` is used if not specified. If the type is `'LLM'`,
    you must manually specify some attributes. This translates to `lmnr.span.type` attribute on the span.
-- `traceId` (`string`): trace ID for the current trace. This is useful if you want to continue an existing trace. IMPORTANT: must be a valid UUID, i.e. has to include 8-4-4-4-12 hex digits.
+- `traceId` (`string`): [experimental] trace ID for the current trace. This is useful if you want to continue an existing trace.
+IMPORTANT: must be a valid UUID, i.e. has to include 8-4-4-4-12 hex digits.
 
 #### Inputs and outputs
 - Function parameters and their values are serialized to JSON and recorded as span input.

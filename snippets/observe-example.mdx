@@ -29,7 +29,7 @@ separate functions into a single trace.
 ```javascript
 import { observe } from '@lmnr-ai/lmnr';
 
-const myFunction = observe(async () => {
+const myFunction = observe({name: 'myFunction'}, async () => {
   const response = await client.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{ role: "user", content: "What is the capital of France?" }],
