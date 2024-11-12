@@ -89,7 +89,8 @@
       "group": "Labels",
       "pages": [
         "labels/introduction",
-        "labels/manually-label"
+        "labels/manually-label",
+        "labels/labeling-from-code"
       ]
     },
     {
