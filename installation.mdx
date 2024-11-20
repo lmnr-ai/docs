@@ -1,0 +1,106 @@
+---
+title: Installation
+description: Install Laminar
+---
+
+<Tabs>
+<Tab title="JavaScript/Typescript">
+
+Install the package from [npm](https://www.npmjs.com/package/@lmnr-ai/lmnr).
+
+```sh
+npm add @lmnr-ai/lmnr
+```
+
+<Expandable title="other installation options: yarn, pnpm">
+yarn
+
+```sh
+yarn add @lmnr-ai/lmnr
+```
+
+pnpm
+
+```sh
+pnpm add @lmnr-ai/lmnr
+```
+</Expandable>
+</Tab>
+<Tab title="Python">
+
+Install the package from [PyPI](https://pypi.org/project/lmnr/). You can
+specify the extras to enable automatic instrumentations of client SDKs/libraries.
+
+For example, to enable automatic instrumentations of Anthropic and OpenAI, run:
+
+```sh
+pip install 'lmnr[anthropic,openai]'
+```
+
+<Warning>
+If you do not specify the extras, no automatic instrumentation will be enabled.
+</Warning>
+
+<Expandable title="all available extras">
+- `alephalpha`
+- `anthropic`
+- `bedrock`
+- `cohere`
+- `google-generativeai`
+- `groq`
+- `haystack`
+- `lancedb`
+- `langchain`
+- `llamaindex`
+- `marqo`
+- `milvus`
+- `mistralai`
+- `ollama`
+- `openai`
+- `pinecone`
+- `qdrant`
+- `replicate`
+- `sagemaker`
+- `together`
+- `transformers`
+- `vertexai`
+- `watsonx`
+- `weaviate`
+</Expandable>
+
+If you want to install all instruments at once with a special `all` extra:
+
+```sh
+pip install 'lmnr[all]'
+```
+
+Note that this will install all the available instruments, which might be a lot of dependencies.
+
+<Note>
+  The extras configuration is only available since version `0.4.39`. Before that default would install all the available instruments.
+</Note>
+
+<Expandable title="other installation options: poetry, uv">
+
+poetry
+
+```sh
+poetry add 'lmnr[anthropic,openai]'
+```
+
+uv
+
+```sh
+uv add lmnr --extra anthropic --extra openai
+```
+
+uv pip
+
+```sh
+uv pip install 'lmnr[anthropic,openai]'
+```
+
+</Expandable>
+
+</Tab>
+</Tabs>

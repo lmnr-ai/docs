@@ -14,20 +14,18 @@ As a user of Laminar, you don't have to deal with the internals of OpenTelemetry
 | span_id | Unique identifier for the span | 8-bytes | UUID [1] | `00000000-0000-0000-0123-456789abcdef` |
 | parent_span_id | Unique identifier for the parent span | 8-bytes | UUID [1] | `00000000-0000-0000-0123-456789abcdef` |
 | name | Name of the span | string | | `my_function` |
-| events [2] | Events associated with the span | Array\<Event\> | | |
-| attributes | Attributes associated with the span. Fully compatible with the `gen_ai` [semantic conventions](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/gen-ai/gen-ai-spans.md) | Key-value pair. Key must comply to semantic conventions, value must be of `AttributeType` [3] | | `{"gen_ai.usage.output_tokens": 369}` |
-| start_time_unix_nano | Start time of the span in nanoseconds [4] | number | timestamp with UTC timezone | `1630000000000000000` |
-| end_time_unix_nano | End time of the span in nanoseconds [4] | number | timestamp with UTC timezone | `1630000000000000000` |
+| events | Events associated with the span | Array\<Event\> | | |
+| attributes | Attributes associated with the span. Fully compatible with the `gen_ai` [semantic conventions](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/gen-ai/gen-ai-spans.md) | Key-value pair. Key must comply to semantic conventions, value must be of `AttributeType` [2] | | `{"gen_ai.usage.output_tokens": 369}` |
+| start_time_unix_nano | Start time of the span in nanoseconds [3] | number | timestamp with UTC timezone | `1630000000000000000` |
+| end_time_unix_nano | End time of the span in nanoseconds [3] | number | timestamp with UTC timezone | `1630000000000000000` |
 
 
 [1] 13th digit in hex UUID depends on UUID version, so technically converting [OTel/WC3's](https://www.w3.org/TR/trace-context/#trace-id) 16-byte and, especially, 8-byte IDs
 to UUIDs is not exactly UUID.
 
-[2] Learn more about event attributes in the [Events Otel page](/events/otel)
+[2] `AttributeType` is a union of `string`, `number`, `boolean`, `Array<string>`, `Array<number>`, `Array<boolean>`
 
-[3] `AttributeType` is a union of `string`, `number`, `boolean`, `Array<string>`, `Array<number>`, `Array<boolean>`
-
-[4] In most OpenTelemetry client implementations, you don't have to convert the timestamp to nanoseconds manually,
+[3] In most OpenTelemetry client implementations, you don't have to convert the timestamp to nanoseconds manually,
 you can simply pass the `Date` / `datetime` object and the client will convert it to nanoseconds.
 
 ## Span attributes
