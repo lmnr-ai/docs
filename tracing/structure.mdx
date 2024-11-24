@@ -76,15 +76,14 @@ def my_function():
 </Tab>
 <Tab title="JavaScript/TypeScript">
 
-Use the `Laminar.contextWithSession` function to create a context with a sessionId.
-All the spans within the context will be associated with the session.
+Use the `Laminar.withSession` wrapper function to create a context with a sessionId.
+All the spans within the wrapper will be associated with the session.
 
 ```javascript
 import { Laminar } from "@lmnr-ai/lmnr";
 import { context as contextApi } from '@opentelemetry/api';
 
-const context = Laminar.contextWithSession({ sessionId: "session123"});
-contextApi.with(context, () => {
+const context = Laminar.withSession({ sessionId: "session123"}, () => {
     // Your code here
 });
 ```

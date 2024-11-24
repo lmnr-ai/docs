@@ -7,6 +7,11 @@ Sometimes you have some context prior to running a function and you want to labe
 creation time. For example, you may want to tag a span with the model provider
 endpoint that you use, or the test dataset that you used to run the request.
 
+Note that labels are not the same as metadata. Metadata is additional information about a trace
+in a form of key-value pairs. Labels are used to categorize and filter spans, and they must
+be created in the Laminar UI in advance. See [metadata](/tracing/metadata) for a more detailed
+comparison.
+
 ### 1. Create a label class
 
 First, you need to create a label class. This is required to define the label name
@@ -97,3 +102,8 @@ The only difference for these labels is that they will have `CODE` as their sour
 <div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
   <img src="/images/labels/labelled-from-code.png" alt="Span with labels from code" style={{ margin: '0px' }}/>
 </div>
+
+#### Filter spans by labels
+
+You can filter spans by labels in the Laminar UI. Go to the traces page and select the spans tab.
+Add a filter by label, and enter the name and value in the format `label_name=label_value`.

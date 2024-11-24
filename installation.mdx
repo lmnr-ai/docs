@@ -3,6 +3,8 @@ title: Installation
 description: Install Laminar
 ---
 
+## Install the package
+
 <Tabs>
 <Tab title="JavaScript/Typescript">
 
@@ -28,20 +30,52 @@ pnpm add @lmnr-ai/lmnr
 </Tab>
 <Tab title="Python">
 
-Install the package from [PyPI](https://pypi.org/project/lmnr/). You can
-specify the extras to enable automatic instrumentations of client SDKs/libraries.
+Install the package from [PyPI](https://pypi.org/project/lmnr/).
+
+```sh
+pip install --upgrade 'lmnr[all]'
+```
+
+This will install the package and enable all the available automatic instrumentations.
+
+However, this installs a lot of dependencies, so you can specify the extras to enable
+specific automatic instrumentations of client SDKs/libraries.
 
 For example, to enable automatic instrumentations of Anthropic and OpenAI, run:
 
 ```sh
-pip install 'lmnr[anthropic,openai]'
+pip install --upgrade 'lmnr[anthropic,openai]'
 ```
 
 <Warning>
-If you do not specify the extras, no automatic instrumentation will be enabled.
+If you do not specify any extras, no automatic instrumentation will be enabled.
 </Warning>
 
-<Expandable title="all available extras">
+<Expandable title="other installation options: poetry, uv">
+
+poetry
+
+```sh
+poetry add 'lmnr[anthropic,openai]'
+```
+
+uv
+
+```sh
+uv add lmnr --extra anthropic --extra openai
+```
+
+uv pip
+
+```sh
+uv pip install 'lmnr[anthropic,openai]'
+```
+
+</Expandable>
+
+
+Full list of available extras:
+
 - `alephalpha`
 - `anthropic`
 - `bedrock`
@@ -66,41 +100,13 @@ If you do not specify the extras, no automatic instrumentation will be enabled.
 - `vertexai`
 - `watsonx`
 - `weaviate`
-</Expandable>
 
-If you want to install all instruments at once with a special `all` extra:
-
-```sh
-pip install 'lmnr[all]'
-```
-
-Note that this will install all the available instruments, which might be a lot of dependencies.
 
 <Note>
-  The extras configuration is only available since version `0.4.39`. Before that default would install all the available instruments.
+  The extras configuration is only available since version `0.4.39`.
+  Before that, default option would install all the available instruments.
 </Note>
 
-<Expandable title="other installation options: poetry, uv">
-
-poetry
-
-```sh
-poetry add 'lmnr[anthropic,openai]'
-```
-
-uv
-
-```sh
-uv add lmnr --extra anthropic --extra openai
-```
-
-uv pip
-
-```sh
-uv pip install 'lmnr[anthropic,openai]'
-```
-
-</Expandable>
 
 </Tab>
 </Tabs>

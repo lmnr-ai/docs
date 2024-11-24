@@ -70,6 +70,7 @@
             "tracing/manual-instrumentation"
           ]
         },
+        "tracing/metadata",
         "tracing/nextjs",
         "tracing/vercel-ai-sdk",
         "tracing/litellm",
@@ -98,7 +99,8 @@
       "group": "Datasets",
       "pages": [
         "datasets/introduction",
-        "datasets/adding-data"
+        "datasets/adding-data",
+        "datasets/indexing"
       ]
     },
     {
@@ -139,6 +141,12 @@
       "group": "Pipelines - API",
       "pages": [
         "api-reference/pipeline/pipeline_run"
+      ]
+    },
+    {
+      "group": "Semantic Search - API",
+      "pages": [
+        "api-reference/semantic-search/semantic-search"
       ]
     }
   ],
