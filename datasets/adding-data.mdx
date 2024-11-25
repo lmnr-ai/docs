@@ -24,65 +24,20 @@ To do that, click "Add from source" at the top of the Datasets page. Then, selec
 
 Supported file formats are: `.csv`, `.json`, `.jsonl`. We infer the format based on the file extension.
 
-- csv - **header is required**, default separator and minimal quoting are assumed. If a row has an empty value or less values than headers, missing values will be filled with empty strings.
+- csv - **header is required**, default separator and minimal quoting are assumed.
+If a row has an empty value or less values than headers, missing values will be filled with empty strings.
 - json - the file must contain **one array** of datapoints.
 - jsonlines - every line must contain one datapoint.
 
 For each datapoint, we first construct the key-value object, and then parse it according to the following rules:
-1. If the only key is `"data"`, and the corresponding value is a JSON object, place that object in datapoint's `"data"`.
-1. If the keys are `"data"` and `"target"`, and both corresponding values are JSON objects, populate the datapoint's `"data"` and `"target"` accordingly.
-1. In **ALL** other cases, all keys and values will go inside `"data"`.
-
-This is needed to ensure that at the top level `"data"` and `"target"` are both JSON objects.
+1. If keys are `"data"`, `"target"`, `"metadata"`, and `"id"`, we place them in the corresponding fields.
+     - If we cannot parse `"id"` as UUID, we assign it a new random UUID.
+2. Otherwise, all keys and values will go inside `"data"`.
 
 If there is an error parsing the file, no datapoints will be added.
 If a single value in the file does not conform to format, it will be silently ignored.
 
-<Expandable title="examples of uploaded data">
-#### Examples
-
-<Tabs>
-    <Tab title='Example 1. `"data"` only'> 
-
-        ```json
-        {"data": {"key1": "val1"}}
-        ```
-
-        becomes:
-
-        ```json
-        {"data": {"key1": "val1"}}
-        ```
-    </Tab>
-    <Tab title = 'Example 2. `"data"` and `"target"`'> 
-        ```json
-        {"data": {"key1": "val1"}, "target": {"target_key1": "target_val1"}}
-        ```
-
-        becomes:
-
-        ```json
-        {"data": {"key1": "val1"}, "target": {"target_key1": "target_val1"}}
-        ```
-    </Tab>
-
-    <Tab title = 'Example 3. Non-object `"data"`'>
-
-        ```json
-        {"data": ["apple", "banana", "cherry"]}
-        ```
-
-        becomes:
-
-        ```json
-        {"data": {"data": ["apple", "banana", "cherry"]}}
-        ```
-    </Tab>
-</Tabs>
-</Expandable>
-
 ## 3. Add manually
 
 Click "Add datapoint" at the top of the Datasets page and new empty row will be added.
-Then, you can fill out the content of "data" and "target" for newly created datapoint.
-Make sure to keep both `data` and `target` as JSON objects. 
+You can any value as long as it is a valid JSON that contains a `data` field.

@@ -109,7 +109,7 @@ import os
 from anthropic import Anthropic
 from openai import OpenAI
 
-from lmnr import observe, Laminar, Instruments
+from lmnr import Laminar, Instruments
 
 Laminar.initialize(
     project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
@@ -160,7 +160,7 @@ See available instruments in [the next subsection](/tracing/automatic-instrument
 ```javascript
 import { OpenAI } from 'openai';
 import * as anthropic from '@anthropic-ai/sdk';
-import { Laminar, observe } from '@lmnr-ai/lmnr';
+import { Laminar } from '@lmnr-ai/lmnr';
 
 Laminar.initialize(
   { projectApiKey: process.env.LMNR_PROJECT_API_KEY,

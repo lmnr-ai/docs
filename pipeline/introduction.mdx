@@ -98,7 +98,8 @@ Here's an example of how to call the pipeline from:
 from lmnr import Laminar
 
 Laminar.initialize(project_api_key='<YOUR_PROJECT_API_KEY>')
-  
+
+# note that if you call from an async function, you need to await the result
 result = Laminar.run(
     pipeline = 'my_pipeline',
     inputs = {
