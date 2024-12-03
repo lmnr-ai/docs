@@ -1,0 +1,252 @@
+---
+title: Configuration
+description: This page describes how to configure evaluations in Laminar and showcases some common use cases.
+---
+
+## Registering human evaluators
+
+You can register human evaluators right from your code. To do this, you will need to
+first create a [labeling queue](/labels/manually-label), and then pass the queue name to the `evaluate` function.
+
+In this example, let's assume you have created labeling queues with names `my_queue` and `my_other_queue`.
+
+<Tabs>
+<Tab title = "JavaScript/TypeScript">
+```javascript
+import { evaluate, HumanEvaluator } from '@lmnr-ai/lmnr';
+
+evaluate({
+    data: evaluationData,
+    executor: async (data) => await getCapital(data),
+    evaluators: { checkCapitalCorrectness: evaluator },
+    projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+    // note, this is new from `@lmnr-ai/lmnr==0.4.18`
+    humanEvaluators: [
+        HumanEvaluator("my_queue"),
+        HumanEvaluator("my_other_queue"),
+    ],
+})
+```
+</Tab>
+<Tab title = "Python">
+```python
+from lmnr import evaluate, HumanEvaluator
+import os
+
+evaluate(
+    data=data,
+    executor=get_capital,
+    evaluators={'check_capital_correctness': evaluator},
+    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
+    # note, this is new from `lmnr==0.4.29`
+    human_evaluators=[
+        HumanEvaluator(queue_name="my_queue"),
+        HumanEvaluator(queue_name="my_other_queue")
+    ],
+)
+```
+</Tab>
+</Tabs>
+
+This will run your programmatic evaluator ("check capital correctness") and then
+send the `target` and `executor_output` to the queues `my_queue` and `my_other_queue`.
+
+When a label is added to an item in the queue, it will be added back to the evaluation alongside
+the programmatic evaluator scores.
+
+You can then visualize the human labeler scores in the UI, and compare them to the
+programmatic evaluator scores.
+
+## Configuring evaluations to report results to locally self-hosted Laminar
+
+In this example, we configure the evaluation to report results to a locally self-hosted Laminar instance.
+
+Evaluations send data to Laminar over both HTTP and gRPC. HTTP is used to create an evaluation and report
+the datapoints, stats, and trace ids. OpenTelemetry traces themselves are sent over gRPC.
+
+Assuming you have configured Laminar to run on ports 8000 and 8001 on your `localhost`, you will need to
+pass these values to the `evaluate` function.
+
+<Tabs>
+<Tab title = "JavaScript/TypeScript">
+```javascript
+import { evaluate } from '@lmnr-ai/lmnr';
+evaluate({
+    data: evaluationData,
+    executor: async (data) => await getCapital(data),
+    evaluators: [evaluator],
+    config: {
+        projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+        baseUrl: 'http://localhost',
+        httpPort: 8000,
+        grpcPort: 8001,
+    }
+})
+```
+Run this file either by executing it, or by running it with `npx lmnr eval` CLI.
+</Tab>
+<Tab title = "Python">
+```python
+from lmnr import evaluate
+evaluate(
+    data=data,
+    executor=get_capital,
+    evaluators={'check_capital_correctness': evaluator},
+    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
+    base_url="http://localhost",
+    http_port=8000,
+    grpc_port=8001,
+)
+```
+Run this file either by executing it, or by running it with `lmnr eval` CLI.
+
+</Tab>
+</Tabs>
+
+
+
+## Using a Laminar dataset for evaluations
+
+### Prerequisites
+
+Have a dataset uploaded to Laminar, or collected from traces. See [datasets](/datasets/introduction) for more information.
+
+### Defining data
+
+To run an evaluation with a Laminar dataset, you pass the dataset object as `data` instead of a list of dictionaries.
+
+Use `LaminarDataset` to create a dataset object. The dataset name should match the name of the dataset in Laminar.
+The constructor also takes an optional `fetch_size`/`fetchSize` parameter, which specifies the number of datapoints to fetch at once.
+The default value is 25. We strongly recommend setting this value to a number that is a multiple of the
+evaluation [batch size](/evaluations/configuration#configuring-evaluations) for best performance.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { evaluate, LaminarDataset } from '@lmnr-ai/lmnr';
+const data = new LaminarDataset("name_of_your_dataset");
+evaluate({
+    data,
+    executor: yourExecutorFunction,
+    evaluators: yourEvaluators,
+    config: {
+        projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+        // ... other optional parameters
+    }
+})
+```
+</Tab>
+<Tab title="Python">
+```python
+from lmnr import evaluate, LaminarDataset
+data = LaminarDataset("name_of_your_dataset")
+evaluate(
+    data=data,
+    executor=your_executor_function,
+    evaluators=your_evaluators,
+    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
+    # ... other optional parameters
+)
+```
+</Tab>
+</Tabs>
+
+### Technical details and extension
+
+`LaminarDataset` is an implementation of an abstract class `EvaluationDataset` which defines 2 methods besides initialization:
+- `__len__` (`size` in JS): Returns the number of datapoints in the dataset.
+- `__getitem__` (`get` in JS): Returns a single datapoint by index.
+
+We also implement a concrete `slice` method to make slicing easier than using `__getitem__` directly.
+
+This is inspired by the PyTorch [`Dataset` class](https://pytorch.org/tutorials/beginner/basics/data_tutorial.html#creating-a-custom-dataset-for-your-files),
+and is designed to be used in a similar way.
+
+You can re-use the `EvaluationDataset` class to create your own dataset classes, for example, to fetch data from a database or an API.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { EvaluationDataset } from '@lmnr-ai/lmnr';
+
+class MyCustomDataset extends EvaluationDataset {
+    constructor(customProperty) {
+        super();
+        // Your custom initialization code here
+    }
+
+    public async size() {
+        // Your custom implementation here
+        return 0;
+    }
+
+    public async get(index: number) {
+        // Your custom implementation here
+        return { data: {}, target: {} };
+    }
+
+    // Optionally, you can implement other custom methods here
+}
+```
+</Tab>
+<Tab title="Python">
+```python
+from lmnr import EvaluationDataset
+
+class MyCustomDataset(EvaluationDataset):
+    def __init__(self, custom_property):
+        super().__init__()
+        # Your custom initialization code here
+    
+    def __len__(self):
+        # Your custom implementation here
+        return 0
+    
+    def __getitem__(self, index):
+        # Your custom implementation here
+        return Datapoint(data={}, target={})
+
+    # Optionally, you can implement other custom methods here
+```
+</Tab>
+</Tabs>
+
+## Configuring evaluations
+
+Evaluations in Laminar are configured using the `evaluate` function. The function takes the following arguments:
+- `data`: Either (1) A list of dictionaries, where each dictionary contains the data and target for a single evaluation; or
+(2) An instance of `LaminarDataset` – read more in [the dedicated section](#using-a-laminar-dataset-for-evaluations) above.
+- `executor`: An optionally async function that takes a single argument, the evaluation data, and returns the output.
+- `evaluators`: A dictionary of async functions that take the output and target as arguments and return a score. Keys in the dictionary are the names of the evaluators.
+- `humanEvaluators`/`human_evaluators` : A list of `HumanEvaluator` objects, which register human evaluators for the evaluation. Read more in [the dedicated section](#registering-human-evaluators) above.
+- `name` (optional): Evaluation name, so it is easier to identify the evaluation in the UI. If not provided, a random name is assigned.
+- `groupId`/`group_id` (optional): An optional string that groups evaluations together. Only evaluations with the same `group_id` can be visually compared.
+
+Additional optional configuration parameters are passed as a `config` object in JavaScript/TypeScript and directly to `evaluate` in Python.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+- `projectApiKey`: The API key of the project where the evaluation results will be stored.
+Required, unless you set the `LMNR_PROJECT_API_KEY` environment variable.
+- `batchSize`: The number of evaluations to run in parallel. Default is `5`.
+- `baseUrl`: The base URL of the Laminar instance. Do NOT include port here. Default is `https://api.lmnr.ai`.
+- `httpPort`: The port of the Laminar instance for HTTP. Used to send evaluation results and metadata.
+Default is 443. For local self-hosted Laminar, use 8000.
+- `grpcPort`: The port of the Laminar instance for gRPC. Used to send traces via OTel gRPC exporter.
+Default is 8443. For local self-hosted Laminar, use 8001.
+- `instrumentModules`: An object with modules to instrument.
+Read more in the [instrumentation guide](/tracing/automatic-instrumentation#instrument-specific-modules-only).
+</Tab>
+<Tab title="Python">
+- `project_api_key`: The API key of the project where the evaluation results will be stored.
+Required, unless you set the `LMNR_PROJECT_API_KEY` environment variable.
+- `batch_size`: The number of evaluations to run in parallel. Default is `5`.
+- `base_url`: The base URL of the Laminar instance. Do NOT include port here. Default is `https://api.lmnr.ai`.
+- `http_port`: The port of the Laminar instance for HTTP. Used to send evaluation results and metadata.
+Default is 443. For local self-hosted Laminar, use 8000.
+- `grpc_port`: The port of the Laminar instance for gRPC. Used to send traces via OTel gRPC exporter.
+Default is 8443. For local self-hosted Laminar, use 8001.
+- `instrument_modules`: A set of modules to instrument.
+Read more in the [instrumentation guide](/tracing/automatic-instrumentation#instrument-specific-modules-only).
+</Tab>
+</Tabs>

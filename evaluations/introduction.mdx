@@ -29,6 +29,8 @@ to the existing one.
 - Datapoint – two values: `data` and `target` each represented as a free-form JSON.
   - `data` – data sent to the executor. Required.
   - `target` – data sent to the evaluator. Usually, contains the expected or target outputs of certain parts of your executor. Optional.
+- Evaluation group - a group of evaluations that evaluate one feature or one part of your application. Results of evaluations in the same
+group are aggregated and visualized together.
 
 ### Example datapoint
 
@@ -50,27 +52,9 @@ For every datapoint in the dataset, evaluation does the following:
 1. Evaluator pipeline produces a numeric output or a json object with several numeric outputs.
 This is stored in the results of the evaluation.
 
-### Example:
+### Example
 
 <Tabs>
-<Tab title = "Python">
-```python
-def write_poem(data: dict) -> str:
-    # ...
-
-def contains_poem(output: str, target: str) -> int:
-    # ...
-
-evaluate(
-    data=[{
-        "data": {"topic": "flowers"},
-        "target": "This is a good poem about flowers"
-    }],
-    executor=write_poem,
-    evaluators={"contains_poem": contains_poem}
-)
-```
-</Tab>
 <Tab title = "JavaScript/TypeScript">
 ```javascript
 const writePoem = (data: {topic: string}) => {
@@ -89,6 +73,24 @@ evaluate({
     executor: writePoem,
     evaluators: { "contains_poem": containsPoem }
 })
+```
+</Tab>
+<Tab title = "Python">
+```python
+def write_poem(data: dict) -> str:
+    # ...
+
+def contains_poem(output: str, target: str) -> int:
+    # ...
+
+evaluate(
+    data=[{
+        "data": {"topic": "flowers"},
+        "target": "This is a good poem about flowers"
+    }],
+    executor=write_poem,
+    evaluators={"contains_poem": contains_poem}
+)
 ```
 </Tab>
 </Tabs>
@@ -115,6 +117,38 @@ The score that is produced by the evaluator is stored in the results of the eval
 #### 1. Create an evaluation file.
 
 <Tabs>
+<Tab title = "JavaScript/TypeScript">
+
+Create a file named `my-first-evaluation.ts` and add the following code:
+
+```javascript my-first-evaluation.ts
+import { evaluate } from '@lmnr-ai/lmnr';
+
+const writePoem = (data: {topic: string}) => {
+    // replace this with your LLM call or custom logic
+    return `This is a good poem about ${data.topic}`
+}
+
+const containsPoem = (output: string, target: string): number => {
+    return output.includes(target) ? 1 : 0
+}
+
+evaluate({
+    data: [
+        {
+            data: { topic: 'flowers' },
+            target: 'This is a good poem about flowers',
+        },
+        {
+            data: { topic: 'cats' },
+            target: 'I like cats',
+        },
+    ],
+    executor: writePoem,
+    evaluators: { contains_poem: containsPoem }
+})
+```
+</Tab>
 <Tab title = "Python">
 
 Create a file named `my-first-evaluation.py` and add the following code:
@@ -146,38 +180,6 @@ evaluate(
 ```
 
 </Tab>
-<Tab title = "JavaScript/TypeScript">
-
-Create a file named `my-first-evaluation.ts` and add the following code:
-
-```javascript my-first-evaluation.ts
-import { evaluate } from '@lmnr-ai/lmnr';
-
-const writePoem = (data: {topic: string}) => {
-    // replace this with your LLM call or custom logic
-    return `This is a good poem about ${data.topic}`
-}
-
-const containsPoem = (output: string, target: string) => {
-    return output.includes(target) ? 1 : 0
-}
-
-evaluate({
-    data: [
-        {
-            data: { topic: 'flowers' },
-            target: 'This is a good poem about flowers',
-        },
-        {
-            data: { topic: 'cats' },
-            target: 'I like cats',
-        },
-    ],
-    executor: writePoem,
-    evaluators: { contains_poem: containsPoem }
-})
-```
-</Tab>
 </Tabs>
 
 #### 2. Run the evaluation
@@ -186,6 +188,12 @@ You can run the evaluations both from Laminar CLI and from code.
 To run the evaluation from the CLI, execute the following command:
 
 <Tabs>
+<Tab title = "JavaScript/TypeScript">
+```sh
+export LMNR_PROJECT_API_KEY=<YOUR_PROJECT_API_KEY>
+npx lmnr eval my-first-evaluation.ts
+```
+</Tab>
 <Tab title = "Python">
 ```sh
 # 1. Make sure `lmnr` is installed in a virtual environment
@@ -195,13 +203,6 @@ export LMNR_PROJECT_API_KEY=<YOUR_PROJECT_API_KEY>
 lmnr eval my-first-evaluation.py
 ```
 </Tab>
-<Tab title = "JavaScript/TypeScript">
-```sh
-export LMNR_PROJECT_API_KEY=<YOUR_PROJECT_API_KEY>
-npx lmnr eval my-first-evaluation.ts
-```
-</Tab>
-
 </Tabs>
 
 To run the evaluation directly from code, simply call the `evaluate` function, i.e. import or
@@ -240,4 +241,68 @@ or the evaluator, you will also see the LLM spans in the trace.
     src="/images/evaluations/evaluation-trace.png"
     alt="Example evaluation trace screenshot"
   />
+</Frame>
+
+### Grouping evaluations
+
+To be able to track the score progression over time, or compare evaluations side-by-side,
+you need to group them together. This can be achieved by passing the `groupId` parameter
+to the `evaluate` function.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { evaluate, LaminarDataset } from '@lmnr-ai/lmnr';
+
+evaluate({
+    data: new LaminarDataset("name_of_your_dataset"),
+    executor: yourExecutorFunction,
+    evaluators: {evaluatorName: yourEvaluator},
+    groupId: "evals_group_1",
+    config: {
+        projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+        // ... other optional parameters
+    }
+});
+```
+</Tab>
+<Tab title="Python">
+```python
+from lmnr import evaluate, LaminarDataset
+import os
+
+evaluate(
+    data=LaminarDataset("name_of_your_dataset"),
+    executor=your_executor_function,
+    evaluators={"evaluator_name": your_evaluator},
+    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
+    group_id="evals_group_1",
+    # ... other optional parameters
+)
+```
+</Tab>
+</Tabs>
+
+#### Tracking evaluation score progression over time
+
+You can see how the score changes over time for a given group by clicking on the group name in the evaluations page.
+
+<Frame caption = "Example evaluation score progression over time.">
+    <img
+        height="300"
+        src="/images/evaluations/eval-score-progression.png"
+        alt="Example evaluation score progression over time."
+    />
+</Frame>
+
+#### Comparing evaluations side-by-side
+
+Laminar allows you to compare evaluations side-by-side in the UI.
+
+<Frame caption = "Example comparison of two evaluation runs.">
+    <img
+        height="300"
+        src="/images/evaluations/compare-evals.png"
+        alt="Screenshot of the comparison of two evaluation runs."
+    />
 </Frame>

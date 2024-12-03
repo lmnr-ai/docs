@@ -82,8 +82,8 @@
       "group": "Evaluations",
       "pages": [
         "evaluations/introduction",
-        "evaluations/configurations",
-        "evaluations/examples",
+        "evaluations/configuration",
+        "evaluations/cookbook",
         "evaluations/online-evaluations"
       ]
     },

@@ -1,55 +1,7 @@
 ---
-title: Examples
+title: Eval cookbook
 description: Examples of evaluations in Laminar
 ---
-
-## Comparing evaluations side-by-side
-
-Laminar allows you to compare evaluations side-by-side in the UI.
-
-<Frame caption = "Example comparison of two evaluation runs.">
-    <img
-        height="300"
-        src="/images/evaluations/compare-evals.png"
-        alt="Screenshot of the comparison of two evaluation runs."
-    />
-</Frame>
-
-To do this, you need to group evaluations together. This can be achieved by passing the `group_id` parameter to the `evaluate` function.
-
-<Tabs>
-<Tab title="Python">
-```python
-from lmnr import evaluate, LaminarDataset
-import os
-
-evaluate(
-    data=LaminarDataset("name_of_your_dataset"),
-    executor=your_executor_function,
-    evaluators={"evaluator_name": your_evaluator},
-    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
-    group_id="evals_group_1",
-    # ... other optional parameters
-)
-```
-</Tab>
-<Tab title="JavaScript/TypeScript">
-```javascript
-import { evaluate, LaminarDataset } from '@lmnr-ai/lmnr';
-
-evaluate({
-    data: new LaminarDataset("name_of_your_dataset"),
-    executor: yourExecutorFunction,
-    evaluators: {evaluatorName: yourEvaluator},
-    groupId: "evals_group_1",
-    config: {
-        projectApiKey: process.env.LMNR_PROJECT_API_KEY,
-        // ... other optional parameters
-    }
-});
-```
-</Tab>
-</Tabs>
 
 ## Basic correctness evaluation
 
@@ -59,41 +11,20 @@ We then evaluate the correctness of the prediction by checking for exact match w
 <Steps>
 <Step title="1. Define an executor function">
 
-An executor function calls OpenAI to get the capital of a country.
+The executor function calls OpenAI to get the capital of a country.
 The prompt also asks to only name the city and nothing else. In a real scenario,
 you will likely want to use structured output to get the city name only.
 
 <Tabs>
-<Tab title = "Python">
-```python
-from openai import AsyncOpenAI
-
-openai_client = AsyncOpenAI(api_key=os.environ["OPENAI_API_KEY"])
-
-async def get_capital(data):
-    country = data["country"]
-    response = await openai_client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {
-                "role": "user",
-                "content": f"What is the capital of {country}? Just name the "
-                "city and nothing else",
-            },
-        ],
-    )
-    return response.choices[0].message.content.strip()
-
-```
-</Tab>
 <Tab title = "JavaScript/TypeScript">
 ```javascript
 import OpenAI from 'openai';
 
 const openai = new OpenAI({apiKey: process.env.OPENAI_API_KEY});
 
-const getCapital = async ({country}: {country: string}): Promise<string> => {
+const getCapital = async (
+    {country}: {country: string}
+): Promise<string> => {
     const response = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
@@ -112,29 +43,48 @@ const getCapital = async ({country}: {country: string}): Promise<string> => {
 
 ```
 </Tab>
+<Tab title = "Python">
+```python
+from openai import AsyncOpenAI
+
+openai_client = AsyncOpenAI(api_key=os.environ["OPENAI_API_KEY"])
+
+async def get_capital(data):
+    country = data["country"]
+    response = await openai_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {
+                "role": "user",
+                "content": f"What is the capital of {country}? "
+                "Just name the city and nothing else",
+            },
+        ],
+    )
+    return response.choices[0].message.content.strip()
+```
+</Tab>
 </Tabs>
 
 </Step>
 <Step title="2. Define an evaluator function">
 
-An evaluator function checks for exact match and returns 1 if the executor output 
+The evaluator function checks for exact match and returns 1 if the executor output 
 matches the target, and 0 otherwise.
 
 <Tabs>
+<Tab title = "JavaScript/TypeScript">
+```javascript
+const evaluator = async (output, target) =>
+    (await output) === target.capital ? 1 : 0
+```
+</Tab>
 <Tab title = "Python">
 ```python
 def evaluator(output, target):
     return 1 if output == target["capital"] else 0
 ```
-</Tab>
-<Tab title = "JavaScript/TypeScript">
-
-```javascript
-
-const evaluator = async (output, target) =>
-        (await output) === target.capital ? 1 : 0
-```
-
 </Tab>
 </Tabs>
 
@@ -142,29 +92,8 @@ const evaluator = async (output, target) =>
 <Step title="3. Define data and run the evaluation">
 
 <Tabs>
-<Tab title = "Python">
-```python
-from lmnr import evaluate
-import os
-
-data = [
-    {"data": {"country": "Germany"}, "target": {"capital": "Berlin"}},
-    {"data": {"country": "Canada"}, "target": {"capital": "Ottawa"}},
-    {"data": {"country": "Tanzania"}, "target": {"capital": "Dodoma"}},
-]
-
-evaluate(
-    data=data,
-    executor=get_capital,
-    evaluators={'check_capital_correctness': evaluator},
-    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
-)
-
-```
-</Tab>
 <Tab title = "JavaScript/TypeScript">
-
-```javascript
+```javascript my-eval.ts
 import { evaluate } from '@lmnr-ai/lmnr';
 
 const evaluationData = [
@@ -182,6 +111,30 @@ evaluate({
     }
 })
 ```
+
+And then run either `ts-node my-eval.ts` or `npx lmnr eval my-eval.ts`.
+</Tab>
+<Tab title = "Python">
+```python my-eval.py
+from lmnr import evaluate
+import os
+
+data = [
+    {"data": {"country": "Germany"}, "target": {"capital": "Berlin"}},
+    {"data": {"country": "Canada"}, "target": {"capital": "Ottawa"}},
+    {"data": {"country": "Tanzania"}, "target": {"capital": "Dodoma"}},
+]
+
+evaluate(
+    data=data,
+    executor=get_capital,
+    evaluators={'check_capital_correctness': evaluator},
+    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
+)
+
+```
+
+And then run either `python my-eval.py` or `lmnr eval my-eval.py`.
 </Tab>
 </Tabs>
 </Step>
@@ -244,6 +197,14 @@ because, for a few years prior to their data cut-off, the capital was indeed cal
 Since the dataset already contains the LLM output, we can simply extract it from the dataset instead of calling the LLM.
 
 <Tabs>
+<Tab title = "JavaScript/TypeScript">
+```javascript
+const getCapital = async (data: Record<string, string>): Promise<string> => {
+    return data.llm_output
+}
+
+```
+</Tab>
 <Tab title = "Python">
 ```python
 from openai import AsyncOpenAI
@@ -253,37 +214,26 @@ async def get_capital(data):
 
 ```
 </Tab>
-<Tab title = "JavaScript/TypeScript">
-```javascript
-const getCapital = async (data: Record<string, string>): Promise<string> => {
-    return data.llm_output
-}
-
-```
-</Tab>
 </Tabs>
 
 </Step>
 <Step title="2. Define an evaluator function">
 
-An evaluator function checks for exact match and returns 1 if the executor output 
+The evaluator function checks for exact match and returns 1 if the executor output 
 matches the target, and 0 otherwise.
 
 <Tabs>
+<Tab title = "JavaScript/TypeScript">
+```javascript
+const evaluator = async (output, target) =>
+    (await output) === target.capital ? 1 : 0
+```
+</Tab>
 <Tab title = "Python">
 ```python
 def evaluator(output, target):
     return 1 if output == target["capital"] else 0
 ```
-</Tab>
-<Tab title = "JavaScript/TypeScript">
-
-```javascript
-
-const evaluator = async (output, target) =>
-        (await output) === target.capital ? 1 : 0
-```
-
 </Tab>
 </Tabs>
 
@@ -291,27 +241,8 @@ const evaluator = async (output, target) =>
 <Step title="3. Define data and run the evaluation">
 
 <Tabs>
-<Tab title = "Python">
-```python
-from lmnr import evaluate
-import os
-
-data = [
-    # ... your dataset here
-]
-
-evaluate(
-    data=data,
-    executor=get_capital,
-    evaluators={'check_capital_correctness': evaluator},
-    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
-)
-
-```
-</Tab>
 <Tab title = "JavaScript/TypeScript">
-
-```javascript
+```javascript my-eval.ts
 import { evaluate } from '@lmnr-ai/lmnr';
 
 const evaluationData = [
@@ -328,9 +259,29 @@ evaluate({
 })
 ```
 
+And then run either `ts-node my-eval.ts` or `npx lmnr eval my-eval.ts`.
 </Tab>
-</Tabs>
+<Tab title = "Python">
+```python my-eval.py
+from lmnr import evaluate
+import os
 
+data = [
+    # ... your dataset here
+]
+
+evaluate(
+    data=data,
+    executor=get_capital,
+    evaluators={'check_capital_correctness': evaluator},
+    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
+)
+
+```
+</Tab>
+
+And then run either `python my-eval.py` or `lmnr eval my-eval.py`.
+</Tabs>
 </Step>
 </Steps>
 
@@ -366,29 +317,6 @@ The data may look something like the following:
 An executor function calls OpenAI to summarize a news article. It returns a single string, the summary.
 
 <Tabs>
-<Tab title = "Python">
-```python
-from openai import AsyncOpenAI
-
-openai_client = AsyncOpenAI(api_key=os.environ["OPENAI_API_KEY"])
-
-async def get_summary(data: dict[str, str]) -> str:
-    response = await openai_client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {
-                "role": "system",
-                "content": "Summarize the articles that the user sends you"
-            }, {
-                "role": "user",
-                "content": data["article"],
-            },
-        ],
-    )
-    return response.choices[0].message.content.strip()
-
-```
-</Tab>
 <Tab title = "JavaScript/TypeScript">
 ```javascript
 import OpenAI from 'openai';
@@ -413,6 +341,29 @@ const getSummary = async (data: {article: string}): Promise<string> => {
 
 ```
 </Tab>
+<Tab title = "Python">
+```python
+from openai import AsyncOpenAI
+
+openai_client = AsyncOpenAI(api_key=os.environ["OPENAI_API_KEY"])
+
+async def get_summary(data: dict[str, str]) -> str:
+    response = await openai_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {
+                "role": "system",
+                "content": "Summarize the articles that the user sends you"
+            }, {
+                "role": "user",
+                "content": data["article"],
+            },
+        ],
+    )
+    return response.choices[0].message.content.strip()
+
+```
+</Tab>
 </Tabs>
 
 </Step>
@@ -427,25 +378,6 @@ it may be useful for debugging or further analysis. In addition, LLMs are known 
 when given a chance to explain their reasoning.
 
 <Tabs>
-<Tab title = "Python">
-```python
-import json
-async def grade_summary(summary: str, target: dict[str, str]) -> int:
-    response = await openai_client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{
-            "role": "user",
-            "content": "Given an article and its summary, grade the " +
-                "summary from 1 to 5. Answer in json format. For example: " +
-                '{"grade": 3, "comment": "The summary is missing key points"}' +
-                f"Article: {target['article']}. Summary: {summary}"
-            },
-        ],
-    )
-    return int(json.loads(response.choices[0].message.content.strip())["grade"])
-
-```
-</Tab>
 <Tab title = "JavaScript/TypeScript">
 ```javascript
 import OpenAI from 'openai';
@@ -461,13 +393,34 @@ const gradeSummary = async (
         messages: [{
             role: "user",
             content: "Given an article and its summary, grade the " +
-                "summary from 1 to 5. Answer in json format. For example: " +
-                '{"grade": 3, "comment": "The summary is missing key points"}' +
+                "summary from 1 to 5. Answer in json. For example: " +
+                '{"grade": 3, "comment": "Summary is missing key points"}' +
                 `Article: ${target['article']}. Summary: ${summary}`
         }],
     });
     return JSON.parse(response.choices[0].message.content ?? '')["grade"]
 }
+```
+</Tab>
+<Tab title = "Python">
+```python
+import json
+async def grade_summary(summary: str, target: dict[str, str]) -> int:
+    response = await openai_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{
+            "role": "user",
+            "content": "Given an article and its summary, grade the " +
+              "summary from 1 to 5. Answer in json. For example: " +
+              '{"grade": 3, "comment": "Summary is missing key points"}' +
+              f"Article: {target['article']}. Summary: {summary}"
+            },
+        ],
+    )
+    return int(
+        json.loads(response.choices[0].message.content.strip())["grade"]
+    )
+
 ```
 </Tab>
 </Tabs>
@@ -476,29 +429,9 @@ const gradeSummary = async (
 <Step title="4. Run the evaluation">
 
 <Tabs>
-<Tab title = "Python">
-```python
-from lmnr import evaluate
-import os
-
-data = [
-    { "data": { "article": '...' }, "target": { "article": '...' } },
-    { "data": { "article": '...' }, "target": { "article": '...' } },
-    { "data": { "article": '...' }, "target": { "article": '...' } },
-]
-
-evaluate(
-    data=data,
-    executor=get_summary,
-    evaluators={'grade_summary': grade_summary},
-    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
-)
-
-```
-</Tab>
 <Tab title = "JavaScript/TypeScript">
 
-```javascript
+```javascript my-eval.ts
 import { evaluate } from '@lmnr-ai/lmnr';
 
 const evaluationData = [
@@ -517,8 +450,68 @@ evaluate({
 })
 ```
 
+And then run either `ts-node my-eval.ts` or `npx lmnr eval my-eval.ts`.
+</Tab>
+<Tab title = "Python">
+```python my-eval.py
+from lmnr import evaluate
+import os
+
+data = [
+    {"data": {"article": '...'}, "target": {"article": '...'}},
+    {"data": {"article": '...'}, "target": {"article": '...'}},
+    {"data": {"article": '...'}, "target": {"article": '...'}},
+]
+
+evaluate(
+    data=data,
+    executor=get_summary,
+    evaluators={'grade_summary': grade_summary},
+    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
+)
+
+```
+
+And then run either `python my-eval.py` or `lmnr eval my-eval.py`.
 </Tab>
 </Tabs>
 </Step>
 </Steps>
 
+## Evaluation with no target
+
+Sometimes you may want to run evaluations on the output of the executor without a target.
+This can be useful, for example, to check if the output of the executor is in the correct format
+or if you want to use an LLM as a judge evaluator that generally evaluates the output.
+
+<Tabs>
+<Tab title = "JavaScript/TypeScript">
+
+This is as simple as not passing `target` to your evaluator functions.
+
+```javascript
+function isOutputLongEnough(output) {
+    return output.length > 100 ? 1 : 0
+}
+```
+</Tab>
+<Tab title = "Python">
+
+In Python, you will have to add `*args, **kwargs` to your evaluator function.
+
+```python
+def is_output_long_enough(output, *args, **kwargs):
+    return int(len(output) > 100)
+```
+</Tab>
+</Tabs>
+
+And for your dataset, you can just remove the `target` field. For example:
+
+```json
+[
+    { "data": { "article": "..." } },
+    { "data": { "article": "..." } },
+    { "data": { "article": "..." } },
+]
+```
