@@ -7,16 +7,31 @@ title: "Vercel AI SDK"
 
 Laminar tracing is based on OpenTelemetry, so it is fully compatible with Vercel AI SDK tracing and you can start sending Vercel AI SDK traces to Laminar right away.
 
+This guide will show you how to send Vercel AI SDK traces to Laminar if you are using NextJS app router.
+
 <Steps>
 <Step title="Initialize Laminar">
 
-Initialize Laminar with your project API key.
-```typescript Initialize Laminar
+1. Add `instrumentation.ts` to the root of your NextJS project. Learn more about `instrumentation.ts` [here](https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation).
+
+2. Inside of `instrumentation.ts`, initialize Laminar with your project API key as follows:
+```typescript instrumentations.ts
 import { Laminar } from '@lmnr-ai/lmnr';
 
-Laminar.initialize({
-    projectApiKey: process.env.LMNR_API_KEY,
-});
+export async function register() {
+  // prevent this from running in the edge runtime
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+
+    const { Laminar } = await import('@lmnr-ai/lmnr');
+    Laminar.initialize({
+      projectApiKey: process.env.LMNR_API_KEY,
+    });
+  }
+}
+```
+3. By default, Laminar will track all OpenTelemetry traces. To prevent tracking all API calls, set the following environment variable:
+```shell
+export NEXT_OTEL_FETCH_DISABLED=1
 ```
 </Step>
 <Step title="Enable Vercel AI SDK tracing">
@@ -40,16 +55,12 @@ await generateText({
 ```
 </Step>
 <Step title="NextJS">
-If you are using AI SDK in the NextJS route handler, your code might look like this:
+NextJS route handler example:
 
 ```typescript NextJS
 import { Laminar } from '@lmnr-ai/lmnr';
 import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
-
-Laminar.initialize({
-    projectApiKey: process.env.LMNR_API_KEY,
-});
 
 export async function GET() {
 
