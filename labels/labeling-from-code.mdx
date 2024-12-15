@@ -39,7 +39,7 @@ with Laminar.with_labels({"my_label": "my_value", "another_label": "value"}):
 ```
 
 Note that any spans created within the `with_labels` block will inherit the labels,
-including auto-instrumented spans or any calls to `observe`d. functions.
+including auto-instrumented spans or any calls to `observe`d functions.
 
 #### Example 2. Labeling a span created manually
 
@@ -69,7 +69,7 @@ await withLabels({ my_label: 'my_value' }, (message: string) => {
 }, userMessageValue);
 ```
 Note that any spans created within the `withLabels` function will inherit the labels,
-including auto-instrumented spans or any calls to `observe`d. functions.
+including auto-instrumented spans or any calls to `observe`d functions.
 
 #### Example 2. Labeling a span created manually
 
