@@ -193,6 +193,20 @@ To run the evaluation from the CLI, execute the following command:
 export LMNR_PROJECT_API_KEY=<YOUR_PROJECT_API_KEY>
 npx lmnr eval my-first-evaluation.ts
 ```
+
+If you want to run multiple files, place them in the `evals` directory,
+and name the files such that they end with `.eval.{ts,js}`.
+
+```
+├─ src/
+├─ evals/
+│  ├── my-first-evaluation.eval.ts
+│  ├── my-second-evaluation.eval.ts
+│  ├── ...
+```
+
+Then, run `npx lmnr eval` to run all the evaluation files in the `evals` directory.
+
 </Tab>
 <Tab title = "Python">
 ```sh
@@ -202,6 +216,20 @@ npx lmnr eval my-first-evaluation.ts
 export LMNR_PROJECT_API_KEY=<YOUR_PROJECT_API_KEY>
 lmnr eval my-first-evaluation.py
 ```
+
+If you want to run multiple files, place them in the `evals` directory,
+and name the files `eval_*.py` or `*_eval.py`.
+
+```
+├─ src/
+├─ evals/
+│  ├── eval_first.py
+│  ├── second_eval.py
+│  ├── ...
+```
+
+Then, run `lmnr eval` to run all the evaluation files in the `evals` directory.
+
 </Tab>
 </Tabs>
 

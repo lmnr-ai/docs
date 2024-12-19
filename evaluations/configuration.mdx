@@ -213,6 +213,8 @@ class MyCustomDataset(EvaluationDataset):
 
 ## Configuring evaluations
 
+### evaluate reference
+
 Evaluations in Laminar are configured using the `evaluate` function. The function takes the following arguments:
 - `data`: Either (1) A list of dictionaries, where each dictionary contains the data and target for a single evaluation; or
 (2) An instance of `LaminarDataset` – read more in [the dedicated section](#using-a-laminar-dataset-for-evaluations) above.
@@ -250,3 +252,28 @@ Default is 8443. For local self-hosted Laminar, use 8001.
 Read more in the [instrumentation guide](/tracing/automatic-instrumentation#instrument-specific-modules-only).
 </Tab>
 </Tabs>
+
+### eval CLI reference
+
+`lmnr eval` subcommand is used to run evaluations.
+
+```bash
+lmnr eval [options]
+# or in most Node settings
+npx lmnr eval [options]
+```
+
+#### Options
+
+First positional argument is the path to the evaluation file. E.g.
+
+```bash
+lmnr eval ./evals/my_evaluation.eval.ts
+```
+
+If file is not provided, `lmnr eval` will run all files in the `evals` directory that match the naming pattern.
+For TypeScript/JavaScript, the pattern is `*.eval.{ts,js}`. For Python, the pattern is `eval_*.py` or `*_eval.py`.
+
+#### Params
+
+`--fail-on-error` – if set, the CLI will fail on non-critical errors, for example, if `evaluate` is not called in the file. Default is `false`.
