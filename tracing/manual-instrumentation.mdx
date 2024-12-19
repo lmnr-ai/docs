@@ -479,7 +479,7 @@ outer.end()
 
 <Tip>
 Ending the span is required. If you don't end the span, the trace will not be recorded.
-You can also end the span in the last by passing `end_on_exit=True` to the last `use_span`.
+You can also end the span by passing `end_on_exit=True` to the last `use_span`.
 </Tip>
 
 </Tab>
@@ -517,7 +517,7 @@ outer.end();
 ```
 <Tip>
 Ending the span is required. If you don't end the span, the trace will not be recorded.
-You can also end the span in the last by passing `true` as the third argument (`endOnExit`)
+You can also end the span by passing `true` as the third argument (`endOnExit`)
 to the last `Laminar.withSpan`.
 </Tip>
 </Tab>
@@ -579,14 +579,14 @@ Both spans, `foo` and `bar`, will be in the same trace, because they have the sa
 import { Laminar } from '@lmnr-ai/lmnr';
 
 Laminar.initialize({ projectApiKey: process.env.LMNR_PROJECT_API_KEY });
-const foo = async () => {
-    await observe({ name: 'foo', traceId: traceId }, async () => {
+const foo = async (traceId: string) => {
+    await observe({ name: 'foo', traceId }, async () => {
         // your code here
     });
 }
 
-const bar = async () => {
-    await observe({ name: 'bar', traceId: traceId }, async () => {
+const bar = async (traceId: string) => {
+    await observe({ name: 'bar', traceId }, async () => {
         // your code here
     });
 }
@@ -594,8 +594,8 @@ const bar = async () => {
 // if this is not available, use `v4()` from `uuid` package.
 const traceId = crypto.randomUUID();
 
-foo();
-bar();
+foo(traceId);
+bar(traceId);
 ```
 Both spans, `foo` and `bar`, will be in the same trace, because they have the same trace ID.
 </Tab>

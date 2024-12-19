@@ -29,13 +29,16 @@ separate functions into a single trace.
 ```javascript
 import { observe } from '@lmnr-ai/lmnr';
 
-const myFunction = observe({name: 'myFunction'}, async () => {
-  const response = await client.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{ role: "user", content: "What is the capital of France?" }],
-  });
-  return response.choices[0].message.content;
-});
+const myFunction = observe(
+  { name: 'myFunction'}, 
+  async () => {
+    const response = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: "What is the capital of France?" }],
+    });
+    return response.choices[0].message.content;
+  }
+);
 
 await myFunction();
 ```
@@ -53,3 +56,18 @@ We are now recording `my_function` *and* the OpenAI call, which is nested inside
 You can nest as many spans as you want inside each other. By observing both the functions and the LLM/vector DB calls
 you can have better visualization of execution flow which is useful for debugging and better understanding of the application.
 </Tip>
+
+Input arguments to the function are automatically recorded as inputs of the span. The return value is automatically recorded as the output of the span.
+
+Passing arguments to the function in TypeScript is slightly non-trivial. Example:
+
+```javascript
+const myFunction = observe(
+  { name: 'myFunction'}, 
+  async (param1, param2) => {
+    // ...
+  }
+  'argValue1',
+  'argValue2'
+);
+```
