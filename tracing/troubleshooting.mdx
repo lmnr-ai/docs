@@ -35,35 +35,6 @@ Laminar.initialize({ projectApiKey: process.env.LMNR_PROJECT_API_KEY });
 await Laminar.shutdown(); // NOTE: don't forget to await
 ```
 
-## I can see my trace in the Laminar UI, but it is not showing the spans.
-
-### Problem
-
-Our UI relies on the presence of a "parent" span in every trace. If the parent span is missing, the trace will not be correctly displayed.
-
-### Cause
-
-Parent span may have not been sent correctly from the SDK.
-This typically happens when an exception occurs before the parent span is properly ended. It could also be that everything is sent correctly,
-and you are just looking at the trace too early, before the parent span is sent.
-
-Common causes:
-- `observe()` function is not awaited in JS
-- Node process exits before the last span to finish (commonly, parent span)
-is sent. See [My JS traces are not showing up in the Laminar UI](#my-js-traces-are-not-showing-up-in-the-laminar-ui).
-- span is [created manually](/tracing/introduction#manually-creating-spans) in Python, but a
-`with` statement is not used, or the span is not ended properly in the `finally` block.
-
-If this happens elsewhere, especially in the Python's `@observe` decorator, it is likely a bug in the SDK.
-
-### Solution
-
-If the trace is very recent (and possibly very nested and large), wait a few seconds and refresh the page.
-
-If the problem still persists, make sure that the `observe()` function is awaited in JavaScript, and that the `with` statement is used in Python for manual span creation.
-
-If you are sure that the spans are created correctly, but the issue persists, please report it in our [Discord server](https://discord.gg/nNFUUDAKub).
-
 ## I can see traces and spans in the UI, but they are not showing inputs and/or outputs.
 
 ### Problem
@@ -82,6 +53,41 @@ that the serialization fails.
 
 Make sure inputs and outputs to your functions or spans are serializable to JSON. If you are using custom objects, make sure their fields are serializible.
 In Python, that may mean having to implement `default()` method on some of them, or on the parent object.
+
+## [Next.js] Many of my Next.js route requests are instrumented in the Laminar UI, even though I don't want that.
+
+### Problem
+
+I see many traces and spans in the UI, but most of them are just noise, they merely are route requests.
+
+Some examples of noise spans:
+- GET /my/route
+- resolve page component
+- executing api route (app) /my/route
+- start response
+
+### Cause
+
+Next.js telemetry sends numerous [spans](https://nextjs.org/docs/app/building-your-application/optimizing/open-telemetry#default-spans-in-nextjs), which may seem noisy in Laminar's dashboard.
+
+Laminar ignores Next.js spans by default, but this is only introduced in `@lmnr-ai/lmnr@0.4.29`.
+
+### Solution
+
+Upgrade to `@lmnr-ai/lmnr@0.4.29` or higher.
+
+```sh
+npm install @lmnr-ai/lmnr@latest
+```
+
+If you still want to see Next.js spans, set `preserveNextjsSpans` to `true` in `Laminar.initialize()` after upgrading.
+
+```javascript
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_API_KEY,
+  preserveNextjsSpans: true
+});
+```
 
 ## Many of my JS route requests are instrumented in the Laminar UI, even though I don't want that.
 
@@ -133,8 +139,6 @@ The most noisy ones are `fs`, `http`, `dns`, `undici` (GET/POST requests), `expr
 ```sh
 export OTEL_NODE_DISABLED_INSTRUMENTATIONS="fs,http,dns,undici,express"
 ```
-
-For Next JS in particular, you can also disable most of the noise by setting `NEXT_OTEL_FETCH_DISABLED=1`. [Read more](/tracing/nextjs#2-initialize-laminar).
 
 However, if you still want to use the basic instrumentations above, you could:
 
