@@ -29,10 +29,6 @@ export async function register() {
   }
 }
 ```
-3. By default, Laminar will track all OpenTelemetry traces. To prevent tracking all API calls, set the following environment variable:
-```shell
-export NEXT_OTEL_FETCH_DISABLED=1
-```
 </Step>
 <Step title="Enable Vercel AI SDK tracing">
 Enable `experimental_telemetry` in the Vercel AI SDK configuration.
