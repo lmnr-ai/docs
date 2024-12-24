@@ -13,16 +13,7 @@ npm add @lmnr-ai/lmnr
 
 ## 2. Initialize Laminar
 
-We suggest to disable Next.js OpenTelemetry instrumentation to avoid excessive tracing.
-
-```bash
-export NEXT_OTEL_FETCH_DISABLED=1
-```
-
-### Observing entire application
-
-To instrument your entire Next.js app, place Laminar initialization in `instrumentation.ts` file. Learn more about `instrumentation.ts` [here](https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation).
-
+To instrument your entire Next.js app, place Laminar initialization in `instrumentation.{ts,js}` file. Learn more about `instrumentation.{ts,js}` [here](https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation).
 
 ```typescript instrumentation.ts
 export async function register() {
@@ -49,17 +40,6 @@ module.exports = {
 };
 ```
 
-### Observing specific routes
-
-If you want to instrument a specific [app router](https://nextjs.org/docs/app) route,
-initialize Laminar at the top of your route file.
-
-```javascript
-import { Laminar } from '@lmnr-ai/lmnr';
-
-Laminar.initialize({ projectApiKey: process.env.LMNR_PROJECT_API_KEY });
-```
-
 <Tip>
 Simple initialization may not work for all cases.
 </Tip>
@@ -67,14 +47,14 @@ Simple initialization may not work for all cases.
 The best workaround is to selectively pass `instrumentModules` to `.initialize()`.
 The example below shows how to do this for OpenAI and Anthropic.
 
-```javascript app/.../route.ts
-import OpenAI from 'openai';
-import * as anthropic from '@anthropic-ai/sdk';
-import { Laminar } from '@lmnr-ai/lmnr';
+```javascript
+const { OpenAI } = await import('openai');
+const anthropic = await import('@anthropic-ai/sdk');
+const { Laminar } = await import('@lmnr-ai/lmnr');
 
 Laminar.initialize({
-    projectApiKey: process.env.LMNR_PROJECT_API_KEY,
-    instrumentModules: { openAI: OpenAI, anthropic: anthropic }
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+  instrumentModules: { openAI: OpenAI, anthropic: anthropic }
 });
 ```
 
@@ -83,3 +63,17 @@ you can do simple initialization, however, you will need to import _and_ initial
 This is because JavaScript binds the imported module to its name at import time, so introducing
 instrumentation afterwards statically is not possible.
 
+## Next.js traces
+
+Next.js telemetry sends numerous [spans](https://nextjs.org/docs/app/building-your-application/optimizing/open-telemetry#default-spans-in-nextjs), which may seem noisy in Laminar's dashboard.
+
+By default, Laminar (since `@lmnr-ai/lmnr@0.4.29`) ignores Next.js spans. If you see many Next.js spans in your traces, it may be that you are using an older version of Laminar. Consider upgrading to the latest version.
+
+If you want to see all Next.js spans, set `preserveNextjsSpans` to `true` in `Laminar.initialize()`.
+
+```javascript
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_API_KEY,
+  preserveNextjsSpans: true
+});
+```
