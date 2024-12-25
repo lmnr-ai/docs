@@ -3,7 +3,7 @@ title: "Vercel AI SDK"
 ---
 
 
-[Vercel AI SDK](https://sdk.vercel.ai/docs/introduction) is a great library to add LLM features to your JS/TS applications. It supports tracing using [OpenTelemetry](https://opentelemetry.io/). 
+[Vercel AI SDK](https://sdk.vercel.ai/docs/introduction) is a library that allows you to add LLM features to your JS/TS applications. It supports tracing using [OpenTelemetry](https://opentelemetry.io/). 
 
 Laminar tracing is based on OpenTelemetry, so it is fully compatible with Vercel AI SDK tracing and you can start sending Vercel AI SDK traces to Laminar right away.
 
@@ -59,22 +59,24 @@ import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
 
 export async function GET() {
+  const response = await generateText({
+    model: openai('gpt-4o-mini'), messages: [
+      {
+        role: 'user',
+        content: 'What is the capital of France?'
+       }
+    ],
+    experimental_telemetry: {
+      isEnabled: true
+    }
+  });
 
-    const response = await generateText({
-        model: openai('gpt-4o-mini'), messages: [
-            {
-                role: 'user',
-                content: 'What is the capital of France?'
-            }
-        ],
-        experimental_telemetry: {
-            isEnabled: true
-        }
-    });
-
-    return Response.json(response);
+  return Response.json(response);
 }
 ```
+
+Laminar skips saving thorough traces created by Next.js by default and only keeps AI SDK traces.
+Learn more about [tracing in Next.js](/tracing/nextjs).
 </Step>
 <Step title="Results">
 And that's it! You should now see traces in Laminar.
