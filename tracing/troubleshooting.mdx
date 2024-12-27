@@ -3,6 +3,64 @@ title: Troubleshooting
 description: Troubleshooting common issues with Laminar tracing
 ---
 
+## My JS auto-instrumentation is not working.
+
+### Problem
+
+I have instrumented my JavaScript code with Laminar, and I can see the manual spans in the Laminar UI, but I don't see the auto-instrumented spans.
+
+### Cause
+
+Due to how JS bundles the modules, in some runtimes, the modules need to be imported _after_ Laminar's initialization.
+
+### Solution
+
+There are two options:
+
+1. Importing the LLM modules _after_ Laminar initialization.
+2. Passing the imported modules as `instrumentModules` option.
+
+#### Option 1. Importing the LLM modules _after_ Laminar initialization
+
+This option is good for quick testing, but is against linting best practices.
+
+```javascript
+import { Laminar } from '@lmnr-ai/lmnr';
+
+Laminar.initialize({ projectApiKey: process.env.LMNR_PROJECT_API_KEY });
+
+// import the LLM modules after Laminar initialization
+import { OpenAI } from 'openai';
+
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const response = await client.chat.completions.create({
+  model: "gpt-4o-mini",
+  messages: [{
+    role: "user",
+    content: "Write a short poem about Laminar flow?"
+  }],
+});
+```
+
+#### Option 2. Passing the imported modules as `instrumentModules` option
+
+```javascript
+import { Laminar } from '@lmnr-ai/lmnr';
+import { OpenAI } from 'openai';
+
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+  instrumentModules: {
+    openAI: OpenAI,
+  }
+});
+
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// your code here
+```
+
+For a full list of supported modules, see the `instrumentModules` doc comment or read this section of instrumentation [docs](/tracing/automatic-instrumentation#available-instruments).
+
 ## My JS traces are not showing up in the Laminar UI.
 
 ### Problem
@@ -25,7 +83,7 @@ but not for Node.js.
 Use Laminar's `shutdown()` function to ensure that the traces are sent before the process exits.
 
 ```javascript
-import { Laminar} from '@lmnr-ai/lmnr';
+import { Laminar } from '@lmnr-ai/lmnr';
 
 Laminar.initialize({ projectApiKey: process.env.LMNR_PROJECT_API_KEY });
 

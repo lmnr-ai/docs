@@ -29,7 +29,7 @@ separate functions into a single trace.
 ```javascript
 import { observe } from '@lmnr-ai/lmnr';
 
-const myFunction = observe(
+const myFunction = async () => observe(
   { name: 'myFunction'}, 
   async () => {
     const response = await client.chat.completions.create({
@@ -40,7 +40,7 @@ const myFunction = observe(
   }
 );
 
-await myFunction;
+await myFunction();
 ```
 
 </Tab>
@@ -59,10 +59,10 @@ you can have better visualization of execution flow which is useful for debuggin
 
 Input arguments to the function are automatically recorded as inputs of the span. The return value is automatically recorded as the output of the span.
 
-Passing arguments to the function in TypeScript is slightly non-trivial. Example:
+Passing arguments to the function in TypeScript is slightly non-obvious. Example:
 
 ```javascript
-const myFunction = observe(
+const myFunction = async () => observe(
   { name: 'myFunction'}, 
   async (param1, param2) => {
     // ...
