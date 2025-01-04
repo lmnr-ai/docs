@@ -17,8 +17,8 @@ Due to how JS bundles the modules, in some runtimes, the modules need to be impo
 
 There are two options:
 
-1. Importing the LLM modules _after_ Laminar initialization.
-2. Passing the imported modules as `instrumentModules` option.
+1. Importing the LLM modules _after_ Laminar initialization. This may not always work.
+2. [Recommended] Passing the imported modules as `instrumentModules` option.
 
 #### Option 1. Importing the LLM modules _after_ Laminar initialization
 
@@ -92,6 +92,26 @@ Laminar.initialize({ projectApiKey: process.env.LMNR_PROJECT_API_KEY });
 // at the end of your script, when you are done tracing
 await Laminar.shutdown(); // NOTE: don't forget to await
 ```
+
+## My Python auto-instrumentation is not working.
+
+### Problem
+
+I have instrumented my Python code with Laminar, and I can see the manual spans in the Laminar UI, but I don't see the auto-instrumented spans.
+
+### Cause
+
+Most likely, you have not installed the right extras that enable the auto-instrumentations.
+
+### Solution
+
+Install the extras for LLM providers you are using and wish to instrument. For instance,
+
+```sh
+pip install lmnr[openai]
+```
+
+Read the [installation docs](/installation) for more information.
 
 ## I can see traces and spans in the UI, but they are not showing inputs and/or outputs.
 

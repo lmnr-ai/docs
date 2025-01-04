@@ -36,7 +36,7 @@ import { OpenAI } from 'openai';
 // ...
 ```
 
-<Warning> If you are using Next.js, you may need to manually pass all libraries which you want Laminar to auto-instrument.
+<Warning> If this is not working for you, you may need to manually pass all libraries which you want Laminar to auto-instrument.
 Check [the section](#instrument-specific-modules-only) on specific modules instrumentation </Warning>
 
 </Tab>
@@ -90,7 +90,7 @@ Laminar.initialize({
 You can also enable instrumentation for specific modules only.
 
 This is useful if you either want more control over what is being instrumented.
-Also, use this if you are using Next.js and having issues with automatic instrumentation – [learn more](/tracing/nextjs).
+Some JS bundlers do not support dynamic import re-definitions, so you may need to explicitly specify the modules you want to instrument.
 
 Let's say, for example, we call OpenAI and Anthropic models to perform the same task, and 
 we only want to instrument the Anthropic calls, but not OpenAI.
