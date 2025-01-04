@@ -8,16 +8,6 @@ Laminar.initialize(project_api_key="LMNR_PROJECT_API_KEY")
 </Tab>
 <Tab title="JavaScript/TypeScript">
 
-<Expandable title="additional setting for Next.js">
-
-```bash
-# Disable automatic Opentelemetry instrumentation by Next.js
-# to avoid excessive amount of traces not related to your LLM application
-export NEXT_OTEL_FETCH_DISABLED=1
-```
-
-</Expandable>
-
 ```javascript
 import { Laminar } from '@lmnr-ai/lmnr';
 Laminar.initialize({ projectApiKey: process.env.LMNR_PROJECT_API_KEY });
@@ -34,5 +24,9 @@ at the server startup, or in the entry point of your application.
 This will automatically instrument all major LLM provider SDKs, LLM frameworks including
 LangChain and LlamaIndex, and calls to vector databases.
 
-To disable or configure automatic instrumentation,
-see the section on [Automatic instrumentation](/tracing/automatic-instrumentation).
+<Tip>
+In some Node JS setups, you may need to manually pass the modules you want to instrument, such as OpenAI.
+See the section on [manual instrumentation](/tracing/automatic-instrumentation#instrument-specific-modules-only).
+</Tip>
+
+For more information, refer to the [instrumentation docs](/tracing/automatic-instrumentation).
