@@ -113,6 +113,59 @@
           }
         }
       }
+    },
+    "/v1/queues/push": {
+      "post": {
+        "tags": [
+          "api::queues"
+        ],
+        "operationId": "push_to_queue",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueuePushRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Queue push response",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "Items uploaded successfully."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request. Cannot parse the JSON payload into a valid request.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "Json deserialize error."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Queue not found. `queueName` is not found within the project defined by project API key.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "Queue not found."
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -279,6 +332,48 @@
           },
           "content": {
             "description": "Content from the data point that matched the query. Usually entire content of the field that dataset is indexed on, but might be a chunk of it, if it is too long.",
+            "type": "string"
+          }
+        }
+      },
+      "QueuePushItem": {
+        "type": "object",
+        "required": [],
+        "properties": {
+          "id": {
+            "description": "Unique datapoint ID. If not specified, a UUID v4 will be generated.",
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "description": "Name of the datapoint. If not specified, an empty string is used.",
+            "type": "string"
+          },
+          "input": {
+            "description": "Input of the datapoint. Can be any JSON value. Defaults to null."
+          },
+          "output": {
+            "description": "Output of the datapoint. Can be any JSON value. Defaults to null."
+          },
+          "attributes": {
+            "description": "Attributes of the datapoint. Can be any JSON object. Defaults to an empty object.",
+            "type": "object"
+          }
+        }
+      },
+      "QueuePushRequest": {
+        "type": "object",
+        "required": ["items", "queueName"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "description": "List of datapoints to push to the queue.",
+            "items": {
+              "$ref": "#/components/schemas/QueuePushItem"
+            }
+          },
+          "queueName": {
+            "description": "Name of the queue to push to. Must be an existing queue.",
             "type": "string"
           }
         }

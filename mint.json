@@ -91,7 +91,7 @@
       "group": "Labels",
       "pages": [
         "labels/introduction",
-        "labels/manually-label",
+        "labels/queues",
         "labels/labeling-from-code"
       ]
     },
@@ -147,6 +147,12 @@
       "group": "Semantic Search - API",
       "pages": [
         "api-reference/semantic-search/semantic-search"
+      ]
+    },
+    {
+      "group": "Queues - API",
+      "pages": [
+        "api-reference/queues/queues_push"
       ]
     }
   ],

@@ -19,6 +19,36 @@ Create a new labeling queue by clicking on the "New queue" button.
 We recommend creating separate queues for different team members, so that no more than one person labels the same span.
 You can create more than one queue per team member.
 
+## Adding data to a queue
+
+There are three ways to add data to a queue:
+
+- Manually adding from the span view in the traces page.
+- Pushing from the API.
+- Registering a human evaluator in an evaluation.
+
+### Manually pushing from the span view
+
+You can manually push data to a queue by clicking on the "Add to labeling queue" button in the span view.
+
+<Frame title="Push to queue">
+  <img src="/images/labels/push-to-queue.png" alt="Push to queue" />
+</Frame>
+
+### Pushing from the API
+
+You can push data to a queue by calling the `POST /v1/queues/push` API endpoint.
+
+See the [API reference](/api-reference/queues/queues_push) for more information.
+
+### Registering a human evaluator in an evaluation
+
+You can register a human evaluator in an evaluation by passing a `HumanEvaluator` object
+with the queue name to the `evaluate` function.
+
+See the [Evaluation configuration](/evaluations/configuration#registering-human-evaluators) page
+for more information.
+
 ## Labeling spans in a queue
 
 You can move back and forth between spans in a queue by clicking on "Next" and "Previous".
