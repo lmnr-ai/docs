@@ -24,6 +24,7 @@ In addition, the following attributes can be manually addded to report token usa
 - `gen_ai.usage.input_cost`, `gen_ai.usage.output_cost`, `gen_ai.usage.cost` – can
 all be reported explicitly. However, Laminar calculates the cost of the major providers
 using the values of `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`, and `gen_ai.response.model`.
+For the list of supported providers and models, see this [section](#provider-and-model-names).
 
 All of these values can be set in Python and JavaScript/TypeScript using static methods on `Laminar` class.
 
@@ -600,3 +601,25 @@ bar(traceId);
 Both spans, `foo` and `bar`, will be in the same trace, because they have the same trace ID.
 </Tab>
 </Tabs>
+
+## Provider and model names
+
+Here is the list of provider names that Laminar uses when calculating costs. We
+use the names defaulted in OpenLLMetry and OpenLLMetry JS packages. If you are
+not using the auto-instrumentations, set the `gen_ai.system` attribute manually to 
+one of the following values.
+
+For the model names, we use the names in the provider's API.
+
+| Provider | Names | Example model name | Link to other model names |
+| --- | --- | --- | --- |
+| Anthropic | `anthropic` | `claude-3-5-sonnet`, `claude-3-5-sonnet-20241022`, or `claude-3-5-sonnet-20241022-v2:0` | [docs.anthropic.com](https://docs.anthropic.com/en/docs/about-claude/models#model-names) |
+| Azure OpenAI | `azure-openai` | `gpt-4o-mini` or `gpt-4o-mini-2024-07-18` | [learn.microsoft.com](https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models?tabs=global-standard%2Cstandard-chat-completions) |
+| Bedrock Anthropic | `bedrock-anthropic` | `claude-3-5-sonnet` or `claude-3-5-sonnet-20241022-v2:0` | [docs.aws.amazon.com](https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-claude.html)
+| Gemini | `gemini`, `google-genai` | `models/gemini-1.5-pro` | [ai.google.dev](https://ai.google.dev/gemini-api/docs/models/gemini)
+| Groq | `groq` | `llama-3.1-70b-versatile` | [console.groq.com](https://console.groq.com/docs/models)
+| Mistral | `mistral` | `mistral-large-2407` | [docs.mistral.ai](https://docs.mistral.ai/getting-started/models/models_overview/)
+| OpenAI | `openai` | `gpt-4o` or `gpt-4o-2024-11-20` | [platform.openai.com](https://platform.openai.com/docs/models)
+
+For the full list of models and prices, and to suggest edits, see the initialization data
+in our [github](https://github.com/lmnr-ai/lmnr/blob/main/frontend/lib/db/initial-data.json#L2176).
