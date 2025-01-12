@@ -1,0 +1,434 @@
+---
+title: Troubleshooting non-Laminar SDKs
+description: Troubleshooting for using Laminar as the backend for OpenTelemetry.
+---
+
+This page is relevant for the users not using Laminar's SDK for tracing, but sending
+their OpenTelemetry traces to Laminar. For a getting started guide, please refer to
+the [OpenTelemetry](/tracing/otel#getting-started) page.
+
+## [Node.js / TypeScript] Error: 16 UNAUTHENTICATED: Failed to authenticate request
+
+### Problem
+
+I am using the OpenTelemetry Node.js SDK and I see the following error:
+
+```sh
+Error: 16 UNAUTHENTICATED: Failed to authenticate request
+```
+
+<Expandable title="full error trace">
+```sh
+Error: 16 UNAUTHENTICATED: Failed to authenticate request
+    at callErrorFromStatus (/workspace/node_modules/.pnpm/@grpc+grpc-js@1.12.5/node_modules/@grpc/grpc-js/src/call.ts:82:17)
+    at Object.onReceiveStatus (/workspace/node_modules/.pnpm/@grpc+grpc-js@1.12.5/node_modules/@grpc/grpc-js/src/client.ts:360:55)
+    at Object.onReceiveStatus (/workspace/node_modules/.pnpm/@grpc+grpc-js@1.12.5/node_modules/@grpc/grpc-js/src/client-interceptors.ts:458:34)
+    at Object.onReceiveStatus (/workspace/node_modules/.pnpm/@grpc+grpc-js@1.12.5/node_modules/@grpc/grpc-js/src/client-interceptors.ts:419:48)
+    at /workspace/node_modules/.pnpm/@grpc+grpc-js@1.12.5/node_modules/@grpc/grpc-js/src/resolving-call.ts:163:24
+    at processTicksAndRejections (node:internal/process/task_queues:85:11)
+for call at
+    at ServiceClientImpl.makeUnaryRequest (/workspace/node_modules/.pnpm/@grpc+grpc-js@1.12.5/node_modules/@grpc/grpc-js/src/client.ts:325:42)
+    at ServiceClientImpl.export (/workspace/node_modules/.pnpm/@grpc+grpc-js@1.12.5/node_modules/@grpc/grpc-js/src/make-client.ts:189:15)
+    at /workspace/node_modules/.pnpm/@opentelemetry+otlp-grpc-exporter-base@0.57.0_@opentelemetry+api@1.9.0/node_modules/@opentelemetry/otlp-grpc-exporter-base/src/grpc-exporter-transport.ts:159:26
+    at new Promise (<anonymous>)
+    at GrpcExporterTransport.send (/workspace/node_modules/.pnpm/@opentelemetry+otlp-grpc-exporter-base@0.57.0_@opentelemetry+api@1.9.0/node_modules/@opentelemetry/otlp-grpc-exporter-base/src/grpc-exporter-transport.ts:146:12)
+    at OTLPExportDelegate.export (/workspace/node_modules/.pnpm/@opentelemetry+otlp-exporter-base@0.57.0_@opentelemetry+api@1.9.0/node_modules/@opentelemetry/otlp-exporter-base/src/otlp-export-delegate.ts:82:23)
+    at OTLPTraceExporter.export (/workspace/node_modules/.pnpm/@opentelemetry+otlp-exporter-base@0.57.0_@opentelemetry+api@1.9.0/node_modules/@opentelemetry/otlp-exporter-base/src/OTLPExporterBase.ts:32:26)
+    at doExport (/workspace/node_modules/.pnpm/@opentelemetry+sdk-trace-base@1.30.0_@opentelemetry+api@1.9.0/node_modules/@opentelemetry/sdk-trace-base/src/export/BatchSpanProcessorBase.ts:193:32)
+    at /workspace/node_modules/.pnpm/@opentelemetry+sdk-trace-base@1.30.0_@opentelemetry+api@1.9.0/node_modules/@opentelemetry/sdk-trace-base/src/export/BatchSpanProcessorBase.ts:219:11
+    at AsyncLocalStorage.run (node:internal/async_local_storage/async_hooks:91:14) {
+  code: 16,
+  details: 'Failed to authenticate request',
+  metadata: Metadata {
+    internalRepr: Map(3) {
+      'content-type' => [Array],
+      'content-length' => [Array],
+      'date' => [Array]
+    },
+    options: {}
+  }
+}
+```
+</Expandable>
+
+I have checked that my `LMNR_PROJECT_API_KEY` is correct and I set the headers when initializing the exporter.
+
+### Cause
+
+One common cause is that the `authorization` header on the gRPC exporter is set
+as a raw HTTP header, instead of a gRPC metadata header. Read the
+[authorization](/tracing/otel#authorization) section for more information.
+
+### Solution
+
+Make sure that the `authorization` header is passed to the exporter as part
+of the metadata object.
+
+```javascript {1,4-5,8}
+import { Metadata } from '@grpc/grpc-js';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
+
+const metadata = new Metadata();
+metadata.set('authorization', `Bearer ${process.env.LMNR_PROJECT_API_KEY}`);
+const exporter = new OTLPTraceExporter({
+  url: "https://api.lmnr.ai:8443/v1/traces",
+  metadata,
+});
+```
+
+## [Node.js / TypeScript] Error: Parse Error: Expected HTTP/
+
+### Problem
+
+I am using the OpenTelemetry Node.js SDK and I see the following error:
+
+```sh
+Error: Parse Error: Expected HTTP/'
+```
+
+<Expandable title="full error trace">
+```sh
+Error: Parse Error: Expected HTTP/'
+Error: Parse Error: Expected HTTP/
+    at Socket.socketOnData (node:_http_client:552:22)
+    at Socket.emit (node:events:513:28)
+    at Socket.emit (node:domain:489:12)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Socket.Readable.push (node:internal/streams/readable:390:5)
+    at TCP.onStreamRead (node:internal/stream_base_commons:189:23)
+    at TCP.callbackTrampoline (node:internal/async_hooks:130:17) {
+  bytesParsed: 0,
+  code: 'HPE_INVALID_CONSTANT',
+  reason: 'Expected HTTP/',
+  rawPacket: <Buffer ...>
+```
+</Expandable>
+
+### Cause
+
+This error occurs when the exporter is configured to use the HTTP endpoint, but
+sends traces to the gRPC endpoint. The error message indicates the mismatch
+between the HTTP versions. gRPC uses HTTP/2.0, while the HTTP exporter uses
+HTTP/1.1.
+
+### Solution
+
+Make sure that you are importing the gRPC exporter from the
+`@opentelemetry/exporter-trace-otlp-grpc` package.
+
+```javascript
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
+// not from `@opentelemetry/exporter-trace-otlp-proto`
+// not from `@opentelemetry/exporter-trace-otlp-http`
+```
+
+## [Node.js / TypeScript] OTLPExporterError: Not Found
+
+### Problem
+
+I am using the OpenTelemetry Node.js SDK and I see the following error:
+
+```sh
+OTLPExporterError: Not Found
+```
+
+<Expandable title="full error trace">
+```sh
+ OTLPExporterError: Not Found
+    at IncomingMessage.<anonymous> (/workspace/node_modules/.pnpm/@opentelemetry+otlp-exporter-base@0.57.0_@opentelemetry+api@1.9.0/node_modules/@opentelemetry/otlp-exporter-base/src/transport/http-transport-utils.ts:75:23)
+    at IncomingMessage.emit (node:events:525:35)
+    at IncomingMessage.emit (node:domain:489:12)
+    at endReadableNT (node:internal/streams/readable:1696:12)
+    at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  data: '',
+  code: 404
+}
+```
+</Expandable>
+
+### Cause
+
+OTLP HTTP exporter called the correct base URL, but not the path.
+
+### Solution
+
+We recommend using the gRPC exporter,
+as it is more reliable and faster. Make sure you are importing
+`OTLPTraceExporter` from `@opentelemetry/exporter-trace-otlp-grpc`.
+
+If you have to use the HTTP exporter, make sure that you are using the correct endpoint.
+The endpoint for HTTP is `https://api.lmnr.ai:443/v1/traces` (port 443).
+
+```javascript {1}
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+
+const exporter = new OTLPSpanExporter({
+    url: "https://api.lmnr.ai:443/v1/traces", // note the path `/v1/traces`
+    headers: {
+        Authorization: `Bearer ${process.env.LMNR_PROJECT_API_KEY}`,
+    },
+});
+```
+
+## [Node.js / TypeScript] OTLPExporterError: Internal Server Error
+
+### Problem
+
+I am using the OpenTelemetry Node.js SDK and I see the following error:
+
+```sh
+OTLPExporterError: Internal Server Error
+```
+
+<Expandable title="full error trace">
+```sh
+OTLPExporterError: Internal Server Error
+    at IncomingMessage.<anonymous> (/workspace/node_modules/.pnpm/@opentelemetry+otlp-exporter-base@0.57.0_@opentelemetry+api@1.9.0/node_modules/@opentelemetry/otlp-exporter-base/src/transport/http-transport-utils.ts:75:23)
+    at IncomingMessage.emit (node:events:525:35)
+    at IncomingMessage.emit (node:domain:489:12)
+    at endReadableNT (node:internal/streams/readable:1696:12)
+    at processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  data: '',
+  code: 500
+}
+```
+</Expandable>
+
+### Cause
+
+While this may indicate any issue with the Laminar server, one of the most common cases
+is attempting to send HTTP/json traces to HTTP/proto endpoint. Laminar does NOT support
+HTTP/json traces.
+
+### Solution
+
+We recommend using the gRPC exporter,
+as it is more reliable and faster. Make sure you are importing
+`OTLPTraceExporter` from `@opentelemetry/exporter-trace-otlp-grpc`.
+
+If you have to use the HTTP exporter, make sure that you are using are importing
+`OTLPTraceExporter` from `@opentelemetry/exporter-trace-otlp-proto`, NOT from
+`@opentelemetry/exporter-trace-otlp-http`, as the latter is for HTTP/json traces.
+
+## [Python] TypeError: not all arguments converted during string formatting
+
+### Problem
+
+I am using the OpenTelemetry Python SDK and I see the following error:
+
+```sh
+TypeError: not all arguments converted during string formatting
+```
+
+<Expandable title="full error trace">
+```sh
+Traceback (most recent call last):
+  File "/workspace/.venv/lib/python3.12/site-packages/opentelemetry/sdk/trace/export/__init__.py", line 360, in _export_batch
+    self.span_exporter.export(self.spans_list[:idx])  # type: ignore
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.venv/lib/python3.12/site-packages/opentelemetry/exporter/otlp/proto/grpc/trace_exporter/__init__.py", line 143, in export
+    return self._export(spans)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.venv/lib/python3.12/site-packages/opentelemetry/exporter/otlp/proto/grpc/exporter.py", line 299, in _export
+    self._client.Export(
+  File "/workspace/.venv/lib/python3.12/site-packages/grpc/_channel.py", line 1178, in __call__
+    ) = self._blocking(
+        ^^^^^^^^^^^^^^^
+  File "/workspace/.venv/lib/python3.12/site-packages/grpc/_channel.py", line 1146, in _blocking
+    call = self._channel.segregated_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/python/grpcio/grpc/_cython/_cygrpc/channel.pyx.pxi", line 547, in grpc._cython.cygrpc.Channel.segregated_call
+  File "src/python/grpcio/grpc/_cython/_cygrpc/channel.pyx.pxi", line 416, in grpc._cython.cygrpc._segregated_call
+  File "src/python/grpcio/grpc/_cython/_cygrpc/channel.pyx.pxi", line 410, in grpc._cython.cygrpc._segregated_call
+  File "src/python/grpcio/grpc/_cython/_cygrpc/channel.pyx.pxi", line 262, in grpc._cython.cygrpc._call
+  File "src/python/grpcio/grpc/_cython/_cygrpc/channel.pyx.pxi", line 305, in grpc._cython.cygrpc._call
+  File "src/python/grpcio/grpc/_cython/_cygrpc/channel.pyx.pxi", line 62, in grpc._cython.cygrpc._raise_call_error
+  File "src/python/grpcio/grpc/_cython/_cygrpc/channel.pyx.pxi", line 32, in grpc._cython.cygrpc._call_error
+  File "src/python/grpcio/grpc/_cython/_cygrpc/channel.pyx.pxi", line 23, in grpc._cython.cygrpc._call_error_metadata
+TypeError: not all arguments converted during string formatting
+```
+</Expandable>
+
+### Cause
+
+This error indicates that some of the headers that you passed to the gRPC trace exporter
+are not within the allowed set of keys. For Laminar uses, this is mosth likely the
+`authorization` header.
+
+### Solution
+
+Check that the headers you pass to the trace exporter are valid. Most likely,
+make sure that the `authorization` header starts with lowercase `a`.
+
+```python {6-7}
+import os
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+
+exporter = OTLPSpanExporter(
+    endpoint="https://api.lmnr.ai:8443/v1/traces",
+    # important: `authorization` starts with a lowercase letter
+    headers={"authorization": f"Bearer {os.getenv('LMNR_PROJECT_API_KEY')}"},
+)
+```
+
+## [Python] ConnectionResetError: [Errno 54] Connection reset by peer
+
+### Problem
+
+I am using the OpenTelemetry Python SDK and I see the following error:
+
+```sh
+ConnectionResetError: [Errno 54] Connection reset by peer
+```
+
+<Expandable title="full error trace">
+```sh
+Traceback (most recent call last):
+  File "/workspace/.venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 534, in _make_request
+    response = conn.getresponse()
+               ^^^^^^^^^^^^^^^^^^
+  File "/workspace/.venv/lib/python3.12/site-packages/urllib3/connection.py", line 516, in getresponse
+    httplib_response = super().getresponse()
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/http/client.py", line 1428, in getresponse
+    response.begin()
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/http/client.py", line 331, in begin
+    version, status, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/http/client.py", line 292, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/socket.py", line 707, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [Errno 54] Connection reset by peer
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/workspace/.venv/lib/python3.12/site-packages/requests/adapters.py", line 667, in send
+    resp = conn.urlopen(
+           ^^^^^^^^^^^^^
+  File "/workspace/.venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/workspace/.venv/lib/python3.12/site-packages/urllib3/util/retry.py", line 474, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.venv/lib/python3.12/site-packages/urllib3/util/util.py", line 38, in reraise
+    raise value.with_traceback(tb)
+  File "/workspace/.venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 534, in _make_request
+    response = conn.getresponse()
+               ^^^^^^^^^^^^^^^^^^
+  File "/workspace/.venv/lib/python3.12/site-packages/urllib3/connection.py", line 516, in getresponse
+    httplib_response = super().getresponse()
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/http/client.py", line 1428, in getresponse
+    response.begin()
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/http/client.py", line 331, in begin
+    version, status, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/http/client.py", line 292, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/socket.py", line 707, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.ProtocolError: ('Connection aborted.', ConnectionResetError(54, 'Connection reset by peer'))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/workspace/.venv/lib/python3.12/site-packages/opentelemetry/sdk/trace/export/__init__.py", line 360, in _export_batch
+    self.span_exporter.export(self.spans_list[:idx])  # type: ignore
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.venv/lib/python3.12/site-packages/opentelemetry/exporter/otlp/proto/http/trace_exporter/__init__.py", line 189, in export
+    return self._export_serialized_spans(serialized_data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.venv/lib/python3.12/site-packages/opentelemetry/exporter/otlp/proto/http/trace_exporter/__init__.py", line 159, in _export_serialized_spans
+    resp = self._export(serialized_data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.venv/lib/python3.12/site-packages/opentelemetry/exporter/otlp/proto/http/trace_exporter/__init__.py", line 133, in _export
+    return self._session.post(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.venv/lib/python3.12/site-packages/requests/sessions.py", line 637, in post
+    return self.request("POST", url, data=data, json=json, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.venv/lib/python3.12/site-packages/requests/sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.venv/lib/python3.12/site-packages/requests/sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.venv/lib/python3.12/site-packages/requests/adapters.py", line 682, in send
+    raise ConnectionError(err, request=request)
+requests.exceptions.ConnectionError: ('Connection aborted.', ConnectionResetError(54, 'Connection reset by peer'))
+```
+</Expandable>
+
+### Cause
+
+This error indicates that the connection was reset at Laminar's backend. Most likely,
+this error indicates an HTTP version mismatch. One common cause for this is using
+the HTTP exporter against the gRPC endpoint.
+
+### Solution
+
+Laminar accepts traces via both gRPC and HTTP. We recommend using the gRPC exporter,
+as it is more reliable and faster. Make sure you are importing
+`OTLPTraceExporter` from `opentelemetry.exporter.otlp.proto.grpc.trace_exporter` and not
+from `opentelemetry.exporter.otlp.proto.http.trace_exporter`.
+
+If you have to use the HTTP exporter, make sure that you are using the correct endpoint.
+The endpoint for HTTP is `https://api.lmnr.ai:443/v1/traces` (port 443).
+
+```python {5}
+import os
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
+exporter = OTLPSpanExporter(
+    endpoint="https://api.lmnr.ai:443/v1/traces",  # note the port 443
+    headers={"authorization": f"Bearer {os.getenv('LMNR_PROJECT_API_KEY')}"},
+)
+```
+
+## [Python] Failed to export batch code: 404, reason:
+
+### Problem
+
+I am using the OpenTelemetry Python SDK and I see the following error:
+
+```sh
+Failed to export batch code: 404, reason:
+```
+
+### Cause
+
+OTLP HTTP exporter called the correct base URL, but not the path.
+
+### Solution
+
+We recommend using the gRPC exporter,
+as it is more reliable and faster. Make sure you are importing
+`OTLPTraceExporter` from `opentelemetry.exporter.otlp.proto.grpc.trace_exporter` and not
+from `opentelemetry.exporter.otlp.proto.http.trace_exporter`.
+
+If you have to use the HTTP exporter, make sure that you are using the correct endpoint.
+The endpoint for HTTP is `https://api.lmnr.ai:443/v1/traces` (port 443).
+
+```python {5}
+import os
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
+exporter = OTLPSpanExporter(
+    endpoint="https://api.lmnr.ai:443/v1/traces",  # note the path `/v1/traces`
+    headers={"authorization": f"Bearer {os.getenv('LMNR_PROJECT_API_KEY')}"},
+)
+```

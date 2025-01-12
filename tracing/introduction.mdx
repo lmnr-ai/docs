@@ -133,12 +133,7 @@ Our Rust backend is an OpenTelemetry-compatible ingestion endpoint and processes
 Instrumentations for LLM and vector DB libraries are provided by [OpenLLMetry](https://github.com/traceloop/openllmetry).
 
 This means that you can use OpenTelemetry SDKs to send traces to Laminar, and they will be displayed in the Laminar UI.
-
-To get started, in your application, set the OpenTelemetry exporter to the Laminar gRPC endpoint:
-`https://api.lmnr.ai:8443/v1/traces`.
-
-Read on to the [Otel section](/tracing/otel) to learn more about the OpenTelemetry
-objects and attributes that Laminar uses in more detail.
+A separate getting started guide for OpenTelemetry is available in the [OpenTelemetry](/tracing/otel) section.
 
 ## Next steps
 

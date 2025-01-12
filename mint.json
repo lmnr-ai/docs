@@ -75,7 +75,13 @@
         "tracing/vercel-ai-sdk",
         "tracing/litellm",
         "tracing/otel",
-        "tracing/troubleshooting"
+        {
+          "group": "Troubleshooting",
+          "pages": [
+            "tracing/troubleshooting",
+            "tracing/troubleshooting-opentelemetry"
+          ]
+        }
       ]
     },
     {
