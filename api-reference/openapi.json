@@ -294,6 +294,17 @@
             "minimum": 0.0,
             "maximum": 1.0,
             "default": 0.0
+          },
+          "metadataFilters": {
+            "description": "Filters to apply to the dataset. Each item in the array is a record from keys to values. Records within the record are joined with AND operator. Array items are joined with OR operator. For example, [{\"name\": \"John\"}, {\"age\": 30, \"city\": \"New York\"}] will return records where name is John or (age is 30 and city is New York).",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "description": "Record from keys to values. Keys are metadata field names, values are metadata field values. Joined with AND operator."
+              }
+            }
           }
         }
       },
