@@ -74,6 +74,7 @@
         "tracing/nextjs",
         "tracing/vercel-ai-sdk",
         "tracing/litellm",
+        "tracing/browser-use",
         "tracing/otel",
         {
           "group": "Troubleshooting",
