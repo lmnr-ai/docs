@@ -1,0 +1,36 @@
+---
+title: "Access Control Setup"
+description: "GitHub based access control for restricted users"
+---
+
+## Overview
+
+Laminar supports optional GitHub authentication for controlling access to your self-hosted instance.
+
+## GitHub Authentication Setup
+
+To enable GitHub authentication, configure these environment variables in your frontend:
+
+```
+AUTH_GITHUB_ID=your_github_oauth_app_id
+AUTH_GITHUB_SECRET=your_github_oauth_app_secret
+```
+
+## Access Control
+
+### Default Behavior
+
+By default (without an `allowed-emails.json` file), any GitHub user can access your platform after authentication.
+
+### Restricted Access
+
+To limit access to specific users, create an `allowed-emails.json` file in your project root:
+
+```json
+{
+  "emails ": [
+    "user1@example.com",
+    "user2@example.com"
+  ]
+}
+```
