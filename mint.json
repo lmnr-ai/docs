@@ -161,6 +161,12 @@
       "pages": [
         "api-reference/queues/queues_push"
       ]
+    },
+    {
+      "group": "Self Hosting",
+      "pages":[
+        "self-hosting/access-control-setup"
+      ]
     }
   ],
   "footerSocials": {
