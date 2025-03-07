@@ -223,6 +223,49 @@ However, if you still want to use the basic instrumentations above, you could:
 - Initialize Laminar first, and then the OpenTelemetry SDK.
 - Explicitly enable only the instrumentations you need in the OpenTelemetry SDK.
 
+## SSL Certificate and GRPC Connection Issues for Laminar
+
+### Problem
+
+Experiencing errors related to SSL certificate verification and GRPC connections in Laminar. Error messages include `CERTIFICATE_VERIFY_FAILED` and `StatusCode.UNAVAILABLE` when attempting to export traces to a GRPC server.
+
+### Cause
+
+1. **SSL Certificate Verification Error**:
+   - The server's SSL certificate is either untrusted or not configured correctly.
+   - The certificate chain may be incomplete or incorrect.
+   - The client is not configured to accept the server's certificate.
+
+2. **GRPC Connection Error**:
+   - SSL configuration issues prevent establishing a secure connection.
+   - The GRPC service may be unavailable or misconfigured.
+
+### Solution
+
+To resolve these errors, follow these steps:
+
+1. **Import the Certifi Library**:
+   - Use the `certifi` library to obtain an updated set of trusted CA certificates.
+   - Install using pip: `pip install certifi`
+
+2. **Verify the Certifi Path**:
+   - After installation, you can verify the path to the `certifi` CA bundle by running:
+     ```
+     python -m certifi
+     ```
+   - This command will print the path to the `cacert.pem` file, which you can use for further configurations.
+
+3. **Configure Environment Variables**:
+   - **`SSL_CERT_FILE`**: Set the path to the trusted CA certificate file.
+     ```
+     export SSL_CERT_FILE=$(python -m certifi)
+     ```
+   - **`GRPC_DEFAULT_SSL_ROOTS_FILE_PATH`**: Configure this variable so that GRPC uses the same CA certificate file.
+     ```
+     export GRPC_DEFAULT_SSL_ROOTS_FILE_PATH=$(python -m certifi)
+     ```
+
+
 ## Observe decorator is not working in Python with async generators, i.e. model stream responses
 
 ### Problem
