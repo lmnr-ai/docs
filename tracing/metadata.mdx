@@ -54,7 +54,6 @@ Here's a brief comparison of the two:
 | --- | --- | --- |
 | **Scope** | Applies to entire trace | Applies to individual spans |
 | **Purpose** | General trace context (e.g., environment, user ID) | Specific span classification or tagging |
-| **Configuration** | Set directly in code | Requires pre-configured label classes in UI |
-| **Validation** | Any string key-value pairs allowed | Must match predefined label names and values |
+| **Validation** | Any string key-value pairs allowed | Any string |
 | **UI Location** | Shown in trace overview | Shown in individual span details |
-| **Common Uses** | Environment info, user context, request IDs | Quality scores, data categories |
+| **Common Uses** | Environment info, user context, request IDs | Data categories, tags |

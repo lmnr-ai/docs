@@ -1,0 +1,59 @@
+---
+title: "Self-hosting"
+---
+
+# Setup for self-hosting
+
+<Steps>
+<Step title="Pull the repository">
+```bash
+git clone https://github.com/lmnr-ai/lmnr
+```
+</Step>
+<Step>
+```bash
+cd lmnr
+```
+</Step>
+<Step title="Spin up the docker compose stack">
+```bash
+docker compose up -d
+```
+</Step>
+<Step title="Configure the SDK to export traces to the local instance">
+
+By default, the backend will listen on port 8000 for HTTP and 8001 for gRPC.
+
+<Tabs>
+<Tab title="JavaScript/Typescript">
+```ts
+import { Laminar } from `@lmnr-ai/lmnr`;
+
+Laminar.initialize({
+    projectApiKey: "<YOUR_PROJECT_API_KEY>",
+    baseUrl: "http://localhost",
+    httpPort: 8000,
+    grpcPort: 8001,
+})
+```
+</Tab>
+<Tab title="Python">
+```python
+from lmnr import Laminar
+
+Laminar.initialize(
+    project_api_key="<YOUR_PROJECT_API_KEY>",
+    base_url="http://localhost",
+    http_port=8000,
+    grpc_port=8001,
+)
+```
+</Tab>
+</Tabs>
+</Step>
+<Step title="Access the dashboard">
+The dashboard will be available at `http://localhost:5667/`.
+</Step>
+</Steps>
+
+

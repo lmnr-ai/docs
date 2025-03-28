@@ -1,0 +1,48 @@
+---
+title: "Realtime tracing"
+---
+
+It is useful when debugging or developing to view traces in realtime.
+
+This is especially relevant for larger agents that make many requests to LLMs and take a while to run.
+
+## Introduction
+
+Laminar uses [OpenTelemetry](https://opentelemetry.io/) to trace requests.
+
+By default, we use the `BatchSpanProcessor` from OpenTelemetry, which is an object on the client side (where your code runs) that
+buffers spans and sends them in batches to the Laminar backend.
+
+This means that there is some delay between when a span is finished and when it is visible in the Laminar dashboard based on the
+configuration of the `BatchSpanProcessor` (usually interval between flushes and the limit of spans in a batch).
+
+## Enable realtime tracing
+
+To enable realtime tracing, you can use the `disableBatch` option in the `Laminar.initialize` function.
+
+<Tabs>
+<Tab title="JavaScript/Typescript">
+```javascript
+Laminar.initialize({
+    // ... other options
+    disableBatch: true,
+});
+```
+</Tab>
+
+<Tab title="Python">
+```python
+Laminar.initialize(
+    # other options
+    disable_batch=True,
+)
+```
+</Tab>
+</Tabs>
+
+
+This will use `SimpleSpanProcessor` instead which sends the spans to the Laminar backend immediately.
+
+<Warning>
+This is not recommended for production environments as it may impact the performance of your application.
+</Warning>

@@ -1,0 +1,193 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "palm",
+  "name": "laminar docs",
+  "colors": {
+    "primary": "#ED6E40",
+    "light": "#ED6E40",
+    "dark": "#ED6E40"
+  },
+  "favicon": "/favicon.png",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "overview",
+              "installation",
+              {
+                "group": "Self-hosting",
+                "pages": [
+                  "self-hosting/setup",
+                  "self-hosting/access-control-setup"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "Tracing",
+            "pages": [
+              "tracing/introduction",
+              "tracing/structure",
+              "tracing/realtime",
+              {
+                "group": "Instrumentation",
+                "pages": [
+                  "tracing/automatic-instrumentation",
+                  "tracing/manual-instrumentation"
+                ]
+              },
+              "tracing/metadata",
+              "tracing/otel",
+              {
+                "group": "Troubleshooting",
+                "pages": [
+                  "tracing/troubleshooting",
+                  "tracing/troubleshooting-opentelemetry"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "Integrations",
+            "pages": [
+              "tracing/integrations/nextjs",
+              "tracing/integrations/vercel-ai-sdk",
+              "tracing/integrations/litellm",
+              "tracing/integrations/playwright",
+              "tracing/integrations/browser-use",
+              "tracing/integrations/stagehand"
+            ]
+          },
+          {
+            "group": "Evaluations",
+            "pages": [
+              "evaluations/introduction",
+              "evaluations/configuration",
+              "evaluations/cookbook",
+              "evaluations/online-evaluations"
+            ]
+          },
+          {
+            "group": "Index",
+            "pages": [
+              "laminar-index/introduction"
+            ]
+          },
+          {
+            "group": "Labels",
+            "pages": [
+              "labels/introduction",
+              "labels/queues",
+              "labels/labeling-from-code"
+            ]
+          },
+          {
+            "group": "Datasets",
+            "pages": [
+              "datasets/introduction",
+              "datasets/adding-data",
+              "datasets/indexing"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "API Documentation",
+            "pages": [
+              "api-reference/introduction"
+            ]
+          },
+          {
+            "group": "Pipelines - API",
+            "pages": [
+              "api-reference/pipeline/pipeline_run"
+            ]
+          },
+          {
+            "group": "Semantic Search - API",
+            "pages": [
+              "api-reference/semantic-search/semantic-search"
+            ]
+          },
+          {
+            "group": "Queues - API",
+            "pages": [
+              "api-reference/queues/queues_push"
+            ]
+          },
+          {
+            "group": "Agent - API",
+            "pages": [
+              "api-reference/agent/agent_run"
+            ]
+          }
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "Community",
+          "href": "https://discord.gg/nNFUUDAKub",
+          "icon": "discord",
+          "color": {
+            "dark": "#5562ea",
+            "light": "#5562ea"
+          }
+        }
+      ]
+    }
+  },
+  "logo": "/logo/logo.png",
+  "api": {
+    "openapi": [
+      "api-reference/openapi.json"
+    ]
+  },
+  "appearance": {
+    "default": "dark",
+    "strict": true
+  },
+  "background": {
+    "color": {
+      "dark": "#0F0F0F"
+    }
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Contact support",
+        "href": "mailto:founders@lmnr.ai"
+      },
+      {
+        "label": "Dashboard",
+        "href": "https://www.lmnr.ai/projects"
+      }
+    ],
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/lmnr-ai/lmnr"
+    }
+  },
+  "footer": {
+    "socials": {
+      "discord": "https://discord.gg/nNFUUDAKub",
+      "twitter": "https://twitter.com/lmnrai",
+      "linkedin": "https://linkedin.com/company/lmnr-ai/",
+      "github": "https://github.com/lmnr-ai"
+    }
+  },
+  "integrations": {
+    "posthog": {
+      "apiKey": "phc_dUMdjfNKf11jcHgtn7juSnT4P1pO0tafsPUWt4PuwG7",
+      "apiHost": "https://p.lmnr.ai"
+    }
+  }
+}

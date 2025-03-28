@@ -1,11 +1,14 @@
 ---
-title: "Browser Use"
+title: "Browser Use (Python only)"
 description: "Trace Browser Use's agent execution steps and browser sessions"
 ---
 
 ## Overview
 
-Browser Use has a native integration with Laminar for tracing browser agents.
+[Browser Use](https://browser-use.com/) is a framework written in Python that allows you to build browser agents.
+
+Laminar has a native integration with Browser Use and underlying Playwright browser.
+
 <Note>
   Laminar excels at tracing browser agents by providing unified visibility into both browser session recordings and agent execution steps.
 </Note>
@@ -20,8 +23,8 @@ from browser_use import Agent
 import asyncio
 
 from lmnr import Laminar
-# this line auto-instruments Browser Use and any browser you use (local or remote)
-Laminar.initialize(project_api_key="...") # you can also pass project api key here
+# this line instruments Browser Use and playwright browser
+Laminar.initialize(project_api_key="...")
 
 async def main():
     agent = Agent(

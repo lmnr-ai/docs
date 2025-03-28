@@ -166,6 +166,63 @@
           }
         }
       }
+    },
+    "/v1/agent/run": {
+      "post": {
+        "tags": [
+          "api::agent"
+        ],
+        "operationId": "run_agent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunAgentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Agent run result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunAgentDefaultResponse"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunAgentStreamChunk"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request. Cannot parse the JSON payload into a valid request.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "Json deserialize error."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Project API key is invalid.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "Invalid project API key."
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -388,6 +445,245 @@
             "type": "string"
           }
         }
+      },
+      "AgentChatMessageContentBlockText": {
+        "type": "object",
+        "required": ["type", "text"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["text"]
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentChatMessageContentBlockImageUrl": {
+        "type": "object",
+        "required": ["type", "url"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["image"]
+          },
+          "imageUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentChatMessageContentBlockImageBase64": {
+        "type": "object",
+        "required": ["type", "base64"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["image"]
+          },
+          "imageB64": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentChatMessageContentBlockImage": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/AgentChatMessageContentBlockImageUrl",
+            "description": "Image URL."
+          },
+          {
+            "$ref": "#/components/schemas/AgentChatMessageContentBlockImageBase64",
+            "description": "Image base64."
+          }
+        ]
+      },
+      "AgentChatMessageContentBlock": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/AgentChatMessageContentBlockText",
+            "description": "Text block."
+          },
+          {
+            "$ref": "#/components/schemas/AgentChatMessageContentBlockImage",
+            "description": "Image block."
+          }
+        ]
+      },
+      "AgentChatMessageContent": {
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentChatMessageContentBlock"
+            }
+          }
+        ]
+      },
+      "AgentChatMessage": {
+        "type": "object",
+        "required": ["role", "content"],
+        "properties": {
+          "role": {
+            "type": "string"
+          },
+          "content": {
+            "$ref": "#/components/schemas/AgentChatMessageContent"
+          },
+          "name": {
+            "type": "string"
+          },
+          "toolCallId": {
+            "type": "string"
+          },
+          "isStateMessage": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AgentState": {
+        "type": "string",
+        "description": "Stringified list of chat messages with the underlying LLM."
+      },
+      "LaminarSpanContext": {
+        "type": "object",
+        "required": ["traceId", "spanId"],
+        "properties": {
+          "traceId": {
+            "type": "string",
+            "description": "OpenTelemetry trace ID in the UUID format."
+          },
+          "spanId": {
+            "type": "string",
+            "description": "OpenTelemetry span ID in the UUID format."
+          },
+          "isRemote": {
+            "type": "boolean",
+            "description": "Whether the span is remote."
+          }
+        }
+      },
+      "RunAgentRequest": {
+        "type": "object",
+        "required": ["prompt"],
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "description": "The instructions to be used for the agent run."
+          },
+          "spanContext": {
+            "$ref": "#/components/schemas/LaminarSpanContext",
+            "description": "Laminar OpenTelemetry span context. Useful to embed agent spans in a larger trace."
+          },
+          "modelProvider": {
+            "type": "string",
+            "enum": ["anthropic", "bedrock"],
+            "description": "LLM provider. Defaults to `anthropic`."
+          },
+          "model": {
+            "type": "string",
+            "description": "LLM model name. Must match the provider API model name, e.g. 'claude-3-7-sonnet-latest'."
+          },
+          "stream": {
+            "type": "boolean",
+            "description": "If true, the response will be streamed including the intermediate 'thinking' steps. If false, the response will be returned as a single message. Defaults to false."
+          },
+          "enableThinking": {
+            "type": "boolean",
+            "description": "The thinking parameter that is sent to the underlying LLM. Defaults to true."
+          }
+        }
+      },
+      "ActionResult": {
+        "type": "object",
+        "properties": {
+          "isDone": {
+            "type": "boolean",
+            "description": "Whether the agent has finished its work. True on the final step."
+          },
+          "content": {
+            "type": "string",
+            "description": "The output of the agent."
+          },
+          "error": {
+            "type": "string",
+            "description": "The error that occurred during the agent run."
+          }
+        }
+      },
+      "RunAgentDefaultResponse": {
+        "type": "object",
+        "required": ["result"],
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/ActionResult",
+            "description": "The result of the agent run."
+          }
+        }
+      },
+      "RunAgentResponse": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/RunAgentDefaultResponse",
+            "description": "Non-streaming response."
+          },
+          {
+            "$ref": "#/components/schemas/RunAgentStreamChunk",
+            "description": "Streaming response."
+          }
+        ]
+      },
+      "StepChunk": {
+        "type": "object",
+        "required": ["chunkType", "messageId", "actionResult", "summary"],
+        "properties": {
+          "chunkType": {
+            "type": "string",
+            "enum": ["step"]
+          },
+          "messageId": {
+            "type": "string",
+            "description": "The UUID of the message."
+          },
+          "actionResult": {
+            "$ref": "#/components/schemas/ActionResult",
+            "description": "The result of the agent run."
+          },
+          "summary": {
+            "type": "string",
+            "description": "A quick summary of the step."
+          }
+        }
+      },
+      "FinalOutputChunk": {
+        "type": "object",
+        "required": ["chunkType", "messageId", "content"],
+        "properties": {
+          "chunkType": {
+            "type": "string",
+            "enum": ["final_output"]
+          },
+          "messageId": {
+            "type": "string",
+            "description": "The UUID of the message."
+          },
+          "content": {
+            "$ref": "#/components/schemas/RunAgentDefaultResponse",
+            "description": "The final output of the agent."
+          }
+        }
+      },
+      "RunAgentStreamChunk": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/StepChunk"
+          },
+          {
+            "$ref": "#/components/schemas/FinalOutputChunk"
+          }
+        ]
       }
     }
   }

@@ -5,13 +5,19 @@ description: Instrument your Next.js app based on App Router with Laminar
 
 import AutoInstrumentableJSModules from '/snippets/autoinstrumentable-js-modules.mdx';
 
-## 1. Install Laminar
+## Overview
+
+[Next.js](https://nextjs.org/) is a popular React framework for building web applications.
+
+## Getting Started
+
+### 1. Install Laminar
 
 ```bash
 npm add @lmnr-ai/lmnr
 ```
 
-## 2. Initialize Laminar
+### 2. Initialize Laminar
 
 To instrument your entire Next.js app, place Laminar initialization in `instrumentation.{ts,js}` file. Learn more about `instrumentation.{ts,js}` [here](https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation).
 
@@ -67,7 +73,8 @@ instrumentation afterwards statically is not possible.
 
 Next.js telemetry sends numerous [spans](https://nextjs.org/docs/app/building-your-application/optimizing/open-telemetry#default-spans-in-nextjs), which may seem noisy in Laminar's dashboard.
 
-By default, Laminar (since `@lmnr-ai/lmnr@0.4.29`) ignores Next.js spans. If you see many Next.js spans in your traces, it may be that you are using an older version of Laminar. Consider upgrading to the latest version.
+By default, Laminar ignores Next.js spans.
+If you see many Next.js spans in your traces, it may be that you are using an older version of Laminar. Consider upgrading to the latest version.
 
 If you want to see all Next.js spans, set `preserveNextjsSpans` to `true` in `Laminar.initialize()`.
 

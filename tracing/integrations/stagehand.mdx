@@ -1,0 +1,56 @@
+---
+title: "Stagehand (JS only)"
+---
+
+## Overview
+
+[Stagehand](https://github.com/browserbase/stagehand) is a relatively low-level AI-native framework for building browser agents in TypeScript.
+
+Stagehand is designed to be a seamless extension of Playwright, and in particular, it's Page API.
+
+Thanks to Laminar's native integration with Playwright, you can trace your Stagehand agents with ease.
+
+## Usage
+
+```javascript
+import { Laminar } from '@lmnr-ai/lmnr';
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_API_KEY,
+});
+import { Stagehand } from 'stagehand';
+
+const stagehand = new Stagehand({
+    // options
+});
+
+await stagehand.init();
+const page = stagehand.page;
+await page.act("...");
+```
+
+In some setups, you may need to pass the module to the `Laminar.initialize` function. For example,
+
+```javascript
+import { Laminar } from '@lmnr-ai/lmnr';
+import { Stagehand } from 'stagehand';
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_API_KEY,
+  instrumentModules: {
+    stagehand: Stagehand,
+  },
+});
+
+const stagehand = new Stagehand({
+    // options
+});
+
+await stagehand.init();
+const page = stagehand.page;
+await page.act("...");
+```
+
+## Example result
+
+<Frame caption="An example trace for page.act('go to Laminar pricing page')">
+<img width="600" src="/images/traces/stagehand.png" alt="Stagehand example" />
+</Frame>
