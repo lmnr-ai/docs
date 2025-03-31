@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "palm",
+  "theme": "mint",
   "name": "laminar docs",
   "colors": {
     "primary": "#ED6E40",
@@ -25,6 +25,13 @@
                   "self-hosting/access-control-setup"
                 ]
               }
+            ]
+          },
+          {
+            "group": "Index - Browser Agent",
+            "pages": [
+              "laminar-index/introduction",
+              "laminar-index/tracing"
             ]
           },
           {
@@ -69,12 +76,6 @@
               "evaluations/configuration",
               "evaluations/cookbook",
               "evaluations/online-evaluations"
-            ]
-          },
-          {
-            "group": "Index",
-            "pages": [
-              "laminar-index/introduction"
             ]
           },
           {

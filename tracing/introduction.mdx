@@ -1,55 +1,96 @@
 ---
-title: Introduction
-description: OpenTelemetry-based tracing with Laminar
+title: Introduction to Tracing with Laminar
+description: Comprehensive observability for your LLM applications with OpenTelemetry-based tracing
 ---
 
 import LaminarInitialize from '/snippets/laminar-initialize.mdx';
 import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
 import ObserveExample from '/snippets/observe-example.mdx';
 
-## Glossary
+## What is Laminar Tracing?
 
-- **Span** – Think of this as one step in your LLM application's process. It could be a function call or an API request.
-  - **Span attributes** – Extra information about the span, like input parameters or results
-  - **Span path** – Shows where the span came from in your code. For example: `get_user.validate.api_call`
+Laminar offers comprehensive observability for your LLM applications, capturing the entire execution flow with minimal setup. This allows you to:
 
-- **Trace** – A collection of spans, where each span can have parent and child spans. For example, when function A calls function B, function A is the parent span and function B is the child span. This creates a hierarchical view showing how different parts of your code interact with each other.
-- **Session** – A group of related traces that belong to the same user or conversation.
+- **Debug complex LLM workflows** by seeing exactly how data flows through your application
+- **Monitor performance** with detailed execution time and token usage metrics
+- **Track costs** across different models and components
+- **Analyze user sessions** to understand and improve the end-user experience
 
-### Example trace
+## Key Concepts
+
+### Span
+
+A single operation in your application's execution flow, such as a function call or an API request. Spans include:
+
+- **Attributes**: Input parameters, return values, and other metadata
+- **Path**: Hierarchical location in your code (e.g., `get_user.validate.api_call`)
+- **Duration**: How long the operation took to execute
+
+### Trace
+
+A collection of spans that form a complete execution path. Traces show parent-child relationships between operations, helping you understand how your code executes.
+
+### Session
+
+A group of related traces belonging to the same user interaction or conversation, allowing you to analyze complete user journeys.
+
+### Visualization Example
+
 <div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
-<img src="/images/traces/trace-example.png" alt="Screenshot of observability dashboard" style={{ margin: '0px' }}/>
+<img src="/images/traces/trace-example.png" alt="Screenshot of a trace visualization" style={{ margin: '0px' }}/>
 </div>
 
-Tree on the left shows a trace of an example LLM application. Function `answer_question` calls `fetch_page_and_check`, which in turn calls `check_presence`, which calls `OpenAI`. 
-Each line in the tree is a span.
+The tree view on the left shows a trace of an LLM application. The hierarchy displays how functions call each other:
+- `answer_question` calls `fetch_page_and_check`
+- which calls `check_presence` 
+- which calls `OpenAI`
 
-## Tracing overview
+Each node in this tree is a span, giving you a complete picture of your application's execution.
 
-Laminar offers comprehensive tracing of your entire application.
-For every run, the entire execution trace is logged, so the information you can see in the traces includes:
+## What Laminar Captures
 
-- Inputs and outputs of each span
+For every execution of your application, Laminar automatically records:
+
+### Performance Metrics
 - Total execution time
-- Total execution tokens and cost
-- Span-level execution time and token counts
+- Per-span execution times
+- Bottlenecks and slow operations
+
+### LLM-Specific Data
+- Token counts (input and output)
+- Model information
+- Cost calculations
+
+### Inputs & Outputs
+- Function parameters
+- Return values
+- Prompts and completions
+
+### Execution Flow
+- Parent-child relationships
+- Complete call hierarchy
+- Cross-service transactions
 
 <div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
 <img src="/images/traces/trace-attr.png" alt="Screenshot of trace attributes" style={{ margin: '0px' }}/>
 </div>
 
-## Getting started
+## Getting Started in 2 Minutes
 
-### Project API key
+### 1. Get Your Project API Key
 
 <GetProjectApiKey />
 
-### Add 2 lines to start tracing your entire application
+### 2. Initialize Laminar in Your Application
+
+Adding just two lines to your application enables comprehensive tracing:
 
 <LaminarInitialize />
 
-For example, calling OpenAI after initializing Laminar like this
-will create the following span in Laminar dashboard:
+### 3. That's it! Your LLM API Calls Are Now Traced
+
+Once initialized, Laminar automatically traces LLM API calls. For example, after initialization, this standard OpenAI call:
+
 <Tabs>
 <Tab title="Python">
 
@@ -73,28 +114,30 @@ const response = await client.chat.completions.create({
     messages: [{ role: "user", content: "What is the capital of France?" }],
 });
 ```
-
 </Tab>
 </Tabs>
 
-<Note>
-Laminar automatically records latency, cost, and tokens for LLM spans, taking into account the model and the number of tokens in the response.
-</Note>
+Will automatically create a span in your Laminar dashboard:
 
 <div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
-  <img src="/images/traces/trace-openai.png" alt="OpenAI span" style={{ margin: '0px' }}/>
+  <img src="/images/traces/trace-openai.png" alt="OpenAI span visualization" style={{ margin: '0px' }}/>
 </div>
 
-### Tracing specific functions with `observe` and adding children spans
+<Note>
+Laminar automatically captures important LLM metrics including latency, token usage, and cost calculations based on the specific model used.
+</Note>
+
+## Advanced Tracing Capabilities
+
+### Tracing Custom Functions
+
+Beyond automatic LLM tracing, you can use the `observe` decorator/wrapper to trace specific functions in your application:
 
 <ObserveExample />
 
-### Sending traces to a self-hosted Laminar instance
+### Self-Hosting Laminar
 
-By default, Laminar client packages send traces to the Laminar cloud at api.lmnr.ai.
-
-If you want to send traces to your own self-hosted Laminar instance, you can set the base URL and port numbers at
-initialization. Default settings in our repo are gRPC port 8001 and HTTP port 8000.
+While Laminar Cloud (api.lmnr.ai) is the default target for traces, you can also send data to your own self-hosted instance:
 
 <Tabs>
 <Tab title="Python">
@@ -125,17 +168,20 @@ Laminar.initialize({
 </Tab>
 </Tabs>
 
-## OpenTelemetry compatibility
+## OpenTelemetry Integration
 
-Laminar's manual and automatic instrumentation is compatible with [OpenTelemetry](https://opentelemetry.io/docs/specs/otel/).
-Our Rust backend is an OpenTelemetry-compatible ingestion endpoint and processes traces using gRPC. This ensures long-lived connections and extremely fast ingestion.
+Laminar builds on the industry-standard [OpenTelemetry](https://opentelemetry.io/docs/specs/otel/) protocol, providing:
 
-Instrumentations for LLM and vector DB libraries are provided by [OpenLLMetry](https://github.com/traceloop/openllmetry).
+- **Compatibility** with existing OpenTelemetry instrumentation
+- **High-performance** trace ingestion through gRPC
+- **Specialized support** for LLM and vector DB operations via [OpenLLMetry](https://github.com/traceloop/openllmetry)
 
-This means that you can use OpenTelemetry SDKs to send traces to Laminar, and they will be displayed in the Laminar UI.
-A separate getting started guide for OpenTelemetry is available in the [OpenTelemetry](/tracing/otel) section.
+If you already use OpenTelemetry in your stack, you can send those traces to Laminar with minimal configuration. Learn more in our [OpenTelemetry integration guide](/tracing/otel).
 
-## Next steps
+## Next Steps
 
-To better understand the anatomy of a trace, the terminology, and the concepts,
-read on to the [Structure](/tracing/structure) page.
+Now that you understand the basics of Laminar tracing:
+
+- Continue to [Trace Structure](/tracing/structure) to learn more about interpreting and using trace data
+- Explore [Advanced Configuration](/tracing/configuration) for customizing your tracing setup
+- Check out [Common Patterns](/tracing/patterns) for typical LLM application tracing strategies

@@ -2,21 +2,17 @@
 title: Laminar
 ---
 
-> **Laminar is an open-source all-in-one platform for engineering best-in-class LLM products.**
+> **Laminar is an open-source platform for observability and evaluations of AI applications.**
 
-- **Open-source** - Laminar is fully open-source, free to use and easy to self-host. Check our [Github repo](https://github.com/lmnr-ai/lmnr) to learn more. We also provide a [managed version](https://lmnr.ai/), for high-volume production use cases.
-
-- **All-in-one** - Laminar provides a full suite of tools for LLM engineering, from observability, evaluations and datasets to prompt chain management, data labeling, and more.
-
-- **Engineering** - building software with LLMs is essentially a form of test-driven development, Laminar facilitates this process by seamlessly integrating observability, evaluations, and data labeling.
+- **Open-source** - Laminar is fully open-source and easy to self-host. Give us a ⭐ [here](https://github.com/lmnr-ai/lmnr).
+- **Cloud** - Laminar provides fully managed cloud service for easier setup and scaling [lmnr.ai](https://lmnr.ai).
 
 ## Tracing
 
-- Laminar tracing is framework-agnostic and based on OpenTelemetry.
-- Just add 2 lines of code and you will be tracing entire execution of your LLM app. Laminar auto-instruments popular LLM SDKs and frameworks, such as OpenAI, Anthropic, Langchain, and more.
-- Traces are sent via gRPC and processed by the Rust 🦀 backend, delivering extremely low-latency and high-throughput.
-- Tracing of images is supported out of the box. Audio is coming soon.
-
+- Laminar tracing is framework-agnostic and based on **OpenTelemetry**.
+- Laminar auto-instruments popular LLM SDKs and frameworks, such as OpenAI, Anthropic, Langchain, and more with just 2 lines of code.
+- Traces are sent via gRPC and processed by blazing fast Rust 🦀 backend, delivering extremely low-latency and high-throughput.
+- Tracing of images is supported out of the box.
 
 Get started with [Tracing](/tracing/introduction).
 
@@ -24,42 +20,10 @@ Get started with [Tracing](/tracing/introduction).
 
 ## Evaluations
 
-### Offline evaluations
+- Evaluations are a way of tracking progress of your AI application. Without them, any iteration on your AI application becomes a guessing game.
+- Laminar gives you powerful tools to quickly setup evaluations and efficiently run them at scale.
+- All evaluations results data is tracked and managed by Laminar, so you can focus on building your AI application.
 
-Evaluations are unit tests for your prompts. Without them, any iteration attempt is blind. Laminar gives you powerful tools to build and run evaluations to facilitate the iteration process. Run them from the code, terminal, or as a part of your CI/CD pipeline.
+![Screenshot of evaluations dashboard](/images/evals.png)
 
-Learn more about [offline evaluations](/evaluations/introduction).
-
-### Online evaluations
-
-You can create and configure an LLM-as-a-judge evaluator or a Python scripts evaluators in Laminar UI. Then,
-Laminar hosts this evaluation logic and runs it with the selection of incoming traces. The results are
-stored as labels, and you can use them for further analysis, filtering, and improvement.
-
-Learn more about [online evaluations](/evaluations/online-evaluations).
-
-## Data labeling and analytics
-
-Laminar provides a UI for labeling and annotating the traces of your LLM applications.
-Multiple team members can label the same spans to measure human agreement. In addition, our online
-evaluators can label spans too, so you can measure human alignment of your LLM judge.
-
-You can organize the labeled data into datasets and use them to update your prompts or fine-tune your models.
-
-Learn more about [Data labeling](/labels/introduction) and [Datasets](/datasets/introduction).
-
-
-## Prompt chain management
-
-You can build and host chains of prompts and LLMs and then call them as if each chain was a single function.
-It is especially useful when you want to experiment with techniques, such as Mixture of Agents
-and self-reflecting agents, without or before having to manage prompts and model configs in your code.
-
-Learn more about [Pipeline builder](/pipeline/introduction) for prompt chains.
-
-## Access Control
-
-When self-hosting, Laminar supports GitHub authentication with optional email-based access restrictions.
-
-Learn more about [Access Control Setup](/self-hosting/access-control-setup).
-
+Get started with [evaluations](/evaluations/introduction).
