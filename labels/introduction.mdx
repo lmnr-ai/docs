@@ -11,30 +11,8 @@ To help you filter traces and export only relevant ones to datasets, you can add
 labels to spans. Laminar provides you with a UI for labeling. This page explains label
 types.
 
-## Label classes
+## Labels
 
-Every label on a span has a class. The class defines the name of the label,
-and the possible values. For example `sentiment` can be a class
-with possible values `positive`, `negative`, and `neutral`.
-
-Every user can assign one label value per label class per span.
-
-### Internal representation
-
-Internally, each possible label value is represented by a number. This is helpful
-to be able to add label values alongside evaluation scores.
-
-### Creating a label class
-
-When you create a label class, you will need to assign a number to each possible
-label value. Make sure to use unique numbers for each possible label value.
-
-For example, if you have a label class `sentiment` with possible values `positive`,
-`negative`, and `neutral`, you can assign the numbers `1`, `2`, and `3` to each
-of them.
-
-## Label description
-
-Label descriptions are optional and can be used to provide more context about the label.
-We recommend setting them for better alignment between labelers, both human and
-LLM-as-a-judge labelers.
+Labels are simple tags that you can add to spans. They are used to filter traces
+and export them to datasets. If you want to add key-value pairs to spans, use
+[metadata](/tracing/metadata) instead.

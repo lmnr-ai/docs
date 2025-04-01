@@ -89,8 +89,11 @@ Laminar.initialize({
 
 You can also enable instrumentation for specific modules only.
 
-This is useful if you either want more control over what is being instrumented.
-Some JS bundlers do not support dynamic import re-definitions, so you may need to explicitly specify the modules you want to instrument.
+This is useful if you want more control over what is being instrumented.
+
+<Note>
+For some JavaScript setups, this may be required. For example, in TS, we've seen this required for `tsx`, but not for `ts-node`.
+</Note>
 
 Let's say, for example, we call OpenAI and Anthropic models to perform the same task, and 
 we only want to instrument the Anthropic calls, but not OpenAI.

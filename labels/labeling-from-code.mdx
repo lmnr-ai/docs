@@ -12,39 +12,29 @@ in a form of key-value pairs. Labels are used to categorize and filter spans, an
 be created in the Laminar UI in advance. See [metadata](/tracing/metadata) for a more detailed
 comparison.
 
-### 1. Create a label class
-
-First, you need to create a label class. This is required to define the label name
-and possible values.
-Label classes are created in the Laminar UI.
-
-<Note>
-  If you do not create a label class, the labels sent from code will not be saved.
-</Note>
-
-### 2. Label spans from code
+## Label spans from code
 
 <Tabs>
 <Tab title="Python">
 
-This functionality is available from `v0.4.35`.
+This functionality is available from `v0.5.0`.
 
-#### Example 1. Labeling a span created with automatic instrumentation
+### Example 1. Labeling a span created with automatic instrumentation
 
 ```python
 from lmnr import Laminar
 
-with Laminar.with_labels({"my_label": "my_value", "another_label": "value"}):
+with Laminar.with_labels(["my_label", "another_label"]):
     openai_client.chat.completions.create(...)
 ```
 
 Note that any spans created within the `with_labels` block will inherit the labels,
 including auto-instrumented spans or any calls to `observe`d functions.
 
-#### Example 2. Labeling a span created manually
+### Example 2. Labeling a span created manually
 
 ```python
-with Laminar.start_as_current_span(name="foo", labels={"my_label": "value"}):
+with Laminar.start_as_current_span(name="foo", labels=["my_label", "another_label"]):
     # your code here
     pass
 ```
@@ -52,7 +42,7 @@ Note that only the span created by this `Laminar.start_as_current_span` call wil
 </Tab>
 
 <Tab title="JavaScript/TypeScript">
-This functionality is available from `v0.4.21`.
+This functionality is available from `v0.5.0`.
 
 #### Example 1. Labeling a span created with automatic instrumentation
 
@@ -61,7 +51,7 @@ This functionality is available from `v0.4.21`.
 import { Laminar, withLabels} from '@lmnr-ai/lmnr';
 
 // This can be both a function or an async function
-await withLabels({ my_label: 'my_value' }, (message: string) => {
+await withLabels(["my_label", "another_label"], (message: string) => {
   return openaiClient.chat.completions.create({
     messages: [{ role: 'user', content: message }],
       // ...
@@ -76,7 +66,7 @@ including auto-instrumented spans or any calls to `observe`d functions.
 ```javascript
 import { Laminar } from '@lmnr-ai/lmnr';
 
-const span = Laminar.startSpan('foo', { labels: { my_label: 'my_value' } });
+const span = Laminar.startSpan('foo', { labels: ["my_label", "another_label"] });
 // elsewhere
 Laminar.withSpan(span, () => {
     // your code here
@@ -95,15 +85,4 @@ Note that only the span created by this `Laminar.startSpan` call will have the l
 
 ### 3. Viewing labels
 
-The labels will be visible in the Laminar UI, in the "Labels" view of the span.
-
-The only difference for these labels is that they will have `CODE` as their source.
-
-<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
-  <img src="/images/labels/labelled-from-code.png" alt="Span with labels from code" style={{ margin: '0px' }}/>
-</div>
-
-#### Filter spans by labels
-
-You can filter spans by labels in the Laminar UI. Go to the traces page and select the spans tab.
-Add a filter by label, and enter the name and value in the format `label_name=label_value`.
+The labels will be visible in the Laminar UI, shown on each span as shields.

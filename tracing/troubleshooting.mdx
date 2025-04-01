@@ -11,7 +11,14 @@ I have instrumented my JavaScript code with Laminar, and I can see the manual sp
 
 ### Cause
 
-Due to how JS bundles the modules, in some runtimes, the modules need to be imported _after_ Laminar's initialization.
+`Laminar.initialize()` registers and enables OpenTelemetry's automatic instrumentations. OpenTelemetry's automatic instrumentations usually
+intercept the module imports, so if they are applied _after_ the module is imported, they may not work.
+Sometimes, the solution is to initialize Laminar first, and then import the modules. For example,
+in Next.js, it makes sense to initialize Laminar in `instrumentation.ts`, and then import the instrumented modules in your app.
+
+<Note>
+We have seen this issue in TypeScript with `tsx`, but not with `ts-node`.
+</Note>
 
 ### Solution
 

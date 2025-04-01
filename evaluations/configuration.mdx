@@ -20,7 +20,6 @@ evaluate({
     executor: async (data) => await getCapital(data),
     evaluators: { checkCapitalCorrectness: evaluator },
     projectApiKey: process.env.LMNR_PROJECT_API_KEY,
-    // note, this is new from `@lmnr-ai/lmnr==0.4.18`
     humanEvaluators: [
         HumanEvaluator("my_queue"),
         HumanEvaluator("my_other_queue"),
@@ -38,7 +37,6 @@ evaluate(
     executor=get_capital,
     evaluators={'check_capital_correctness': evaluator},
     project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
-    # note, this is new from `lmnr==0.4.29`
     human_evaluators=[
         HumanEvaluator(queue_name="my_queue"),
         HumanEvaluator(queue_name="my_other_queue")

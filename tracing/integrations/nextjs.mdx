@@ -1,0 +1,86 @@
+---
+title: Next.js
+description: Instrument your Next.js app based on App Router with Laminar
+---
+
+import AutoInstrumentableJSModules from '/snippets/autoinstrumentable-js-modules.mdx';
+
+## Overview
+
+[Next.js](https://nextjs.org/) is a popular React framework for building web applications.
+
+## Getting Started
+
+### 1. Install Laminar
+
+```bash
+npm add @lmnr-ai/lmnr
+```
+
+### 2. Initialize Laminar
+
+To instrument your entire Next.js app, place Laminar initialization in `instrumentation.{ts,js}` file. Learn more about `instrumentation.{ts,js}` [here](https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation).
+
+```typescript instrumentation.ts
+export async function register() {
+  // prevent this from running in the edge runtime
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+
+    const { Laminar } = await import('@lmnr-ai/lmnr');
+    Laminar.initialize({
+      projectApiKey: process.env.LMNR_API_KEY,
+    });
+  }
+}
+```
+
+<Note>
+`instrumentation.ts` is experimental in Next.js < 15.
+</Note>
+
+If you use Next.js < 15, add the following to your `next.config.js`:
+
+```javascript next.config.js
+module.exports = {
+    experimental: { instrumentationHook: true }
+};
+```
+
+<Tip>
+Simple initialization may not work for all cases.
+</Tip>
+
+The best workaround is to selectively pass `instrumentModules` to `.initialize()`.
+The example below shows how to do this for OpenAI and Anthropic.
+
+```javascript
+const { OpenAI } = await import('openai');
+const anthropic = await import('@anthropic-ai/sdk');
+const { Laminar } = await import('@lmnr-ai/lmnr');
+
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+  instrumentModules: { openAI: OpenAI, anthropic: anthropic }
+});
+```
+
+If you want to try it quickly without manually importing and instrumenting all modules,
+you can do simple initialization, however, you will need to import _and_ initialize Laminar **before importing LLM client libraries**.
+This is because JavaScript binds the imported module to its name at import time, so introducing
+instrumentation afterwards statically is not possible.
+
+## Next.js traces
+
+Next.js telemetry sends numerous [spans](https://nextjs.org/docs/app/building-your-application/optimizing/open-telemetry#default-spans-in-nextjs), which may seem noisy in Laminar's dashboard.
+
+By default, Laminar ignores Next.js spans.
+If you see many Next.js spans in your traces, it may be that you are using an older version of Laminar. Consider upgrading to the latest version.
+
+If you want to see all Next.js spans, set `preserveNextjsSpans` to `true` in `Laminar.initialize()`.
+
+```javascript
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_API_KEY,
+  preserveNextjsSpans: true
+});
+```
