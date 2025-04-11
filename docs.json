@@ -47,6 +47,7 @@
                   "tracing/manual-instrumentation"
                 ]
               },
+              "tracing/browser-agent-observability",
               "tracing/metadata",
               "tracing/otel",
               {
