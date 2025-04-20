@@ -96,20 +96,20 @@
           {
             "group": "Index",
             "pages": [
-              "index/getting-started",
-              "index/models",
-              "index/cli",
-              "index/configuration",
-              "index/streaming",
-              "index/tracing"
+              "index-agent/getting-started",
+              "index-agent/models",
+              "index-agent/cli",
+              "index-agent/configuration",
+              "index-agent/streaming",
+              "index-agent/tracing"
             ]
           },
           {
             "group": "Serverless API",
             "pages": [
-              "index/api/getting-started",
-              "index/api/tracing",
-              "index/api/sdk-reference"
+              "index-agent/api/getting-started",
+              "index-agent/api/tracing",
+              "index-agent/api/sdk-reference"
             ]
           }
         ]
