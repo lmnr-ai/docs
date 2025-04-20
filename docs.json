@@ -28,13 +28,6 @@
             ]
           },
           {
-            "group": "Index - Browser Agent",
-            "pages": [
-              "laminar-index/introduction",
-              "laminar-index/tracing"
-            ]
-          },
-          {
             "group": "Tracing",
             "pages": [
               "tracing/introduction",
@@ -93,6 +86,30 @@
               "datasets/introduction",
               "datasets/adding-data",
               "datasets/indexing"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Index - Browser Agent",
+        "groups": [
+          {
+            "group": "Index",
+            "pages": [
+              "index/getting-started",
+              "index/models",
+              "index/cli",
+              "index/configuration",
+              "index/streaming",
+              "index/tracing"
+            ]
+          },
+          {
+            "group": "Serverless API",
+            "pages": [
+              "index/api/getting-started",
+              "index/api/tracing",
+              "index/api/sdk-reference"
             ]
           }
         ]

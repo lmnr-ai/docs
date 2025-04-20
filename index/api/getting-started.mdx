@@ -1,24 +1,9 @@
 ---
 title: Getting started
 ---
-
-Index is the open-source state-of-the-art AI browser agent that can autonomously perform numerous tasks with a single prompt in the browser environment.
-
-Index is available as a Python package or as an API on the Laminar platform.
-
-## Use Cases
-
-Index browser agent is ideal for:
-- Web research and data collection
-- Automated testing of web applications
-- Content monitoring and summarization
-- Competitive analysis and market research
-- Customer support automation
-- E-commerce operations
-
-By combining the power of large language models with browser automation capabilities, Index enables you to perform sophisticated web-based workflows that previously required complex custom code with a single API call.
-
 # Index API 
+
+The easiest way to use Index in production is via the serverless API. Index API manages remote browser sessions, agent infrastructure and browser observability.
 
 ## Getting Started
 
@@ -217,60 +202,3 @@ By combining the power of large language models with browser automation capabili
     ```
   </Tab>
 </Tabs>
-
-## Tracing with Laminar
-
-<Tabs>
-  <Tab title="TypeScript">
-    One of the most powerful features of using Index through Laminar is the comprehensive tracing and observability it provides. When you run browser agent tasks through Laminar, you get:
-    
-    1. **Full Session Replay**: Watch exactly what the browser agent saw and did during execution
-    2. **Synchronized Traces**: See the agent's internal reasoning process alongside browser actions
-    3. **Performance Metrics**: Track duration, token usage, and other performance indicators
-    4. **Error Analysis**: Easily identify and debug failures or unexpected behaviors
-    
-    To ensure your browser agent sessions are properly traced, make sure you've initialized Laminar at the start of your application:
-    
-    ```typescript
-    import { Laminar as L } from '@lmnr-ai/lmnr';
-    
-    L.initialize({ projectApiKey: "YOUR_PROJECT_API_KEY" });
-    ```
-    
-    All browser agent activities will automatically be traced and recorded in the Laminar platform, where you can access the session replays and analysis.
-  </Tab>
-  <Tab title="Python">
-    One of the most powerful features of using Index through Laminar is the comprehensive tracing and observability it provides. When you run browser agent tasks through Laminar, you get:
-    
-    1. **Full Session Replay**: Watch exactly what the browser agent saw and did during execution
-    2. **Synchronized Traces**: See the agent's internal reasoning process alongside browser actions
-    3. **Performance Metrics**: Track duration, token usage, and other performance indicators
-    4. **Error Analysis**: Easily identify and debug failures or unexpected behaviors
-    
-    To ensure your browser agent sessions are properly traced, make sure you've initialized Laminar at the start of your application:
-    
-    ```python
-    from lmnr import Laminar
-    
-    Laminar.initialize(project_api_key="YOUR_PROJECT_API_KEY")
-    ```
-    
-    All browser agent activities will automatically be traced and recorded in the Laminar platform, where you can access the session replays and analysis.
-  </Tab>
-</Tabs>
-
-## Visualizing Browser Agent Sessions
-
-![Browser agent session replay](/images/index/browser-session.png)
-
-The Laminar platform provides a comprehensive visualization interface where you can:
-- Watch time-synced recordings of what the browser agent saw and interacted with
-- Follow the agent's thought process and decision-making
-- Review extracted data and final outcomes
-- Debug issues by identifying exactly where and why things went wrong
-- Speed up session replays up to 8x for faster debugging
-
-This visual replay gives you unprecedented insight into how the browser agent interprets and executes instructions, making it easier to refine your prompts and build robust web automation workflows.
-
-
-

@@ -1,0 +1,59 @@
+---
+title: Streaming
+description: Learn how to stream Index browser agent's output.
+---
+
+# Streaming Agent Output
+
+When running complex browser automation tasks, you may want to see the agent's output in real-time rather than waiting for the entire task to complete. Index provides streaming capabilities that allow you to see the agent's actions and thought process as they happen.
+
+## Basic Streaming Example
+
+Here's how to stream the agent's output:
+
+```python
+async for chunk in agent.run_stream(
+    prompt="Navigate to news.ycombinator.com, find a post about AI, and summarize it"
+):
+    print(chunk)
+```
+
+## Streaming in Interactive CLI
+
+When you use the `index run` command to start the interactive CLI, streaming is enabled by default. This gives you real-time updates as the agent works, showing each step of the process:
+
+```
+Your message: go to lmnr.ai, summarize pricing page
+
+Agent is working...
+Step 1: Opening lmnr.ai
+Step 2: Opening Pricing page
+Step 3: Scrolling for more pricing details
+Step 4: Scrolling back up to view pricing tiers
+Step 5: Provided concise summary of the three pricing tiers
+```
+
+## Stream Processing
+
+When streaming the agent's output, you can process different types of chunks to provide custom feedback to users:
+
+```python
+async for chunk in agent.run_stream(
+    prompt="Navigate to news.ycombinator.com, find a post about AI, and summarize it"
+):
+    if chunk.type == "thinking":
+        # Process internal reasoning
+        print(f"Agent thinking: {chunk.content}")
+    elif chunk.type == "action":
+        # Process browser actions
+        print(f"Agent action: {chunk.action_type} - {chunk.description}")
+    elif chunk.type == "observation":
+        # Process what the agent sees
+        print(f"Agent observed: {chunk.summary}")
+```
+
+Streaming is particularly useful for:
+- Providing real-time feedback to users
+- Implementing early stopping mechanisms
+- Debugging agent behavior
+- Displaying progress indicators

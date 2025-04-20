@@ -2,6 +2,8 @@
 title: Session Replay and Tracing
 ---
 
+# Browser Agent Observability
+
 One of the most powerful features of using Index is its built-in tracing and observability. Both in OSS package and in the Index API, you get:
 
 1. **Full Browser Session Replay**: Watch exactly what the browser agent saw and did during execution
@@ -11,8 +13,7 @@ One of the most powerful features of using Index is its built-in tracing and obs
 
 ## Setup
 
-To ensure your browser agent sessions are properly traced, make sure you've initialized Laminar at the start of your application.
-You can do this by calling `Laminar.initialize()` at the start of your application. You can also set the `LMNR_PROJECT_API_KEY` environment variable instead of passing it directly.
+To enable browser agent observability, you simply need to initialize Laminar tracing before running the agent. You can do this by calling `Laminar.initialize()` at the start of your application. You can also set the `LMNR_PROJECT_API_KEY` environment variable instead of passing it directly.
 
 <Tabs>
     <Tab title="TypeScript">
@@ -21,14 +22,13 @@ You can do this by calling `Laminar.initialize()` at the start of your applicati
 
     // Initialize Laminar with your project API key
     Laminar.initialize({ projectApiKey: "YOUR_PROJECT_API_KEY" });
-
     ```
     </Tab>
      <Tab title="Python">
     ```python
     from lmnr import Laminar
 
-    # 
+    # Initialize tracing with your project API key
     Laminar.initialize(project_api_key="YOUR_PROJECT_API_KEY")
     ```
     </Tab>

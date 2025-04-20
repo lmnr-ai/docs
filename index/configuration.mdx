@@ -1,0 +1,117 @@
+---
+title: Configuration
+description: Configure the Index browser agent
+---
+
+# Configuration
+
+Index provides several configuration options that allow you to customize how the browser agent operates.
+
+## Browser Configuration
+
+The `BrowserConfig` class allows you to customize the browser's behavior:
+
+```python
+from index import Agent, BrowserConfig
+```
+
+### Viewport Size
+
+You can customize the browser window size by specifying custom viewport dimensions:
+
+```python
+import asyncio
+from index import Agent, AnthropicProvider, BrowserConfig
+
+async def main():
+    # Configure browser with custom viewport size
+    browser_config = BrowserConfig(
+        viewport_size={"width": 1200, "height": 900}
+    )
+    
+    llm = AnthropicProvider(model="claude-3-7-sonnet-20250219")
+    
+    agent = Agent(llm=llm, browser_config=browser_config)
+    
+    output = await agent.run(
+        "Navigate to a responsive website and capture how it looks in full HD resolution"
+    )
+    
+    print(output.result)
+    
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+### Remote CDP URL
+
+You can connect to an existing Chrome DevTools Protocol endpoint instead of launching a new browser instance:
+
+```python
+import asyncio
+from index import Agent, AnthropicProvider, BrowserConfig
+
+async def main():
+    # Configure browser to connect to an existing Chrome DevTools Protocol endpoint
+    browser_config = BrowserConfig(
+        cdp_url="<cdp_url>"
+    )
+    
+    llm = AnthropicProvider(model="claude-3-7-sonnet-20250219", enable_thinking=True, thinking_token_budget=2048)
+    
+    agent = Agent(llm=llm, browser_config=browser_config)
+    
+    output = await agent.run(
+        prompt="Navigate to news.ycombinator.com and find the top story"
+    )
+    
+    print(output.result)
+    
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+## Additional Configuration Options
+
+### Persisting Browser State
+
+Index can persist browser state between sessions, which is useful for maintaining login sessions or other browsing context. This happens automatically when using the CLI but can be configured programmatically:
+
+```python
+from index import Agent, BrowserConfig
+
+browser_config = BrowserConfig(
+    state_directory="/path/to/state/directory"
+)
+
+agent = Agent(browser_config=browser_config)
+```
+
+### Timeout Settings
+
+You can configure various timeout settings for the browser agent:
+
+```python
+from index import Agent, BrowserConfig
+
+browser_config = BrowserConfig(
+    navigation_timeout=30000,  # Navigation timeout in milliseconds
+    action_timeout=5000        # Action timeout in milliseconds
+)
+
+agent = Agent(browser_config=browser_config)
+```
+
+### User Agent
+
+You can specify a custom user agent string:
+
+```python
+from index import Agent, BrowserConfig
+
+browser_config = BrowserConfig(
+    user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+)
+
+agent = Agent(browser_config=browser_config)
+``` 

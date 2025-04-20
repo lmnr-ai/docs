@@ -1,0 +1,46 @@
+---
+title: Models
+description: Learn about the models available in Laminar Index.
+---
+
+# Supported Models
+
+Index supports several powerful large language models with vision capabilities:
+
+## Claude 3.7 Sonnet
+
+- **Status**: Top performing model
+- **Features**: Extended thinking capabilities
+- **Usage**: Best choice for complex reasoning tasks
+- **How to use**:
+  ```python
+  from index import Agent, AnthropicProvider
+  
+  llm = AnthropicProvider(
+      model="claude-3-7-sonnet-20250219",
+      enable_thinking=True,
+      thinking_token_budget=2048
+  )
+  
+  agent = Agent(llm=llm)
+  ```
+
+## OpenAI o4-mini
+
+- **Features**: Strong vision-language capabilities
+- **Usage**: Good alternative to Claude models
+- **How to use**:
+  ```python
+  from index import Agent, OpenAIProvider
+  
+  llm = OpenAIProvider(model="o4-mini")
+  
+  agent = Agent(llm=llm)
+  ```
+
+## Gemini Models
+
+- **Status**: Upcoming
+- **Features**: To be announced
+- **Availability**: Will be added in future releases
+
