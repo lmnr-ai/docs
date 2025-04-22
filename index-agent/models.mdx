@@ -7,10 +7,41 @@ description: Learn about the models available in Laminar Index.
 
 Index supports several powerful large language models with vision capabilities:
 
-## Claude 3.7 Sonnet
+## Gemini
 
-- **Status**: Top performing model
-- **Features**: Extended thinking capabilities
+### Gemini 2.5 Pro
+
+- **Status**: High performance and fast execution
+- **Usage**: Best choice for complex reasoning tasks that require fast execution
+- **How to use**:
+  ```python
+  from index import Agent, GeminiProvider
+  
+  llm = GeminiProvider(
+          model="gemini-2.5-pro-preview-03-25",
+          thinking_token_budget=8192
+        )
+  ```
+
+### Gemini 2.5 Flash
+
+- **Status**: Good performance and fast execution, very cost effective
+- **Usage**: Best choice for simpler tasks that require fast execution and low cost
+- **How to use**:
+  ```python
+  from index import Agent, GeminiProvider
+  
+  llm = GeminiProvider(
+          model="gemini-2.5-flash-preview-04-17",
+          thinking_token_budget=8192
+        )
+  ```
+
+## Anthropic
+
+### Claude 3.7 Sonnet
+
+- **Status**: High performance
 - **Usage**: Best choice for complex reasoning tasks
 - **How to use**:
   ```python
@@ -21,26 +52,19 @@ Index supports several powerful large language models with vision capabilities:
       enable_thinking=True,
       thinking_token_budget=2048
   )
-  
-  agent = Agent(llm=llm)
   ```
 
-## OpenAI o4-mini
+## OpenAI
 
-- **Features**: Strong vision-language capabilities
-- **Usage**: Good alternative to Claude models
+### o4-mini
+
+- **Status**: Good performance
+- **Usage**: Various difficulty tasks, depends on `reasoning_effort` parameter
 - **How to use**:
   ```python
-  from index import Agent, OpenAIProvider
+  from index import OpenAIProvider
   
-  llm = OpenAIProvider(model="o4-mini")
-  
-  agent = Agent(llm=llm)
+  llm = OpenAIProvider(model="o4-mini", reasoning_effort="low")
   ```
 
-## Gemini Models
-
-- **Status**: Upcoming
-- **Features**: To be announced
-- **Availability**: Will be added in future releases
 

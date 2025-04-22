@@ -15,7 +15,10 @@ Here's how to stream the agent's output:
 async for chunk in agent.run_stream(
     prompt="Navigate to news.ycombinator.com, find a post about AI, and summarize it"
 ):
-    print(chunk)
+    if chunk.type == "step":
+        print(chunk.content)
+    elif chunk.type == "final_output":
+        print(chunk.content)
 ```
 
 ## Streaming in Interactive CLI
@@ -32,28 +35,3 @@ Step 3: Scrolling for more pricing details
 Step 4: Scrolling back up to view pricing tiers
 Step 5: Provided concise summary of the three pricing tiers
 ```
-
-## Stream Processing
-
-When streaming the agent's output, you can process different types of chunks to provide custom feedback to users:
-
-```python
-async for chunk in agent.run_stream(
-    prompt="Navigate to news.ycombinator.com, find a post about AI, and summarize it"
-):
-    if chunk.type == "thinking":
-        # Process internal reasoning
-        print(f"Agent thinking: {chunk.content}")
-    elif chunk.type == "action":
-        # Process browser actions
-        print(f"Agent action: {chunk.action_type} - {chunk.description}")
-    elif chunk.type == "observation":
-        # Process what the agent sees
-        print(f"Agent observed: {chunk.summary}")
-```
-
-Streaming is particularly useful for:
-- Providing real-time feedback to users
-- Implementing early stopping mechanisms
-- Debugging agent behavior
-- Displaying progress indicators

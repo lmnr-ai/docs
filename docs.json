@@ -98,9 +98,9 @@
             "pages": [
               "index-agent/getting-started",
               "index-agent/models",
+              "index-agent/streaming",
               "index-agent/cli",
               "index-agent/configuration",
-              "index-agent/streaming",
               "index-agent/tracing"
             ]
           },
@@ -108,8 +108,8 @@
             "group": "Serverless API",
             "pages": [
               "index-agent/api/getting-started",
-              "index-agent/api/tracing",
-              "index-agent/api/sdk-reference"
+              "index-agent/api/streaming",
+              "index-agent/api/tracing"
             ]
           }
         ]
@@ -121,24 +121,6 @@
             "group": "API Documentation",
             "pages": [
               "api-reference/introduction"
-            ]
-          },
-          {
-            "group": "Pipelines - API",
-            "pages": [
-              "api-reference/pipeline/pipeline_run"
-            ]
-          },
-          {
-            "group": "Semantic Search - API",
-            "pages": [
-              "api-reference/semantic-search/semantic-search"
-            ]
-          },
-          {
-            "group": "Queues - API",
-            "pages": [
-              "api-reference/queues/queues_push"
             ]
           },
           {

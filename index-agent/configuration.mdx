@@ -26,7 +26,7 @@ from index import Agent, AnthropicProvider, BrowserConfig
 async def main():
     # Configure browser with custom viewport size
     browser_config = BrowserConfig(
-        viewport_size={"width": 1200, "height": 900}
+        viewport_size={"width": 1024, "height": 768}
     )
     
     llm = AnthropicProvider(model="claude-3-7-sonnet-20250219")
@@ -70,48 +70,3 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 ```
-
-## Additional Configuration Options
-
-### Persisting Browser State
-
-Index can persist browser state between sessions, which is useful for maintaining login sessions or other browsing context. This happens automatically when using the CLI but can be configured programmatically:
-
-```python
-from index import Agent, BrowserConfig
-
-browser_config = BrowserConfig(
-    state_directory="/path/to/state/directory"
-)
-
-agent = Agent(browser_config=browser_config)
-```
-
-### Timeout Settings
-
-You can configure various timeout settings for the browser agent:
-
-```python
-from index import Agent, BrowserConfig
-
-browser_config = BrowserConfig(
-    navigation_timeout=30000,  # Navigation timeout in milliseconds
-    action_timeout=5000        # Action timeout in milliseconds
-)
-
-agent = Agent(browser_config=browser_config)
-```
-
-### User Agent
-
-You can specify a custom user agent string:
-
-```python
-from index import Agent, BrowserConfig
-
-browser_config = BrowserConfig(
-    user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-)
-
-agent = Agent(browser_config=browser_config)
-``` 
