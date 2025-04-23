@@ -1,0 +1,70 @@
+---
+title: Models
+description: Learn about the models available in Laminar Index.
+---
+
+# Supported Models
+
+Index supports several powerful large language models with vision capabilities:
+
+## Gemini
+
+### Gemini 2.5 Pro
+
+- **Status**: High performance and fast execution
+- **Usage**: Best choice for complex reasoning tasks that require fast execution
+- **How to use**:
+  ```python
+  from index import Agent, GeminiProvider
+  
+  llm = GeminiProvider(
+          model="gemini-2.5-pro-preview-03-25",
+          thinking_token_budget=8192
+        )
+  ```
+
+### Gemini 2.5 Flash
+
+- **Status**: Good performance and fast execution, very cost effective
+- **Usage**: Best choice for simpler tasks that require fast execution and low cost
+- **How to use**:
+  ```python
+  from index import Agent, GeminiProvider
+  
+  llm = GeminiProvider(
+          model="gemini-2.5-flash-preview-04-17",
+          thinking_token_budget=8192
+        )
+  ```
+
+## Anthropic
+
+### Claude 3.7 Sonnet
+
+- **Status**: High performance
+- **Usage**: Best choice for complex reasoning tasks
+- **How to use**:
+  ```python
+  from index import Agent, AnthropicProvider
+  
+  llm = AnthropicProvider(
+      model="claude-3-7-sonnet-20250219",
+      enable_thinking=True,
+      thinking_token_budget=2048
+  )
+  ```
+
+## OpenAI
+
+### o4-mini
+
+- **Status**: Good performance
+- **Usage**: Various difficulty tasks, depends on `reasoning_effort` parameter
+- **How to use**:
+  ```python
+  from index import OpenAIProvider
+  
+  llm = OpenAIProvider(model="o4-mini", reasoning_effort="low")
+  ```
+
+

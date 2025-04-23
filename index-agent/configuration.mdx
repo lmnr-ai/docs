@@ -1,0 +1,72 @@
+---
+title: Configuration
+description: Configure the Index browser agent
+---
+
+# Configuration
+
+Index provides several configuration options that allow you to customize how the browser agent operates.
+
+## Browser Configuration
+
+The `BrowserConfig` class allows you to customize the browser's behavior:
+
+```python
+from index import Agent, BrowserConfig
+```
+
+### Viewport Size
+
+You can customize the browser window size by specifying custom viewport dimensions:
+
+```python
+import asyncio
+from index import Agent, AnthropicProvider, BrowserConfig
+
+async def main():
+    # Configure browser with custom viewport size
+    browser_config = BrowserConfig(
+        viewport_size={"width": 1024, "height": 768}
+    )
+    
+    llm = AnthropicProvider(model="claude-3-7-sonnet-20250219")
+    
+    agent = Agent(llm=llm, browser_config=browser_config)
+    
+    output = await agent.run(
+        "Navigate to a responsive website and capture how it looks in full HD resolution"
+    )
+    
+    print(output.result)
+    
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+### Remote CDP URL
+
+You can connect to an existing Chrome DevTools Protocol endpoint instead of launching a new browser instance:
+
+```python
+import asyncio
+from index import Agent, AnthropicProvider, BrowserConfig
+
+async def main():
+    # Configure browser to connect to an existing Chrome DevTools Protocol endpoint
+    browser_config = BrowserConfig(
+        cdp_url="<cdp_url>"
+    )
+    
+    llm = AnthropicProvider(model="claude-3-7-sonnet-20250219", enable_thinking=True, thinking_token_budget=2048)
+    
+    agent = Agent(llm=llm, browser_config=browser_config)
+    
+    output = await agent.run(
+        prompt="Navigate to news.ycombinator.com and find the top story"
+    )
+    
+    print(output.result)
+    
+if __name__ == "__main__":
+    asyncio.run(main())
+```

@@ -19,101 +19,6 @@
     }
   ],
   "paths": {
-    "/v1/pipeline/run": {
-      "post": {
-        "tags": [
-          "api::pipelines"
-        ],
-        "operationId": "run_pipeline_graph",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GraphRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Pipeline run result",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": ["runId", "outputs"],
-                  "properties": {
-                    "runId": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
-                    "outputs" : {
-                      "type": "object",
-                      "additionalProperties": {
-                        "$ref": "#/components/schemas/GraphRunOutput"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/semantic-search": {
-      "post": {
-        "tags": [
-          "api::semantic-search"
-        ],
-        "operationId": "semantic_search",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SemanticSearchRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Semantic search result",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SemanticSearchResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request. Cannot parse the JSON payload into a valid request. Common causes: `datasetId` is not a valid UUID",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "string",
-                  "example": "Json deserialize error."
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Dataset not found. Either `datasetId` is not found within the project defined by project API key.",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "string",
-                  "example": "Dataset not found."
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/queues/push": {
       "post": {
         "tags": [
@@ -233,177 +138,6 @@
       }
     },
     "schemas": {
-      "ChatMessage": {
-        "type": "object",
-        "properties": {
-          "role": {
-            "type": "string"
-          },
-          "content": {
-            "type": "string"
-          }
-        },
-        "required": ["role", "content"]
-      },
-      "ConditionedValue": {
-        "type": "object",
-        "properties": {
-          "condition": {
-            "type": "string"
-          },
-          "value": {
-            "type": "string"
-          }
-        },
-        "required": ["condition", "value"]
-      },
-      "NodeInput": {
-        "oneOf": [
-          {
-            "type": "string"
-          },
-          {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ChatMessage"
-            }
-          },
-          {
-            "$ref": "#/components/schemas/ConditionedValue"
-          }
-        ]
-      },
-      "GraphRequest": {
-        "type": "object",
-        "required": [
-          "pipeline",
-          "inputs",
-          "env"
-        ],
-        "properties": {
-          "pipeline": {
-            "type": "string",
-            "description": "Name of the pipeline to be called. Not to be confused with the pipeline version name. Target pipeline version for the pipeline is set in the UI."
-          },
-          "inputs": {
-            "type": "object",
-            "additionalProperties": {
-              "$ref": "#/components/schemas/NodeInput"
-            }
-          },
-          "env": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            },
-            "description": "The keys are env variables such as OPENAI_API_KEY, POSTGRES_URL, etc."
-          },
-          "metadata": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            },
-            "description": "Per-request metadata. Keys are arbitrary strings such as user_id, etc.",
-            "nullable": true
-          },
-          "stream": {
-            "type": "boolean",
-            "description": "If true, each node's output will be streamed. For some nodes, the whole execution will be streamed (e.g. LLM). Final value will be the run trace.",
-            "nullable": true
-          }
-        }
-      },
-      "GraphRunOutput": {
-        "type": "object",
-        "required": [
-          "value"
-        ],
-        "properties": {
-          "value": {
-            "$ref": "#/components/schemas/NodeInput"
-          }
-        }
-      },
-      "SemanticSearchRequest": {
-        "type": "object",
-        "required": ["query", "datasetId"],
-        "properties": {
-          "query": {
-            "description": "Query string to search semantically similar records",
-            "type": "string"
-          },
-          "datasetId": {
-            "description": "Dataset ID to search from.",
-            "type": "string",
-            "format": "uuid"
-          },
-          "limit": {
-            "description": "Maximum number of results to return. Defaults to 10.",
-            "type": "integer",
-            "format": "int32",
-            "default": 10,
-            "minimum": 0
-          },
-          "threshold": {
-            "description": "Minimum semantic similarity score threshold for the results. Defaults to 0.0.",
-            "type": "number",
-            "format": "float",
-            "minimum": 0.0,
-            "maximum": 1.0,
-            "default": 0.0
-          },
-          "metadataFilters": {
-            "description": "Filters to apply to the dataset. Each item in the array is a record from keys to values. Records within the record are joined with AND operator. Array items are joined with OR operator. For example, [{\"name\": \"John\"}, {\"age\": 30, \"city\": \"New York\"}] will return records where name is John or (age is 30 and city is New York).",
-            "type": "array",
-            "items": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "object",
-                "description": "Record from keys to values. Keys are metadata field names, values are metadata field values. Joined with AND operator."
-              }
-            }
-          }
-        }
-      },
-      "SemanticSearchResponse": {
-        "type": "object",
-        "required": ["results"],
-        "properties": {
-          "results": {
-            "description": "List of semantic search results, ordered by score in descending order",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/SemanticSearchResult"
-            }
-          }
-        }
-      },
-      "SemanticSearchResult": {
-        "type": "object",
-        "required": ["datasetId", "score", "data", "content"],
-        "properties": {
-          "datasetId": {
-            "description": "Dataset ID",
-            "type": "string",
-            "format": "uuid"
-          },
-          "score": {
-            "description": "Semantic similarity score between the query and the data",
-            "type": "number",
-            "format": "float",
-            "minimum": 0.0,
-            "maximum": 1.0
-          },
-          "data": {
-            "description": "Data object – `data` field from the dataset",
-            "type": "object"
-          },
-          "content": {
-            "description": "Content from the data point that matched the query. Usually entire content of the field that dataset is indexed on, but might be a chunk of it, if it is too long.",
-            "type": "string"
-          }
-        }
-      },
       "QueuePushItem": {
         "type": "object",
         "required": [],
@@ -573,27 +307,67 @@
             "type": "string",
             "description": "The instructions to be used for the agent run."
           },
-          "spanContext": {
-            "$ref": "#/components/schemas/LaminarSpanContext",
-            "description": "Laminar OpenTelemetry span context. Useful to embed agent spans in a larger trace."
+          "parentSpanContext": {
+            "type": "string",
+            "description": "Stringified Laminar OpenTelemetry span context. Useful to embed agent spans in a larger trace."
           },
           "modelProvider": {
             "type": "string",
-            "enum": ["anthropic", "bedrock"],
-            "description": "LLM provider. Defaults to `anthropic`."
+            "enum": ["anthropic", "bedrock", "gemini", "openai"],
+            "description": "LLM provider. Make sure to explicitly set this parameter, especially if you are setting the `model` parameter."
           },
           "model": {
             "type": "string",
-            "description": "LLM model name. Must match the provider API model name, e.g. 'claude-3-7-sonnet-latest'."
+            "description": "LLM model name. Must match the provider API model name, e.g. 'claude-3-7-sonnet-latest'. Make sure to set the `modelProvider` parameter explicitly."
           },
           "stream": {
             "type": "boolean",
-            "description": "If true, the response will be streamed including the intermediate 'thinking' steps. If false, the response will be returned as a single message. Defaults to false."
+            "description": "If true, the response will be streamed including the intermediate 'thinking' steps. If false, the response will be returned as a single message. Currently, non-streaming connections timeout after 350 seconds. Laminar SDKs always set this to true, and, in the non-streaming mode, the response will be returned as a single message. Defaults to false."
           },
           "enableThinking": {
             "type": "boolean",
             "description": "The thinking parameter that is sent to the underlying LLM. Defaults to true."
-          }
+          },
+          "agentState": {
+            "type": "string",
+            "description": "Stringified agent state as returned by a previous agent run. Useful to resume from a previous state."
+          },
+          "storageState": {
+            "type": "string",
+            "description": "Stringified browser storage state as returned by a previous agent run. Contains cookies and auth-related data."
+          },
+          "timeout": {
+            "type": "number",
+            "description": "Timeout in seconds. Only works in streaming mode. Note, this is a soft timeout, and the agent will finish its current step even if the timeout is reached. In addition, this timeout does not include initialization time."
+          },
+          "maxSteps": {
+            "type": "number",
+            "description": "Maximum number of steps to execute. Defaults to 100."
+          },
+          "cdpUrl": {
+            "type": "string",
+            "description": "URL of the Chrome DevTools Protocol (CDP) server. If not specified, Laminar will start its own CDP browser instance."
+          },
+          "thinkingTokenBudget": {
+            "type": "number",
+            "description": "Number of tokens the underlying LLM can use for thinking."
+          },
+          "startUrl": {
+            "type": "string",
+            "description": "URL to start the agent from. If not specified, the agent will infer this from the prompt. Make sure this is a valid URL with the protocol/scheme included."
+          },
+          "returnScreenshots": {
+            "type": "boolean",
+            "description": "Whether to return screenshots of the browser with each step. Ignored in the non-streaming mode."
+          },
+          "returnAgentState": {
+            "type": "boolean",
+            "description": "Whether to return the agent state at the end of the run. CAUTION: This is a very large payload. Defaults to false."
+          },
+          "returnStorageState": {
+            "type": "boolean",
+            "description": "Whether to return the browser storage state at the end of the run. This includes cookies and auth-related data. CAUTION: This may be a very large payload. Defaults to false."
+          } 
         }
       },
       "ActionResult": {
@@ -601,7 +375,7 @@
         "properties": {
           "isDone": {
             "type": "boolean",
-            "description": "Whether the agent has finished its work. True on the final step."
+            "description": "Whether the agent has finished its work. True on the final step, even if the agent has given control back to the user."
           },
           "content": {
             "type": "string",
@@ -610,6 +384,10 @@
           "error": {
             "type": "string",
             "description": "The error that occurred during the agent run."
+          },
+          "giveControl": {
+            "type": "boolean",
+            "description": "Whether the agent has given control back to the user. If true, the agent will pause and wait for the user to take over. If false, the agent is done with its work."
           }
         }
       },
@@ -620,6 +398,18 @@
           "result": {
             "$ref": "#/components/schemas/ActionResult",
             "description": "The result of the agent run."
+          },
+          "storageState": {
+            "type": "string",
+            "description": "Stringified browser storage state as returned by a previous agent run. Contains cookies and auth-related data. Only returned if `returnStorageState` is true in the request. CAUTION: This may be a very large payload."
+          },
+          "agentState": {
+            "type": "string",
+            "description": "Stringified agent state as returned by a previous agent run. Only returned if `returnAgentState` is true in the request. CAUTION: This is a very large payload."
+          },
+          "stepCount": {
+            "type": "number",
+            "description": "Number of steps the agent took. Returned in non-streaming mode."
           }
         }
       },
@@ -657,6 +447,46 @@
           }
         }
       },
+      "ErrorChunk": {
+        "type": "object",
+        "required": ["chunkType", "messageId", "error"],
+        "properties": {
+          "chunkType": {
+            "type": "string",
+            "enum": ["error"]
+          },
+          "messageId": {
+            "type": "string",
+            "description": "The UUID of the message."
+          },
+          "error": {
+            "type": "string",
+            "description": "The error that occurred during the agent run."
+          }
+        }
+      },
+      "TimeoutChunk": {
+        "type": "object",
+        "required": ["chunkType", "messageId", "actionResult", "summary"],
+        "properties": {
+          "chunkType": {
+            "type": "string",
+            "enum": ["timeout"]
+          },
+          "messageId": {
+            "type": "string",
+            "description": "The UUID of the message."
+          },
+          "actionResult": {
+            "$ref": "#/components/schemas/ActionResult",
+            "description": "The result of the agent run."
+          },
+          "summary": {
+            "type": "string",
+            "description": "A quick summary of the step."
+          }
+        }
+      },
       "FinalOutputChunk": {
         "type": "object",
         "required": ["chunkType", "messageId", "content"],
@@ -678,10 +508,20 @@
       "RunAgentStreamChunk": {
         "oneOf": [
           {
-            "$ref": "#/components/schemas/StepChunk"
+            "$ref": "#/components/schemas/StepChunk",
+            "description": "Step chunk. A step of the agent run."
           },
           {
-            "$ref": "#/components/schemas/FinalOutputChunk"
+            "$ref": "#/components/schemas/FinalOutputChunk",
+            "description": "Final output chunk. The final output of the agent."
+          },
+          {
+            "$ref": "#/components/schemas/TimeoutChunk",
+            "description": "Timeout chunk. The final step if the agent timed out."
+          },
+          {
+            "$ref": "#/components/schemas/ErrorChunk",
+            "description": "Error chunk. The error details."
           }
         ]
       }

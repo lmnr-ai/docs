@@ -1,0 +1,97 @@
+---
+title: CLI
+description: Learn how to use the Index browser agent through the command line interface
+---
+
+# Command Line Interface
+
+Index provides a convenient command line interface (CLI) that allows you to interact with the browser agent through your terminal.
+
+## Features
+
+The Index CLI offers:
+
+* Browser state persistence between sessions
+* Follow-up messages with support for "give human control" action
+* Real-time streaming updates
+* Beautiful terminal UI using Textual
+
+## Getting Started with CLI
+
+### Prerequisites
+
+Make sure you have Index installed:
+
+```bash
+pip install lmnr-index
+
+# Install playwright
+playwright install chromium
+```
+
+### Running the CLI
+
+You can run the CLI with the following command:
+
+```bash
+index run
+```
+
+Remember to set API key for the selected model in the `.env` file.
+
+## Interactive Mode
+
+When you run the CLI, you'll enter interactive mode:
+
+{/* These dashes are actually ─ symbols in the terminal, they are just rendered weirdly in markdown,
+so we replace them with a dash in the code block. */}
+
+```
+Loaded existing browser state
+╭--------------------– Interactive Mode ---------------------╮
+│ Index Browser Agent Interactive Mode                       │
+│ Type your message and press Enter. The agent will respond. │
+│ Press Ctrl+C to exit.                                      │
+╰------------------------------------------------------------╯
+
+Choose an LLM model:
+1. Gemini 2.5 Pro
+2. Gemini 2.5 Flash
+3. Claude 3.7 Sonnet
+4. OpenAI o4-mini
+Select model [1/2/3/4] (1): 4
+Using OpenAI model: o4-mini
+Loaded existing browser state
+
+Your message: go to lmnr.ai, summarize pricing page
+
+Agent is working...
+Step 1: Opening lmnr.ai
+Step 2: Opening Pricing page
+Step 3: Scrolling for more pricing details
+Step 4: Scrolling back up to view pricing tiers
+Step 5: Provided concise summary of the three pricing tiers
+```
+
+## Model Selection
+
+The CLI allows you to choose between different LLM models:
+
+1. Gemini 2.5 Pro (default) - Best for complex reasoning tasks that require fast execution
+2. Gemini 2.5 Flash - Good performance and fast execution, very cost effective
+3. Claude 3.7 Sonnet - Best for complex reasoning tasks
+4. OpenAI o4-mini - Good alternative with strong capabilities
+
+## Browser State Persistence
+
+The CLI automatically maintains browser state between sessions, which means:
+
+- Login sessions are preserved
+- Cookies are maintained
+- Site preferences are remembered
+
+This makes it convenient for tasks that require authentication or maintaining context across multiple runs.
+
+## Stopping the Agent
+
+You can exit the CLI at any time by pressing `Ctrl+C`. 

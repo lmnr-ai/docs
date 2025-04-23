@@ -1,0 +1,75 @@
+---
+title: Getting started
+---
+
+# Index
+
+Index is the SOTA open-source browser agent for autonomously executing complex tasks on the web. Check out the [GitHub repo](https://github.com/lmnr-ai/index).
+
+Powered by reasoning LLMs with vision capabilities
+    * Gemini 2.5 Pro/Flash
+    * Claude 3.7 Sonnet with extended thinking (top performing model)
+    * OpenAI o4-mini
+  
+
+## Local Quick Start
+
+### Install dependencies
+
+```bash
+pip install lmnr-index
+
+# Install playwright
+playwright install chromium
+```
+
+### Run the agent with code
+
+```python
+import asyncio
+from index import Agent, AnthropicProvider
+
+async def main():
+    llm = AnthropicProvider(
+            model="claude-3-7-sonnet-20250219",
+            enable_thinking=True, 
+            thinking_token_budget=2048)
+
+    agent = Agent(llm=llm)
+    prompt="Go to news.ycombinator.com, find a post about AI, and summarize it"
+
+    output = await agent.run(
+        prompt=prompt,
+    )
+    
+    print(output.result)
+    
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+You can also run Index using the [command line interface](/index-agent/cli) for an interactive experience.
+
+## Use Cases
+
+Index browser agent is ideal for:
+- Web research and data collection
+- Automated testing of web applications
+- Content monitoring and summarization
+- Competitive analysis and market research
+- Customer support automation
+- E-commerce operations
+
+By combining the power of large language models with browser automation capabilities, Index enables you to perform sophisticated web-based workflows that previously required complex custom code.
+
+## Next Steps
+
+- Learn about the [supported models](/index-agent/models) for the Index browser agent
+- Use the [command line interface](/index-agent/cli) for interactive sessions
+- Explore [advanced configuration options](/index-agent/configuration) for customizing the browser behavior
+- Understand how to [stream agent output](/index-agent/streaming) in real-time
+- Set up [tracing and session replay](/index-agent/tracing) for observability
+- Use the [Index API](/index-agent/api/getting-started) for serverless browser automation
+
+
+

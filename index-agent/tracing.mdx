@@ -2,7 +2,9 @@
 title: Session Replay and Tracing
 ---
 
-One of the most powerful features of using Index is its built-in tracing and observability. Both in OSS package and in the Index API, you get:
+### Browser Agent Observability
+
+One of the most powerful features of using Index is its built-in tracing and observability. Both in the open source package and in the Index API, you get:
 
 1. **Full Browser Session Replay**: Watch exactly what the browser agent saw and did during execution
 2. **Synchronized Traces**: See the agent's internal reasoning process alongside browser actions
@@ -11,8 +13,7 @@ One of the most powerful features of using Index is its built-in tracing and obs
 
 ## Setup
 
-To ensure your browser agent sessions are properly traced, make sure you've initialized Laminar at the start of your application.
-You can do this by calling `Laminar.initialize()` at the start of your application. You can also set the `LMNR_PROJECT_API_KEY` environment variable instead of passing it directly.
+To enable browser agent observability, you simply need to initialize Laminar tracing before running the agent. You can do this by calling `Laminar.initialize()` at the start of your application. You can also set the `LMNR_PROJECT_API_KEY` environment variable instead of passing it directly.
 
 <Tabs>
     <Tab title="TypeScript">
@@ -21,14 +22,13 @@ You can do this by calling `Laminar.initialize()` at the start of your applicati
 
     // Initialize Laminar with your project API key
     Laminar.initialize({ projectApiKey: "YOUR_PROJECT_API_KEY" });
-
     ```
     </Tab>
      <Tab title="Python">
     ```python
     from lmnr import Laminar
 
-    # 
+    # Initialize tracing with your project API key
     Laminar.initialize(project_api_key="YOUR_PROJECT_API_KEY")
     ```
     </Tab>
@@ -38,7 +38,7 @@ All browser agent activities will automatically be traced and recorded in the La
 
 ## Visualizing Browser Agent Sessions
 
-![Browser agent session replay](/images/index/browser-session.png)
+![Browser agent session replay](/images/index-agent/browser-session.png)
 
 The Laminar platform provides a comprehensive visualization interface where you can:
 - Watch time-synced recordings of what the browser agent saw and interacted with
@@ -48,3 +48,7 @@ The Laminar platform provides a comprehensive visualization interface where you 
 - Speed up session replays up to 8x for faster debugging
 
 This visual replay gives you unprecedented insight into how the browser agent interprets and executes your instructions, making it easier to refine your prompts and build robust web automation workflows.
+
+## Learn More
+
+Learn more about tracing on Laminar [here](/tracing/introduction).

@@ -1,0 +1,96 @@
+---
+title: Streaming
+---
+
+When running browser agent tasks through the Index API, you can receive real-time updates as the agent executes rather than waiting for the entire task to complete. This is particularly useful for:
+
+- Providing immediate feedback to users
+- Showing progress indicators for long-running tasks
+- Enabling early termination if needed
+- Debugging agent behavior in real-time
+
+## Streaming Mode
+
+<Tabs>
+  <Tab title="TypeScript">
+    To receive real-time updates as the browser agent executes:
+    
+    ```typescript
+    import { LaminarClient } from '@lmnr-ai/lmnr';
+    
+    const client = new LaminarClient({
+      projectApiKey: "YOUR_PROJECT_API_KEY",
+    });
+    
+    async function runStreamingBrowserAgent() {
+      const response = await client.agent.run({
+        prompt: "Lookup the current weather for New York, London, and Tokyo and compare them.",
+      });
+      
+      for await (const chunk of response) {
+        if (chunk.chunkType === 'step') {
+          // Print step-by-step actions as they happen
+          console.log(`Step: ${chunk.summary}`);
+        } else if (chunk.chunkType === 'finalOutput') {
+          // Print the final result
+          console.log(`Final output: ${chunk.content.result.content}`);
+        }
+      }
+    }
+    
+    runStreamingBrowserAgent();
+    ```
+  </Tab>
+  <Tab title="Python">
+    ### Synchronous
+    ```python
+    from lmnr import LaminarClient
+    
+    client = LaminarClient(project_api_key="YOUR_PROJECT_API_KEY")
+    
+    # Stream the browser agent's execution
+    for chunk in client.agent.run(
+        prompt="Lookup the current weather for New York, London, and Tokyo and compare them.",
+        stream=True
+    ):
+        if chunk.chunk_type == 'step':
+            # Print step-by-step actions as they happen
+            print(f"Step: {chunk.summary}")
+        elif chunk.chunk_type == 'finalOutput':
+            # Print the final result
+            print(f"Final output: {chunk.content.result.content}")
+    ```
+    
+    ### Asynchronous
+    ```python
+    import asyncio
+    from lmnr import AsyncLaminarClient
+    
+    async def run_streaming_agent():
+        client = AsyncLaminarClient(project_api_key="YOUR_PROJECT_API_KEY")
+        
+        # Stream the browser agent's execution asynchronously
+        async for chunk in await client.agent.run(
+            prompt="Lookup the current weather for New York, London, and Tokyo and compare them.",
+            stream=True
+        ):
+            if chunk.chunk_type == 'step':
+                print(f"Step: {chunk.summary}")
+            elif chunk.chunk_type == 'finalOutput':
+                print(f"Final output: {chunk.content.result.content}")
+    
+    # Run the async function
+    asyncio.run(run_streaming_agent())
+    ```
+  </Tab>
+</Tabs>
+
+## Chunk Types
+
+When streaming browser agent output, you'll receive different types of chunks that represent various aspects of the agent's execution:
+
+| Chunk Type | Description |
+|------------|-------------|
+| `step` | A step taken by the agent during execution (e.g., navigating to a page, clicking a button) |
+| `finalOutput` | The final result of the agent's execution |
+

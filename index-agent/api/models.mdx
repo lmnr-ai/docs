@@ -1,0 +1,270 @@
+---
+title: "Models"
+---
+
+## Anthropic
+
+
+# Supported Models
+
+Index supports several powerful large language models with vision capabilities:
+
+## Gemini
+
+### Gemini 2.5 Pro
+
+- **Status**: High performance and fast execution
+- **Usage**: Best choice for complex reasoning tasks that require fast execution
+- **How to use**:
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { LaminarClient } from '@lmnr-ai/lmnr';
+
+const client = new LaminarClient({
+  projectApiKey: 'lmnr-project-api-key',
+});
+
+const main = async () => {
+  const result = await client.agent.run({
+    prompt: 'Go to www.lmnr.ai and summarize their homepage.',
+    modelProvider: 'gemini',
+    model: 'gemini-2.5-pro-preview-03-25',
+  });
+  console.log(result);
+};
+
+main().then(() => {
+  console.log('Done');
+});
+```
+</Tab>
+<Tab title="Python (synchronous)">
+
+```python
+from lmnr import LaminarClient
+
+client = LaminarClient(project_api_key='lmnr-project-api-key')
+
+result = client.agent.run(
+    prompt='Go to www.lmnr.ai and summarize their homepage.',
+    model_provider='gemini',
+    model='gemini-2.5-pro-preview-03-25',
+)
+print(result)
+```
+
+</Tab>
+<Tab title="Python (asynchronous)">
+```python
+from lmnr import AsyncLaminarClient
+
+client = AsyncLaminarClient(project_api_key='lmnr-project-api-key')
+
+async def main():
+    result = await client.agent.run(
+        prompt='Go to www.lmnr.ai and summarize their homepage.',
+        model_provider='gemini',
+        model='gemini-2.5-pro-preview-03-25',
+    )
+    print(result)
+
+asyncio.run(main())
+```
+</Tab>
+</Tabs>
+
+
+### Gemini 2.5 Flash
+
+- **Status**: Good performance and fast execution, very cost effective
+- **Usage**: Best choice for simpler tasks that require fast execution and low cost
+- **How to use**:
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { LaminarClient } from '@lmnr-ai/lmnr';
+
+const client = new LaminarClient({
+  projectApiKey: 'lmnr-project-api-key',
+});
+
+const main = async () => {
+  const result = await client.agent.run({
+    prompt: 'Go to www.lmnr.ai and summarize their homepage.',
+    modelProvider: 'gemini',
+    model: 'gemini-2.5-flash-preview-04-17',
+  });
+  console.log(result);
+};
+
+main().then(() => {
+  console.log('Done');
+});
+```
+</Tab>
+<Tab title="Python (synchronous)">
+
+```python
+from lmnr import LaminarClient
+
+client = LaminarClient(project_api_key='lmnr-project-api-key')
+
+result = client.agent.run(
+    prompt='Go to www.lmnr.ai and summarize their homepage.',
+    model_provider='gemini',
+    model='gemini-2.5-flash-preview-04-17',
+)
+print(result)
+```
+
+</Tab>
+<Tab title="Python (asynchronous)">
+```python
+from lmnr import AsyncLaminarClient
+
+client = AsyncLaminarClient(project_api_key='lmnr-project-api-key')
+
+async def main():
+    result = await client.agent.run(
+        prompt='Go to www.lmnr.ai and summarize their homepage.',
+        model_provider='gemini',
+        model='gemini-2.5-flash-preview-04-17',
+    )
+    print(result)
+
+asyncio.run(main())
+```
+</Tab>
+</Tabs>
+
+## Anthropic
+
+### Claude 3.7 Sonnet
+
+- **Status**: High performance
+- **Usage**: Best choice for complex reasoning tasks
+- **How to use**:
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { LaminarClient } from '@lmnr-ai/lmnr';
+
+const client = new LaminarClient({
+  projectApiKey: 'lmnr-project-api-key',
+});
+
+const main = async () => {
+  const result = await client.agent.run({
+    prompt: 'Go to www.lmnr.ai and summarize their homepage.',
+    modelProvider: 'anthropic',
+    model: 'claude-3-7-sonnet-20250219',
+  });
+  console.log(result);
+};
+
+main().then(() => {
+  console.log('Done');
+});
+```
+</Tab>
+<Tab title="Python (synchronous)">
+
+```python
+from lmnr import LaminarClient
+
+client = LaminarClient(project_api_key='lmnr-project-api-key')
+
+result = client.agent.run(
+    prompt='Go to www.lmnr.ai and summarize their homepage.',
+    model_provider='anthropic',
+    model='claude-3-7-sonnet-20250219',
+)
+print(result)
+```
+
+</Tab>
+<Tab title="Python (asynchronous)">
+```python
+from lmnr import AsyncLaminarClient
+
+client = AsyncLaminarClient(project_api_key='lmnr-project-api-key')
+
+async def main():
+    result = await client.agent.run(
+        prompt='Go to www.lmnr.ai and summarize their homepage.',
+        model_provider='anthropic',
+        model='claude-3-7-sonnet-20250219',
+    )
+    print(result)
+
+asyncio.run(main())
+```
+</Tab>
+</Tabs>
+
+## OpenAI
+
+### o4-mini
+
+- **Status**: Good performance
+- **Usage**: Various difficulty tasks, depends on `reasoning_effort` parameter
+- **How to use**:
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { LaminarClient } from '@lmnr-ai/lmnr';
+
+const client = new LaminarClient({
+  projectApiKey: 'lmnr-project-api-key',
+});
+
+const main = async () => {
+  const result = await client.agent.run({
+    prompt: 'Go to www.lmnr.ai and summarize their homepage.',
+    modelProvider: 'openai',
+    model: 'o4-mini',
+  });
+  console.log(result);
+};
+
+main().then(() => {
+  console.log('Done');
+});
+```
+</Tab>
+<Tab title="Python (synchronous)">
+
+```python
+from lmnr import LaminarClient
+
+client = LaminarClient(project_api_key='lmnr-project-api-key')
+
+result = client.agent.run(
+    prompt='Go to www.lmnr.ai and summarize their homepage.',
+    model_provider='openai',
+    model='o4-mini',
+)
+print(result)
+```
+
+</Tab>
+<Tab title="Python (asynchronous)">
+```python
+from lmnr import AsyncLaminarClient
+
+client = AsyncLaminarClient(project_api_key='lmnr-project-api-key')
+
+async def main():
+    result = await client.agent.run(
+        prompt='Go to www.lmnr.ai and summarize their homepage.',
+        model_provider='openai',
+        model='o4-mini',
+    )
+    print(result)
+
+asyncio.run(main())
+```
+</Tab>
+</Tabs>
+

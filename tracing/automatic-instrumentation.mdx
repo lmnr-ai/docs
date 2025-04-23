@@ -6,7 +6,7 @@ description: Automatic code instrumentation and best practices for tracing with 
 import AutoInstrumentableJSModules from "/snippets/autoinstrumentable-js-modules.mdx"
 
 By default, `Laminar.initialize()` will automatically instrument majority of common LLM and VectorDB libraries for tracing.
-This includes OpenAI, Anthropic, Langchain, Pinecone, and many more.
+This includes OpenAI, Anthropic, Langchain, Gemini, and many more.
 
 ## Instrument all available libraries
 
@@ -24,9 +24,7 @@ Laminar.initialize(project_api_key=os.environ["LMNR_PROJECT_API_KEY"])
 </Tab>
 <Tab title="JavaScript/TypeScript">
 
-<Tip> For automatic instrumentation, import **AND** initialize Laminar before importing any instrumentable modules. 
-This is because JavaScript binds the imported module to its name at import time, so introducing
-instrumentation afterwards statically is not possible. </Tip>
+<Tip> For automatic instrumentation, import **AND** initialize Laminar before importing any instrumentable modules.</Tip>
 
 ```javascript
 import { Laminar } from '@lmnr-ai/lmnr';
@@ -94,6 +92,24 @@ This is useful if you want more control over what is being instrumented.
 <Note>
 For some JavaScript setups, this may be required. For example, in TS, we've seen this required for `tsx`, but not for `ts-node`.
 </Note>
+
+<Expandable title="technical details on JavaScript automatic instrumentation">
+Automatic instrumentation is done by patching the `import`/`require` statements.
+
+In many setups, if a module, e.g. `openai` is imported after Laminar (and so, the underlying
+OpenTelemetry Tracer) is initialized, the instrumentation will not be applied.
+
+Most bundlers will allow an import after initialization, but some bundlers, will first
+evaluate the import statements, and so, even moving the import after initialization will not work.
+
+In such setups, it is recommended to manually instrument the modules you need.
+
+When you pass the entire module to `instrumentModules`, our tracer will have access to the
+exports of the module, despite the fact that it's already imported.
+
+OpenTelemetry is stabilizing the support for this, so feel free to track the progress [here](https://github.com/open-telemetry/opentelemetry-js/issues/4845).
+
+</Expandable>
 
 Let's say, for example, we call OpenAI and Anthropic models to perform the same task, and 
 we only want to instrument the Anthropic calls, but not OpenAI.
