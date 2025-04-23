@@ -36,9 +36,10 @@ async def main():
             thinking_token_budget=2048)
 
     agent = Agent(llm=llm)
+    prompt="Go to news.ycombinator.com, find a post about AI, and summarize it"
 
     output = await agent.run(
-        prompt="Navigate to news.ycombinator.com, find a post about AI, and summarize it"
+        prompt=prompt,
     )
     
     print(output.result)

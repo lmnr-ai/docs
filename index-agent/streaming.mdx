@@ -10,25 +10,10 @@ Here's how to stream the agent's output:
 
 ```python
 async for chunk in agent.run_stream(
-    prompt="Navigate to news.ycombinator.com, find a post about AI, and summarize it"
+    prompt="Go to news.ycombinator.com, find a post about AI, and summarize it"
 ):
     if chunk.type == "step":
         print(chunk.content)
     elif chunk.type == "final_output":
         print(chunk.content)
-```
-
-## Streaming in Interactive CLI
-
-When you use the `index run` command to start the interactive CLI, streaming is enabled by default. This gives you real-time updates as the agent works, showing each step of the process:
-
-```
-Your message: go to lmnr.ai, summarize pricing page
-
-Agent is working...
-Step 1: Opening lmnr.ai
-Step 2: Opening Pricing page
-Step 3: Scrolling for more pricing details
-Step 4: Scrolling back up to view pricing tiers
-Step 5: Provided concise summary of the three pricing tiers
 ```

@@ -1,0 +1,1247 @@
+---
+title: Index SDK Reference
+---
+
+# Index SDK Reference
+
+Laminar SDKs are available for JavaScript/TypeScript and Python. Index SDK is the SDK for calling
+the [Index API](/api-reference/agent/agent_run). All index calls from SDK can be traced as
+described in the [index tracing docs](/index-agent/api/tracing).
+
+<Note>
+SDKs call the streaming API, regardless of the `stream` parameter in the SDK request.
+This is because the non-streaming API has a timeout limitation. SDKs will transform the streaming
+response into a non-streaming response.
+</Note>
+
+## Agent Run
+
+### Request
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| [prompt](#prompt) | string | Yes | - | The prompt text to send to the agent |
+| [stream](#stream) | boolean | No | false | Whether to stream the response from the agent |
+| [parentSpanContext / parent_span_context](#parentspancontext-parent-span-context) | string | No | - | Stringified Laminar span context for tracing |
+| [modelProvider / model_provider](#modelprovider-model-provider) | Enum | No | - | The model provider to use (anthropic, gemini, openai) |
+| [model](#model) | string | No | - | The specific model to use (must set modelProvider) |
+| [enableThinking / enable_thinking](#enablethinking-enable-thinking) | boolean | No | false | Whether to enable thinking (passed to LLM provider) |
+| [timeout](#timeout) | integer | No | - | Soft timeout in seconds for the agent run |
+| [maxSteps / max_steps](#maxsteps-max-steps) | integer | No | 100 | Maximum number of steps the agent will take |
+| [cdpUrl / cdp_url](#cdpurl-cdp-url) | string | No | - | URL to a running browser with CDP |
+| [thinkingTokenBudget / thinking_token_budget](#thinkingtokenbudget-thinking-token-budget) | integer | No | - | Maximum tokens for agent thinking |
+| [startUrl / start_url](#starturl-start-url) | string | No | - | Starting URL for the agent to visit |
+| [agentState / agent_state](#agentstate-agent-state) | string | No | - | Stringified agent state from previous run |
+| [storageState / storage_state](#storagestate-storage-state) | string | No | - | Stringified browser storage state |
+| [returnScreenshots / return_screenshots](#returnscreenshots-return-screenshots) | boolean | No | false | Whether to return screenshots with each step |
+| [returnAgentState / return_agent_state](#returnagentstate-return-agent-state) | boolean | No | false | Whether to return agent state after run |
+| [returnStorageState / return_storage_state](#returnstoragestate-return-storage-state) | boolean | No | false | Whether to return browser storage state |
+
+#### prompt
+
+The prompt to the agent. Required.
+
+| Type | Required |
+| --- | --- |
+| string | Yes |
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { LaminarClient } from '@lmnr-ai/lmnr';
+
+const client = new LaminarClient({
+  projectApiKey: 'lmnr-project-api-key',
+});
+
+const main = async () => {
+  const result = await client.agent.run({
+    prompt: 'Go to www.lmnr.ai and summarize their homepage.',
+  });
+  console.log(result);
+};
+
+main().then(() => {
+  console.log('Done');
+});
+```
+</Tab>
+<Tab title="Python (synchronous)">
+
+```python
+from lmnr import LaminarClient
+
+client = LaminarClient(project_api_key='lmnr-project-api-key')
+
+result = client.agent.run(
+    prompt='Go to www.lmnr.ai and summarize their homepage.'
+)
+print(result)
+```
+</Tab>
+<Tab title="Python (asynchronous)">
+```python
+from lmnr import AsyncLaminarClient
+
+client = AsyncLaminarClient(project_api_key='lmnr-project-api-key')
+
+async def main():
+    result = await client.agent.run(
+        prompt='Go to www.lmnr.ai and summarize their homepage.'
+    )
+    print(result)
+
+asyncio.run(main())
+```
+</Tab>
+</Tabs>
+
+#### stream
+
+Whether to stream the response from the agent. This affects the [response](#response) shape.
+
+| Type | Required | Default |
+| --- | --- | --- |
+| boolean | No | `false` |
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { LaminarClient } from '@lmnr-ai/lmnr';
+
+const client = new LaminarClient({
+  projectApiKey: 'lmnr-project-api-key',
+});
+
+const main = async () => {
+  const result = await client.agent.run({
+    prompt: 'Go to www.lmnr.ai and summarize their homepage.',
+    stream: true,
+  });
+  for await (const chunk of result) {
+    console.log(chunk);
+  }
+};
+
+main().then(() => {
+  console.log('Done');
+});
+```
+</Tab>
+<Tab title="Python (synchronous)">
+
+```python
+from lmnr import LaminarClient
+
+client = LaminarClient(project_api_key='lmnr-project-api-key')
+
+result = client.agent.run(
+    prompt='Go to www.lmnr.ai and summarize their homepage.',
+    stream=True,
+)
+for chunk in result:
+    print(chunk)
+```
+</Tab>
+<Tab title="Python (asynchronous)">
+```python
+from lmnr import AsyncLaminarClient
+
+client = AsyncLaminarClient(project_api_key='lmnr-project-api-key')
+
+async def main():
+    # Note this await, similar to major LLM SDKs.
+    result = await client.agent.run(
+        prompt='Go to www.lmnr.ai and summarize their homepage.',
+        stream=True,
+    )
+    async for chunk in result:
+        print(chunk)
+
+asyncio.run(main())
+```
+</Tab>
+</Tabs>
+
+#### parentSpanContext / parent_span_context
+
+The stringified Laminar span context that can be used to place the trace in an existing trace.
+
+| Type | Required |
+| --- | --- |
+| string | No |
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { LaminarClient, Laminar } from '@lmnr-ai/lmnr';
+
+const client = new LaminarClient({
+  projectApiKey: 'lmnr-project-api-key',
+});
+
+const main = async () => {
+  const result = await client.agent.run({
+    prompt: 'Go to www.lmnr.ai and summarize their homepage.',
+    // This will serialize the current span context, assuming there is an active
+    // span.
+    parentSpanContext: Laminar.serializeSpanContext(),
+  });
+  console.log(result);
+};
+
+main().then(() => {
+  console.log('Done');
+});
+```
+</Tab>
+<Tab title="Python (synchronous)">
+
+```python
+from lmnr import LaminarClient, Laminar
+
+client = LaminarClient(project_api_key='lmnr-project-api-key')
+
+result = client.agent.run(
+    prompt='Go to www.lmnr.ai and summarize their homepage.',
+    # This will serialize the current span context, assuming there is an active
+    # span.
+    parent_span_context=Laminar.serialize_span_context(),
+)
+print(result)
+```
+</Tab>
+<Tab title="Python (asynchronous)">
+```python
+from lmnr import AsyncLaminarClient, Laminar
+
+client = AsyncLaminarClient(project_api_key='lmnr-project-api-key')
+
+async def main():
+    result = await client.agent.run(
+        prompt='Go to www.lmnr.ai and summarize their homepage.',
+        # This will serialize the current span context, assuming there is an active
+        # span.
+        parent_span_context=Laminar.serialize_span_context(),
+    )
+    print(result)
+
+asyncio.run(main())
+```
+</Tab>
+</Tabs>
+
+#### modelProvider
+
+The model provider to use for the agent.
+
+| Type | Required |
+| --- | --- |
+| Enum['anthropic', 'gemini', 'openai'] | No |
+
+<Warning>
+It is required to set the `modelProvider` if you set the `model`.
+</Warning>
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { LaminarClient } from '@lmnr-ai/lmnr';
+
+const client = new LaminarClient({
+  projectApiKey: 'lmnr-project-api-key',
+});
+
+const main = async () => {
+  const result = await client.agent.run({
+    prompt: 'Go to www.lmnr.ai and summarize their homepage.',
+    modelProvider: 'anthropic',
+    model: 'claude-3-7-sonnet-20250219',
+  });
+  console.log(result);
+};
+
+main().then(() => {
+  console.log('Done');
+});
+```
+</Tab>
+<Tab title="Python (synchronous)">
+
+```python
+from lmnr import LaminarClient
+
+client = LaminarClient(project_api_key='lmnr-project-api-key')
+
+result = client.agent.run(
+    prompt='Go to www.lmnr.ai and summarize their homepage.',
+    model_provider='anthropic',
+    model='claude-3-7-sonnet-20250219',
+)
+print(result)
+```
+</Tab>
+<Tab title="Python (asynchronous)">
+```python
+from lmnr import AsyncLaminarClient
+
+client = AsyncLaminarClient(project_api_key='lmnr-project-api-key')
+
+async def main():
+    result = await client.agent.run(
+        prompt='Go to www.lmnr.ai and summarize their homepage.',
+        model_provider='anthropic',
+        model='claude-3-7-sonnet-20250219',
+    )
+    print(result)
+
+asyncio.run(main())
+```
+</Tab>
+</Tabs>
+
+#### model
+
+The model to use for the agent. Must match an available model (with vision) in the `modelProvider`'s API.
+
+See [models](/index-agent/api/models) for available models.
+
+| Type | Required |
+| --- | --- |
+| string | No |
+
+<Warning>
+It is required to set the `modelProvider` if you set the `model`.
+</Warning>
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { LaminarClient } from '@lmnr-ai/lmnr';
+
+const client = new LaminarClient({
+  projectApiKey: 'lmnr-project-api-key',
+});
+
+const main = async () => {
+  const result = await client.agent.run({
+    prompt: 'Go to www.lmnr.ai and summarize their homepage.',
+    modelProvider: 'anthropic',
+    model: 'claude-3-7-sonnet-20250219',
+  });
+  console.log(result);
+};
+
+main().then(() => {
+  console.log('Done');
+});
+```
+</Tab>
+<Tab title="Python (synchronous)">
+
+```python
+from lmnr import LaminarClient
+
+client = LaminarClient(project_api_key='lmnr-project-api-key')
+
+result = client.agent.run(
+    prompt='Go to www.lmnr.ai and summarize their homepage.',
+    model_provider='anthropic',
+    model='claude-3-7-sonnet-20250219',
+)
+print(result)
+```
+
+</Tab>
+<Tab title="Python (asynchronous)">
+```python
+from lmnr import AsyncLaminarClient
+
+client = AsyncLaminarClient(project_api_key='lmnr-project-api-key')
+
+async def main():
+    result = await client.agent.run(
+        prompt='Go to www.lmnr.ai and summarize their homepage.',
+        model_provider='anthropic',
+        model='claude-3-7-sonnet-20250219',
+    )
+    print(result)
+
+asyncio.run(main())
+```
+</Tab>
+</Tabs>
+
+#### enableThinking / enable_thinking
+
+The param is passed to the underlying LLM provider. Only used for Anthropic.
+
+| Type | Required | Default |
+| --- | --- | --- |
+| boolean | No | `false` |
+
+<Note>
+For OpenAI, `reasoning_effort` is currently defaulted to `low`, regardless of this param.
+Gemini models always set this to `true`.
+</Note>
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { LaminarClient } from '@lmnr-ai/lmnr';
+
+const client = new LaminarClient({
+  projectApiKey: 'lmnr-project-api-key',
+});
+
+const main = async () => {
+  const result = await client.agent.run({
+    prompt: 'Go to www.lmnr.ai and summarize their homepage.',
+    modelProvider: 'anthropic',
+    model: 'claude-3-7-sonnet-20250219',
+    enableThinking: true,
+  });
+  console.log(result);
+};
+
+main().then(() => {
+  console.log('Done');
+});
+```
+</Tab>
+<Tab title="Python (synchronous)">
+
+```python
+from lmnr import LaminarClient
+
+client = LaminarClient(project_api_key='lmnr-project-api-key')
+
+result = client.agent.run(
+    prompt='Go to www.lmnr.ai and summarize their homepage.',
+    model_provider='anthropic',
+    model='claude-3-7-sonnet-20250219',
+    enable_thinking=True,
+)
+print(result)
+```
+
+</Tab>
+<Tab title="Python (asynchronous)">
+```python
+from lmnr import AsyncLaminarClient
+
+client = AsyncLaminarClient(project_api_key='lmnr-project-api-key')
+
+async def main():
+    result = await client.agent.run(
+        prompt='Go to www.lmnr.ai and summarize their homepage.',
+        model_provider='anthropic',
+        model='claude-3-7-sonnet-20250219',
+        enable_thinking=True,
+    )
+    print(result)
+
+asyncio.run(main())
+```
+</Tab>
+</Tabs>
+
+#### timeout
+
+Timeout in seconds. This is a soft timeout, the agent will continue its current step until completion after the timeout. Also, initialization of the agent is not included in the timeout.
+
+| Type | Required |
+| --- | --- |
+| integer | No |
+
+<Warning>
+In non-streaming mode, agent timing out will throw an error.
+</Warning>
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { LaminarClient } from '@lmnr-ai/lmnr';
+
+const client = new LaminarClient({
+  projectApiKey: 'lmnr-project-api-key',
+});
+
+const main = async () => {
+  const result = await client.agent.run({
+    prompt: 'Go to www.lmnr.ai and summarize their homepage.',
+    timeout: 600, // 10 minutes
+  });
+  console.log(result);
+};
+
+main().then(() => {
+  console.log('Done');
+});
+```
+</Tab>
+<Tab title="Python (synchronous)">
+
+```python
+from lmnr import LaminarClient
+
+client = LaminarClient(project_api_key='lmnr-project-api-key')
+
+result = client.agent.run(
+    prompt='Go to www.lmnr.ai and summarize their homepage.',
+    timeout=600, # 10 minutes
+)
+print(result)
+```
+
+</Tab>
+<Tab title="Python (asynchronous)">
+```python
+from lmnr import AsyncLaminarClient
+
+client = AsyncLaminarClient(project_api_key='lmnr-project-api-key')
+
+async def main():
+    result = await client.agent.run(
+        prompt='Go to www.lmnr.ai and summarize their homepage.',
+        timeout=600, # 10 minutes
+    )
+    print(result)
+
+asyncio.run(main())
+```
+</Tab>
+</Tabs>
+
+#### maxSteps / max_steps
+
+The maximum number of steps the agent will take.
+
+| Type | Required | Default |
+| --- | --- | --- |
+| integer | No | None (currently defaulted to 100 in the backend) |
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { LaminarClient } from '@lmnr-ai/lmnr';
+
+const client = new LaminarClient({
+  projectApiKey: 'lmnr-project-api-key',
+});
+
+const main = async () => {
+  const result = await client.agent.run({
+    prompt: 'Go to www.lmnr.ai and summarize their homepage.',
+    max_steps: 10,
+  });
+  console.log(result);
+};
+
+main().then(() => {
+  console.log('Done');
+});
+```
+</Tab>
+<Tab title="Python (synchronous)">
+
+```python
+from lmnr import LaminarClient
+
+client = LaminarClient(project_api_key='lmnr-project-api-key')
+
+result = client.agent.run(
+    prompt='Go to www.lmnr.ai and summarize their homepage.',
+    max_steps=10,
+)
+print(result)
+```
+
+</Tab>
+<Tab title="Python (asynchronous)">
+```python
+from lmnr import AsyncLaminarClient
+
+client = AsyncLaminarClient(project_api_key='lmnr-project-api-key')
+
+async def main():
+    result = await client.agent.run(
+        prompt='Go to www.lmnr.ai and summarize their homepage.',
+        max_steps=10,
+    )
+    print(result)
+
+asyncio.run(main())
+```
+</Tab>
+</Tabs>
+
+
+#### cdpUrl / cdp_url
+
+If you have a running browser with CDP, you can pass the URL to the browser here. By default, Laminar will start and manage its own browser instance.
+
+| Type | Required |
+| --- | --- |
+| string | No |
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { LaminarClient } from '@lmnr-ai/lmnr';
+
+const client = new LaminarClient({
+  projectApiKey: 'lmnr-project-api-key',
+});
+
+const main = async () => {
+  const result = await client.agent.run({
+    prompt: 'Go to www.lmnr.ai and summarize their homepage.',
+    cdpUrl: 'wss://localhost:9222',
+  });
+  console.log(result);
+};
+
+main().then(() => {
+  console.log('Done');
+});
+```
+</Tab>
+<Tab title="Python (synchronous)">
+
+```python
+from lmnr import LaminarClient
+
+client = LaminarClient(project_api_key='lmnr-project-api-key')
+
+result = client.agent.run(
+    prompt='Go to www.lmnr.ai and summarize their homepage.',
+    cdp_url='wss://localhost:9222',
+)
+print(result)
+```
+
+</Tab>
+<Tab title="Python (asynchronous)">
+```python
+from lmnr import AsyncLaminarClient
+
+client = AsyncLaminarClient(project_api_key='lmnr-project-api-key')
+
+async def main():
+    result = await client.agent.run(
+        prompt='Go to www.lmnr.ai and summarize their homepage.',
+        cdp_url='wss://localhost:9222',
+    )
+    print(result)
+
+asyncio.run(main())
+```
+</Tab>
+</Tabs>
+
+
+#### thinkingTokenBudget / thinking_token_budget
+
+The maximum number of tokens the agent will use for thinking. Passed to the underlying LLM provider.
+
+Currently, there is a heuristic that converts the token budget to a reasoning effort parameter for OpenAI.
+
+| Type | Required |
+| --- | --- |
+| integer | No |
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { LaminarClient } from '@lmnr-ai/lmnr';
+
+const client = new LaminarClient({
+  projectApiKey: 'lmnr-project-api-key',
+});
+
+const main = async () => {
+  const result = await client.agent.run({
+    prompt: 'Go to www.lmnr.ai and summarize their homepage.',
+    thinkingTokenBudget: 2048,
+  });
+  console.log(result);
+};
+
+main().then(() => {
+  console.log('Done');
+});
+```
+</Tab>
+<Tab title="Python (synchronous)">
+
+```python
+from lmnr import LaminarClient
+
+client = LaminarClient(project_api_key='lmnr-project-api-key')
+
+result = client.agent.run(
+    prompt='Go to www.lmnr.ai and summarize their homepage.',
+    thinking_token_budget=2048,
+)
+print(result)
+```
+
+</Tab>
+<Tab title="Python (asynchronous)">
+```python
+from lmnr import AsyncLaminarClient
+
+client = AsyncLaminarClient(project_api_key='lmnr-project-api-key')
+
+async def main():
+    result = await client.agent.run(
+        prompt='Go to www.lmnr.ai and summarize their homepage.',
+        thinking_token_budget=2048,
+    )
+    print(result)
+
+asyncio.run(main())
+```
+</Tab>
+</Tabs>
+
+
+#### startUrl / start_url
+
+The URL to start the agent on. If not specified, the agent infers the URL from the prompt.
+
+| Type | Required |
+| --- | --- |
+| string | No |
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { LaminarClient } from '@lmnr-ai/lmnr';
+
+const client = new LaminarClient({
+  projectApiKey: 'lmnr-project-api-key',
+});
+
+const main = async () => {
+  const result = await client.agent.run({
+    prompt: 'Summarize this page.',
+    start_url: 'https://www.lmnr.ai',
+  });
+  console.log(result);
+};
+
+main().then(() => {
+  console.log('Done');
+});
+```
+</Tab>
+<Tab title="Python (synchronous)">
+
+```python
+from lmnr import LaminarClient
+
+client = LaminarClient(project_api_key='lmnr-project-api-key')
+
+result = client.agent.run(
+    prompt='Summarize this page.',
+    start_url='https://www.lmnr.ai',
+)
+print(result)
+```
+
+</Tab>
+<Tab title="Python (asynchronous)">
+```python
+from lmnr import AsyncLaminarClient
+
+client = AsyncLaminarClient(project_api_key='lmnr-project-api-key')
+
+async def main():
+    result = await client.agent.run(
+        prompt='Summarize this page.',
+        start_url='https://www.lmnr.ai',
+    )
+    print(result)
+
+asyncio.run(main())
+```
+</Tab>
+</Tabs>
+
+#### agentState / agent_state
+
+The stringified agent state as returned by a previous agent run. This is useful for continuing the agent run in a subsequent call.
+
+| Type | Required |
+| --- | --- |
+| string | No |
+
+<Warning>
+Agent state is a very large object.
+</Warning>
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { LaminarClient } from '@lmnr-ai/lmnr';
+
+const client = new LaminarClient({
+  projectApiKey: 'lmnr-project-api-key',
+});
+
+const main = async () => {
+  const result = await client.agent.run({
+    prompt: 'Go to www.lmnr.ai and summarize their homepage.',
+    agentState: '...',
+  });
+  console.log(result);
+};
+
+main().then(() => {
+  console.log('Done');
+});
+```
+</Tab>
+<Tab title="Python (synchronous)">
+
+```python
+from lmnr import LaminarClient
+
+client = LaminarClient(project_api_key='lmnr-project-api-key')
+
+result = client.agent.run(
+    prompt='Go to www.lmnr.ai and summarize their homepage.',
+    agent_state='...',
+)
+print(result)
+```
+
+</Tab>
+<Tab title="Python (asynchronous)">
+```python
+from lmnr import AsyncLaminarClient
+
+client = AsyncLaminarClient(project_api_key='lmnr-project-api-key')
+
+async def main():
+    result = await client.agent.run(
+        prompt='Go to www.lmnr.ai and summarize their homepage.',
+        agent_state='...',
+    )
+    print(result)
+
+asyncio.run(main())
+```
+</Tab>
+</Tabs>
+
+#### storageState / storage_state
+
+The stringified browser storage state (auth, cookies, etc.) as returned by a previous agent run. This is useful for continuing the agent run in a subsequent call.
+
+| Type | Required |
+| --- | --- |
+| string | No |
+
+<Warning>
+This may be a very large object.
+</Warning>
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { LaminarClient } from '@lmnr-ai/lmnr';
+
+const client = new LaminarClient({
+  projectApiKey: 'lmnr-project-api-key',
+});
+
+const main = async () => {
+  const result = await client.agent.run({
+    prompt: 'Go to www.lmnr.ai and summarize their homepage.',
+    storageState: '...',
+  });
+  console.log(result);
+};
+
+main().then(() => {
+  console.log('Done');
+});
+```
+</Tab>
+<Tab title="Python (synchronous)">
+
+```python
+from lmnr import LaminarClient
+
+client = LaminarClient(project_api_key='lmnr-project-api-key')
+
+result = client.agent.run(
+    prompt='Go to www.lmnr.ai and summarize their homepage.',
+    storage_state='...',
+)
+print(result)
+```
+
+</Tab>
+<Tab title="Python (asynchronous)">
+```python
+from lmnr import AsyncLaminarClient
+
+client = AsyncLaminarClient(project_api_key='lmnr-project-api-key')
+
+async def main():
+    result = await client.agent.run(
+        prompt='Go to www.lmnr.ai and summarize their homepage.',
+        storage_state='...',
+    )
+    print(result)
+
+asyncio.run(main())
+```
+</Tab>
+</Tabs>
+
+#### returnScreenshots / return_screenshots
+
+Whether to return a screenshot of the page with each step.
+
+| Type | Required | Default |
+| --- | --- | --- |
+| boolean | No | `false` |
+
+<Note>
+This will not have any effect on non-streaming runs.
+</Note>
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { LaminarClient } from '@lmnr-ai/lmnr';
+
+const client = new LaminarClient({
+  projectApiKey: 'lmnr-project-api-key',
+});
+
+const main = async () => {
+  const result = await client.agent.run({
+    prompt: 'Go to www.lmnr.ai and summarize their homepage.',
+    stream: true,
+    returnScreenshots: true,
+  });
+  for await (const chunk of result) {
+    console.log(chunk);
+  }
+};
+
+main().then(() => {
+  console.log('Done');
+});
+```
+</Tab>
+<Tab title="Python (synchronous)">
+
+```python
+from lmnr import LaminarClient
+
+client = LaminarClient(project_api_key='lmnr-project-api-key')
+
+result = client.agent.run(
+    prompt='Go to www.lmnr.ai and summarize their homepage.',
+    stream=True,
+    return_screenshots=True,
+)
+for chunk in result:
+    print(chunk)
+```
+
+</Tab>
+<Tab title="Python (asynchronous)">
+```python
+from lmnr import AsyncLaminarClient
+
+client = AsyncLaminarClient(project_api_key='lmnr-project-api-key')
+
+async def main():
+    # Note this await, similar to major LLM SDKs.
+    result = await client.agent.run(
+        prompt='Go to www.lmnr.ai and summarize their homepage.',
+        stream=True,
+        return_screenshots=True,
+    )
+    async for chunk in result:
+        print(chunk)
+
+asyncio.run(main())
+```
+</Tab>
+</Tabs>
+
+#### returnAgentState / return_agent_state
+
+Whether to return the agent state after the run. This is useful for continuing the agent run in a subsequent call.
+
+| Type | Required | Default |
+| --- | --- | --- |
+| boolean | No | `false` |
+
+<Warning>
+Agent state is a very large object
+</Warning>
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { LaminarClient } from '@lmnr-ai/lmnr';
+
+const client = new LaminarClient({
+  projectApiKey: 'lmnr-project-api-key',
+});
+
+const main = async () => {
+  const result = await client.agent.run({
+    prompt: 'Go to www.lmnr.ai and summarize their homepage.',
+    returnAgentState: true,
+  });
+  console.log(result);
+};
+
+main().then(() => {
+  console.log('Done');
+});
+```
+</Tab>
+<Tab title="Python (synchronous)">
+
+```python
+from lmnr import LaminarClient
+
+client = LaminarClient(project_api_key='lmnr-project-api-key')
+
+result = client.agent.run(
+    prompt='Go to www.lmnr.ai and summarize their homepage.',
+    returnAgentState=True,
+)
+print(result)
+```
+
+</Tab>
+<Tab title="Python (asynchronous)">
+```python
+from lmnr import AsyncLaminarClient
+
+client = AsyncLaminarClient(project_api_key='lmnr-project-api-key')
+
+async def main():
+    result = await client.agent.run(
+        prompt='Go to www.lmnr.ai and summarize their homepage.',
+        return_agent_state=True,
+    )
+    print(result)
+
+asyncio.run(main())
+```
+</Tab>
+</Tabs>
+
+#### returnStorageState / return_storage_state
+
+Whether to return the browser storage state (auth, cookies, etc.) after the run. This is useful for continuing the agent run in a subsequent call.
+
+| Type | Required | Default |
+| --- | --- | --- |
+| boolean | No | `false` |
+
+<Warning>
+Storage state may be a very large object
+</Warning>
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { LaminarClient } from '@lmnr-ai/lmnr';
+
+const client = new LaminarClient({
+  projectApiKey: 'lmnr-project-api-key',
+});
+
+const main = async () => {
+  const result = await client.agent.run({
+    prompt: 'Go to www.lmnr.ai and summarize their homepage.',
+    returnStorageState: true,
+  });
+  console.log(result);
+};
+
+main().then(() => {
+  console.log('Done');
+});
+```
+</Tab>
+<Tab title="Python (synchronous)">
+
+```python
+from lmnr import LaminarClient
+
+client = LaminarClient(project_api_key='lmnr-project-api-key')
+
+result = client.agent.run(
+    prompt='Go to www.lmnr.ai and summarize their homepage.',
+    return_storage_state=True,
+)
+print(result)
+```
+
+</Tab>
+<Tab title="Python (asynchronous)">
+```python
+from lmnr import AsyncLaminarClient
+
+client = AsyncLaminarClient(project_api_key='lmnr-project-api-key')
+
+async def main():
+    result = await client.agent.run(
+        prompt='Go to www.lmnr.ai and summarize their homepage.',
+        return_storage_state=True,
+    )
+    print(result)
+
+asyncio.run(main())
+```
+</Tab>
+</Tabs>
+
+### Response
+
+#### Non-streaming (AgentOutput)
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+type AgentOutput = {
+    result: ActionResult;
+    agentState?: string | null;
+    storageState?: string | null;
+};
+
+type ActionResult = {
+    isDone: boolean;
+    content?: string | null;
+    error?: string | null;
+};
+```
+</Tab>
+<Tab title="Python">
+```python
+class AgentOutput:
+    result: ActionResult = pydantic.Field(default_factory=ActionResult)
+    storage_state: Optional[str] = pydantic.Field(default=None)
+    agent_state: Optional[str] = pydantic.Field(default=None)
+
+class ActionResult(pydantic.BaseModel):
+    is_done: bool = pydantic.Field(default=False)
+    content: Optional[str] = pydantic.Field(default=None)
+    error: Optional[str] = pydantic.Field(default=None)
+```
+</Tab>
+</Tabs>
+
+#### Streaming
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+type RunAgentResponseChunk = RunAgentStepChunk
+  | RunAgentFinalChunk | RunAgentErrorChunk | RunAgentTimeoutChunk;
+
+type RunAgentStepChunk = {
+    chunkType: "step";
+    messageId: string; // UUID
+    actionResult: ActionResult;
+    summary: string;
+    screenshot?: string | null;
+};
+
+type ActionResult = {
+    isDone: boolean;
+    content?: string | null;
+    error?: string | null;
+}
+
+type RunAgentFinalChunk = {
+    chunkType: "finalOutput";
+    messageId: string; // UUID
+    content: AgentOutput;
+};
+
+type AgentOutput = {
+    result: ActionResult;
+    agentState?: string | null;
+    storageState?: string | null;
+};
+
+type RunAgentErrorChunk = {
+    chunkType: "error";
+    messageId: string; // UUID
+    error: string;
+};
+
+type RunAgentTimeoutChunk = {
+    chunkType: "timeout";
+    messageId: string; // UUID
+    actionResult: ActionResult;
+    summary: string;
+    screenshot?: string | null;
+};
+```
+
+</Tab>
+<Tab title="Python">
+```python
+class RunAgentResponseChunk(pydantic.RootModel):
+    root: Union[
+        StepChunkContent,
+        FinalOutputChunkContent,
+        ErrorChunkContent,
+        TimeoutChunkContent,
+    ]
+
+class StepChunkContent:
+    chunk_type: Literal["step"] = pydantic.Field(default="step")
+    message_id: uuid.UUID
+    action_result: ActionResult
+    summary: str
+    screenshot: Optional[str] = pydantic.Field(default=None)
+
+class TimeoutChunkContent:
+    chunk_type: Literal["timeout"] = pydantic.Field(default="timeout")
+    message_id: uuid.UUID
+    summary: str
+    screenshot: Optional[str] = pydantic.Field(default=None)
+
+class FinalOutputChunkContent:
+    # Note the camelCase here. This may change in the future.
+    chunk_type: Literal["finalOutput"] = pydantic.Field(default="finalOutput")
+    message_id: uuid.UUID
+    content: AgentOutput
+
+
+class ErrorChunkContent:
+    chunk_type: Literal["error"] = pydantic.Field(default="error")
+    message_id: uuid.UUID
+    error: str
+
+class AgentOutput:
+    result: ActionResult = pydantic.Field(default_factory=ActionResult)
+    storage_state: Optional[str] = pydantic.Field(default=None)
+    agent_state: Optional[str] = pydantic.Field(default=None)
+
+class ActionResult(pydantic.BaseModel):
+    is_done: bool = pydantic.Field(default=False)
+    content: Optional[str] = pydantic.Field(default=None)
+    error: Optional[str] = pydantic.Field(default=None)
+```
+</Tab>
+</Tabs>

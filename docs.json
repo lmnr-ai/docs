@@ -109,7 +109,9 @@
             "pages": [
               "index-agent/api/getting-started",
               "index-agent/api/streaming",
-              "index-agent/api/tracing"
+              "index-agent/api/tracing",
+              "index-agent/api/sdk-reference",
+              "index-agent/api/models"
             ]
           }
         ]

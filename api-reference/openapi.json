@@ -314,15 +314,15 @@
           "modelProvider": {
             "type": "string",
             "enum": ["anthropic", "bedrock", "gemini", "openai"],
-            "description": "LLM provider."
+            "description": "LLM provider. Make sure to explicitly set this parameter, especially if you are setting the `model` parameter."
           },
           "model": {
             "type": "string",
-            "description": "LLM model name. Must match the provider API model name, e.g. 'claude-3-7-sonnet-latest'."
+            "description": "LLM model name. Must match the provider API model name, e.g. 'claude-3-7-sonnet-latest'. Make sure to set the `modelProvider` parameter explicitly."
           },
           "stream": {
             "type": "boolean",
-            "description": "If true, the response will be streamed including the intermediate 'thinking' steps. If false, the response will be returned as a single message. Currently, non-streaming connections timeout after 350 seconds. Defaults to false."
+            "description": "If true, the response will be streamed including the intermediate 'thinking' steps. If false, the response will be returned as a single message. Currently, non-streaming connections timeout after 350 seconds. Laminar SDKs always set this to true, and, in the non-streaming mode, the response will be returned as a single message. Defaults to false."
           },
           "enableThinking": {
             "type": "boolean",
@@ -447,6 +447,46 @@
           }
         }
       },
+      "ErrorChunk": {
+        "type": "object",
+        "required": ["chunkType", "messageId", "error"],
+        "properties": {
+          "chunkType": {
+            "type": "string",
+            "enum": ["error"]
+          },
+          "messageId": {
+            "type": "string",
+            "description": "The UUID of the message."
+          },
+          "error": {
+            "type": "string",
+            "description": "The error that occurred during the agent run."
+          }
+        }
+      },
+      "TimeoutChunk": {
+        "type": "object",
+        "required": ["chunkType", "messageId", "actionResult", "summary"],
+        "properties": {
+          "chunkType": {
+            "type": "string",
+            "enum": ["timeout"]
+          },
+          "messageId": {
+            "type": "string",
+            "description": "The UUID of the message."
+          },
+          "actionResult": {
+            "$ref": "#/components/schemas/ActionResult",
+            "description": "The result of the agent run."
+          },
+          "summary": {
+            "type": "string",
+            "description": "A quick summary of the step."
+          }
+        }
+      },
       "FinalOutputChunk": {
         "type": "object",
         "required": ["chunkType", "messageId", "content"],
@@ -468,10 +508,20 @@
       "RunAgentStreamChunk": {
         "oneOf": [
           {
-            "$ref": "#/components/schemas/StepChunk"
+            "$ref": "#/components/schemas/StepChunk",
+            "description": "Step chunk. A step of the agent run."
           },
           {
-            "$ref": "#/components/schemas/FinalOutputChunk"
+            "$ref": "#/components/schemas/FinalOutputChunk",
+            "description": "Final output chunk. The final output of the agent."
+          },
+          {
+            "$ref": "#/components/schemas/TimeoutChunk",
+            "description": "Timeout chunk. The final step if the agent timed out."
+          },
+          {
+            "$ref": "#/components/schemas/ErrorChunk",
+            "description": "Error chunk. The error details."
           }
         ]
       }
