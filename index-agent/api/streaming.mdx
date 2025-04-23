@@ -1,9 +1,6 @@
 ---
 title: Streaming
-description: Learn how to stream browser agent outputs in real-time using the Index API
 ---
-
-# Streaming Agent Output
 
 When running browser agent tasks through the Index API, you can receive real-time updates as the agent executes rather than waiting for the entire task to complete. This is particularly useful for:
 
@@ -56,10 +53,10 @@ When running browser agent tasks through the Index API, you can receive real-tim
         prompt="Lookup the current weather for New York, London, and Tokyo and compare them.",
         stream=True
     ):
-        if chunk.chunkType == 'step':
+        if chunk.chunk_type == 'step':
             # Print step-by-step actions as they happen
             print(f"Step: {chunk.summary}")
-        elif chunk.chunkType == 'final_output':
+        elif chunk.chunk_type == 'finalOutput':
             # Print the final result
             print(f"Final output: {chunk.content.result.content}")
     ```
@@ -77,9 +74,9 @@ When running browser agent tasks through the Index API, you can receive real-tim
             prompt="Lookup the current weather for New York, London, and Tokyo and compare them.",
             stream=True
         ):
-            if chunk.chunkType == 'step':
+            if chunk.chunk_type == 'step':
                 print(f"Step: {chunk.summary}")
-            elif chunk.chunkType == 'final_output':
+            elif chunk.chunk_type == 'finalOutput':
                 print(f"Final output: {chunk.content.result.content}")
     
     # Run the async function

@@ -1,9 +1,6 @@
 ---
 title: Tracing and Session Replay
-description: Set up tracing and session replay for browser agent sessions using the Index API
 ---
-
-# Tracing and Session Replay
 
 One of the most powerful features of using Index through the Laminar platform is the comprehensive tracing and observability it provides. When you run browser agent tasks through the API, you get:
 
@@ -39,6 +36,8 @@ All browser agent activities will automatically be traced and recorded in the La
 
 ## Viewing Session Replays
 
+![Browser agent session replay](/images/index-agent/browser-session.png)
+
 Once you run an agent through the Index API, you can access the session recording in the **Traces** tab of the Laminar platform.
 
 The session replay interface provides:
@@ -48,109 +47,6 @@ The session replay interface provides:
 - The agent's internal reasoning and decision-making process
 - A list of actions taken by the agent
 - Extracted data and final results
-
-## Trace Context and Correlation
-
-When running multiple related browser sessions, you can correlate them by passing the same trace context:
-
-<Tabs>
-    <Tab title="TypeScript">
-    ```typescript
-    import { LaminarClient, context } from '@lmnr-ai/lmnr';
-    
-    const client = new LaminarClient({
-      projectApiKey: "YOUR_PROJECT_API_KEY",
-    });
-    
-    // Create a trace context
-    const traceContext = context.active();
-    
-    // Run multiple related agent sessions with the same context
-    async function runRelatedAgentTasks() {
-      // First task
-      const response1 = await client.agent.run({
-        prompt: "Search for the latest AI research papers",
-        context: traceContext
-      });
-      
-      // Second related task with the same context
-      const response2 = await client.agent.run({
-        prompt: "Summarize the top 3 papers you found",
-        context: traceContext
-      });
-    }
-    ```
-    </Tab>
-     <Tab title="Python">
-    ```python
-    from lmnr import LaminarClient, context
-    
-    client = LaminarClient(project_api_key="YOUR_PROJECT_API_KEY")
-    
-    # Create a trace context
-    trace_context = context.active()
-    
-    # First task
-    response1 = client.agent.run(
-        prompt="Search for the latest AI research papers",
-        context=trace_context
-    )
-    
-    # Second related task with the same context
-    response2 = client.agent.run(
-        prompt="Summarize the top 3 papers you found",
-        context=trace_context
-    )
-    ```
-    </Tab>
-</Tabs>
-
-## Adding Metadata to Traces
-
-You can add custom metadata to your browser agent sessions to make them more searchable and provide additional context:
-
-<Tabs>
-    <Tab title="TypeScript">
-    ```typescript
-    import { LaminarClient, context } from '@lmnr-ai/lmnr';
-    
-    const client = new LaminarClient({
-      projectApiKey: "YOUR_PROJECT_API_KEY",
-    });
-    
-    // Add metadata to the current trace
-    context.current().addMetadata({
-      userId: "user-123",
-      taskType: "research",
-      priority: "high"
-    });
-    
-    // Run agent with enriched context
-    const response = await client.agent.run({
-      prompt: "Research the latest AI developments in healthcare"
-    });
-    ```
-    </Tab>
-     <Tab title="Python">
-    ```python
-    from lmnr import LaminarClient, context
-    
-    client = LaminarClient(project_api_key="YOUR_PROJECT_API_KEY")
-    
-    # Add metadata to the current trace
-    context.current().add_metadata({
-      "user_id": "user-123",
-      "task_type": "research",
-      "priority": "high"
-    })
-    
-    # Run agent with enriched context
-    response = client.agent.run(
-        prompt="Research the latest AI developments in healthcare"
-    )
-    ```
-    </Tab>
-</Tabs>
 
 ## Debugging Failed Sessions
 
@@ -165,4 +61,7 @@ When a browser agent session fails or produces unexpected results, the trace and
 
 The visual replay gives you unprecedented insight into how the browser agent interprets and executes your instructions, making it easier to refine your prompts and build robust web automation workflows.
 
+## Learn More
+
+Learn more about tracing on Laminar [here](/tracing/introduction).
 
