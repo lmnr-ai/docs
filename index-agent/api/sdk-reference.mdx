@@ -171,6 +171,8 @@ The stringified Laminar span context that can be used to place the trace in an e
 | --- | --- |
 | string | No |
 
+Read more about LaminarSpanContext in our [tracing docs](/tracing/manual-instrumentation#using-laminarspancontext).
+
 <Tabs>
 <Tab title="JavaScript/TypeScript">
 ```javascript
@@ -185,7 +187,7 @@ const main = async () => {
     prompt: 'Go to www.lmnr.ai and summarize their homepage.',
     // This will serialize the current span context, assuming there is an active
     // span.
-    parentSpanContext: Laminar.serializeSpanContext(),
+    parentSpanContext: Laminar.serializeLaminarSpanContext(),
   });
   console.log(result);
 };
@@ -906,7 +908,7 @@ asyncio.run(main())
 
 #### returnScreenshots / return_screenshots
 
-Whether to return a screenshot of the page with each step.
+Whether to return a base64 encoded screenshot of the page with each step.
 
 | Type | Required | Default |
 | --- | --- | --- |
@@ -932,7 +934,11 @@ const main = async () => {
     returnScreenshots: true,
   });
   for await (const chunk of result) {
-    console.log(chunk);
+    if (chunk.chunkType === 'step') {
+      if (chunk.screenshot) {
+        console.log("Screenshot in base64: ", chunk.screenshot);
+      }
+    }
   }
 };
 
@@ -954,7 +960,9 @@ result = client.agent.run(
     return_screenshots=True,
 )
 for chunk in result:
-    print(chunk)
+    if chunk.chunk_type == 'step':
+        if chunk.screenshot:
+            print("Screenshot in base64: ", chunk.screenshot)
 ```
 
 </Tab>
@@ -972,7 +980,9 @@ async def main():
         return_screenshots=True,
     )
     async for chunk in result:
-        print(chunk)
+        if chunk.chunk_type == 'step':
+            if chunk.screenshot:
+                print("Screenshot in base64: ", chunk.screenshot)
 
 asyncio.run(main())
 ```
