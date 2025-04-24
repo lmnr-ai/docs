@@ -20,10 +20,10 @@ The easiest way to use Index in production is via the serverless API. Index API 
     Initialize Laminar with your project API key and create a client instance. You can also set the `LMNR_PROJECT_API_KEY` environment variable instead of passing it directly.
     
     ```typescript
-    import { Laminar as L, LaminarClient } from '@lmnr-ai/lmnr';
+    import { Laminar, LaminarClient } from '@lmnr-ai/lmnr';
     
     // Initialize Laminar with your project API key
-    L.initialize({ projectApiKey: "YOUR_PROJECT_API_KEY" });
+    Laminar.initialize({ projectApiKey: "YOUR_PROJECT_API_KEY" });
     
     // Create a client instance
     const client = new LaminarClient({
@@ -36,21 +36,21 @@ The easiest way to use Index in production is via the serverless API. Index API 
     
     First, install the Laminar Python SDK with the required dependencies:
     
-    ```bash
+  ```bash
     pip install 'lmnr[all]'
-    ```
+  ```
         
     Initialize Laminar with your project API key and create a client instance. You can also set the `LMNR_PROJECT_API_KEY` environment variable instead of passing it directly.
     
-    ```python
+```python
     from lmnr import Laminar, LaminarClient
     
     # Initialize Laminar with your project API key
     Laminar.initialize(project_api_key="YOUR_PROJECT_API_KEY")
-    
+
     # Create a client instance
     client = LaminarClient(project_api_key="YOUR_PROJECT_API_KEY")
-    ```
+```
   </Tab>
 </Tabs>
 
@@ -62,7 +62,7 @@ The easiest way to use Index in production is via the serverless API. Index API 
     
     To run a browser agent that performs tasks based on your prompt:
     
-    ```typescript
+  ```typescript
     import { LaminarClient } from '@lmnr-ai/lmnr';
     
     const client = new LaminarClient({
@@ -72,7 +72,10 @@ The easiest way to use Index in production is via the serverless API. Index API 
     // Execute a browser agent task
     async function runBrowserAgent() {
       const response = await client.agent.run({
-        prompt: "Search for the latest news about AI, find the most recent article, and summarize it.",
+        prompt: "Search for the latest news about AI, " +
+               "find the most recent article, and summarize it.",
+        modelProvider: "gemini",
+        model: "gemini-2.5-pro-preview-03-25",
       });
     
       // Print the final result
@@ -88,22 +91,25 @@ The easiest way to use Index in production is via the serverless API. Index API 
     To run a browser agent that performs tasks based on your prompt:
     
     **Synchronous**
-    ```python
+  ```python
     from lmnr import LaminarClient
     
     client = LaminarClient(project_api_key="YOUR_PROJECT_API_KEY")
     
     # Execute a browser agent task
     response = client.agent.run(
-        prompt="Search for the latest news about AI, find the most recent article, and summarize it."
+        prompt="Search for the latest news about AI, " +
+               "find the most recent article, and summarize it.",
+        model_provider="gemini",
+        model="gemini-2.5-pro-preview-03-25",
     )
     
     # Print the final result
     print(response.result.content)
-    ```
+  ```
     
     **Asynchronous**
-    ```python
+  ```python
     import asyncio
     from lmnr import AsyncLaminarClient
     
@@ -112,14 +118,17 @@ The easiest way to use Index in production is via the serverless API. Index API 
         
         # Execute a browser agent task asynchronously
         response = await client.agent.run(
-            prompt="Search for the latest news about AI, find the most recent article, and summarize it."
+            prompt="Search for the latest news about AI, " +
+                   "find the most recent article, and summarize it.",
+            model_provider="gemini",
+            model="gemini-2.5-pro-preview-03-25",
         )
         
         print(response.result.content)
     
     # Run the async function
     asyncio.run(run_agent())
-    ```
+  ```
   </Tab>
 </Tabs>
 
