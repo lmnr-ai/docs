@@ -31,9 +31,10 @@ from index import Agent, AnthropicProvider
 
 async def main():
     llm = AnthropicProvider(
-            model="claude-3-7-sonnet-20250219",
-            enable_thinking=True, 
-            thinking_token_budget=2048)
+        model="claude-3-7-sonnet-20250219",
+        enable_thinking=True, 
+        thinking_token_budget=2048
+    )
 
     agent = Agent(llm=llm)
     prompt="Go to news.ycombinator.com, find a post about AI, and summarize it"

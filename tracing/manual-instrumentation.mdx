@@ -534,74 +534,92 @@ where any spans created with `use_span`/`Laminar.withSpan` will be children of `
 In this example, `outer` is the top level span, `foo` called OpenAI, which got auto-instrumented,
 and `bar` is a custom span that we created manually.
 
-### Setting trace ID manually
+### Using LaminarSpanContext
 
-<Warning>
-This is not completely compatible with OpenTelemetry, so use only when you have to.
-Please use the span object passing method above whenever possible.
-</Warning>
+LaminarSpanContext is a Laminar's representation of an OpenTelemetry span context. You can pass
+it as a string between services, in the cases when you cannot pass the span object directly.
 
-If there is no way for you to pass the span object between functions, you can set the trace ID manually.
-In the backend, Laminar will associate all spans with the same trace ID.
-Laminar's trace IDs are UUIDs, so if you want to set a trace ID manually, you must pass a valid UUID.
+An example of such a case is a server that handles different parts of the same client session in different request handlers,
+but has access to a shared file. In this case, you can save the span context in the file and pass it to the next request handler.
+
+Laminar provides several utilities to serialize and deserialize the span context.
 
 #### Example
+
 <Tabs>
 <Tab title="Python">
+
+In Python, you can use `Laminar.serialize_span_context` and `Laminar.deserialize_span_context` to serialize and deserialize the span context.
+
+`serialize_span_context` optionally takes a span object and returns a string. If no span is provided, it will use the current active span.
+
+`deserialize_span_context` takes a string and returns a `LaminarSpanContext` object. You can pass the result to `Laminar.start_span` or `Laminar.start_as_current_span` as `parent_span_context` to continue the same trace.
 
 ```python
 from lmnr import Laminar
 import os
-import uuid
 
-trace_id = None
 Laminar.initialize(project_api_key=os.environ['LMNR_PROJECT_API_KEY'])
+shared_context = ""
 
-def foo():
-    with Laminar.start_as_current_span(name="foo", trace_id=trace_id):
-        # your code here
-        pass
+def first_handler(request: str) -> str:
+    global shared_context
+    with Laminar.start_as_current_span(name="first_handler") as span:
+        shared_context = Laminar.serialize_span_context(span)
+        return "Hello, world!"
 
-def bar():
-    with Laminar.start_as_current_span(name="bar", trace_id=trace_id):
-        # your code here
-        pass
-
-trace_id = uuid.uuid4()
-
-foo()
-bar()
+def second_handler(context: str) -> str:
+    global shared_context
+    parent_span_context = (
+        Laminar.deserialize_span_context(shared_context)
+        if shared_context and len(shared_context) > 0
+        else None
+    )
+    with Laminar.start_as_current_span(
+        name="second_handler",
+        parent_span_context=parent_span_context
+    ):
+        return "¡Hola, mundo!"
 ```
-Both spans, `foo` and `bar`, will be in the same trace, because they have the same trace ID.
+
+This will result in a nested trace with `first_handler` as the top level span, and `second_handler` as a child span.
+
 </Tab>
+
+
 <Tab title="JavaScript/TypeScript">
+
+In TypeScript, `LaminarSpanContext` is simply a typed record, so you can pass its stringified JSON representation. You can use `Laminar.serializeLaminarSpanContext` to create and serialize the span context.
+
+`serializeLaminarSpanContext` optionally takes a span object and returns a string. If no span is provided, it will use the current active span.
 
 ```javascript
 import { Laminar } from '@lmnr-ai/lmnr';
 
-Laminar.initialize({ projectApiKey: process.env.LMNR_PROJECT_API_KEY });
-const foo = async (traceId: string) => {
-    await observe({ name: 'foo', traceId }, async () => {
-        // your code here
+let _spanContext: string | null = null;
+
+const firstHandler = async () => {
+    const span = Laminar.startSpan({
+        name: 'firstHandler',
     });
+    _spanContext = Laminar.serializeLaminarSpanContext(span);
+    // your code here
+    span.end();
 }
 
-const bar = async (traceId: string) => {
-    await observe({ name: 'bar', traceId }, async () => {
-        // your code here
+const secondHandler = async () => {
+    const span = Laminar.startSpan({
+        name: 'secondHandler',
+        parentSpanContext: _spanContext ?? undefined,
     });
+    // your code here
+    span.end();
 }
-
-// if this is not available, use `v4()` from `uuid` package.
-const traceId = crypto.randomUUID();
-
-foo(traceId);
-bar(traceId);
 ```
-Both spans, `foo` and `bar`, will be in the same trace, because they have the same trace ID.
+
+This will result in a nested trace with `firstHandler` as the top level span, and `secondHandler` as a child span.
 </Tab>
 </Tabs>
-
 ## Provider and model names
 
 Here is the list of provider names that Laminar uses when calculating costs. We

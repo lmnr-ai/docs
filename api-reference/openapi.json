@@ -309,11 +309,11 @@
           },
           "parentSpanContext": {
             "type": "string",
-            "description": "Stringified Laminar OpenTelemetry span context. Useful to embed agent spans in a larger trace."
+            "description": "Stringified Laminar OpenTelemetry span context. Useful to embed agent spans in a larger trace. Read more about LaminarSpanContext in our [tracing docs](/tracing/manual-instrumentation#using-laminarspancontext)."
           },
           "modelProvider": {
             "type": "string",
-            "enum": ["anthropic", "bedrock", "gemini", "openai"],
+            "enum": ["anthropic", "gemini", "openai"],
             "description": "LLM provider. Make sure to explicitly set this parameter, especially if you are setting the `model` parameter."
           },
           "model": {
@@ -326,7 +326,7 @@
           },
           "enableThinking": {
             "type": "boolean",
-            "description": "The thinking parameter that is sent to the underlying LLM. Defaults to true."
+            "description": "The thinking parameter that is sent to the underlying LLM. This is always true for Gemini models. Defaults to true."
           },
           "agentState": {
             "type": "string",
@@ -350,7 +350,7 @@
           },
           "thinkingTokenBudget": {
             "type": "number",
-            "description": "Number of tokens the underlying LLM can use for thinking."
+            "description": "Number of tokens the underlying LLM can use for thinking. Currently, there is a heuristic that converts the token budget to a reasoning effort parameter for OpenAI."
           },
           "startUrl": {
             "type": "string",
@@ -358,7 +358,7 @@
           },
           "returnScreenshots": {
             "type": "boolean",
-            "description": "Whether to return screenshots of the browser with each step. Ignored in the non-streaming mode."
+            "description": "Whether to return screenshots of the browser with each step. Ignored in non-streaming mode."
           },
           "returnAgentState": {
             "type": "boolean",

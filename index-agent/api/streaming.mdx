@@ -24,7 +24,11 @@ When running browser agent tasks through the Index API, you can receive real-tim
     
     async function runStreamingBrowserAgent() {
       const response = await client.agent.run({
-        prompt: "Lookup the current weather for New York, London, and Tokyo and compare them.",
+        prompt: "Lookup the current weather for New York, " +
+               "London, and Tokyo and compare them.",
+        stream: true,
+        modelProvider: "gemini",
+        model: "gemini-2.5-pro-preview-03-25",
       });
       
       for await (const chunk of response) {
@@ -34,6 +38,11 @@ When running browser agent tasks through the Index API, you can receive real-tim
         } else if (chunk.chunkType === 'finalOutput') {
           // Print the final result
           console.log(`Final output: ${chunk.content.result.content}`);
+        } else if (chunk.chunkType === 'timeout') {
+          console.log("Final step before timeout:");
+          console.log(chunk.summary);
+        } else if (chunk.chunkType === 'error') {
+          console.log(`Error: ${chunk.error}`);
         }
       }
     }
@@ -41,8 +50,7 @@ When running browser agent tasks through the Index API, you can receive real-tim
     runStreamingBrowserAgent();
     ```
   </Tab>
-  <Tab title="Python">
-    ### Synchronous
+  <Tab title="Python (synchronous)">
     ```python
     from lmnr import LaminarClient
     
@@ -50,8 +58,11 @@ When running browser agent tasks through the Index API, you can receive real-tim
     
     # Stream the browser agent's execution
     for chunk in client.agent.run(
-        prompt="Lookup the current weather for New York, London, and Tokyo and compare them.",
-        stream=True
+        prompt="Lookup the current weather for New York, " +
+               "London, and Tokyo and compare them.",
+        stream=True,
+        model_provider="gemini",
+        model="gemini-2.5-pro-preview-03-25",
     ):
         if chunk.chunk_type == 'step':
             # Print step-by-step actions as they happen
@@ -59,9 +70,15 @@ When running browser agent tasks through the Index API, you can receive real-tim
         elif chunk.chunk_type == 'finalOutput':
             # Print the final result
             print(f"Final output: {chunk.content.result.content}")
+        elif chunk.chunk_type == 'timeout':
+            print("Final step before timeout:")
+            print(chunk.summary)
+        elif chunk.chunk_type == 'error':
+            print(f"Error: {chunk.error}")
     ```
     
-    ### Asynchronous
+  </Tab>
+  <Tab title="Python (asynchronous)">
     ```python
     import asyncio
     from lmnr import AsyncLaminarClient
@@ -71,13 +88,21 @@ When running browser agent tasks through the Index API, you can receive real-tim
         
         # Stream the browser agent's execution asynchronously
         async for chunk in await client.agent.run(
-            prompt="Lookup the current weather for New York, London, and Tokyo and compare them.",
-            stream=True
+            prompt="Lookup the current weather for New York, " +
+                   "London, and Tokyo and compare them.",
+            stream=True,
+            model_provider="gemini",
+            model="gemini-2.5-pro-preview-03-25",
         ):
             if chunk.chunk_type == 'step':
                 print(f"Step: {chunk.summary}")
             elif chunk.chunk_type == 'finalOutput':
                 print(f"Final output: {chunk.content.result.content}")
+            elif chunk.chunk_type == 'timeout':
+                print("Final step before timeout:")
+                print(chunk.summary)
+            elif chunk.chunk_type == 'error':
+                print(f"Error: {chunk.error}")
     
     # Run the async function
     asyncio.run(run_streaming_agent())
@@ -93,4 +118,5 @@ When streaming browser agent output, you'll receive different types of chunks th
 |------------|-------------|
 | `step` | A step taken by the agent during execution (e.g., navigating to a page, clicking a button) |
 | `finalOutput` | The final result of the agent's execution |
-
+| `timeout` | The agent timed out. It's no different from a step chunk, but this will be the last chunk in the stream. |
+| `error` | The agent encountered an error. The error message is in the `error` field. |
