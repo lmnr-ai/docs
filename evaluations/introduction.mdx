@@ -274,7 +274,7 @@ or the evaluator, you will also see the LLM spans in the trace.
 ### Grouping evaluations
 
 To be able to track the score progression over time, or compare evaluations side-by-side,
-you need to group them together. This can be achieved by passing the `groupId` parameter
+you need to group them together. This can be achieved by passing the `groupName` parameter
 to the `evaluate` function.
 
 <Tabs>
@@ -286,7 +286,7 @@ evaluate({
     data: new LaminarDataset("name_of_your_dataset"),
     executor: yourExecutorFunction,
     evaluators: {evaluatorName: yourEvaluator},
-    groupId: "evals_group_1",
+    groupName: "evals_group_1",
     config: {
         projectApiKey: process.env.LMNR_PROJECT_API_KEY,
         // ... other optional parameters
@@ -304,7 +304,7 @@ evaluate(
     executor=your_executor_function,
     evaluators={"evaluator_name": your_evaluator},
     project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
-    group_id="evals_group_1",
+    group_name="evals_group_1",
     # ... other optional parameters
 )
 ```
