@@ -67,6 +67,7 @@
             "group": "Evaluations",
             "pages": [
               "evaluations/introduction",
+              "evaluations/quickstart",
               "evaluations/configuration",
               "evaluations/cookbook",
               "evaluations/online-evaluations"
