@@ -1,336 +1,43 @@
 ---
 title: Introduction
-description: Evaluate the results of your LLM applications with Laminar
 ---
 import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
 
-Evaluation is the concept of running your production logic against some dataset
-and evaluating its results with another function.
+Evaluation is the process of validating and testing the outputs that your AI applications are producing. Having strong evaluations ("evals") means a more stable, reliable application that is resilient to code and model changes. An eval is a task used to measure the quality of the output of an LLM or LLM system.
 
-### Why do we need evaluations?
+### Why do we need evals?
 
-TL;DR: Evaluations help bring rigor to AI development process.
+In short, evaluations bring rigor to AI development process.
 
-During the development process, it is natural to "vibe-check" the outputs of LLMs.
-It is a good way to get a sense of how well your model or prompt is performing.
-However, this is both not scalable and not reliable. We like to think of evaluations as
-almost like unit tests, where you can test your models against a dataset. The difference
-is that the output is not binary (pass/fail), but a score or a set of scores.
+When you are building with foundation models, creating high-quality evals is one of the most impactful things you can do. Developing AI solutions involves an iterative design process. Without evals, it can be difficult and time-intensive to understand how different model versions and prompts affect your use case.
 
-This approach allows you to control most variables and only
-check one thing in isolation, e.g., how does the new prompt perform in comparison
-to the existing one.
+With continuous model upgrades from providers, evals allow you to efficiently test model performance for your specific uses in a standardized way. Developing a suite of evals customized to your objectives will help you quickly understand how new models perform for your applications. You can also make evals part of your CI/CD pipeline to ensure desired accuracy before deployment.
 
-## Key concepts
+### Types of evals
 
-- Executor – the function being evaluated, often your prompt or (to-be-)production logic
-- Evaluator – the function evaluating the results
-- Dataset – collection of datapoints to run executors and evaluators against
-- Datapoint – two values: `data` and `target` each represented as a free-form JSON.
-  - `data` – data sent to the executor. Required.
-  - `target` – data sent to the evaluator. Usually, contains the expected or target outputs of certain parts of your executor. Optional.
-- Evaluation group - a group of evaluations that evaluate one feature or one part of your application. Results of evaluations in the same
-group are aggregated and visualized together.
+There are two main approaches to evaluating outputs:
 
-### Example datapoint
+**1. Logic-based evaluation**: The simplest and most common type uses code to check outputs against expected answers. For example:
+- String matching to check if the completion includes an expected phrase
+- Parsing to validate proper JSON output
+- Custom logic to verify domain-specific requirements
 
-```json
-{
-  "data": {"topic": "flowers"},
-  "target": "This is a good poem about flowers"
-}
-```
+**2. Model-based evaluation**: A two-stage process where:
+- First, the model generates a response to the input
+- Then, another model (ideally more powerful) evaluates the quality of that response
 
-## Flow overview
+Model-based evaluation works best with powerful models when the desired output has significant variation, such as open-ended questions or creative tasks.
 
-For every datapoint in the dataset, evaluation does the following:
+## How evals differ from traditional unit tests
 
-1. Pass the `data` as an argument to the executor.
-1. Run the executor.
-1. Executor output is stored.
-1. Output of the executor and `target` are passed to the _evaluator_ function.
-1. Evaluator pipeline produces a numeric output or a json object with several numeric outputs.
-This is stored in the results of the evaluation.
+Unlike traditional unit tests that focus on binary pass/fail outcomes, evaluations for AI systems require continuous tracking and visualization of performance metrics over time. As models evolve and prompts are refined, being able to compare performance across different versions becomes critical.
 
-### Example
+What makes evals unique is their ability to:
+- Track nuanced quality metrics beyond simple correctness
+- Visualize performance trends across model versions and prompt iterations
+- Compare multiple implementations side-by-side
+- Detect subtle regressions that might not be obvious in isolated tests
 
-<Tabs>
-<Tab title = "JavaScript/TypeScript">
-```javascript
-const writePoem = (data: {topic: string}) => {
-    // ...
-}
+Laminar provides the best developer experience and visualization capabilities for AI evaluations, making it easy to understand how your models are performing and where improvements can be made. With comprehensive dashboards and detailed tracing, you can get deep insights into every aspect of your AI system's behavior.
 
-const containsPoem = (output: string, target: string) => {
-    // ...
-}
-
-evaluate({
-    data: [{
-        data: { topic: 'flowers' },
-        target: { poem: 'This is a good poem about flowers' }
-    }],
-    executor: writePoem,
-    evaluators: { "contains_poem": containsPoem }
-})
-```
-</Tab>
-<Tab title = "Python">
-```python
-def write_poem(data: dict) -> str:
-    # ...
-
-def contains_poem(output: str, target: str) -> int:
-    # ...
-
-evaluate(
-    data=[{
-        "data": {"topic": "flowers"},
-        "target": "This is a good poem about flowers"
-    }],
-    executor=write_poem,
-    evaluators={"contains_poem": contains_poem}
-)
-```
-</Tab>
-</Tabs>
-
-In this example, the `write_poem` function is the executor, and the `contains_poem` function is the evaluator.
-The score that is produced by the evaluator is stored in the results of the evaluation under the `contains_poem` key.
-
-<Frame caption="Example evaluation">
-  <img
-    height="300"
-    src="/images/evaluations/simple-eval-example.png"
-    alt="Example evaluation"
-  />
-</Frame>
-
-## Quickstart
-
-### Prerequisites
-
-<GetProjectApiKey />
-
-### Example. Running and registering evaluations
-
-#### 1. Create an evaluation file.
-
-<Tabs>
-<Tab title = "JavaScript/TypeScript">
-
-Create a file named `my-first-evaluation.ts` and add the following code:
-
-```javascript my-first-evaluation.ts
-import { evaluate } from '@lmnr-ai/lmnr';
-
-const writePoem = (data: {topic: string}) => {
-    // replace this with your LLM call or custom logic
-    return `This is a good poem about ${data.topic}`
-}
-
-const containsPoem = (output: string, target: string): number => {
-    return output.includes(target) ? 1 : 0
-}
-
-evaluate({
-    data: [
-        {
-            data: { topic: 'flowers' },
-            target: 'This is a good poem about flowers',
-        },
-        {
-            data: { topic: 'cats' },
-            target: 'I like cats',
-        },
-    ],
-    executor: writePoem,
-    evaluators: { contains_poem: containsPoem }
-})
-```
-</Tab>
-<Tab title = "Python">
-
-Create a file named `my-first-evaluation.py` and add the following code:
-
-```python my-first-evaluation.py
-from lmnr import evaluate
-
-def write_poem(data: dict) -> str:
-    # replace this with your LLM call or custom logic
-    return f"This is a good poem about {data['topic']}"
-
-def contains_poem(output: str, target: str) -> int:
-    return 1 if target in output else 0
-
-evaluate(
-    data=[
-        {
-            "data": {"topic": "flowers"},
-            "target": "This is a good poem about flowers"
-        },
-        {
-            "data": {"topic": "cats"},
-            "target": "I like cats"
-        },
-    ],
-    executor=write_poem,
-    evaluators={"contains_poem": contains_poem}
-)
-```
-
-</Tab>
-</Tabs>
-
-#### 2. Run the evaluation
-
-You can run the evaluations both from Laminar CLI and from code.
-To run the evaluation from the CLI, execute the following command:
-
-<Tabs>
-<Tab title = "JavaScript/TypeScript">
-```sh
-export LMNR_PROJECT_API_KEY=<YOUR_PROJECT_API_KEY>
-npx lmnr eval my-first-evaluation.ts
-```
-
-If you want to run multiple files, place them in the `evals` directory,
-and name the files such that they end with `.eval.{ts,js}`.
-
-```
-├─ src/
-├─ evals/
-│  ├── my-first-evaluation.eval.ts
-│  ├── my-second-evaluation.eval.ts
-│  ├── ...
-```
-
-Then, run `npx lmnr eval` to run all the evaluation files in the `evals` directory.
-
-</Tab>
-<Tab title = "Python">
-```sh
-# 1. Make sure `lmnr` is installed in a virtual environment
-# lmnr --help
-# 2. Run the evaluation
-export LMNR_PROJECT_API_KEY=<YOUR_PROJECT_API_KEY>
-lmnr eval my-first-evaluation.py
-```
-
-If you want to run multiple files, place them in the `evals` directory,
-and name the files `eval_*.py` or `*_eval.py`.
-
-```
-├─ src/
-├─ evals/
-│  ├── eval_first.py
-│  ├── second_eval.py
-│  ├── ...
-```
-
-Then, run `lmnr eval` to run all the evaluation files in the `evals` directory.
-
-</Tab>
-</Tabs>
-
-To run the evaluation directly from code, simply call the `evaluate` function, i.e. import or
-run the file created in the previous step.
-
-<Tip>
-Evaluator returns either a single numeric score or a JSON object / dict, with string keys and numeric values for multiple scores
-</Tip>
-
-### Viewing evaluation results and traces
-
-When you run an evaluation from the CLI, Laminar will output the link to the dashboard
-where you can view the evaluation results.
-
-Laminar stores every evaluation result.
-A run for every datapoint is represented as a trace.
-You can view the results and corresponding traces in the evaluations page.
-
-<Frame caption="Example evaluation">
-  <img
-    height="300"
-    src="/images/evaluations/simple-eval-example.png"
-    alt="Example evaluation"
-  />
-</Frame>
-
-In this example, we can see that the score for the first datapoint is 1, and for the second one is 0.
-This is because our evaluator function `contains_poem` returns 1 if the target string is found in the output string, and 0 otherwise.
-
-We can also see the full execution trace for each datapoint. If you actually call an LLM in the executor,
-or the evaluator, you will also see the LLM spans in the trace.
-
-<Frame caption="Here the executor called OpenAI, and there are three evaluator functions.">
-  <img
-    height="300"
-    src="/images/evaluations/evaluation-trace.png"
-    alt="Example evaluation trace screenshot"
-  />
-</Frame>
-
-### Grouping evaluations
-
-To be able to track the score progression over time, or compare evaluations side-by-side,
-you need to group them together. This can be achieved by passing the `groupName` parameter
-to the `evaluate` function.
-
-<Tabs>
-<Tab title="JavaScript/TypeScript">
-```javascript
-import { evaluate, LaminarDataset } from '@lmnr-ai/lmnr';
-
-evaluate({
-    data: new LaminarDataset("name_of_your_dataset"),
-    executor: yourExecutorFunction,
-    evaluators: {evaluatorName: yourEvaluator},
-    groupName: "evals_group_1",
-    config: {
-        projectApiKey: process.env.LMNR_PROJECT_API_KEY,
-        // ... other optional parameters
-    }
-});
-```
-</Tab>
-<Tab title="Python">
-```python
-from lmnr import evaluate, LaminarDataset
-import os
-
-evaluate(
-    data=LaminarDataset("name_of_your_dataset"),
-    executor=your_executor_function,
-    evaluators={"evaluator_name": your_evaluator},
-    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
-    group_name="evals_group_1",
-    # ... other optional parameters
-)
-```
-</Tab>
-</Tabs>
-
-#### Tracking evaluation score progression over time
-
-You can see how the score changes over time for a given group by clicking on the group name in the evaluations page.
-
-<Frame caption = "Example evaluation score progression over time.">
-    <img
-        height="300"
-        src="/images/evaluations/eval-score-progression.png"
-        alt="Example evaluation score progression over time."
-    />
-</Frame>
-
-#### Comparing evaluations side-by-side
-
-Laminar allows you to compare evaluations side-by-side in the UI.
-
-<Frame caption = "Example comparison of two evaluation runs.">
-    <img
-        height="300"
-        src="/images/evaluations/compare-evals.png"
-        alt="Screenshot of the comparison of two evaluation runs."
-    />
-</Frame>
+Check out our [Quickstart Guide](/evaluations/quickstart) to run your first evaluation.

@@ -1,0 +1,235 @@
+---
+title: Quickstart Guide
+---
+import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
+
+This guide will walk you through running your first evaluation using Laminar's evaluation system.
+
+Laminar provides a structured approach to evaluations that makes it easy to create, run, and track your AI system's performance. The main components work together to provide a comprehensive evaluation framework:
+
+- **Executors run your AI systems** - Call models, run code, or process data
+- **Evaluators assess the quality** - Measure accuracy, correctness, and other metrics
+- **Datasets provide test cases** - Organize inputs and expected outputs
+- **Visualization shows trends over time** - Track performance and detect regressions
+- **Tracing** - All evaluation runs are automatically traced, allowing you to see the execution flow and model invocations.
+
+This structured approach allows you to continuously measure your AI system's performance as you make changes, helping you understand the impact of model updates, prompt revisions, and code changes.
+
+## Evaluation components
+
+- **Executor** – The function being evaluated, which processes inputs and produces outputs. This is often your prompt template, LLM call, or production logic.
+- **Evaluator** – The function that assesses executor outputs against expected targets or quality criteria, producing numeric scores.
+- **Dataset** – Collection of datapoints to run executors and evaluators against, representing your test cases.
+- **Datapoint** – Two values: `data` and `target` each represented as a free-form JSON.
+  - `data` – Input sent to the executor. Required.
+  - `target` – Reference data sent to the evaluator, typically containing expected outputs. Optional.
+
+Example datapoint:
+```json
+{
+  "data": {"topic": "flowers"},
+  "target": "This is a good poem about flowers"
+}
+```
+- **Evaluation group** - A collection of evaluations that assess one feature or application component. Results within a group are aggregated and visualized together for tracking and comparing results over time.
+
+
+## Evaluation lifecycle overview
+
+For every datapoint in the dataset, evaluation does the following:
+
+1. Pass the `data` as an argument to the executor.
+1. Run the executor.
+1. Executor output is stored.
+1. Output of the executor and `target` are passed to the _evaluator_ function.
+1. Evaluator pipeline produces a numeric output or a json object with several numeric outputs.
+This is stored in the results of the evaluation.
+
+## Create your first evaluation
+
+### Prerequisites
+
+<GetProjectApiKey />
+
+### Create an evaluation file
+
+<Tabs>
+<Tab title = "TypeScript">
+
+Create a file named `my-first-evaluation.ts` and add the following code:
+
+```javascript my-first-evaluation.ts
+import { evaluate } from '@lmnr-ai/lmnr';
+
+const writePoem = (data: {topic: string}) => {
+    // replace this with your LLM call or custom logic
+    return `This is a good poem about ${data.topic}`
+}
+
+const containsPoem = (output: string, target: string): number => {
+    return output.includes(target) ? 1 : 0
+}
+
+evaluate({
+    data: [
+        {
+            data: { topic: 'flowers' },
+            target: 'This is a good poem about flowers',
+        },
+        {
+            data: { topic: 'cats' },
+            target: 'I like cats',
+        },
+    ],
+    executor: writePoem,
+    evaluators: { contains_poem: containsPoem }
+})
+```
+</Tab>
+<Tab title = "Python">
+
+Create a file named `my-first-evaluation.py` and add the following code:
+
+```python my-first-evaluation.py
+from lmnr import evaluate
+
+def write_poem(data: dict) -> str:
+    # replace this with your LLM call or custom logic
+    return f"This is a good poem about {data['topic']}"
+
+def contains_poem(output: str, target: str) -> int:
+    return 1 if target in output else 0
+
+evaluate(
+    data=[
+        {
+            "data": {"topic": "flowers"},
+            "target": "This is a good poem about flowers"
+        },
+        {
+            "data": {"topic": "cats"},
+            "target": "I like cats"
+        },
+    ],
+    executor=write_poem,
+    evaluators={"contains_poem": contains_poem}
+)
+```
+</Tab>
+</Tabs>
+
+### Run the evaluation
+
+You can run the evaluations both from Laminar CLI and from code.
+
+<Tabs>
+<Tab title = "TypeScript">
+```sh
+export LMNR_PROJECT_API_KEY=<YOUR_PROJECT_API_KEY>
+npx lmnr eval my-first-evaluation.ts
+```
+
+If you want to run multiple files, place them in the `evals` directory, and name the files such that they end with `.eval.{ts,js}`.
+
+```
+├─ src/
+├─ evals/
+│  ├── my-first-evaluation.eval.ts
+│  ├── my-second-evaluation.eval.ts
+│  ├── ...
+```
+
+Then, run `npx lmnr eval` to run all the evaluation files in the `evals` directory.
+</Tab>
+<Tab title = "Python">
+```sh
+# 1. Make sure `lmnr` is installed in a virtual environment
+# lmnr --help
+# 2. Run the evaluation
+export LMNR_PROJECT_API_KEY=<YOUR_PROJECT_API_KEY>
+lmnr eval my-first-evaluation.py
+```
+
+If you want to run multiple files, place them in the `evals` directory, and name the files `eval_*.py` or `*_eval.py`.
+
+```
+├─ src/
+├─ evals/
+│  ├── eval_first.py
+│  ├── second_eval.py
+│  ├── ...
+```
+
+Then, run `lmnr eval` to run all the evaluation files in the `evals` directory.
+</Tab>
+</Tabs>
+
+To run the evaluation directly from code, simply call the `evaluate` function, i.e. import or run the file created in the previous step.
+
+<Tip>
+Evaluator returns either a single numeric score or a JSON object / dict, with string keys and numeric values for multiple scores
+</Tip>
+
+<Note>
+No need to initialize Laminar - the evaluation system automatically initializes Laminar behind the scenes. All instrumented function calls and model invocations are traced without any additional setup.
+</Note>
+
+### View evaluation results
+
+When you run an evaluation from the CLI, Laminar will output the link to the dashboard where you can view the evaluation results.
+
+Laminar stores every evaluation result. A run for every datapoint is represented as a trace. You can view the results and corresponding traces in the evaluations page.
+
+<Frame caption="Example evaluation">
+  <img
+    height="300"
+    src="/images/evaluations/simple-eval-example.png"
+    alt="Example evaluation"
+  />
+</Frame>
+
+In this example, we can see that the score for the first datapoint is 1, and for the second one is 0. This is because our evaluator function `contains_poem` returns 1 if the target string is found in the output string, and 0 otherwise.
+
+We can also see the full execution trace for each datapoint. If you actually call an LLM in the executor, or the evaluator, you will also see the LLM spans in the trace.
+
+<Frame caption="Here the executor called OpenAI, and there are three evaluator functions.">
+  <img
+    height="300"
+    src="/images/evaluations/evaluation-trace.png"
+    alt="Example evaluation trace screenshot"
+  />
+</Frame>
+
+## Group evaluation runs
+
+To track the score progression over time or compare evaluations side-by-side, you need to group them together. This can be achieved by passing the `groupName` parameter to the `evaluate` function.
+
+<Tabs>
+<Tab title="TypeScript">
+```javascript {7}
+import { evaluate, LaminarDataset } from '@lmnr-ai/lmnr';
+
+evaluate({
+    data: new LaminarDataset("name_of_your_dataset"),
+    executor: yourExecutorFunction,
+    evaluators: {evaluatorName: yourEvaluator},
+    groupName: "evals_group_1",
+});
+```
+</Tab>
+<Tab title="Python">
+```python {9}
+from lmnr import evaluate, LaminarDataset
+import os
+
+evaluate(
+    data=LaminarDataset("name_of_your_dataset"),
+    executor=your_executor_function,
+    evaluators={"evaluator_name": your_evaluator},
+    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
+    group_name="evals_group_1",
+    # ... other optional parameters
+)
+```
+</Tab>
+</Tabs>
