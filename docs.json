@@ -118,6 +118,12 @@
         ]
       },
       {
+        "tab": "Guides",
+        "pages": [
+          "guides/fastapi"
+        ]
+      },
+      {
         "tab": "API Reference",
         "groups": [
           {
