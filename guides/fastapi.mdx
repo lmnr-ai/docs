@@ -1,5 +1,5 @@
 ---
-title: FastAPI
+title: FastAPI Instrumentation Example
 description: FastAPI Integration with Laminar Tracing
 ---
 
@@ -15,10 +15,9 @@ We'll create a FastAPI application that:
 
 You can also use the example app from our GitHub [repo](https://github.com/lmnr-ai/lmnr-python/tree/main/examples/fastapi-app).
 
-For a clean install, follow the steps below:
+Alternatively, for a clean install, follow the steps below:
 
 <Steps>
-
 <Step title="Install Dependencies">
 
 First, let's install the required packages:
@@ -65,9 +64,9 @@ Let's create our FastAPI application with Laminar tracing. We'll split the code 
 
 This file will contain the Pydantic models for the request and response.
 
-```python
-from pydantic import BaseModel
+```python schemas.py
 from enum import Enum
+from pydantic import BaseModel
 
 class TicketCategory(str, Enum):
     REFUND = "REFUND"
@@ -92,12 +91,13 @@ this will likely be a much bigger module with classes, routing, etc.
 
 For now, we'll just have a function that handles an OpenAI call.
 
-```python
-from openai import OpenAI
-import os
-from lmnr import observe
+```python llm.py
 from dotenv import load_dotenv
+from lmnr import observe
+from openai import OpenAI
 from schemas import Ticket, TicketCategory, TicketClassification
+
+import os
 
 load_dotenv(override=True)
 
@@ -138,12 +138,12 @@ Laminar must be initialized once at the entry point of the application.
 For FastAPI, this is typically `main.py`, right before creating `app`.
 </Note>
 
-```python
-from fastapi import FastAPI, HTTPException
-from schemas import Ticket, TicketClassification
+```python main.py {4,9,10}
 from dotenv import load_dotenv
-from lmnr import Laminar
+from fastapi import FastAPI, HTTPException
 from llm import model_classify_ticket
+from lmnr import Laminar
+from schemas import Ticket, TicketClassification
 
 load_dotenv(override=True)
 
