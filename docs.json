@@ -120,7 +120,8 @@
       {
         "tab": "Guides",
         "pages": [
-          "guides/fastapi"
+          "guides/fastapi",
+          "guides/nextjs"
         ]
       },
       {
