@@ -44,23 +44,23 @@
               "tracing/metadata",
               "tracing/otel",
               {
+                "group": "Integrations",
+                "pages": [
+                  "tracing/integrations/nextjs",
+                  "tracing/integrations/vercel-ai-sdk",
+                  "tracing/integrations/litellm",
+                  "tracing/integrations/playwright",
+                  "tracing/integrations/browser-use",
+                  "tracing/integrations/stagehand"
+                ]
+              },
+              {
                 "group": "Troubleshooting",
                 "pages": [
                   "tracing/troubleshooting",
                   "tracing/troubleshooting-opentelemetry"
                 ]
               }
-            ]
-          },
-          {
-            "group": "Integrations",
-            "pages": [
-              "tracing/integrations/nextjs",
-              "tracing/integrations/vercel-ai-sdk",
-              "tracing/integrations/litellm",
-              "tracing/integrations/playwright",
-              "tracing/integrations/browser-use",
-              "tracing/integrations/stagehand"
             ]
           },
           {

@@ -17,9 +17,18 @@ To ensure your browser agent sessions are properly traced when using the Index A
     <Tab title="TypeScript">
     ```typescript
     import { Laminar } from '@lmnr-ai/lmnr';
+    import { chromium } from 'playwright';
     
     // Initialize Laminar with your project API key
-    Laminar.initialize({ projectApiKey: "YOUR_PROJECT_API_KEY" });
+    Laminar.initialize({
+        projectApiKey: "YOUR_PROJECT_API_KEY",
+        instrumentModules: {
+            playwright: {
+                chromium
+            },
+            // add other libraries as you need
+        }
+    });
     ```
     </Tab>
      <Tab title="Python">

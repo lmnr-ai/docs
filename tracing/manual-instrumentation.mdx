@@ -31,6 +31,42 @@ All of these values can be set in Python and JavaScript/TypeScript using static 
 ### Example
 
 <Tabs>
+<Tab title="JavaScript/TypeScript">
+
+Use `observe` to create a span and `Laminar.setSpanAttributes` to set its attributes.
+
+```javascript
+import { Laminar, LaminarAttributes } from '@lmnr-ai/lmnr';
+
+await observe(
+    {
+        name: 'requestHandler',
+        spanType: 'LLM'
+    }, 
+    async (message: string) => {
+        const response = await fetch('https://custom-llm.com/v1/completions', {
+            method: 'POST',
+            body: JSON.stringify({
+                model: 'custom-model-1',
+                messages: [
+                    {
+                        role: 'user',
+                        content: message
+                    }
+                ]
+            })
+        }).then(res => res.json());
+        Laminar.setSpanAttributes({
+            [LaminarAttributes.PROVIDER]: 'custom-llm.com',
+            [LaminarAttributes.REQUEST_MODEL]: 'custom-model-1',
+            [LaminarAttributes.RESPONSE_MODEL]: response.model,
+            [LaminarAttributes.INPUT_TOKEN_COUNT]: response.usage.input_tokens,
+            [LaminarAttributes.OUTPUT_TOKEN_COUNT]: response.usage.output_tokens,
+        })
+    return a;
+}, userMessage);
+```
+</Tab>
 <Tab title="Python">
 
 Use `with Laminar.start_as_current_span` to create a span and set its attributes.
@@ -74,42 +110,6 @@ with Laminar.start_as_current_span(
 ```
 
 </Tab>
-<Tab title="JavaScript/TypeScript">
-
-Use `observe` to create a span and `Laminar.setSpanAttributes` to set its attributes.
-
-```javascript
-import { Laminar, LaminarAttributes } from '@lmnr-ai/lmnr';
-
-await observe(
-    {
-        name: 'requestHandler',
-        spanType: 'LLM'
-    }, 
-    async (message: string) => {
-        const response = await fetch('https://custom-llm.com/v1/completions', {
-            method: 'POST',
-            body: JSON.stringify({
-                model: 'custom-model-1',
-                messages: [
-                    {
-                        role: 'user',
-                        content: message
-                    }
-                ]
-            })
-        }).then(res => res.json());
-        Laminar.setSpanAttributes({
-            [LaminarAttributes.PROVIDER]: 'custom-llm.com',
-            [LaminarAttributes.REQUEST_MODEL]: 'custom-model-1',
-            [LaminarAttributes.RESPONSE_MODEL]: response.model,
-            [LaminarAttributes.INPUT_TOKEN_COUNT]: response.usage.input_tokens,
-            [LaminarAttributes.OUTPUT_TOKEN_COUNT]: response.usage.output_tokens,
-        })
-    return a;
-}, userMessage);
-```
-</Tab>
 </Tabs>
 
 
@@ -128,48 +128,6 @@ intent. If the intent matches the expected value, it makes another call to
 OpenAI (possibly with additional RAG) to generate a response.
 
 <Tabs>
-<Tab title="Python">
-
-`request_handler` is observed, so all calls to OpenAI inside it are grouped in one trace.
-
-```python
-from lmnr import Laminar, observe
-from openai import OpenAI
-import os
-
-Laminar.initialize(project_api_key=os.environ['LMNR_PROJECT_API_KEY'])
-
-openai_client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])
-
-@observe()
-def request_handler(user_message: str):
-    router_prompt = f"... {user_message} Answer yes or no"
-    user_intent = openai_client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {
-                "role": "user",
-                "content": router_prompt
-            }
-        ]
-    )
-    if user_intent.choices[0].message.content == "yes":
-        # likely some RAG here to enrich the context
-        # ...
-
-        model_response = openai_client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {
-                    "role": "user",
-                    "content": user_message
-                }
-            ]
-        )
-        return model_response.choices[0].message.content
-    return "the user is not asking for help with ..."
-```
-</Tab>
 <Tab title="JavaScript/TypeScript">
 
 `requestHandler` is observed, so all calls to OpenAI are grouped in one trace.
@@ -220,6 +178,48 @@ await Laminar.shutdown();
 
 ```
 </Tab>
+<Tab title="Python">
+
+`request_handler` is observed, so all calls to OpenAI inside it are grouped in one trace.
+
+```python
+from lmnr import Laminar, observe
+from openai import OpenAI
+import os
+
+Laminar.initialize(project_api_key=os.environ['LMNR_PROJECT_API_KEY'])
+
+openai_client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])
+
+@observe()
+def request_handler(user_message: str):
+    router_prompt = f"... {user_message} Answer yes or no"
+    user_intent = openai_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {
+                "role": "user",
+                "content": router_prompt
+            }
+        ]
+    )
+    if user_intent.choices[0].message.content == "yes":
+        # likely some RAG here to enrich the context
+        # ...
+
+        model_response = openai_client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {
+                    "role": "user",
+                    "content": user_message
+                }
+            ]
+        )
+        return model_response.choices[0].message.content
+    return "the user is not asking for help with ..."
+```
+</Tab>
 </Tabs>
 
 As a result, you will get a nested trace with the `request_handler` span as the top level span,
@@ -237,47 +237,6 @@ we've decided to provide a wrapper function syntax. This is common for OpenTelem
 common for LLM observability, so we provide a reference here.
 
 <Tabs>
-<Tab title="Python">
-
-#### Parameters
-
-- `name` (`str|None`): name of the span. If not provided, the name of the wrapped function will be used.
-For example:
-```python
-@observe(name="my_span")
-def my_function(): # the span will be named "my_span"
-    pass
-
-@observe()
-def my_function(): # the span will be named "my_function"
-    pass
-```
-
-- `session_id` (`str|None`): session ID for the current trace. If you know the session ID staticallly, you can pass it here.
-
-#### Inputs and outputs
-- Function parameters and their values are serialized to JSON and recorded as span input.
-- Function return value is serialized to JSON and recorded as span output.
-
-For example:
-```python
-@observe()
-def my_function(param1, param2):
-    return param1 + param2
-
-my_function(1, 2)
-```
-
-In this case, the span will have the following attributes:
-- Span input (`lmnr.span.input`) will be `{"param1": 1, "param2": 2}`
-- Span output (`lmnr.span.output`) will be `3`
-
-#### Notes
-- `@observe` is a decorator factory, so it must always be used with parentheses: `@observe()`.
-- This decorator can be used with both synchronous and asynchronous functions.
-- Streaming responses are taken care of, so if your function returns a generator, it will be observed correctly.
-
-</Tab>
 <Tab title="JavaScript/TypeScript">
 
 #### General syntax
@@ -296,6 +255,9 @@ await observe({ ...options }, async (param1, param2) => {
    you must manually specify some attributes. This translates to `lmnr.span.type` attribute on the span.
 - `traceId` (`string`): [experimental] trace ID for the current trace. This is useful if you want to continue an existing trace.
 IMPORTANT: must be a valid UUID, i.e. has to include 8-4-4-4-12 hex digits.
+- `input`: a dictionary of input parameters. Is preferred over function parameters.
+- `ignoreInput`: if `true`, the input will not be recorded.
+- `ignoreOutput`: if `true`, the output will not be recorded.
 
 #### Inputs and outputs
 - Function parameters and their values are serialized to JSON and recorded as span input.
@@ -364,6 +326,50 @@ await observe({ name: 'mySpan' }, async () => {
 });
 ```
 </Expandable>
+</Tab>
+<Tab title="Python">
+
+#### Parameters
+
+- `name` (`str|None`): name of the span. If not provided, the name of the wrapped function will be used.
+For example:
+```python
+@observe(name="my_span")
+def my_function(): # the span will be named "my_span"
+    pass
+
+@observe()
+def my_function(): # the span will be named "my_function"
+    pass
+```
+
+- `session_id` (`str|None`): session ID for the current trace. If you know the session ID staticallly, you can pass it here.
+- `ignore_input` (`bool`): if `True`, the input will not be recorded.
+- `ignore_output` (`bool`): if `True`, the output will not be recorded.
+- `ignore_inputs` (`list[str]`): list of input parameters to skip.
+
+#### Inputs and outputs
+- Function parameters and their values are serialized to JSON and recorded as span input.
+- Function return value is serialized to JSON and recorded as span output.
+
+For example:
+```python
+@observe()
+def my_function(param1, param2):
+    return param1 + param2
+
+my_function(1, 2)
+```
+
+In this case, the span will have the following attributes:
+- Span input (`lmnr.span.input`) will be `{"param1": 1, "param2": 2}`
+- Span output (`lmnr.span.output`) will be `3`
+
+#### Notes
+- `@observe` is a decorator factory, so it must always be used with parentheses: `@observe()`.
+- This decorator can be used with both synchronous and asynchronous functions.
+- Streaming responses are taken care of, so if your function returns a generator, it will be observed correctly.
+
 </Tab>
 </Tabs>
 
@@ -445,6 +451,44 @@ It is helpful to pass the span object between functions, so that you can continu
 
 #### Example
 <Tabs>
+<Tab title="JavaScript/TypeScript">
+
+We will use two main methods here – `Laminar.startSpan()` and `Laminar.withSpan()`. 
+`Laminar.withSpan()` is a thin convenience wrapper around `opentelemetry.context.with`.
+
+<Note>
+The type of the span is `Span`. You can import it from `@lmnr-ai/lmnr` or directly from `@opentelemetry/api`.
+</Note>
+
+```javascript
+import { Laminar, observe, Span } from '@lmnr-ai/lmnr';
+
+const foo = (span: Span) => {
+  Laminar.withSpan(span, async() => {
+    // your code here, e.g. an LLM call
+  }, false);
+};
+
+const bar = async (span: Span) => {
+  await Laminar.withSpan(span, async() => {
+    await observe({ name: 'bar' }, async () => {
+      // your code here
+    });
+  })
+};
+
+const outer = Laminar.startSpan('outer');
+foo(outer);
+await bar(outer);
+// Don't forget to end the span!
+outer.end();
+```
+<Tip>
+Ending the span is required. If you don't end the span, the trace will not be recorded.
+You can also end the span by passing `true` as the third argument (`endOnExit`)
+to the last `Laminar.withSpan`.
+</Tip>
+</Tab>
 <Tab title="Python">
 
 We will use two main methods here – `Laminar.start_span()` and `use_span`. You can import 
@@ -484,44 +528,6 @@ You can also end the span by passing `end_on_exit=True` to the last `use_span`.
 </Tip>
 
 </Tab>
-<Tab title="JavaScript/TypeScript">
-
-We will use two main methods here – `Laminar.startSpan()` and `Laminar.withSpan()`. 
-`Laminar.withSpan()` is a thin convenience wrapper around `opentelemetry.context.with`.
-
-<Note>
-The type of the span is `Span`. You can import it from `@lmnr-ai/lmnr` or directly from `@opentelemetry/api`.
-</Note>
-
-```javascript
-import { Laminar, observe, Span } from '@lmnr-ai/lmnr';
-
-const foo = (span: Span) => {
-  Laminar.withSpan(span, async() => {
-    // your code here, e.g. an LLM call
-  }, false);
-};
-
-const bar = async (span: Span) => {
-  await Laminar.withSpan(span, async() => {
-    await observe({ name: 'bar' }, async () => {
-      // your code here
-    });
-  })
-};
-
-const outer = Laminar.startSpan('outer');
-foo(outer);
-await bar(outer);
-// Don't forget to end the span!
-outer.end();
-```
-<Tip>
-Ending the span is required. If you don't end the span, the trace will not be recorded.
-You can also end the span by passing `true` as the third argument (`endOnExit`)
-to the last `Laminar.withSpan`.
-</Tip>
-</Tab>
 </Tabs>
 
 As a result, you will get a nested trace with `outer` as the top level span,
@@ -547,6 +553,38 @@ Laminar provides several utilities to serialize and deserialize the span context
 #### Example
 
 <Tabs>
+<Tab title="JavaScript/TypeScript">
+
+In TypeScript, `LaminarSpanContext` is simply a typed record, so you can pass its stringified JSON representation. You can use `Laminar.serializeLaminarSpanContext` to create and serialize the span context.
+
+`serializeLaminarSpanContext` optionally takes a span object and returns a string. If no span is provided, it will use the current active span.
+
+```javascript
+import { Laminar } from '@lmnr-ai/lmnr';
+
+let _spanContext: string | null = null;
+
+const firstHandler = async () => {
+    const span = Laminar.startSpan({
+        name: 'firstHandler',
+    });
+    _spanContext = Laminar.serializeLaminarSpanContext(span);
+    // your code here
+    span.end();
+}
+
+const secondHandler = async () => {
+    const span = Laminar.startSpan({
+        name: 'secondHandler',
+        parentSpanContext: _spanContext ?? undefined,
+    });
+    // your code here
+    span.end();
+}
+```
+
+This will result in a nested trace with `firstHandler` as the top level span, and `secondHandler` as a child span.
+</Tab>
 <Tab title="Python">
 
 In Python, you can use `Laminar.serialize_span_context` and `Laminar.deserialize_span_context` to serialize and deserialize the span context.
@@ -585,40 +623,6 @@ def second_handler(context: str) -> str:
 This will result in a nested trace with `first_handler` as the top level span, and `second_handler` as a child span.
 
 </Tab>
-
-
-<Tab title="JavaScript/TypeScript">
-
-In TypeScript, `LaminarSpanContext` is simply a typed record, so you can pass its stringified JSON representation. You can use `Laminar.serializeLaminarSpanContext` to create and serialize the span context.
-
-`serializeLaminarSpanContext` optionally takes a span object and returns a string. If no span is provided, it will use the current active span.
-
-```javascript
-import { Laminar } from '@lmnr-ai/lmnr';
-
-let _spanContext: string | null = null;
-
-const firstHandler = async () => {
-    const span = Laminar.startSpan({
-        name: 'firstHandler',
-    });
-    _spanContext = Laminar.serializeLaminarSpanContext(span);
-    // your code here
-    span.end();
-}
-
-const secondHandler = async () => {
-    const span = Laminar.startSpan({
-        name: 'secondHandler',
-        parentSpanContext: _spanContext ?? undefined,
-    });
-    // your code here
-    span.end();
-}
-```
-
-This will result in a nested trace with `firstHandler` as the top level span, and `secondHandler` as a child span.
-</Tab>
 </Tabs>
 ## Provider and model names
 
@@ -640,4 +644,4 @@ For the model names, we use the names in the provider's API.
 | OpenAI | `openai` | `gpt-4o` or `gpt-4o-2024-11-20` | [platform.openai.com](https://platform.openai.com/docs/models)
 
 For the full list of models and prices, and to suggest edits, see the initialization data
-in our [github](https://github.com/lmnr-ai/lmnr/blob/main/frontend/lib/db/initial-data.json#L2176).
+in our [github](https://github.com/lmnr-ai/lmnr/blob/main/frontend/lib/db/initial-data.json#L25).

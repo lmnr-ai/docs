@@ -92,6 +92,17 @@ Adding just two lines to your application enables comprehensive tracing:
 Once initialized, Laminar automatically traces LLM API calls. For example, after initialization, this standard OpenAI call:
 
 <Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { OpenAI } from 'openai';
+
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const response = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: "What is the capital of France?" }],
+});
+```
+</Tab>
 <Tab title="Python">
 
 ```python
@@ -102,17 +113,6 @@ response = client.chat.completions.create(
     model="gpt-4o-mini",
     messages=[{"role": "user", "content": "What is the capital of France?"}],
 )
-```
-</Tab>
-<Tab title="JavaScript/TypeScript">
-```javascript
-import { OpenAI } from 'openai';
-
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const response = await client.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{ role: "user", content: "What is the capital of France?" }],
-});
 ```
 </Tab>
 </Tabs>
@@ -140,6 +140,22 @@ Beyond automatic LLM tracing, you can use the `observe` decorator/wrapper to tra
 While Laminar Cloud (api.lmnr.ai) is the default target for traces, you can also send data to your own self-hosted instance:
 
 <Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+import { Laminar } from '@lmnr-ai/lmnr';
+Laminar.initialize({
+    projectApiKey: "<your-project-api-key>",
+    baseUrl: "http://localhost", // do not include ports or trailing slash here
+    httpPort: 8000,
+    grpcPort: 8001,
+    instrumentModules: {
+        // your libraries to instrument
+    }
+});
+```
+
+</Tab>
 <Tab title="Python">
 
 ```python
@@ -151,20 +167,6 @@ Laminar.initialize(
     grpc_port=8001
 )
 ```
-
-</Tab>
-<Tab title="JavaScript/TypeScript">
-
-```javascript
-import { Laminar } from '@lmnr-ai/lmnr';
-Laminar.initialize({
-    projectApiKey: "<your-project-api-key>",
-    baseUrl: "http://localhost", // do not include ports or trailing slash here
-    httpPort: 8000,
-    grpcPort: 8001
-});
-```
-
 </Tab>
 </Tabs>
 

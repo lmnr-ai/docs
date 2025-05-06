@@ -37,6 +37,12 @@ import { chromium } from 'playwright';
 
 Laminar.initialize({
   projectApiKey: process.env.LMNR_API_KEY,
+  instrumentModules: {
+    playwright: {
+      chromium
+    },
+    // add other libraries as you need
+  }
 });
 
 async function main() {
