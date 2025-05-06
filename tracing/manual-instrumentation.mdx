@@ -39,31 +39,31 @@ Use `observe` to create a span and `Laminar.setSpanAttributes` to set its attrib
 import { Laminar, LaminarAttributes } from '@lmnr-ai/lmnr';
 
 await observe(
-    {
-        name: 'requestHandler',
-        spanType: 'LLM'
-    }, 
-    async (message: string) => {
-        const response = await fetch('https://custom-llm.com/v1/completions', {
-            method: 'POST',
-            body: JSON.stringify({
-                model: 'custom-model-1',
-                messages: [
-                    {
-                        role: 'user',
-                        content: message
-                    }
-                ]
-            })
-        }).then(res => res.json());
-        Laminar.setSpanAttributes({
-            [LaminarAttributes.PROVIDER]: 'custom-llm.com',
-            [LaminarAttributes.REQUEST_MODEL]: 'custom-model-1',
-            [LaminarAttributes.RESPONSE_MODEL]: response.model,
-            [LaminarAttributes.INPUT_TOKEN_COUNT]: response.usage.input_tokens,
-            [LaminarAttributes.OUTPUT_TOKEN_COUNT]: response.usage.output_tokens,
-        })
-    return a;
+  {
+    name: 'requestHandler',
+    spanType: 'LLM'
+  }, 
+  async (message: string) => {
+    const response = await fetch('https://custom-llm.com/v1/completions', {
+      method: 'POST',
+      body: JSON.stringify({
+        model: 'custom-model-1',
+        messages: [
+          {
+            role: 'user',
+            content: message
+          }
+        ]
+      })
+    }).then(res => res.json());
+    Laminar.setSpanAttributes({
+      [LaminarAttributes.PROVIDER]: 'custom-llm.com',
+      [LaminarAttributes.REQUEST_MODEL]: 'custom-model-1',
+      [LaminarAttributes.RESPONSE_MODEL]: response.model,
+      [LaminarAttributes.INPUT_TOKEN_COUNT]: response.usage.input_tokens,
+      [LaminarAttributes.OUTPUT_TOKEN_COUNT]: response.usage.output_tokens,
+    })
+    return response;
 }, userMessage);
 ```
 </Tab>
