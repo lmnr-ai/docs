@@ -60,11 +60,11 @@ import { OpenAI } from 'openai';
 
 const client = new OpenAI();
 
-const writePoem = (data: {topic: string}) => {
+const writePoem = (data: {country: string}) => {
     // replace this with your LLM call or custom logic
     return client.chat.completions.create(
-        model="gpt-4.1-nano",
-        messages=[{"role": "user", "content": f"What is the capital of {data['country']}? Answer only with the name of the city."}]
+        model: 'gpt-4.1-nano',
+        messages: [{role: 'user', content: `What is the capital of ${data['country']}? Answer only with the name of the city.`}]
     ).choices[0].message.content
 }
 

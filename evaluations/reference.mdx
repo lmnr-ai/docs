@@ -26,7 +26,7 @@ Required, unless you set the `LMNR_PROJECT_API_KEY` environment variable.
 Default is 443. For local self-hosted Laminar, use 8000.
 - `grpcPort`: The port of the Laminar instance for gRPC. Used to send traces via OTel gRPC exporter.
 Default is 8443. For local self-hosted Laminar, use 8001.
-- `instrumentModules`: An object with modules to instrument.
+- `instrumentModules`: A map from module names to packages to be instrumented.
 Read more in the [instrumentation guide](/tracing/automatic-instrumentation#instrument-specific-modules-only).
 </Tab>
 <Tab title="Python">
