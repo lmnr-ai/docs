@@ -86,9 +86,18 @@ evaluate({
         },
     ],
     executor: writePoem,
-    evaluators: { 'accuracy': accuracy }
+    evaluators: { 'accuracy': accuracy },
+    config: { 
+      instrumentModules: {
+        openAI: OpenAI
+      }
+    }
 })
 ```
+
+<Note>
+It is important to pass the `config` object with `instrumentModules` to `evaluate` to ensure that the OpenAI client and any other instrumented modules are instrumented.
+</Note>
 </Tab>
 <Tab title = "Python">
 
