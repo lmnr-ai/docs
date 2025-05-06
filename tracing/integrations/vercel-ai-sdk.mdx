@@ -1,88 +1,72 @@
 ---
 title: "AI SDK (Vercel)"
 ---
+import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
 
-
-[Vercel AI SDK](https://sdk.vercel.ai/docs/introduction) is a library that allows you to add LLM features to your JS/TS applications. It supports tracing using [OpenTelemetry](https://opentelemetry.io/). 
+[AI SDK](https://sdk.vercel.ai/docs/introduction) is a library that allows you to add LLM features to your JS/TS applications. It supports tracing using [OpenTelemetry](https://opentelemetry.io/). 
 
 Laminar tracing is based on OpenTelemetry, so it is fully compatible with Vercel AI SDK tracing and you can start sending Vercel AI SDK traces to Laminar right away.
 
-This guide will show you how to send Vercel AI SDK traces to Laminar if you are using NextJS app router.
-
 <Steps>
+<Step title="Get your project API key">
+<GetProjectApiKey />
+</Step>
+<Step title="Update your AI SDK calls">
+
+We need to pass the Laminar tracer to the `generateText`, or `streamText`, or any other `generate*` calls.
+
+```javascript {3,8-11}
+import { openai } from '@ai-sdk/openai';
+import { generateText } from 'ai';
+import { getTracer } from '@lmnr-ai/lmnr';
+
+const { text } = await generateText({
+  model: openai('gpt-4.1-nano'),
+  prompt: 'What is Laminar flow?',
+  experimental_telemetry: {
+    isEnabled: true,
+    tracer: getTracer(),
+  },
+});
+```
+</Step>
 <Step title="Initialize Laminar">
+<Tabs>
+<Tab title="Node.js">
+In Node.js, place `Laminar.initialize` in the entry point to your application.
 
-1. Add `instrumentation.ts` to the root of your NextJS project. Learn more about `instrumentation.ts` [here](https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation).
+This must be done once, in an entry point of your application after any other tracing SDK initialization.
 
-2. Inside of `instrumentation.ts`, initialize Laminar with your project API key as follows:
-```typescript instrumentations.ts
+```javascript
 import { Laminar } from '@lmnr-ai/lmnr';
 
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_API_KEY,
+});
+```
+</Tab>
+<Tab title="Next.js">
+In Next.js, place `Laminar.initialize` in the `instrumentation.ts` file.
+
+```typescript {3-4, 8-14} instrumentation.ts
 export async function register() {
   // prevent this from running in the edge runtime
   if (process.env.NEXT_RUNTIME === 'nodejs') {
-
     const { Laminar } = await import('@lmnr-ai/lmnr');
+    const { OpenAI } = await import('openai');
+    const anthropic = await import('@anthropic-ai/sdk');
+
     Laminar.initialize({
       projectApiKey: process.env.LMNR_API_KEY,
+      instrumentModules: {
+        openAI: OpenAI,
+        anthropic: anthropic
+      }
     });
   }
 }
 ```
-</Step>
-<Step title="Enable Vercel AI SDK tracing">
-Enable `experimental_telemetry` in the Vercel AI SDK configuration.
-
-```javascript Generate text {11-13}
-import { generateText } from 'ai';
-import { openai } from '@ai-sdk/openai';
-
-await generateText({
-    model: openai( 'gpt-4o-mini'), messages: [
-        {
-            role: 'user',
-            content: 'What is the capital of France?'
-        }
-    ],
-    experimental_telemetry: {
-        isEnabled: true
-    }
-});
-```
-</Step>
-<Step title="NextJS">
-NextJS route handler example:
-
-```typescript NextJS
-import { Laminar } from '@lmnr-ai/lmnr';
-import { generateText } from 'ai';
-import { openai } from '@ai-sdk/openai';
-
-export async function GET() {
-  const response = await generateText({
-    model: openai('gpt-4o-mini'), messages: [
-      {
-        role: 'user',
-        content: 'What is the capital of France?'
-       }
-    ],
-    experimental_telemetry: {
-      isEnabled: true
-    }
-  });
-
-  return Response.json(response);
-}
-```
-
-Laminar skips saving thorough traces created by Next.js by default and only keeps AI SDK traces.
-Learn more about [tracing in Next.js](/tracing/integrations/nextjs).
-</Step>
-<Step title="Results">
-And that's it! You should now see traces in Laminar.
-
-<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
-<img src="/images/traces/vercel-ai-sdk-example.png" alt="Vercel AI SDK NextJS" style={{ margin: '0px' }}/>
-</div>
+</Tab>
+</Tabs>
 </Step>
 </Steps>

@@ -15,22 +15,9 @@ We will hook into the API to create OpenTelemetry spans, but more importantly, w
 
 <Tabs>
 <Tab title="JavaScript/Typescript">
-```javascript {1, 4-6}
+```javascript {1, 4-11}
 import { Laminar } from '@lmnr-ai/lmnr';
 import { chromium } from 'playwright';
-
-Laminar.initialize({
-  projectApiKey: process.env.LMNR_API_KEY,
-});
-
-// The rest of your playwright code
-```
-
-For some setups, you may need to pass the module to the `Laminar.initialize` function. For example,
-
-```javascript
-import { chromium } from 'playwright';
-import { Laminar } from '@lmnr-ai/lmnr';
 
 Laminar.initialize({
   projectApiKey: process.env.LMNR_API_KEY,
@@ -40,6 +27,8 @@ Laminar.initialize({
     }
   }
 });
+
+// The rest of your playwright code
 ```
 </Tab>
 

@@ -16,32 +16,9 @@ Thanks to Laminar's native integration with Playwright, you can trace your Stage
 import { Laminar } from '@lmnr-ai/lmnr';
 Laminar.initialize({
   projectApiKey: process.env.LMNR_API_KEY,
-});
-import { Stagehand } from 'stagehand';
-
-const stagehand = new Stagehand({
-    // options
-});
-
-await stagehand.init();
-const page = stagehand.page;
-await page.act("...");
-```
-
-In some setups, you may need to pass the module to the `Laminar.initialize` function. For example,
-
-```javascript
-import { Laminar } from '@lmnr-ai/lmnr';
-import { Stagehand } from 'stagehand';
-Laminar.initialize({
-  projectApiKey: process.env.LMNR_API_KEY,
   instrumentModules: {
     stagehand: Stagehand,
   },
-});
-
-const stagehand = new Stagehand({
-    // options
 });
 
 await stagehand.init();

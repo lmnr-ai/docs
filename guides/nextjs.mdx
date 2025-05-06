@@ -84,13 +84,16 @@ Next.js automatically loads this file during initialization.
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     const { Laminar } = await import('@lmnr-ai/lmnr')
+    const { OpenAI } = await import('openai')
     
+    // Make sure to initialize Laminar **after** you initialize other 
+    // tracing libraries, e.g. `registerOTel` from `@vercel/otel`.
     Laminar.initialize({
       apiKey: process.env.LMNR_PROJECT_API_KEY,
-      // By default, Laminar filters out Next.js spans.
-      // You can preserve them by setting this to true.
-      // They are somewhat noisy, but can be useful for debugging.
-      // preserveNextJsSpans: true,
+      instrumentModules: {
+        openAI: OpenAI
+        // add other libraries as you need
+      }
     })
   }
 }
@@ -101,7 +104,7 @@ Laminar only works in the 'nodejs' runtime of Next.js.
 Learn more about the `instrumentation.ts` file in the [Next.js docs](https://nextjs.org/docs/app/guides/instrumentation).
 
 <Note>
-Laminar must be initialized at the entry point of the application.
+Laminar must be initialized at the entry point of the application, but after other tracing libraries are initialized.
 For Next.js, the `instrumentation.ts` file is ideal for this purpose as it's loaded early in the application lifecycle.
 </Note>
 
@@ -135,11 +138,14 @@ export default function Home() {
 
 ### 3. app/api/chat/route.ts
 
-This file contains the API route handler that processes chat messages and communicates with the OpenAI API:
+This file contains the API route handler that processes chat messages and communicates with the OpenAI API.
 
-```typescript app/api/chat/route.ts {1-2, 22-24}
+Make sure to enable `experimental_telemetry` in the `generateText` function and pass the tracer to it.
+
+```typescript app/api/chat/route.ts {3, 25-28}
 import { openai } from "@ai-sdk/openai";
 import { generateText } from "ai";
+import { getTracer } from "@lmnr-ai/lmnr";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -150,17 +156,20 @@ export async function POST(request: NextRequest) {
     // Create system message with therapeutic instructions
     const systemMessage = {
       role: 'system',
-      content: `You are an AI-powered therapist assistant. Respond with empathy, understanding, and professionalism.
-Your goal is to provide supportive responses that help the user process their feelings and thoughts.
-Never give medical advice or diagnose conditions.`
+      content: `You are an AI-powered therapist assistant. Respond with empathy,
+understanding, and professionalism. Your goal is to provide supportive responses
+that help the user process their feelings and thoughts. Never give medical
+advice or diagnose conditions.`
     };
 
-    // Use the messages parameter directly with the system message as the first element
+    // Use the messages parameter directly with the system message as the first
+    // element
     const response = await generateText({
       model: openai("gpt-4.1-nano"),
       messages: [systemMessage, ...messages],
       experimental_telemetry: {
         isEnabled: true,
+        tracer: getTracer(),
       }
     });
 
@@ -174,11 +183,6 @@ Never give medical advice or diagnose conditions.`
   }
 }
 ```
-
-<Note>
-The `experimental_telemetry` option is enabled, which allows AI SDK to send telemetry data.
-This works seamlessly with Laminar's tracing capabilities.
-</Note>
 
 ### 4. components/chat-ui.tsx
 
@@ -242,7 +246,7 @@ export default function ChatUI() {
         ...prev,
         {
           role: "assistant",
-          content: "I'm sorry, I couldn't process your request. Please try again.",
+          content: "Sorry, I couldn't process the request. Please try again.",
         },
       ]);
     } finally {
@@ -251,14 +255,16 @@ export default function ChatUI() {
   };
 
   return (
-    <div className="flex flex-col h-[70vh] border rounded-lg overflow-hidden bg-white dark:bg-gray-800">
+    <div className={"flex flex-col h-[70vh] border rounded-lg" +
+      "overflow-hidden bg-white dark:bg-gray-800"}>
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
           <div className="text-center text-gray-500 dark:text-gray-400 mt-20">
             <p className="text-lg font-medium mb-2">Welcome to Therapy Chat</p>
             <p className="max-w-md mx-auto">
-              Share what's on your mind, and I'll do my best to provide supportive
-              guidance. Your privacy is important - this conversation stays between us.
+              Share what's on your mind, and I'll do my best to provide
+              supportive guidance. Your privacy is important - this conversation
+              stays between us.
             </p>
           </div>
         ) : (
@@ -273,7 +279,8 @@ export default function ChatUI() {
                 className={`max-w-[80%] rounded-lg px-4 py-2 ${
                   msg.role === "user"
                     ? "bg-blue-500 text-white"
-                    : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                    : "bg-gray-100 dark:bg-gray-700 text-gray-800 " +
+                      "dark:text-gray-200"
                 }`}
               >
                 {msg.content}
@@ -283,11 +290,15 @@ export default function ChatUI() {
         )}
         {isLoading && (
           <div className="flex justify-start">
-            <div className="max-w-[80%] rounded-lg px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
+            <div className={"max-w-[80%] rounded-lg px-4 py-2 " +
+              "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"}>
               <div className="flex space-x-2 items-center">
-                <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse"></div>
-                <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse delay-150"></div>
-                <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse delay-300"></div>
+                <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse">
+                </div>
+                <div className={"w-2 h-2 rounded-full bg-gray-400 " +
+                "animate-pulse delay-150"}></div>
+                <div className={"w-2 h-2 rounded-full bg-gray-400 " + 
+                "animate-pulse delay-300"}></div>
               </div>
             </div>
           </div>
@@ -302,13 +313,18 @@ export default function ChatUI() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Type your message..."
-          className="flex-1 border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          className={"flex-1 border rounded-md px-3 py-2 focus:outline-none " +
+            "focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 " +
+            "dark:border-gray-600 dark:text-white"}
           disabled={isLoading}
         />
         <button
           type="submit"
           disabled={isLoading || !input.trim()}
-          className="bg-blue-500 text-white rounded-md px-4 py-2 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className={"bg-blue-500 text-white rounded-md px-4 py-2 " +
+            "hover:bg-blue-600 focus:outline-none focus:ring-2 " +
+            "focus:ring-blue-500 disabled:opacity-50 " + 
+            "disabled:cursor-not-allowed"}
         >
           Send
         </button>

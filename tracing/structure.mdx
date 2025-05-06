@@ -55,6 +55,26 @@ In such case, we may want to represent each turn in the conversation as a trace,
 ### Example. Associate a trace with a session
 
 <Tabs>
+<Tab title="JavaScript/TypeScript">
+
+Use the `Laminar.withSession` wrapper function to create a context with a sessionId.
+All the spans within the wrapper will be associated with the session.
+
+```javascript
+import { Laminar } from "@lmnr-ai/lmnr";
+
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+  instrumentModules: {
+    // your libraries to instrument
+  },
+});
+
+Laminar.withSession({ sessionId: "session123"}, () => {
+  // Your code here
+});
+```
+</Tab>
 <Tab title="Python">
 
 Simply call the `Laminar.set_session(session_id="session123")` within or outside any span context.
@@ -72,20 +92,6 @@ def my_function():
 
     # optionally, at the end of the session, you can clear the session id
     Laminar.clear_session()
-```
-</Tab>
-<Tab title="JavaScript/TypeScript">
-
-Use the `Laminar.withSession` wrapper function to create a context with a sessionId.
-All the spans within the wrapper will be associated with the session.
-
-```javascript
-import { Laminar } from "@lmnr-ai/lmnr";
-import { context as contextApi } from '@opentelemetry/api';
-
-const context = Laminar.withSession({ sessionId: "session123"}, () => {
-    // Your code here
-});
 ```
 </Tab>
 </Tabs>

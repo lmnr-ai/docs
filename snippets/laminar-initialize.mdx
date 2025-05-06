@@ -1,18 +1,24 @@
 <Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+import { Laminar } from '@lmnr-ai/lmnr';
+import { OpenAI } from 'openai';
+Laminar.initialize({
+    projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+    instrumentModules: {
+        openAI: OpenAI,
+        // add other libraries as you need
+    }
+});
+```
+</Tab>
 <Tab title="Python">
 
 ```python
 from lmnr import Laminar
 Laminar.initialize(project_api_key="LMNR_PROJECT_API_KEY")
 ```
-</Tab>
-<Tab title="JavaScript/TypeScript">
-
-```javascript
-import { Laminar } from '@lmnr-ai/lmnr';
-Laminar.initialize({ projectApiKey: process.env.LMNR_PROJECT_API_KEY });
-```
-
 </Tab>
 </Tabs>
 

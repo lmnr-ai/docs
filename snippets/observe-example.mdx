@@ -1,25 +1,4 @@
 <Tabs>
-<Tab title="Python">
-
-You can instrument specific functions by adding the `@observe()` decorator.
-This is especially helpful when you want to trace functions, or group
-separate functions into a single trace.
-
-```python
-from lmnr import observe
-
-@observe()  # annotate all functions you want to trace
-def my_function():
-    res = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": "What is the capital of France?"}],
-    )
-    return res.choices[0].message.content
-
-my_function()
-```
-
-</Tab>
 <Tab title="JavaScript/TypeScript">
 
 You can instrument specific functions by wrapping them in `observe()`. 
@@ -41,6 +20,27 @@ const myFunction = async () => observe(
 );
 
 await myFunction();
+```
+
+</Tab>
+<Tab title="Python">
+
+You can instrument specific functions by adding the `@observe()` decorator.
+This is especially helpful when you want to trace functions, or group
+separate functions into a single trace.
+
+```python
+from lmnr import observe
+
+@observe()  # annotate all functions you want to trace
+def my_function():
+    res = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": "What is the capital of France?"}],
+    )
+    return res.choices[0].message.content
+
+my_function()
 ```
 
 </Tab>

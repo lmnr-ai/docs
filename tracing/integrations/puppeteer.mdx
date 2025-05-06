@@ -13,22 +13,9 @@ title: "Puppeteer"
 Laminar has a native integration with Puppeteer for JavaScript. You simply need to initialize Laminar with your project API key and Puppeteer will be traced automatically.
 We will hook into the API to create OpenTelemetry spans, but more importantly, we record browser session recordings.
 
-```javascript {1, 4-6}
+```javascript {1, 4-9}
 import { Laminar } from '@lmnr-ai/lmnr';
 import puppeteer from 'puppeteer'; // or 'puppeteer-core'
-
-Laminar.initialize({
-  projectApiKey: process.env.LMNR_API_KEY,
-});
-
-// The rest of your puppeteer code
-```
-
-For some setups, you may need to pass the module to the `Laminar.initialize` function. For example,
-
-```javascript
-import puppeteer from 'puppeteer';
-import { Laminar } from '@lmnr-ai/lmnr';
 
 Laminar.initialize({
   projectApiKey: process.env.LMNR_API_KEY,
@@ -36,4 +23,6 @@ Laminar.initialize({
     puppeteer: puppeteer
   }
 });
+
+// The rest of your puppeteer code
 ```
