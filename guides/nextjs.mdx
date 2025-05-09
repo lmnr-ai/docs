@@ -48,7 +48,21 @@ Get [Laminar project API key](https://docs.lmnr.ai/tracing/introduction#2-initia
 Get [OpenAI API key](https://platform.openai.com/api-keys)
 
 </Step>
+<Step title = "Update next.config.ts">
 
+Add the following to your `next.config.ts` file:
+
+```javascript next.config.ts
+const nextConfig = {
+  serverExternalPackages: ['@lmnr-ai/lmnr'],
+};
+
+export default nextConfig;
+```
+
+This is because Laminar depends on OpenTelemetry, which uses some Node.js-specific functionality, and we need to inform Next.js about it. Learn more in the [Next.js docs](https://nextjs.org/docs/app/api-reference/config/next-config-js/serverExternalPackages).
+
+</Step>
 <Step title="Project Structure">
 
 The project has the following structure:

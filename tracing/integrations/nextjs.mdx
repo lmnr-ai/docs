@@ -19,7 +19,22 @@ Also see the [Next.js guide](/guides/nextjs) for a step-by-step guide with a sma
 npm add @lmnr-ai/lmnr
 ```
 
-### 2. Initialize Laminar
+### 2. Update your next.config.ts
+
+Add the following to your `next.config.ts` file:
+
+```javascript next.config.ts
+const nextConfig = {
+  serverExternalPackages: ['@lmnr-ai/lmnr'],
+};
+
+export default nextConfig;
+```
+
+This is because Laminar depends on OpenTelemetry, which uses some Node.js-specific functionality, and we need to inform Next.js about it. Learn more in the [Next.js docs](https://nextjs.org/docs/app/api-reference/config/next-config-js/serverExternalPackages).
+
+
+### 3. Initialize Laminar
 
 To instrument your entire Next.js app, place Laminar initialization in `instrumentation.{ts,js}` file. Learn more about `instrumentation.{ts,js}` [here](https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation).
 
@@ -53,4 +68,3 @@ module.exports = {
     experimental: { instrumentationHook: true }
 };
 ```
-
