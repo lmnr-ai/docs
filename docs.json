@@ -124,6 +124,7 @@
         "tab": "Guides",
         "pages": [
           "guides/fastapi",
+          "guides/nextjs-aisdk",
           "guides/nextjs"
         ]
       },
