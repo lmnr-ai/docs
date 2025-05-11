@@ -46,6 +46,9 @@
               {
                 "group": "Integrations",
                 "pages": [
+                  "tracing/integrations/openai",
+                  "tracing/integrations/anthropic",
+                  "tracing/integrations/langchain",
                   "tracing/integrations/nextjs",
                   "tracing/integrations/vercel-ai-sdk",
                   "tracing/integrations/litellm",
