@@ -3,8 +3,6 @@ title: Next.js
 description: Instrument your Next.js app based on App Router with Laminar
 ---
 
-import AutoInstrumentableJSModules from '/snippets/autoinstrumentable-js-modules.mdx';
-
 ## Overview
 
 Also see the [Next.js guide](/guides/nextjs) for a step-by-step guide with a small example app.
@@ -38,20 +36,12 @@ This is because Laminar depends on OpenTelemetry, which uses some Node.js-specif
 
 To instrument your entire Next.js app, place Laminar initialization in `instrumentation.{ts,js}` file. Learn more about `instrumentation.{ts,js}` [here](https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation).
 
-```typescript instrumentation.ts {3-4, 8-14}
+```typescript instrumentation.ts
 export async function register() {
-  // prevent this from running in the edge runtime
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     const { Laminar } = await import('@lmnr-ai/lmnr');
-    const { OpenAI } = await import('openai');
-    const anthropic = await import('@anthropic-ai/sdk');
-
     Laminar.initialize({
       projectApiKey: process.env.LMNR_API_KEY,
-      instrumentModules: {
-        openAI: OpenAI,
-        anthropic: anthropic
-      }
     });
   }
 }
@@ -68,3 +58,52 @@ module.exports = {
     experimental: { instrumentationHook: true }
 };
 ```
+
+### 4. Patch LLM SDKs
+
+<Tabs>
+<Tab title="AI SDKs">
+AI SDK is already instrumented implicitly, but you need to direct it to use Laminar tracer.
+
+```javascript {3,8-11}
+import { openai } from '@ai-sdk/openai';
+import { generateText } from 'ai';
+import { getTracer } from '@lmnr-ai/lmnr';
+
+const { text } = await generateText({
+  model: openai('gpt-4.1-nano'),
+  prompt: 'What is Laminar flow?',
+  experimental_telemetry: {
+    isEnabled: true,
+    tracer: getTracer(),
+  },
+});
+```
+
+</Tab>
+<Tab title="Other LLM SDKs">
+
+Usually, Laminar initialize can patch the LLM SDKs automatically. However, in Next.js, the imports
+that happen in `instrumentation.{ts,js}` file are not visible to the rest of the app.
+
+So, you need to manually patch the LLM SDKs using `Laminar.patch` function.
+
+For example, if you initialize your LLM SDKs in `lib/llm-clients.ts` file, you can patch them like this:
+
+```javascript lib/llm-clients.ts {3-8}
+import { OpenAI } from "openai";
+import * as anthropic from "@anthropic-ai/sdk";
+import { Laminar } from "@lmnr-ai/lmnr";
+
+Laminar.patch({
+  OpenAI: OpenAI,
+  anthropic: anthropic,
+});
+
+const openai = new OpenAI();
+const anthropic = new anthropic.Anthropic();
+
+export { openai, anthropic };
+```
+</Tab>
+</Tabs>

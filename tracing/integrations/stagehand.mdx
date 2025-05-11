@@ -12,19 +12,54 @@ Thanks to Laminar's native integration with Playwright, you can trace your Stage
 
 ## Usage
 
-```javascript
+<Steps>
+<Step title="Initialize Laminar">
+
+First, we need to initialize Laminar and pass all the LLM modules that you use in your Stagehand agents.
+
+```javascript {2, 5-11}
+import { Stagehand } from '@browserbase/stagehand';
 import { Laminar } from '@lmnr-ai/lmnr';
+import { OpenAI } from 'openai';
+
 Laminar.initialize({
   projectApiKey: process.env.LMNR_API_KEY,
   instrumentModules: {
     stagehand: Stagehand,
+    OpenAI: OpenAI,
   },
 });
+```
 
-await stagehand.init();
+</Step>
+<Step title="Using Stagehand">
+
+You can now use the Stagehand API as usual.
+
+```javascript
+await stagehand.init({
+  modelName: 'gpt-4.1-mini',
+  modelClientOptions: {
+    apiKey: process.env.OPENAI_API_KEY,
+  },
+});
 const page = stagehand.page;
 await page.act("...");
 ```
+</Step>
+<Step title="Finalizing Stagehand traces">
+
+In order to finalize Stagehand traces, make sure to call `stagehand.close()` and `Laminar.flush()`,
+especially if you are using Laminar and Stagehand in standalone scripts or edge runtimes.
+
+```javascript
+await stagehand.close(); // closes the browser and the parent span
+await Laminar.flush(); // sends any remaining spans to Laminar
+```
+
+</Step>
+</Steps>
+
 
 ## Example result
 
