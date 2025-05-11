@@ -3,8 +3,6 @@ title: OpenAI
 description: Instrument your OpenAI API calls with Laminar
 ---
 
-import { Tabs, Tab } from 'nextra/components'
-
 ## Overview
 
 Laminar automatically instruments the official OpenAI package with a single line of code, allowing you to trace and monitor all your OpenAI API calls without modifying your existing code. This provides complete visibility into your AI application's performance, costs, and behavior.
@@ -30,6 +28,10 @@ Laminar automatically instruments the official OpenAI package with a single line
     ```
 
     Then load them in your application using a package like [dotenv](https://www.npmjs.com/package/dotenv).
+
+    <Note>
+    If you are using OpenAI with Next.js, please follow the [Next.js integration guide](/tracing/integrations/nextjs) for best practices and setup instructions.
+    </Note>
 
     ### 3. Initialize Laminar
 
@@ -85,6 +87,10 @@ Laminar automatically instruments the official OpenAI package with a single line
     LMNR_PROJECT_API_KEY=your-laminar-project-api-key
     OPENAI_API_KEY=your-openai-api-key
     ```
+
+    <Note>
+    To see an example of how to integrate Laminar within a FastAPI application, check out our [FastAPI integration guide](/guides/fastapi).
+    </Note>
 
     ### 3. Initialize Laminar
 
