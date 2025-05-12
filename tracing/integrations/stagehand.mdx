@@ -6,7 +6,7 @@ title: "Stagehand"
 
 [Stagehand](https://github.com/browserbase/stagehand) is a relatively low-level AI-native framework for building browser agents in JavaScript.
 
-Stagehand is designed to be a seamless extension of Playwright, and in particular, it's Page API.
+Stagehand is designed to be a seamless extension of Playwright, and in particular, its Page API.
 
 Thanks to Laminar's native integration with Playwright, you can trace your Stagehand agents with ease.
 
@@ -17,7 +17,14 @@ Thanks to Laminar's native integration with Playwright, you can trace your Stage
 
 First, we need to initialize Laminar and pass all the LLM modules that you use in your Stagehand agents.
 
-```javascript {2, 5-11}
+<Tip>
+Import the LLM provider SDK and pass it to `instrumentModules`, depending
+on the model that you use with Stagehand.
+</Tip>
+
+For example, if you use OpenAI with Stagehand, you can do the following:
+
+```javascript {2-3, 5-11}
 import { Stagehand } from '@browserbase/stagehand';
 import { Laminar } from '@lmnr-ai/lmnr';
 import { OpenAI } from 'openai';
