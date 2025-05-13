@@ -27,7 +27,6 @@ Store your API keys in a `.env` file:
 ```bash
 # .env file
 LMNR_PROJECT_API_KEY=your-laminar-project-api-key
-GOOGLE_API_KEY=your-gemini-api-key
 GEMINI_API_KEY=your-gemini-api-key
 ```
 
@@ -52,7 +51,7 @@ load_dotenv()
 Laminar.initialize()
 
 # Initialize Gemini client as usual
-client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 ```
 
 ### 4. Use Gemini as usual
