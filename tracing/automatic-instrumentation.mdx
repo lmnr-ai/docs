@@ -8,7 +8,7 @@ import AutoInstrumentableJSModules from "/snippets/autoinstrumentable-js-modules
 <Tabs>
 <Tab title="JavaScript/TypeScript">
 We always recommend using the `instrumentModules` parameter to specify which modules to instrument.
-Automatic instrumentation of imported modules may work, but it depends on many factors, such as the bundler you are using
+Automatic instrumentation of imported modules may work, but it depends on many factors, such as the bundler you are using.
 </Tab>
 <Tab title = "Python">
 By default, `Laminar.initialize()` will automatically instrument majority of common LLM and VectorDB libraries for tracing.
@@ -21,18 +21,23 @@ This includes OpenAI, Anthropic, Langchain, Gemini, and many more.
 <Tabs>
 <Tab title="JavaScript/TypeScript">
 
-<Tip> For automatic instrumentation, you can try importing **AND** initializing Laminar before importing any instrumentable modules.</Tip>
+<Warning>
+This method is not recommended in JavaScript. It may not work for all setups.
+Please read [the section](#instrument-specific-modules-only) on specific modules instrumentation.
+</Warning>
 
 ```javascript
 import { Laminar } from '@lmnr-ai/lmnr';
-Laminar.initialize({ projectApiKey: process.env.LMNR_PROJECT_API_KEY });
-// and then import the instrumentable modules
-import { OpenAI } from 'openai';
-// ...
-```
 
-<Warning> If this is not working for you, you may need to manually pass all libraries which you want Laminar to auto-instrument.
-Check [the section](#instrument-specific-modules-only) on specific modules instrumentation </Warning>
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY
+});
+
+// and then import the instrumentable modules
+// ...
+import { OpenAI } from 'openai';
+import * as anthropic from '@anthropic-ai/sdk';
+```
 
 </Tab>
 <Tab title="Python">
@@ -115,8 +120,6 @@ In such setups, it is recommended to manually instrument the modules you need.
 When you pass the entire module to `instrumentModules`, our tracer will have access to the
 exports of the module, despite the fact that it's already imported.
 
-OpenTelemetry is stabilizing the support for this, so feel free to track the progress [here](https://github.com/open-telemetry/opentelemetry-js/issues/4845).
-
 </Expandable>
 
 Let's say, for example, we call OpenAI and Anthropic models to perform the same task, and 
@@ -128,6 +131,11 @@ we only want to instrument the Anthropic calls, but not OpenAI.
 `initialize()` accepts
 an optional `instrumentModules` parameter. It takes in an object with string keys
 and values are the entire modules you have imported. In this case we only want to pass `anthropic`.
+
+<Note>
+If you are using AI SDK and/or Next.js, you may need additional configuration.
+Please refer to the [Next.js guide](/tracing/integrations/nextjs) for more details.
+</Note>
 
 See available instruments in [the next subsection](/tracing/automatic-instrumentation#available-instruments).
 
@@ -242,7 +250,7 @@ if __name__ == "__main__":
 </Tab>
 <Tab title="Python">
 See available instruments by importing `Instruments` from `lmnr`
-or [view source](https://github.com/lmnr-ai/lmnr-python/blob/main/src/lmnr/opentelemetry_lib/instruments.py).
+or [view source](https://github.com/lmnr-ai/lmnr-python/blob/main/src/lmnr/opentelemetry_lib/tracing/instruments.py).
 
 All modules from this list are auto-instrumented, if you do not pass `instruments` to `Laminar.initialize()`.
 
