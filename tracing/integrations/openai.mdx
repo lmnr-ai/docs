@@ -44,7 +44,7 @@ Laminar automatically instruments the official OpenAI package with a single line
 
     // This single line instruments all OpenAI API calls
     Laminar.initialize({
-      instrumentModules: { openAI: OpenAI }
+      instrumentModules: { OpenAI: OpenAI }
     });
 
     // Initialize OpenAI client as usual
