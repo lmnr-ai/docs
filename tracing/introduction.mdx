@@ -3,15 +3,11 @@ title: Introduction
 description: Comprehensive observability for your LLM applications with OpenTelemetry-based tracing
 ---
 
-import LaminarInitialize from '/snippets/laminar-initialize.mdx';
-import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
-import ObserveExample from '/snippets/observe-example.mdx';
-
 ## What is Laminar Tracing?
 
 Laminar offers comprehensive observability for your LLM applications, capturing the entire execution flow with minimal setup. This allows you to:
 
-- **Debug complex LLM workflows** by seeing exactly how data flows through your application
+- **Debug complex Agents andLLM workflows** by seeing exactly how data flows through your application
 - **Monitor performance** with detailed execution time and token usage metrics
 - **Track costs** across different models and components
 - **Analyze user sessions** to understand and improve the end-user experience
@@ -75,118 +71,26 @@ For every execution of your application, Laminar automatically records:
 <img src="/images/traces/trace-attr.png" alt="Screenshot of trace attributes" style={{ margin: '0px' }}/>
 </div>
 
-## Getting Started in 2 Minutes
 
-### 1. Get Your Project API Key
 
-<GetProjectApiKey />
 
-### 2. Initialize Laminar in Your Application
 
-Adding just two lines to your application enables comprehensive tracing:
-
-<LaminarInitialize />
-
-### 3. That's it! Your LLM API Calls Are Now Traced
-
-Once initialized, Laminar automatically traces LLM API calls. For example, after initialization, this standard OpenAI call:
-
-<Tabs>
-<Tab title="JavaScript/TypeScript">
-```javascript
-import { OpenAI } from 'openai';
-
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const response = await client.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{ role: "user", content: "What is the capital of France?" }],
-});
-```
-</Tab>
-<Tab title="Python">
-
-```python
-from openai import OpenAI
-
-client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-response = client.chat.completions.create(
-    model="gpt-4o-mini",
-    messages=[{"role": "user", "content": "What is the capital of France?"}],
-)
-```
-</Tab>
-</Tabs>
-
-Will automatically create a span in your Laminar dashboard:
-
-<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
-  <img src="/images/traces/trace-openai.png" alt="OpenAI span visualization" style={{ margin: '0px' }}/>
-</div>
-
-<Note>
-Laminar automatically captures important LLM metrics including latency, token usage, and cost calculations based on the specific model used.
-</Note>
-
-## Advanced Tracing Capabilities
-
-### Tracing Custom Functions
-
-Beyond automatic LLM tracing, you can use the `observe` decorator/wrapper to trace specific functions in your application:
-
-<ObserveExample />
-
-### Self-Hosting Laminar
-
-While Laminar Cloud (api.lmnr.ai) is the default target for traces, you can also send data to your own self-hosted instance:
-
-<Tabs>
-<Tab title="JavaScript/TypeScript">
-
-```javascript
-import { Laminar } from '@lmnr-ai/lmnr';
-Laminar.initialize({
-    projectApiKey: "<your-project-api-key>",
-    baseUrl: "http://localhost", // do not include ports or trailing slash here
-    httpPort: 8000,
-    grpcPort: 8001,
-    instrumentModules: {
-        // your libraries to instrument
-    }
-});
-```
-
-</Tab>
-<Tab title="Python">
-
-```python
-from lmnr import Laminar
-Laminar.initialize(
-    project_api_key="<your-project-api-key>",
-    base_url="http://localhost", # do not include ports or trailing slash here
-    http_port=8000,
-    grpc_port=8001
-)
-```
-</Tab>
-</Tabs>
-
-Read more about [self-hosting Laminar](/self-hosting/setup).
-
-## OpenTelemetry Integration
-
-Laminar builds on the industry-standard [OpenTelemetry](https://opentelemetry.io/docs/specs/otel/) protocol, providing:
-
-- **Compatibility** with existing OpenTelemetry instrumentation
-- **High-performance** trace ingestion through gRPC
-- **Specialized support** for LLM and vector DB operations via [OpenLLMetry](https://github.com/traceloop/openllmetry)
-
-If you already use OpenTelemetry in your stack, you can send those traces to Laminar with minimal configuration. Learn more in our [OpenTelemetry integration guide](/tracing/otel).
 
 ## Next Steps
 
 Now that you understand the basics of Laminar tracing:
 
-- Continue to [Trace Structure](/tracing/structure) to learn more about interpreting and using trace data
-- Explore [Browser agent observability](/tracing/browser-agent-observability) to trace browser sessions and agent execution steps
-- Check out [Integrations](/tracing/integrations) to learn more about tracing other popular LLM frameworks and libraries
-- If you want to get into details on OpenTelemetry, check out the in-depth [OpenTelemetry guide](/tracing/otel)
+- Get started quickly with our [Quickstart Guide](/tracing/quickstart)
+- Explore our integrations to see how Laminar works with your favorite tools:
+    - [OpenAI](/tracing/integrations/openai)
+    - [Anthropic](/tracing/integrations/anthropic)
+    - [Langchain](/tracing/integrations/langchain)
+    - [Next.js](/tracing/integrations/nextjs)
+    - [Vercel AI SDK](/tracing/integrations/vercel-ai-sdk)
+    - [LiteLLM](/tracing/integrations/litellm)
+    - [Playwright](/tracing/integrations/playwright)
+    - [Puppeteer](/tracing/integrations/puppeteer)
+    - [Browser Use](/tracing/integrations/browser-use)
+    - [Stagehand](/tracing/integrations/stagehand)
+- Continue to [Trace Structure](/tracing/structure) to learn more about how to add structure to your traces
+- Explore [Browser agent observability](/tracing/browser-agent-observability) to learn how to record browser sessions and sync them with agent execution steps
