@@ -31,6 +31,22 @@
             "group": "Tracing",
             "pages": [
               "tracing/introduction",
+              "tracing/quickstart",
+              {
+                "group": "Integrations",
+                "pages": [
+                  "tracing/integrations/openai",
+                  "tracing/integrations/anthropic",
+                  "tracing/integrations/langchain",
+                  "tracing/integrations/nextjs",
+                  "tracing/integrations/vercel-ai-sdk",
+                  "tracing/integrations/litellm",
+                  "tracing/integrations/playwright",
+                  "tracing/integrations/puppeteer",
+                  "tracing/integrations/browser-use",
+                  "tracing/integrations/stagehand"
+                ]
+              },
               "tracing/structure",
               "tracing/realtime",
               {
@@ -43,20 +59,6 @@
               "tracing/browser-agent-observability",
               "tracing/metadata",
               "tracing/otel",
-              {
-                "group": "Integrations",
-                "pages": [
-                  "tracing/integrations/openai",
-                  "tracing/integrations/anthropic",
-                  "tracing/integrations/langchain",
-                  "tracing/integrations/nextjs",
-                  "tracing/integrations/vercel-ai-sdk",
-                  "tracing/integrations/litellm",
-                  "tracing/integrations/playwright",
-                  "tracing/integrations/browser-use",
-                  "tracing/integrations/stagehand"
-                ]
-              },
               {
                 "group": "Troubleshooting",
                 "pages": [
