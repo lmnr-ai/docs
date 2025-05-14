@@ -41,6 +41,7 @@ pip install 'litellm[proxy]'
 
 </Step>
 <Step title="Set the environment variables">
+
 ```bash
 LMNR_PROJECT_API_KEY="<your-project-api-key>"
 OTEL_EXPORTER="otlp_grpc"
@@ -49,17 +50,34 @@ OTEL_HEADERS="authorization=Bearer $LMNR_PROJECT_API_KEY"
 ```
 
 <Note>
-`authorization` must start with a lowercase `a`. This is different from
-common HTTP headers convention.
+`authorization` must start with a lowercase `a`, because gRPC headers are case-sensitive
+in Python OpenTelemetry SDK.
 </Note>
 
 </Step>
 <Step title="Enable otel callback in the code">
 ```python
+import litellm
 litellm.callbacks = ['otel']
 ```
 </Step>
 <Step title="Run your code and see traces in Laminar">
+
+Example code:
+
+```python
+import litellm
+litellm.callbacks = ['otel']
+
+ response = litellm.completion(
+    model="gpt-4.1-nano",
+    messages=[
+      {"role": "user", "content": "What is the capital of France?"}
+    ],
+)
+```
+
+
 <div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
   <img src="/images/traces/litellm.png" alt="LiteLLM trace" style={{ margin: '0px' }}/>
 </div>
@@ -69,8 +87,8 @@ litellm.callbacks = ['otel']
 
 ## Using Laminar's features
 
-If you want to use Laminar's features, such as sessions, manual spans, `observe` decorator,
-you will need to install and initialize Laminar.
+If you want to use Laminar's features, such as sessions, manual spans, and the `observe` decorator,
+you will need to install and initialize Laminar alongside setting LiteLLM's callback.
 
 <Steps>
 <Step title="Install Laminar">
@@ -79,16 +97,38 @@ pip install lmnr
 ```
 </Step>
 <Step title="Initialize Laminar">
-```python
-from lmnr import Laminar
+```python {1,4,6}
+from lmnr import Laminar, observe
+import litellm
+
 Laminar.initialize(project_api_key="LMNR_PROJECT_API_KEY")
+litellm.callbacks = ['otel']
+
+@observe
+def completion(model, messages):
+    response = litellm.completion(
+        model=model,
+        messages=messages,
+    )
+    return response
+
+completion(
+  "gpt-4.1-nano",
+  [{"role": "user", "content": "What is the capital of France?"}]
+)
 ```
 </Step>
 </Steps>
 
 This, however, will most likely result in your OpenAI calls being double-traced – once by LiteLLM and once by Laminar.
-To avoid this, you can disable automatic Laminar instruments at initialization.
+This is because LiteLLM uses OpenAI SDK under the hood to call some of the models and Laminar instruments OpenAI SDK.
 
-```python
-Laminar.initialize(project_api_key="LMNR_PROJECT_API_KEY", instruments=set())
+To avoid this, you can disable OpenAI instrumentation at initialization.
+
+```python {4}
+from lmnr import Laminar, Instruments
+Laminar.initialize(
+  project_api_key="LMNR_PROJECT_API_KEY",
+  disabled=set([Instruments.OPENAI])
+)
 ```
