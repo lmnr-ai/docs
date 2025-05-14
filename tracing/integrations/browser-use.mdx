@@ -5,9 +5,9 @@ description: "Trace Browser Use's agent execution steps and browser sessions"
 
 ## Overview
 
-[Browser Use](https://browser-use.com/) is a framework written in Python that allows you to build browser agents.
+[Browser Use](https://browser-use.com/) is a Python library that enables AI to control your browser.
 
-Laminar has a native integration with Browser Use and underlying Playwright browser.
+Laminar has a native tracing integration with Browser Use agent and underlying Playwright browser. It allows you to trace both agent execution steps and browser session recordings.
 
 <Note>
   Laminar excels at tracing browser agents by providing unified visibility into both browser session recordings and agent execution steps.
@@ -18,7 +18,7 @@ Laminar has a native integration with Browser Use and underlying Playwright brow
 Simply initialize Laminar at the top of your project and both Browser Use agent's steps and session recordings will be automatically traced and synced.
 
 ```python {5-8}
-from langchain_openai import ChatOpenAI
+from langchain_anthropic import ChatAnthropic
 from browser_use import Agent
 import asyncio
 
@@ -28,8 +28,8 @@ Laminar.initialize(project_api_key="...")
 
 async def main():
     agent = Agent(
-        task="open google, search Laminar AI",
-        llm=ChatOpenAI(model="gpt-4o-mini"),
+        task="go to ycombinator.com, describe 5 companies from the latest batch of startups.",
+        llm=ChatAnthropic(model="claude-3-7-sonnet-20250219")
     )
     result = await agent.run()
     print(result)
@@ -44,4 +44,4 @@ When you select a trace, you can see both the browser session recording and the 
 
 Timeline of the browser session is synced with the agent execution steps, timeline highlights indicate the agent's current step synced with the browser session.
 
-<img className="block" src="/images/traces/browser-use.png" alt="Laminar" />
+<img className="block" src="/images/integrations/bu_demo.gif" alt="Browser Use Observability" />
