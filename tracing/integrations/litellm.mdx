@@ -14,32 +14,18 @@ configuration through the environment variables.
 
 <Steps>
 <Step title="Install the opentelemetry packages">
-First, install the opentelemetry packages:
+Laminar comes with required opentelemetry packages, so you only need to install Laminar:
+
+```sh
+pip install lmnr
+```
+
+If you want to install the opentelemetry packages separately, follow the instructions below.
+
+<Expandable title="advanced installation - raw opentelemetry packages">
 
 ```sh
 pip install opentelemetry-api opentelemetry-sdk\
-  opentelemetry-exporter-otlp
-```
-
-<Expandable title="other installation options: uv, poetry">
-uv
-
-```sh
-uv pip install opentelemetry-api opentelemetry-sdk\
-  opentelemetry-exporter-otlp
-```
-
-or
-
-```
-uv add opentelemetry-api opentelemetry-sdk\
-  opentelemetry-exporter-otlp
-```
-
-poetry
-
-```sh
-poetry add opentelemetry-api opentelemetry-sdk\
   opentelemetry-exporter-otlp
 ```
 
@@ -50,28 +36,9 @@ poetry add opentelemetry-api opentelemetry-sdk\
 For opentelemetry callback to work, you need to install LiteLLM with the `proxy` extra of the LiteLLM package.
 
 ```sh
-pip install litellm[proxy]
+pip install 'litellm[proxy]'
 ```
 
-<Expandable title="other installation options: uv, poetry">
-uv
-
-```sh
-uv pip install litellm[proxy]
-```
-
-or 
-
-```sh
-uv add litellm --extra proxy
-```
-
-poetry
-
-```sh
-poetry add "litellm[proxy]"
-```
-</Expandable>
 </Step>
 <Step title="Set the environment variables">
 ```bash
@@ -119,7 +86,7 @@ Laminar.initialize(project_api_key="LMNR_PROJECT_API_KEY")
 </Step>
 </Steps>
 
-This, however, will most likely result in your LLM calls being double-traced – once by LiteLLM and once by Laminar.
+This, however, will most likely result in your OpenAI calls being double-traced – once by LiteLLM and once by Laminar.
 To avoid this, you can disable automatic Laminar instruments at initialization.
 
 ```python
