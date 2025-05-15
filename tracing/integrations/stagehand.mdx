@@ -73,3 +73,24 @@ await Laminar.flush(); // sends any remaining spans to Laminar
 <Frame caption="An example trace for page.act('go to Laminar pricing page')">
 <img width="600" src="/images/traces/stagehand.png" alt="Stagehand example" />
 </Frame>
+
+## Troubleshooting
+
+### I can't see LLM calls, token counts, and costs in my trace
+
+It is likely that you've started of with `npx create-browser-app`, which
+creates the package as an ESM module.
+
+#### Solution
+
+Remove the `"type": "module"` from your `package.json` file.
+
+<Tip>
+You can also explicitly set the type to `commonjs` in your `package.json` file.
+
+```json package.json
+"type": "commonjs"
+```
+</Tip>
+
+For further reading, check the section on this issue in our [Troubleshooting guide](/tracing/troubleshooting#my-js-auto-instrumentation-is-not-working).
