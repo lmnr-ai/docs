@@ -11,63 +11,64 @@ I have instrumented my JavaScript code with Laminar, and I can see the manual sp
 
 ### Cause
 
-`Laminar.initialize()` registers and enables OpenTelemetry's automatic instrumentations. OpenTelemetry's automatic instrumentations usually
-intercept the module imports, so if they are applied _after_ the module is imported, they may not work.
-Sometimes, the solution is to initialize Laminar first, and then import the modules. For example,
-in Next.js, it makes sense to initialize Laminar in `instrumentation.ts`, and then import the instrumented modules in your app.
-
-<Note>
-We have seen this issue in TypeScript with `tsx`, but not with `ts-node`.
-</Note>
+Laminar auto-instrumentations are based on OpenTelemetry's auto-instrumentations,
+and they are optimized for `commonjs` modules.
 
 ### Solution
 
-There are two options:
+<Steps>
+<Step title="Make sure that you pass `instrumentModules`">
 
-1. [Recommended] Passing the imported modules as `instrumentModules` option.
-2. Importing the LLM modules _after_ Laminar initialization. This may not always work.
+The `instrumentModules` option is required to instrument the modules you need.
 
-
-#### Option 1. Passing the imported modules as `instrumentModules` option
-
-```javascript
+```javascript {7-11}
 import { Laminar } from '@lmnr-ai/lmnr';
 import { OpenAI } from 'openai';
+import anthropic from 'anthropic';
 
 Laminar.initialize({
   projectApiKey: process.env.LMNR_PROJECT_API_KEY,
   instrumentModules: {
-    openAI: OpenAI,
+    OpenAI: OpenAI,
+    anthropic: anthropic,
+    // ... other modules you want to instrument
   }
 });
-
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-// your code here
 ```
 
-For a full list of supported modules, see the `instrumentModules` doc comment or read this section of instrumentation [docs](/tracing/automatic-instrumentation#available-instruments).
+If this didn't solve your issue, continue with the next steps.
+</Step>
 
-#### Option 2. Importing the LLM modules _after_ Laminar initialization
+<Step title="Check if you are using ESM modules">
 
-This option is good for quick testing, but is against linting best practices.
+Due to the differences between Node versions, bundlers, and TypeScript compilers, it is not easy to definitely determine if you are using ESM modules.
 
-```javascript
-import { Laminar } from '@lmnr-ai/lmnr';
+Some strong indicators:
+- You have a `package.json` file with `"type": "module"` – this is a 100% indicator.
+- Your files have `.mjs` extension – this is a strong indicator.
+- You are using `import` statements **and** this is not TypeScript – this is a strong indicator.
 
-Laminar.initialize({ projectApiKey: process.env.LMNR_PROJECT_API_KEY });
+See more in [Node.js documentation](https://nodejs.org/api/modules.html#enabling) and [Node.js documentation on determining module system](https://nodejs.org/api/packages.html#determining-module-system).
 
-// import the LLM modules after Laminar initialization
-import { OpenAI } from 'openai';
+If you are not sure, you can try to run `node --input-type=module yourfile.js` and see if it works.
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const response = await client.chat.completions.create({
-  model: "gpt-4o-mini",
-  messages: [{
-    role: "user",
-    content: "Write a short poem about Laminar flow?"
-  }],
-});
-```
+</Step>
+
+<Step title="Try to migrate to CommonJS">
+
+For modern Node versions, migrating to CommonJS is straightforward and most code actually
+is written in ESM syntax.
+
+It might be as simple as changing the file extension from `.mjs` to `.js` and adding `"type": "commonjs"` to your `package.json` file.
+
+</Step>
+<Step title="[Optional] Further reading">
+
+Refer to the [CJS vs ESM](https://github.com/open-telemetry/opentelemetry-js/blob/main/doc/esm-support.md) guide
+in OpenTelemetry documentation for more information.
+
+</Step>
+</Steps>
 
 ## My JS traces are not showing up in the Laminar UI.
 
@@ -88,9 +89,9 @@ but not for Node.js.
 
 ### Solution
 
-Use Laminar's `shutdown()` function to ensure that the traces are sent before the process exits.
+Use Laminar's `flush()` function to ensure that the traces are sent before the process exits.
 
-```javascript
+```javascript {13}
 import { Laminar } from '@lmnr-ai/lmnr';
 
 Laminar.initialize({
@@ -103,7 +104,7 @@ Laminar.initialize({
 // your code here
 
 // at the end of your script, when you are done tracing
-await Laminar.shutdown(); // NOTE: don't forget to await
+await Laminar.flush(); // NOTE: don't forget to await
 ```
 
 ## My Python auto-instrumentation is not working.
