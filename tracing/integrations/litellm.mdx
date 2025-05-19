@@ -17,7 +17,7 @@ configuration through the environment variables.
 Laminar comes with required opentelemetry packages, so you only need to install Laminar:
 
 ```sh
-pip install lmnr
+pip install 'lmnr[all]'
 ```
 
 If you want to install the opentelemetry packages separately, follow the instructions below.
@@ -104,7 +104,7 @@ import litellm
 Laminar.initialize(project_api_key="LMNR_PROJECT_API_KEY")
 litellm.callbacks = ['otel']
 
-@observe
+@observe()
 def completion(model, messages):
     response = litellm.completion(
         model=model,
@@ -129,6 +129,6 @@ To avoid this, you can disable OpenAI instrumentation at initialization.
 from lmnr import Laminar, Instruments
 Laminar.initialize(
   project_api_key="LMNR_PROJECT_API_KEY",
-  disabled=set([Instruments.OPENAI])
+  disabled_instruments=set([Instruments.OPENAI])
 )
 ```
