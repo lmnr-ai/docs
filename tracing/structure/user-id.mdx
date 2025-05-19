@@ -46,21 +46,63 @@ await observe({
 ```python
 from lmnr import Laminar, observe
 
-# Option 1: Using set_metadata
+# Option 1: Using set_metadata within a span context
 @observe()
 def process_user_request(user_id):
+    # IMPORTANT: set_metadata must be called within an active span context
+    # Here, the @observe decorator creates that context
     Laminar.set_metadata({
         'userId': user_id
     })
     # Process user request here
 
-# Option 2: Directly in a function
+# Option 2: Directly in the observe decorator (preferred method)
+@observe(metadata={'userId': 'user_123'})
+def process_user_request_alt():
+    # Process user request here
+    pass
+```
+
+<Note>
+In Python, `Laminar.set_metadata()` must be called within an active span context (such as within a function decorated with `@observe()` or inside a `Laminar.start_as_current_span` block). If called outside of any span context, it will have no effect.
+</Note>
+
+Another approach using `start_as_current_span`:
+
+```python
+from lmnr import Laminar
+
+def process_user_request(user_id):
+    with Laminar.start_as_current_span(name="process_request") as span:
+        # Now we have an active span context
+        Laminar.set_metadata({'userId': user_id})
+        
+        # Your code here
+        
+        # Clear when done if needed
+        Laminar.clear_metadata()
+```
+
+❌ **Incorrect usage** (will not work):
+
+```python
+# This won't work because it's outside any span context
 Laminar.set_metadata({'userId': 'user_123'})
-    
-# Your code here
-    
-# Clear metadata when done if needed
-Laminar.clear_metadata()
+
+@observe()
+def my_function():
+    # The metadata set above won't be applied here
+    pass
+```
+
+✅ **Correct usage**:
+
+```python
+@observe()
+def my_function():
+    # Set metadata inside the span context
+    Laminar.set_metadata({'userId': 'user_123'})
+    # Your code here
 ```
 </Tab>
 </Tabs>
@@ -122,6 +164,8 @@ with Laminar.set_tracing_level(TracingLevel.META_ONLY):
 
 For a complete picture of user interactions, combine user IDs with session tracking:
 
+<Tabs>
+<Tab title="JavaScript/TypeScript">
 ```javascript
 // Track both user and session
 Laminar.withMetadata({
@@ -131,4 +175,17 @@ Laminar.withMetadata({
         // All operations here are tracked with both user ID and session ID
     });
 });
-``` 
+```
+</Tab>
+<Tab title="Python">
+```python
+@observe()
+def process_request(user_id, session_id):
+    # Set both user ID and session in the same span context
+    Laminar.set_metadata({'userId': user_id})
+    Laminar.set_session(session_id=session_id)
+    
+    # Your code here
+```
+</Tab>
+</Tabs> 
