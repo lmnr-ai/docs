@@ -1,0 +1,176 @@
+---
+title: "Sessions"
+description: "Group related traces together using sessions"
+---
+
+## What Are Sessions?
+
+Sessions in Laminar provide a way to group related traces together. This is particularly useful for:
+
+- Grouping traces from a single user interaction
+- Connecting multiple API requests that form a logical sequence
+- Organizing conversational turns in a chatbot
+- Tracking complex workflows across multiple functions or services
+
+For example, in a conversational agent, each turn in the conversation might be represented as a trace, while the entire conversation would be a session.
+
+## Creating Sessions
+
+You can associate a trace with a session using the following methods:
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+Use the `Laminar.withSession` wrapper function to create a context with a sessionId:
+
+```javascript
+import { Laminar } from "@lmnr-ai/lmnr";
+
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+  instrumentModules: {
+    // your libraries to instrument
+  },
+});
+
+Laminar.withSession({ sessionId: "session123"}, () => {
+  // Your code here
+  // All spans created within this function will be associated with session123
+});
+```
+</Tab>
+<Tab title="Python">
+
+Call `Laminar.set_session()` within an active span context:
+
+```python
+from lmnr import Laminar, observe
+import os
+
+Laminar.initialize(project_api_key=os.environ["LMNR_PROJECT_API_KEY"])
+
+@observe()
+def my_function():
+    # IMPORTANT: set_session must be called within an active span context
+    # In this case, the @observe decorator creates that span context
+    Laminar.set_session(session_id="session123")
+    
+    # All spans created after this call will be associated with session123
+    # Your code with LLM calls here
+    
+    # When finished with the session:
+    Laminar.clear_session()
+```
+
+<Note>
+In Python, `Laminar.set_session()` must be called within an active span context (such as within a function decorated with `@observe()` or inside a `Laminar.start_as_current_span` block). If called outside of any span context, it will have no effect.
+</Note>
+
+Another example using `start_as_current_span`:
+
+```python
+from lmnr import Laminar
+
+def process_request():
+    with Laminar.start_as_current_span(name="process_request") as span:
+        # Now we have an active span context
+        Laminar.set_session(session_id="session123")
+        
+        # Your code here
+        
+        # Clear when done
+        Laminar.clear_session()
+```
+</Tab>
+</Tabs>
+
+## Alternative: Setting Session ID with Observe
+
+You can also set the session ID directly when using the `observe` decorator/wrapper, which is often simpler and more reliable:
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+import { Laminar, observe } from "@lmnr-ai/lmnr";
+
+// Set session ID in the observe function
+await observe(
+  {
+    name: "myFunction",
+    sessionId: "session123"
+  },
+  async () => {
+    // Function code here
+  }
+);
+```
+</Tab>
+<Tab title="Python">
+
+```python
+from lmnr import Laminar, observe
+
+# Set session ID directly in the observe decorator
+# This is preferred as it guarantees the session is set
+# in the correct context
+@observe(session_id="session123")
+def my_function():
+    # Function code here
+    pass
+```
+</Tab>
+</Tabs>
+
+## Viewing Sessions
+
+To view sessions in the Laminar UI:
+
+1. Navigate to the Traces page
+2. Select the "Sessions" tab
+3. Click on a session to expand it and see all traces within that session
+
+<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
+  <img src="/images/traces/sessions.png" alt="Sessions view" style={{ margin: '0px' }}/>
+</div>
+
+Each trace within a session contains the same information as a standalone trace:
+
+<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
+  <img src="/images/traces/trace-in-session.png" alt="A trace in a session" style={{ margin: '0px' }}/>
+</div>
+
+## Use Cases
+
+### Chatbot Conversations
+
+For a chatbot, each user message and response can be a separate trace, with the entire conversation as a session:
+
+```python
+# Each turn is a separate trace
+@observe(session_id=conversation_id)  # Setting session ID in the decorator is preferred
+def handle_turn(user_message):
+    # Process message, call LLMs, etc.
+    return response
+
+# Alternatively, with manual session management:
+@observe()
+def handle_turn_alt(user_message, conversation_id):
+    Laminar.set_session(session_id=conversation_id)  # Must be within span context
+    # Process message, call LLMs, etc.
+    return response
+```
+
+### Multi-step Workflows
+
+For complex workflows spanning multiple API calls:
+
+```javascript
+// Start a session for a user's checkout process
+Laminar.withSession({ sessionId: `checkout-${userId}` }, async () => {
+  // Each step in the process is a separate trace
+  await observe({ name: "validateCart" }, async () => { /* ... */ });
+  await observe({ name: "processPayment" }, async () => { /* ... */ });
+  await observe({ name: "createOrder" }, async () => { /* ... */ });
+});
+``` 

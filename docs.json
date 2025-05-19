@@ -48,8 +48,17 @@
                   "tracing/integrations/stagehand"
                 ]
               },
-              "tracing/structure",
-              "tracing/realtime",
+              {
+                "group": "Tracing Structure",
+                "pages": [
+                  "tracing/structure/index",
+                  "tracing/structure/observe",
+                  "tracing/structure/realtime",
+                  "tracing/structure/session",
+                  "tracing/structure/user-id",
+                  "tracing/structure/metadata"
+                ]
+              },
               {
                 "group": "Instrumentation",
                 "pages": [
@@ -58,7 +67,6 @@
                 ]
               },
               "tracing/browser-agent-observability",
-              "tracing/metadata",
               "tracing/otel",
               {
                 "group": "Troubleshooting",

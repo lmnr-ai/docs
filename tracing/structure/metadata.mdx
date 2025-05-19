@@ -1,0 +1,258 @@
+---
+title: "Metadata"
+description: "Add contextual information to your traces"
+---
+
+## What is Trace Metadata?
+
+Metadata provides additional context to your traces beyond the basic trace information. It helps you:
+
+- Filter and search for specific traces
+- Add business context to technical traces
+- Group related traces together
+- Categorize traces by environment, feature, or user segment
+
+Metadata is key-value information that is attached to an entire trace, as opposed to individual spans.
+
+## Adding Metadata to Traces
+
+You can add metadata to traces in two main ways:
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+Use the `Laminar.withMetadata` wrapper to add metadata to all traces created within its scope:
+
+```javascript
+import { Laminar } from '@lmnr-ai/lmnr';
+
+Laminar.withMetadata({
+    environment: 'production',
+    featureFlag: 'new-algorithm-v2',
+    region: 'us-west'
+}, () => {
+    // All traces created inside this function will have the metadata
+});
+```
+
+Alternatively, you can add metadata directly in the `observe` function:
+
+```javascript
+import { observe } from '@lmnr-ai/lmnr';
+
+await observe({ 
+    name: 'processRequest',
+    metadata: { 
+        environment: 'production',
+        featureFlag: 'new-algorithm-v2' 
+    }
+}, async () => {
+    // Your code here
+});
+```
+</Tab>
+<Tab title="Python">
+
+In Python, there are two recommended ways to add metadata, but both must be done within a span context:
+
+### Option 1: Using set_metadata within a span context
+
+```python
+from lmnr import Laminar, observe
+
+@observe()
+def my_function():
+    # IMPORTANT: set_metadata must be called within an active span context
+    # Here, the @observe decorator creates that context
+    Laminar.set_metadata({
+        'environment': 'production',
+        'feature_flag': 'new-algorithm-v2',
+        'region': 'us-west'
+    })
+    
+    # your code here
+    
+    # Optionally, at the end of the trace, you can clear the metadata
+    Laminar.clear_metadata()
+```
+
+### Option 2: Directly in the observe decorator (preferred method)
+
+```python
+from lmnr import Laminar, observe
+
+@observe(metadata={
+    'environment': 'production',
+    'feature_flag': 'new-algorithm-v2',
+    'region': 'us-west'
+})
+def my_function():
+    # Your code here
+    pass
+```
+
+<Note>
+In Python, `Laminar.set_metadata()` must be called within an active span context (such as within a function decorated with `@observe()` or inside a `Laminar.start_as_current_span` block). If called outside of any span context, it will have no effect.
+</Note>
+
+### Option 3: Using start_as_current_span
+
+```python
+from lmnr import Laminar
+
+def process_request():
+    with Laminar.start_as_current_span(name="process_request") as span:
+        # Now we have an active span context
+        Laminar.set_metadata({
+            'environment': 'production',
+            'feature_flag': 'new-algorithm-v2'
+        })
+        
+        # Your code here
+        
+        # Clear when done if needed
+        Laminar.clear_metadata()
+```
+
+❌ **Incorrect usage** (will not work):
+
+```python
+# This won't work because it's outside any span context
+Laminar.set_metadata({'environment': 'production'})
+
+@observe()
+def my_function():
+    # The metadata set above won't be applied here
+    pass
+```
+
+✅ **Correct usage**:
+
+```python
+@observe()
+def my_function():
+    # Set metadata inside the span context
+    Laminar.set_metadata({'environment': 'production'})
+    # Your code here
+```
+</Tab>
+</Tabs>
+
+## Common Metadata Use Cases
+
+### Environment Information
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+Laminar.withMetadata({
+    environment: 'production', // or 'staging', 'development', etc.
+    region: 'us-west',
+    deploymentId: 'deploy-123'
+}, () => {
+    // Your code here
+});
+```
+</Tab>
+<Tab title="Python">
+```python
+@observe()
+def my_function():
+    Laminar.set_metadata({
+        'environment': 'production',  # or 'staging', 'development', etc.
+        'region': 'us-west',
+        'deployment_id': 'deploy-123'
+    })
+    # Your code here
+```
+</Tab>
+</Tabs>
+
+### Performance Tracking
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+Laminar.withMetadata({
+    batchSize: 128,
+    optimizerVersion: 'v2',
+    modelVariant: 'high-performance'
+}, () => {
+    // Your code here
+});
+```
+</Tab>
+<Tab title="Python">
+```python
+@observe(metadata={
+    'batch_size': 128,
+    'optimizer_version': 'v2',
+    'model_variant': 'high-performance'
+})
+def my_function():
+    # Your code here
+    pass
+```
+</Tab>
+</Tabs>
+
+### A/B Testing
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+Laminar.withMetadata({
+    experimentId: 'exp-456',
+    variant: 'treatment-B',
+    cohort: 'new-users'
+}, () => {
+    // Your code here
+});
+```
+</Tab>
+<Tab title="Python">
+```python
+@observe()
+def experiment_handler():
+    Laminar.set_metadata({
+        'experiment_id': 'exp-456',
+        'variant': 'treatment-B',
+        'cohort': 'new-users'
+    })
+    # Your experiment code here
+```
+</Tab>
+</Tabs>
+
+## Filtering Traces by Metadata
+
+You can filter traces by metadata in the Laminar UI:
+
+1. Go to the Traces page
+2. Add a filter with the format `metadata_key=value`
+3. View all traces with that specific metadata value
+
+For example, to filter by environment:
+- Filter format: `metadata_environment=production`
+
+## Metadata vs Labels
+
+Adding metadata to a trace is different from adding labels to a span:
+
+| | Metadata | Labels |
+| --- | --- | --- |
+| **Scope** | Applies to entire trace | Applies to individual spans |
+| **Purpose** | General trace context | Specific span classification |
+| **Validation** | Any string key-value pairs | Any string |
+| **UI Location** | Shown in trace overview | Shown in individual span details |
+| **Common Uses** | Environment info, user context | Data categories, tags |
+
+To learn more about labels, see [labels](/labels/labeling-from-code).
+
+## Best Practices
+
+1. **Consistent Keys**: Use consistent key names across your application
+2. **Avoid Sensitive Data**: Don't include PII or sensitive data in metadata
+3. **Keep It Lightweight**: Only include metadata that adds meaningful context
+4. **Use Hierarchical Keys**: Consider using prefixes for related metadata (e.g., `user_id`, `user_tier`, `user_region`)
+5. **Standardize Values**: Use consistent formats and enumerations for values 
