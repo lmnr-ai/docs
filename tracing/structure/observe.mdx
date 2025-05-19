@@ -1,0 +1,185 @@
+---
+title: Observe Decorator/Wrapper
+description: Using the observe decorator/wrapper to structure your traces
+---
+
+import ObserveExample from '/snippets/observe-example.mdx';
+
+## Overview
+
+The `observe` decorator (Python) or function wrapper (JavaScript/TypeScript) is the primary way to structure your traces in Laminar. It allows you to:
+
+- Create a parent span that groups multiple LLM calls into a single trace
+- Capture inputs and outputs of your functions automatically
+- Structure your application's tracing in a logical way
+
+## Basic Usage
+
+<ObserveExample />
+
+## Detailed Reference
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+### General syntax
+
+```javascript
+await observe({ ...options }, async (param1, param2) => {
+  // your code here
+}, arg1, arg2);
+```
+
+### Parameters (`ObserveOptions`)
+- `name` (`string`): name of the span. If not passed, and the function to observe is not an anonymous arrow function, the function name will be used.
+- `sessionId` (`string`): session ID for the wrapped trace.
+- `traceType` (`'DEFAULT'|'EVENT'|'EVALUATION'`): Type of the trace. Unless it is within evaluation, it must be `'DEFAULT'`.
+- `spanType` (`'DEFAULT'|'LLM'`) - Type of the span. `'DEFAULT'` is used if not specified. If the type is `'LLM'`,
+   you must manually specify some attributes. This translates to `lmnr.span.type` attribute on the span.
+- `traceId` (`string`): [experimental] trace ID for the current trace. This is useful if you want to continue an existing trace.
+IMPORTANT: must be a valid UUID, i.e. has to include 8-4-4-4-12 hex digits.
+- `input`: a dictionary of input parameters. Is preferred over function parameters.
+- `ignoreInput`: if `true`, the input will not be recorded.
+- `ignoreOutput`: if `true`, the output will not be recorded.
+
+### Inputs and outputs
+- Function parameters and their values are serialized to JSON and recorded as span input.
+- Function return value is serialized to JSON and recorded as span output.
+
+For example:
+
+```javascript
+const result = await observe({ name: 'my_span' }, async (param1, param2) => {
+    return param1 + param2;
+}, 1, 2);
+```
+
+In this case, the span will have the following attributes:
+- Span input (`lmnr.span.input`) will be `{"param1": 1, "param2": 2}`
+- Span output (`lmnr.span.output`) will be `3`
+</Tab>
+<Tab title="Python">
+
+### Parameters
+
+- `name` (`str|None`): name of the span. If not provided, the name of the wrapped function will be used.
+For example:
+```python
+@observe(name="my_span")
+def my_function(): # the span will be named "my_span"
+    pass
+
+@observe()
+def my_function(): # the span will be named "my_function"
+    pass
+```
+
+- `session_id` (`str|None`): session ID for the current trace. If you know the session ID staticallly, you can pass it here.
+- `ignore_input` (`bool`): if `True`, the input will not be recorded.
+- `ignore_output` (`bool`): if `True`, the output will not be recorded.
+- `ignore_inputs` (`list[str]`): list of input parameters to skip.
+
+### Inputs and outputs
+- Function parameters and their values are serialized to JSON and recorded as span input.
+- Function return value is serialized to JSON and recorded as span output.
+
+For example:
+```python
+@observe()
+def my_function(param1, param2):
+    return param1 + param2
+
+my_function(1, 2)
+```
+
+In this case, the span will have the following attributes:
+- Span input (`lmnr.span.input`) will be `{"param1": 1, "param2": 2}`
+- Span output (`lmnr.span.output`) will be `3`
+</Tab>
+</Tabs>
+
+## Use Cases
+
+### Grouping LLM Calls
+
+One of the most common use cases for `observe` is to group multiple LLM calls into a single trace:
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { Laminar, observe } from '@lmnr-ai/lmnr';
+import { OpenAI } from 'openai';
+
+const handle = async (userMessage) => 
+    await observe({name: 'requestHandler'}, async () => {
+        // First LLM call
+        const routerResponse = await openai.chat.completions.create({
+            messages: [
+                {role: 'user', content: 'First prompt' + userMessage}
+            ],
+            model: 'gpt-4o-mini',
+        });
+        
+        // Second LLM call
+        const modelResponse = await openai.chat.completions.create({
+            messages: [
+                {role: 'user', content: userMessage}
+            ],
+            model: 'gpt-4o',
+        });
+
+        return modelResponse.choices[0].message.content;
+    });
+```
+</Tab>
+<Tab title="Python">
+```python
+from lmnr import Laminar, observe
+from openai import OpenAI
+
+@observe()
+def request_handler(user_message: str):
+    # First LLM call
+    router_response = openai_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {
+                "role": "user",
+                "content": "First prompt" + user_message
+            }
+        ]
+    )
+    
+    # Second LLM call
+    model_response = openai_client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {
+                "role": "user",
+                "content": user_message
+            }
+        ]
+    )
+    return model_response.choices[0].message.content
+```
+</Tab>
+</Tabs>
+
+## Alternative Methods
+
+In Python, you can also use `Laminar.start_as_current_span` if you want to trace a specific block of code:
+
+```python
+from lmnr import Laminar
+
+def request_handler(user_message: str):
+    with Laminar.start_as_current_span(
+        name="handler",
+        input=user_message
+    ) as span:
+        # Your code here
+        
+        # Set output of the current span
+        Laminar.set_span_output(result)
+        return result
+``` 

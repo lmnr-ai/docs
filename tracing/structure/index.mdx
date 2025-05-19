@@ -1,0 +1,95 @@
+---
+title: "Tracing structure"
+sidebarTitle: "Overview"
+---
+
+## Overview
+
+Effective trace structuring enhances the value of your tracing data, making it easier to debug, analyze, and optimize your LLM applications. This section covers the essential components of trace structuring in Laminar:
+
+| Component | Description |
+| --- | --- |
+| [Observe](/tracing/structure/observe) | Create structured traces with the `observe` decorator/wrapper |
+| [Real-time Traces](/tracing/structure/realtime) | View traces as they happen without waiting for completion |
+| [Sessions](/tracing/structure/session) | Group related traces together for better organization |
+| [User ID](/tracing/structure/user-id) | Associate traces with specific users for targeted analysis |
+| [Metadata](/tracing/structure/metadata) | Add contextual information to your traces for filtering and grouping |
+
+## Why Structure Matters
+
+Without structure, each LLM call creates an isolated trace, making it difficult to:
+- Understand the relationships between different LLM calls
+- Track user journeys through your application
+- Debug complex multi-step workflows
+- Find relevant traces quickly
+
+Properly structured traces provide a clear picture of your application's flow, making it easier to identify bottlenecks, debug issues, and optimize performance.
+
+## Getting Started
+
+Start by implementing the `observe` wrapper or decorator to create parent spans that group your LLM calls into meaningful traces. Then, enhance these traces with sessions, user IDs, and metadata to create a comprehensive tracing structure.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+// Example: A well-structured trace implementation
+import { Laminar, observe } from '@lmnr-ai/lmnr';
+
+// Initialize with your project key
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+});
+
+// Set up session and metadata for all traces in this request
+Laminar.withSession({ sessionId: `session-${requestId}` }, () => {
+  Laminar.withMetadata({
+    userId: user.id,
+    environment: process.env.NODE_ENV
+  }, async () => {
+    // Create a parent span for the entire request
+    await observe({ name: 'processUserRequest' }, async () => {
+      // Your LLM calls and other operations will be grouped 
+      // under this parent span and inherit the session and metadata
+    });
+  });
+});
+```
+</Tab>
+
+<Tab title="Python">
+```python
+import os
+from lmnr import Laminar, observe
+
+# Initialize with your project key
+Laminar.initialize(
+    project_api_key=os.environ["LMNR_PROJECT_API_KEY"]
+)
+
+@observe()
+def process_user_request(user_id, request_id):
+    # Set session for this request
+    Laminar.set_session(session_id=f"session-{request_id}")
+    
+    # Add metadata to all spans in this trace
+    Laminar.set_metadata({
+        "userId": user_id,
+        "environment": os.environ.get("ENVIRONMENT", "development")
+    })
+    
+    # Your LLM calls and other operations will be grouped
+    # under this parent span and inherit the session and metadata
+    
+    # Process the request...
+    
+    # Optionally, clear session and metadata at the end
+    # Laminar.clear_session()
+    # Laminar.clear_metadata()
+
+# Example usage
+process_user_request(user_id="user_123", request_id="req_456")
+```
+</Tab>
+</Tabs>
+
+Explore each component in detail through the links above to implement a comprehensive tracing structure for your LLM applications. 

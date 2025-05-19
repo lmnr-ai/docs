@@ -1,0 +1,70 @@
+---
+title: "Real-time Traces"
+description: "Monitor and debug traces in real-time as they're being executed"
+---
+
+## Overview
+
+Real-time traces are one of Laminar's most powerful features, allowing you to see spans as they're being executed without waiting for the top-level span to complete. This provides immediate visibility into trace data during development and debugging processes, which is especially valuable when:
+
+- Working with long-running operations
+- Debugging complex agent interactions
+- Monitoring multiple chained LLM requests
+- Testing a system in development
+
+![Realtime traces](/images/realtime/realtime.gif)
+
+## How It Works
+
+Laminar uses [OpenTelemetry](https://opentelemetry.io/) for trace collection and processing. By default, it uses `BatchSpanProcessor`, which buffers and sends traces in batches to optimize performance:
+
+- Traces are collected and stored temporarily on the client side
+- Data is sent periodically to the Laminar backend
+- There's a small delay between span completion and dashboard visibility
+- The delay depends on batch configuration (flush interval and batch size)
+
+<Note>
+Real-time traces are currently available only in the Laminar cloud platform.
+</Note>
+
+## Disable Batching (Optional)
+
+For immediate trace visibility, you can disable batching by setting `disableBatch` to `true` in the `Laminar.initialize` function:
+
+<Tabs>
+<Tab title="JavaScript/Typescript">
+```javascript
+Laminar.initialize({
+    // ... other options
+    disableBatch: true,
+});
+```
+</Tab>
+
+<Tab title="Python">
+```python
+Laminar.initialize(
+    # other options
+    disable_batch=True,
+)
+```
+</Tab>
+</Tabs>
+
+This configuration uses `SimpleSpanProcessor`, which processes and sends traces immediately.
+
+## Performance Considerations
+
+- **Development**: Real-time processing provides immediate feedback, beneficial for debugging and development workflows
+- **Production**: Batch processing is recommended for better performance and resource utilization
+
+<Note>
+While real-time traces provide immediate visibility, disabling batching may impact application performance in production environments.
+</Note>
+
+## Benefits
+
+1. **Immediate Feedback**: See traces as they happen, without waiting for operations to complete
+2. **Faster Debugging**: Identify issues in real-time without waiting for batched processing
+3. **Progress Monitoring**: Track long-running operations as they execute
+4. **Enhanced Development Experience**: Test and iterate more quickly with instant visibility 

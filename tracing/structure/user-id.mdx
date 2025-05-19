@@ -1,0 +1,134 @@
+---
+title: "User ID"
+description: "Track and associate traces with specific users"
+---
+
+## Associating Traces with Users
+
+Tracking which user triggered a particular trace is crucial for:
+- User-specific debugging
+- Analyzing usage patterns
+- Filtering traces in the dashboard
+- Compliance with data regulations
+
+In Laminar, you can associate traces with users by setting a user ID in the trace metadata.
+
+## Setting User ID
+
+The recommended approach is to add the user ID as metadata to your traces. This allows you to filter and search for traces by user ID later.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+import { Laminar } from '@lmnr-ai/lmnr';
+
+// Option 1: Using withMetadata
+Laminar.withMetadata({
+    userId: 'user_123'
+}, () => {
+    // All traces created inside this function will have userId: user_123
+});
+
+// Option 2: With the observe wrapper
+import { observe } from '@lmnr-ai/lmnr';
+
+await observe({ 
+    name: 'processUserRequest',
+    metadata: { userId: 'user_123' }
+}, async () => {
+    // Process user request here
+});
+```
+</Tab>
+<Tab title="Python">
+
+```python
+from lmnr import Laminar, observe
+
+# Option 1: Using set_metadata
+@observe()
+def process_user_request(user_id):
+    Laminar.set_metadata({
+        'userId': user_id
+    })
+    # Process user request here
+
+# Option 2: Directly in a function
+Laminar.set_metadata({'userId': 'user_123'})
+    
+# Your code here
+    
+# Clear metadata when done if needed
+Laminar.clear_metadata()
+```
+</Tab>
+</Tabs>
+
+## Standardized User ID Format
+
+It's recommended to use a consistent format for user IDs across your application:
+
+```javascript
+// Examples of consistent user ID formats
+{
+  userId: 'user_12345',           // Prefixed numeric ID
+  userId: 'org_4567_user_12345',  // Organization and user combined
+  userId: 'anonymous_abcde12345'  // For unauthenticated users
+}
+```
+
+## Filtering Traces by User
+
+Once you've added user IDs to your traces, you can filter for them in the Laminar dashboard:
+
+1. Go to the Traces page
+2. Add a filter with the format `metadata_userId=user_123`
+3. View all traces associated with that specific user
+
+## Privacy Considerations
+
+When including user IDs in traces, consider the following privacy practices:
+
+- Use anonymous or pseudonymous IDs rather than personally identifiable information
+- Consider your data retention policies
+- Use Laminar's [tracing level](/tracing/structure#dynamically-disabling-tracing) settings to control sensitive data
+- Follow relevant data protection regulations
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+// Use TracingLevel.META_ONLY for sensitive user operations
+import { withTracing, TracingLevel } from "@lmnr-ai/lmnr";
+
+withTracing(TracingLevel.META_ONLY, () => {
+    // Sensitive operations here will only record metadata
+    // Input/output content won't be saved
+});
+```
+</Tab>
+<Tab title="Python">
+```python
+from lmnr import Laminar, TracingLevel
+
+with Laminar.set_tracing_level(TracingLevel.META_ONLY):
+    # Sensitive operations here will only record metadata
+    # Input/output content won't be saved
+```
+</Tab>
+</Tabs>
+
+## Combining User ID with Sessions
+
+For a complete picture of user interactions, combine user IDs with session tracking:
+
+```javascript
+// Track both user and session
+Laminar.withMetadata({
+    userId: 'user_123'
+}, () => {
+    Laminar.withSession({ sessionId: 'session_456' }, () => {
+        // All operations here are tracked with both user ID and session ID
+    });
+});
+``` 
