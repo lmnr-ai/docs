@@ -228,12 +228,15 @@ def experiment_handler():
 
 You can filter traces by metadata in the Laminar UI:
 
-1. Go to the Traces page
-2. Add a filter with the format `metadata_key=value`
-3. View all traces with that specific metadata value
+1. Go to the Traces/Spans page
+2. Add a Metadata filter with the format `metadata_key=value`
 
-For example, to filter by environment:
-- Filter format: `metadata_environment=production`
+<img src="/images/traces/metadata-filter-add.png" alt="Add a filter" style={{ margin: '0px' }}/>
+
+In the example below, we filter by `userId` key of the metadata:
+
+<img src="/images/traces/metadata-filter.png" alt="Filter by metadata" style={{ margin: '0px' }}/>
+
 
 ## Metadata vs Labels
 
