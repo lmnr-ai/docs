@@ -209,6 +209,15 @@ lmnr eval [options]
 npx lmnr eval [options]
 ```
 
+#### Formatting evaluation files
+
+When you run an evaluation file from the CLI, the evaluate functions must be called
+at the top level of the file. You can have one or more `evaluate` calls in the file.
+
+<Note>
+In Python, you can not `await` the calls to `evaluate` when running an evaluation file from the CLI.
+</Note>
+
 #### Options
 
 First positional argument is the path to the evaluation file. E.g.

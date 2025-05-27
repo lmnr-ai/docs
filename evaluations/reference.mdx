@@ -10,7 +10,6 @@ Evaluations in Laminar are configured using the `evaluate` function. The functio
 (2) An instance of `LaminarDataset` – read more in [the dedicated section](/evaluations/configuration#using-a-laminar-dataset-for-evaluations).
 - `executor`: An optionally async function that takes a single argument, the evaluation data, and returns the output.
 - `evaluators`: A dictionary of async functions that take the output and target as arguments and return a score. Keys in the dictionary are the names of the evaluators.
-- `humanEvaluators`/`human_evaluators` : A list of `HumanEvaluator` objects, which register human evaluators for the evaluation. Read more in [the dedicated section](/evaluations/configuration#registering-human-evaluators).
 - `name` (optional): Evaluation name, so it is easier to identify the evaluation in the UI. If not provided, a random name is assigned.
 - `groupName`/`group_name` (optional): An optional string that groups evaluations together. Only evaluations with the same group name can be visually compared.
 
@@ -20,7 +19,7 @@ Additional optional configuration parameters are passed as a `config` object in 
 <Tab title="JavaScript/TypeScript">
 - `projectApiKey`: The API key of the project where the evaluation results will be stored.
 Required, unless you set the `LMNR_PROJECT_API_KEY` environment variable.
-- `batchSize`: The number of evaluations to run in parallel. Default is `5`.
+- `concurrencyLimit`: The number of evaluations to run in parallel. Default is `5`.
 - `baseUrl`: The base URL of the Laminar instance. Do NOT include port here. Default is `https://api.lmnr.ai`.
 - `httpPort`: The port of the Laminar instance for HTTP. Used to send evaluation results and metadata.
 Default is 443. For local self-hosted Laminar, use 8000.
@@ -32,7 +31,7 @@ Read more in the [instrumentation guide](/tracing/automatic-instrumentation#inst
 <Tab title="Python">
 - `project_api_key`: The API key of the project where the evaluation results will be stored.
 Required, unless you set the `LMNR_PROJECT_API_KEY` environment variable.
-- `batch_size`: The number of evaluations to run in parallel. Default is `5`.
+- `concurrency_limit`: The number of evaluations to run in parallel. Default is `5`.
 - `base_url`: The base URL of the Laminar instance. Do NOT include port here. Default is `https://api.lmnr.ai`.
 - `http_port`: The port of the Laminar instance for HTTP. Used to send evaluation results and metadata.
 Default is 443. For local self-hosted Laminar, use 8000.

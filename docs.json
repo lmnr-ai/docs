@@ -99,8 +99,7 @@
             "group": "Datasets",
             "pages": [
               "datasets/introduction",
-              "datasets/adding-data",
-              "datasets/indexing"
+              "datasets/adding-data"
             ]
           }
         ]
