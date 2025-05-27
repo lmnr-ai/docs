@@ -16,20 +16,20 @@ Laminar provides a structured approach to create, run, and track your AI system'
 - **Tracing** - Automatic recording of execution flow and model invocations
 
 Example datapoint:
-```json
+```json5
 {
   "data": {
     ...
   }, // object
   "target": {
     ...
-  } | "..." // string or object
+  }
 }
 ```
 
 **Evaluation Groups** group related evaluations to assess one feature or component, with results aggregated for comparison.
 
-### Evaluation Lifecycle
+## Evaluation Lifecycle
 
 For each datapoint in a dataset:
 
@@ -40,6 +40,29 @@ For each datapoint in a dataset:
 5. Results are stored and can be visualized to track performance over time
 
 This approach helps you continuously measure your AI system's performance as you make changes, showing the impact of model updates, prompt revisions, and code changes.
+
+### Evaluation function types
+
+Each executor takes in the `data` as it is defined in the datapoints.
+Evaluator accepts the output of the executor as its first argument,
+and `target` as it's defined in the datapoints as the second argument.
+
+For a more precise description, here's the partial TypeScript type signature of the `evaluate` function:
+
+```javascript
+evaluate<D, T, O>(
+  data: {
+    data: D,
+    target?: T,
+  },
+  executor: (data: D, ...args: any[]) => O | Promise<O>;
+  evaluators: {
+    [key: string]: (output: O, target?: T, ...args: any[]) => 
+      number | { [key: string]: number }
+  },
+  // ... other parameters
+)
+```
 
 ## Create your first evaluation
 
@@ -61,37 +84,43 @@ import { OpenAI } from 'openai';
 const client = new OpenAI();
 
 const writePoem = async (data: {country: string}) => {
-    // replace this with your LLM call or custom logic
-    const response = await client.chat.completions.create({
-        model: 'gpt-4.1-nano',
-        messages: [{role: 'user', content: `What is the capital of ${data['country']}? Answer only with the name of the city.`}]
-    });
-    return response.choices[0].message.content || '';
+  // replace this with your LLM call or custom logic
+  const response = await client.chat.completions.create({
+    model: 'gpt-4.1-nano',
+    messages: [
+      {
+        role: 'user',
+        content: `Generate a poem about ${data['country']}. ` +
+          'Answer only with the poem, no other text.'
+      }
+    ]
+  });
+  return response.choices[0].message.content || '';
 }
 
 const accuracy = (output: string, target: string | undefined): number => {
-    if (!target) return 0;
-    return output.includes(target) ? 1 : 0;
+  if (!target) return 0;
+  return output.includes(target) ? 1 : 0;
 }
 
 evaluate({
-    data: [
-        {
-            data: { country: 'France' },
-            target: 'Paris',
-        },
-        {
-            data: { country: 'Germany' },
-            target: 'Berlin',
-        },
-    ],
-    executor: writePoem,
-    evaluators: { 'accuracy': accuracy },
-    config: { 
-      instrumentModules: {
-        openAI: OpenAI
-      }
+  data: [
+    {
+      data: { country: 'France' },
+      target: 'Paris',
+    },
+    {
+      data: { country: 'Germany' },
+      target: 'Berlin',
+    },
+  ],
+  executor: writePoem,
+  evaluators: { 'accuracy': accuracy },
+  config: { 
+    instrumentModules: {
+      openAI: OpenAI
     }
+  }
 })
 ```
 
@@ -113,7 +142,13 @@ def write_poem(data: dict) -> str:
     # replace this with your LLM call or custom logic
     return client.chat.completions.create(
         model="gpt-4.1-nano",
-        messages=[{"role": "user", "content": f"What is the capital of {data['country']}? Answer only with the name of the city."}]
+        messages=[
+            {
+                "role": "user",
+                "content": f"Generate a poem about {data['country']}. " +
+                    "Answer only with the poem, no other text."
+            }
+        ]
     ).choices[0].message.content
 
 def accuracy(output: str, target: str) -> int:
@@ -144,8 +179,6 @@ You can run evaluations in two ways: using the `lmnr eval` CLI or directly execu
 #### Using the CLI
 
 The Laminar CLI automatically detects top-level `evaluate` function calls in your files - you don't need to wrap them in a `main` function or any special structure.
-
-Make sure there is one call to `evaluate` per file.
 
 <Tabs>
 <Tab title = "TypeScript">
@@ -217,7 +250,7 @@ python my-first-evaluation.py
 The `evaluate` function is flexible and can be used both in standalone scripts processed by the CLI and integrated directly into your application code.
 
 <Tip>
-Evaluator functions must return either a single numeric score.
+Evaluator functions must return either a single numeric score or a JSON object where each key is a score name and the value is a numeric score.
 </Tip>
 
 <Note>
