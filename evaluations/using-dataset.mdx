@@ -1,0 +1,108 @@
+---
+title: Using dataset stored on Laminar for evaluations
+sidebarTitle: Using Laminar datasets
+---
+
+## Prerequisites
+
+Have a dataset uploaded to Laminar, or collected from traces. See [datasets](/datasets/introduction) for more information.
+
+## Defining data
+
+To run an evaluation with a Laminar dataset, you pass the dataset object as `data` instead of a list of dictionaries.
+
+Use `LaminarDataset` to create a dataset object. The dataset name should match the name of the dataset in Laminar.
+The constructor also takes an optional `fetch_size`/`fetchSize` parameter, which specifies the number of datapoints to fetch at once.
+The default value is 25. We strongly recommend setting this value to a number that is a multiple of the
+evaluation [batch size](/evaluations/configuration#configuring-evaluations) for best performance.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { evaluate, LaminarDataset } from '@lmnr-ai/lmnr';
+const data = new LaminarDataset("name_of_your_dataset");
+evaluate({
+    data,
+    executor: yourExecutorFunction,
+    evaluators: yourEvaluators,
+    config: {
+        projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+        // ... other optional parameters
+    }
+})
+```
+</Tab>
+<Tab title="Python">
+```python
+from lmnr import evaluate, LaminarDataset
+data = LaminarDataset("name_of_your_dataset")
+evaluate(
+    data=data,
+    executor=your_executor_function,
+    evaluators=your_evaluators,
+    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
+    # ... other optional parameters
+)
+```
+</Tab>
+</Tabs>
+
+## Technical details and extension
+
+`LaminarDataset` is an implementation of an abstract class `EvaluationDataset` which defines 2 methods besides initialization:
+- `__len__` (`size` in JS): Returns the number of datapoints in the dataset.
+- `__getitem__` (`get` in JS): Returns a single datapoint by index.
+
+We also implement a concrete `slice` method to make slicing easier than using `__getitem__` directly.
+
+This is inspired by the PyTorch [`Dataset` class](https://pytorch.org/tutorials/beginner/basics/data_tutorial.html#creating-a-custom-dataset-for-your-files),
+and is designed to be used in a similar way.
+
+You can re-use the `EvaluationDataset` class to create your own dataset classes, for example, to fetch data from a database or an API.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { EvaluationDataset } from '@lmnr-ai/lmnr';
+
+class MyCustomDataset extends EvaluationDataset {
+    constructor(customProperty) {
+        super();
+        // Your custom initialization code here
+    }
+
+    public async size() {
+        // Your custom implementation here
+        return 0;
+    }
+
+    public async get(index: number) {
+        // Your custom implementation here
+        return { data: {}, target: {} };
+    }
+
+    // Optionally, you can implement other custom methods here
+}
+```
+</Tab>
+<Tab title="Python">
+```python
+from lmnr import EvaluationDataset
+
+class MyCustomDataset(EvaluationDataset):
+    def __init__(self, custom_property):
+        super().__init__()
+        # Your custom initialization code here
+    
+    def __len__(self):
+        # Your custom implementation here
+        return 0
+    
+    def __getitem__(self, index):
+        # Your custom implementation here
+        return Datapoint(data={}, target={})
+
+    # Optionally, you can implement other custom methods here
+```
+</Tab>
+</Tabs>

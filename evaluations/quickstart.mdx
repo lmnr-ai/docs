@@ -1,5 +1,6 @@
 ---
-title: Quickstart Guide
+title: Get started with Laminar evaluations
+sidebarTitle: Quickstart
 ---
 import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
 
@@ -9,9 +10,10 @@ Laminar provides a structured approach to create, run, and track your AI system'
 
 - **Executors** - Functions that process inputs and produce outputs, such as prompt templates, LLM calls, or production logic
 - **Evaluators** - Functions that assess outputs against targets or quality criteria, producing numeric scores
-- **Datasets** - Collections of datapoints (test cases) with two key elements:
+- **Datasets** - Collections of datapoints (test cases) with 3 key elements:
   - `data` - Required JSON input sent to the executor
   - `target` - Optional reference data sent to the evaluator, typically containing expected outputs
+  - `metadata` - Optional metadata. This can be used to filter evaluation results in the UI after the evaluation is run.
 - **Visualization** - Tools to track performance trends and detect regressions over time
 - **Tracing** - Automatic recording of execution flow and model invocations
 
@@ -19,10 +21,13 @@ Example datapoint:
 ```json5
 {
   "data": {
-    ...
-  }, // object
+    "question": "What is the capital of France? Respond in one word.",
+  },
   "target": {
-    ...
+    "answer": "Paris"
+  },
+  "metadata": {
+    "category": "geography"
   }
 }
 ```
@@ -46,6 +51,14 @@ This approach helps you continuously measure your AI system's performance as you
 Each executor takes in the `data` as it is defined in the datapoints.
 Evaluator accepts the output of the executor as its first argument,
 and `target` as it's defined in the datapoints as the second argument.
+
+This means that the type of the `data` fields in your datapoints must
+match the type of the first parameter of the executor function. Similarly,
+the type of the `target` fields in your datapoints must match the type of
+the second parameter of the evaluator function(s).
+
+Python is a bit more permissive. If you see type errors in TypeScript,
+make sure the data types and the parameter types match.
 
 For a more precise description, here's the partial TypeScript type signature of the `evaluate` function:
 

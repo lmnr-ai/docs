@@ -226,23 +226,31 @@ def experiment_handler():
 
 ## Filtering Traces by Metadata
 
-You can filter traces by metadata in the Laminar UI:
+You can filter traces by metadata in the Laminar UI. Currently, we only support exact key-value matches,
+e.g. a trace with 
+```json
+{
+    "metadata": {
+        "userId": "123",
+        "region": "us-west"
+    }
+}
+```
+can be matched by searching for `userId=123` or `region=us-west`.
 
 1. Go to the Traces/Spans page
-2. Add a Metadata filter with the format `metadata_key=value`
-
-<img src="/images/traces/metadata-filter-add.png" alt="Add a filter" style={{ margin: '0px' }}/>
+2. Add a metadata filter and fill in the key and value
 
 In the example below, we filter by `userId` key of the metadata:
 
 <img src="/images/traces/metadata-filter.png" alt="Filter by metadata" style={{ margin: '0px' }}/>
 
 
-## Metadata vs Labels
+## Metadata vs Tags
 
-Adding metadata to a trace is different from adding labels to a span:
+Adding metadata to a trace is different from adding tags to a span:
 
-| | Metadata | Labels |
+| | Metadata | Tags |
 | --- | --- | --- |
 | **Scope** | Applies to entire trace | Applies to individual spans |
 | **Purpose** | General trace context | Specific span classification |
@@ -250,7 +258,7 @@ Adding metadata to a trace is different from adding labels to a span:
 | **UI Location** | Shown in trace overview | Shown in individual span details |
 | **Common Uses** | Environment info, user context | Data categories, tags |
 
-To learn more about labels, see [labels](/labels/labeling-from-code).
+To learn more about tags, see [tags](/tags/introduction).
 
 ## Best Practices
 

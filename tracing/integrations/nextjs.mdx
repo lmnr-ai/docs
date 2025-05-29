@@ -110,3 +110,52 @@ export { openai, anthropic };
 ```
 </Tab>
 </Tabs>
+
+### 5. Grouping traces within one route
+
+If your app makes multiple LLM calls within one route, you may want to group them together.
+
+You might get this functionality by default, if your app is instrumented with OpenTelemetry and
+some Next.js instrumentation, e.g. `@vercel/otel` or `@sentry/nextjs`.
+
+Otherwise, you can achieve this by using `observe` function wrapper, e.g. something like
+
+```javascript app/api/chat/route.ts {1-2}
+import { NextRequest } from 'next/server';
+import { getTracer, observe } from '@lmnr-ai/lmnr';
+
+export const GET = observe(async (req: NextRequest) => {
+  const tracer = getTracer();
+
+  const { firstText, secondText } = await observe(
+    {
+      name: 'GET /api/chat',
+    },
+    async () => {
+      const { firstText } = await generateText({
+      model: openai('gpt-4.1-nano'),
+      prompt: 'What is Laminar flow?',
+      experimental_telemetry: {
+        isEnabled: true,
+        tracer,
+      },
+    });
+
+    const { secondText } = await generateText({
+      model: openai('gpt-4.1-nano'),
+      prompt: 'What is Laminar flow?',
+      experimental_telemetry: {
+        isEnabled: true,
+        tracer,
+      },
+    });
+
+    return { firstText, secondText };
+    }
+  );
+
+  return NextResponse.json({ firstText, secondText });
+});
+```
+
+Learn more about `observe` function wrapper [here](/tracing/structure/observe).

@@ -127,6 +127,24 @@ pip install lmnr[openai]
 
 Read the [installation docs](/installation) for more information.
 
+## I can see the LLM spans and token counts in the Laminar UI, but prices are 0.
+
+### Problem
+
+LLM spans are instrumented and token counts are shown, but the prices are all at 0.
+
+### Cause
+
+LLM providers do not return pricing information in the API responses, but they do return
+token counts.
+
+Laminar calculates the prices based on what's stored in the Laminar database.
+
+### Solution
+
+Make sure the model you are using is supported by Laminar.
+View model formats and full list of models [here](/tracing/manual-instrumentation#provider-and-model-names).
+
 ## I can see traces and spans in the UI, but they are not showing inputs and/or outputs.
 
 ### Problem
