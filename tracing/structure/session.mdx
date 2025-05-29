@@ -1,5 +1,6 @@
 ---
-title: "Sessions"
+sidebarTitle: Sessions
+title: Grouping traces together using sessions
 description: "Group related traces together using sessions"
 ---
 
@@ -173,4 +174,4 @@ Laminar.withSession({ sessionId: `checkout-${userId}` }, async () => {
   await observe({ name: "processPayment" }, async () => { /* ... */ });
   await observe({ name: "createOrder" }, async () => { /* ... */ });
 });
-``` 
+```

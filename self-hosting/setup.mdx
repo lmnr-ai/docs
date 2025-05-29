@@ -1,8 +1,7 @@
 ---
-title: "Self-hosting"
+title: Self hosting Laminar by forking from GitHub and running docker compose locally
+sidebarTitle: Self-hosting
 ---
-
-# Setup for self-hosting
 
 <Steps>
 <Step title="Pull the repository">
@@ -19,6 +18,22 @@ cd lmnr
 ```bash
 docker compose up -d
 ```
+</Step>
+<Step title="[Optional] Learn more about self-hosting options">
+There is more information about the set up and self-hosting options
+including the contributing guide in the [GitHub repository](https://github.com/lmnr-ai/lmnr).
+</Step>
+<Step title="Access the dashboard">
+The dashboard will be available at `http://localhost:5667/`.
+</Step>
+<Step title="Create a project and get the API key">
+In the dashboard, go over the onboarding flow. By default, any email is accepted,
+so just enter a valid email address and follow the instructions.
+
+If you want to manage users/authentication, read the [access control](./access-control-setup) page.
+
+Once you have your first workspace and the project, go to the project settings,
+create a new API key and copy the value. You will not be able to see the key again.
 </Step>
 <Step title="Configure the SDK to export traces to the local instance">
 
@@ -54,9 +69,4 @@ Laminar.initialize(
 </Tab>
 </Tabs>
 </Step>
-<Step title="Access the dashboard">
-The dashboard will be available at `http://localhost:5667/`.
-</Step>
 </Steps>
-
-

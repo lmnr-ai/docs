@@ -1,5 +1,6 @@
 ---
-title: Configuration
+sidebarTitle: Configuration
+title: Configuring Laminar evaluations
 description: This page describes how to configure evaluations in Laminar and showcases some common use cases.
 ---
 
@@ -49,125 +50,16 @@ Run this file either by executing it, or by running it with `lmnr eval` CLI.
 </Tab>
 </Tabs>
 
-
-
-## Using a Laminar dataset for evaluations
-
-### Prerequisites
-
-Have a dataset uploaded to Laminar, or collected from traces. See [datasets](/datasets/introduction) for more information.
-
-### Defining data
-
-To run an evaluation with a Laminar dataset, you pass the dataset object as `data` instead of a list of dictionaries.
-
-Use `LaminarDataset` to create a dataset object. The dataset name should match the name of the dataset in Laminar.
-The constructor also takes an optional `fetch_size`/`fetchSize` parameter, which specifies the number of datapoints to fetch at once.
-The default value is 25. We strongly recommend setting this value to a number that is a multiple of the
-evaluation [batch size](/evaluations/configuration#configuring-evaluations) for best performance.
-
-<Tabs>
-<Tab title="JavaScript/TypeScript">
-```javascript
-import { evaluate, LaminarDataset } from '@lmnr-ai/lmnr';
-const data = new LaminarDataset("name_of_your_dataset");
-evaluate({
-    data,
-    executor: yourExecutorFunction,
-    evaluators: yourEvaluators,
-    config: {
-        projectApiKey: process.env.LMNR_PROJECT_API_KEY,
-        // ... other optional parameters
-    }
-})
-```
-</Tab>
-<Tab title="Python">
-```python
-from lmnr import evaluate, LaminarDataset
-data = LaminarDataset("name_of_your_dataset")
-evaluate(
-    data=data,
-    executor=your_executor_function,
-    evaluators=your_evaluators,
-    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
-    # ... other optional parameters
-)
-```
-</Tab>
-</Tabs>
-
-### Technical details and extension
-
-`LaminarDataset` is an implementation of an abstract class `EvaluationDataset` which defines 2 methods besides initialization:
-- `__len__` (`size` in JS): Returns the number of datapoints in the dataset.
-- `__getitem__` (`get` in JS): Returns a single datapoint by index.
-
-We also implement a concrete `slice` method to make slicing easier than using `__getitem__` directly.
-
-This is inspired by the PyTorch [`Dataset` class](https://pytorch.org/tutorials/beginner/basics/data_tutorial.html#creating-a-custom-dataset-for-your-files),
-and is designed to be used in a similar way.
-
-You can re-use the `EvaluationDataset` class to create your own dataset classes, for example, to fetch data from a database or an API.
-
-<Tabs>
-<Tab title="JavaScript/TypeScript">
-```javascript
-import { EvaluationDataset } from '@lmnr-ai/lmnr';
-
-class MyCustomDataset extends EvaluationDataset {
-    constructor(customProperty) {
-        super();
-        // Your custom initialization code here
-    }
-
-    public async size() {
-        // Your custom implementation here
-        return 0;
-    }
-
-    public async get(index: number) {
-        // Your custom implementation here
-        return { data: {}, target: {} };
-    }
-
-    // Optionally, you can implement other custom methods here
-}
-```
-</Tab>
-<Tab title="Python">
-```python
-from lmnr import EvaluationDataset
-
-class MyCustomDataset(EvaluationDataset):
-    def __init__(self, custom_property):
-        super().__init__()
-        # Your custom initialization code here
-    
-    def __len__(self):
-        # Your custom implementation here
-        return 0
-    
-    def __getitem__(self, index):
-        # Your custom implementation here
-        return Datapoint(data={}, target={})
-
-    # Optionally, you can implement other custom methods here
-```
-</Tab>
-</Tabs>
-
 ## Configuring evaluations
 
 ### `evaluate` reference
 
 Evaluations in Laminar are configured using the `evaluate` function. The function takes the following arguments:
-- `data`: Either (1) A list of dictionaries, where each dictionary contains the data and target for a single evaluation; or
-(2) An instance of `LaminarDataset` – read more in [the dedicated section](#using-a-laminar-dataset-for-evaluations) above.
+- `data`: Either (1) A list of dictionaries, where each dictionary contains the data, target, and metadata for a single evaluation; or
+(2) An instance of `LaminarDataset` – read more in [the dedicated page](/evaluations/using-dataset).
 - `executor`: An optionally async function that takes a single argument, the evaluation data, and returns the output.
-- `evaluators`: A dictionary of async functions that take the output and target as arguments and return a score. Keys in the dictionary are the names of the evaluators.
-- `humanEvaluators`/`human_evaluators` : A list of `HumanEvaluator` objects, which register human evaluators for the evaluation. Read more in [the dedicated section](#registering-human-evaluators) above.
-- `name` (optional): Evaluation name, so it is easier to identify the evaluation in the UI. If not provided, a random name is assigned.
+- `evaluators`: A dictionary of async functions that take the output and target as arguments and return a score.
+- `name` (optional): Evaluation name, so it is easier to identify the evaluation in the UI. If not provided, a random name is assigned in the backend.
 - `groupName`/`group_name` (optional): An optional string that groups evaluations together. Only evaluations with the same group name can be visually compared.
 
 Additional optional configuration parameters are passed as a `config` object in JavaScript/TypeScript and directly to `evaluate` in Python.

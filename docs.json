@@ -1,7 +1,7 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "laminar docs",
+  "name": "Laminar documentation",
   "colors": {
     "primary": "#ED6E40",
     "light": "#ED6E40",
@@ -53,7 +53,6 @@
                 "pages": [
                   "tracing/structure/index",
                   "tracing/structure/observe",
-                  "tracing/structure/realtime",
                   "tracing/structure/session",
                   "tracing/structure/user-id",
                   "tracing/structure/metadata"
@@ -66,6 +65,7 @@
                   "tracing/manual-instrumentation"
                 ]
               },
+              "tracing/realtime",
               "tracing/browser-agent-observability",
               "tracing/otel",
               {
@@ -82,24 +82,25 @@
             "pages": [
               "evaluations/introduction",
               "evaluations/quickstart",
+              "evaluations/using-dataset",
               "evaluations/configuration",
               "evaluations/reference",
               "evaluations/cookbook"
             ]
           },
           {
-            "group": "Labels",
+            "group": "Tagging",
             "pages": [
-              "labels/introduction",
-              "labels/queues",
-              "labels/labeling-from-code"
+              "tags/introduction",
+              "tags/tagging-from-code"
             ]
           },
           {
             "group": "Datasets",
             "pages": [
               "datasets/introduction",
-              "datasets/adding-data"
+              "datasets/adding-data",
+              "datasets/queues"
             ]
           }
         ]

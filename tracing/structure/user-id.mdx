@@ -1,5 +1,6 @@
 ---
-title: "User ID"
+sidebarTitle: User ID
+title: Track and associate traces with specific users
 description: "Track and associate traces with specific users"
 ---
 
@@ -35,7 +36,7 @@ import { observe } from '@lmnr-ai/lmnr';
 
 await observe({ 
     name: 'processUserRequest',
-    metadata: { userId: 'user_123' }
+    userId: 'user_123'
 }, async () => {
     // Process user request here
 });
@@ -57,7 +58,7 @@ def process_user_request(user_id):
     # Process user request here
 
 # Option 2: Directly in the observe decorator (preferred method)
-@observe(metadata={'userId': 'user_123'})
+@observe(user_id='user_123')
 def process_user_request_alt():
     # Process user request here
     pass
@@ -107,27 +108,6 @@ def my_function():
 </Tab>
 </Tabs>
 
-## Standardized User ID Format
-
-It's recommended to use a consistent format for user IDs across your application:
-
-```javascript
-// Examples of consistent user ID formats
-{
-  userId: 'user_12345',           // Prefixed numeric ID
-  userId: 'org_4567_user_12345',  // Organization and user combined
-  userId: 'anonymous_abcde12345'  // For unauthenticated users
-}
-```
-
-## Filtering Traces by User
-
-Once you've added user IDs to your traces, you can filter for them in the Laminar dashboard:
-
-1. Go to the Traces page
-2. Add a filter with the format `metadata_userId=user_123`
-3. View all traces associated with that specific user
-
 ## Privacy Considerations
 
 When including user IDs in traces, consider the following privacy practices:
@@ -141,7 +121,7 @@ When including user IDs in traces, consider the following privacy practices:
 <Tab title="JavaScript/TypeScript">
 ```javascript
 // Use TracingLevel.META_ONLY for sensitive user operations
-import { withTracing, TracingLevel } from "@lmnr-ai/lmnr";
+import { withTracingLevel, TracingLevel } from "@lmnr-ai/lmnr";
 
 withTracing(TracingLevel.META_ONLY, () => {
     // Sensitive operations here will only record metadata
