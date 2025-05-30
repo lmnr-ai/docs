@@ -55,7 +55,7 @@ await observe({
 
 In Python, there are two recommended ways to add metadata, but both must be done within a span context:
 
-### Option 1: Using set_metadata within a span context
+### Using set_metadata within a span context
 
 ```python
 from lmnr import Laminar, observe
@@ -76,26 +76,11 @@ def my_function():
     Laminar.clear_metadata()
 ```
 
-### Option 2: Directly in the observe decorator (preferred method)
-
-```python
-from lmnr import Laminar, observe
-
-@observe(metadata={
-    'environment': 'production',
-    'feature_flag': 'new-algorithm-v2',
-    'region': 'us-west'
-})
-def my_function():
-    # Your code here
-    pass
-```
-
 <Note>
 In Python, `Laminar.set_metadata()` must be called within an active span context (such as within a function decorated with `@observe()` or inside a `Laminar.start_as_current_span` block). If called outside of any span context, it will have no effect.
 </Note>
 
-### Option 3: Using start_as_current_span
+### Using start_as_current_span
 
 ```python
 from lmnr import Laminar
@@ -184,14 +169,14 @@ Laminar.withMetadata({
 </Tab>
 <Tab title="Python">
 ```python
-@observe(metadata={
-    'batch_size': 128,
-    'optimizer_version': 'v2',
-    'model_variant': 'high-performance'
-})
+@observe()
 def my_function():
+    Laminar.set_metadata({
+        'batch_size': 128,
+        'optimizer_version': 'v2',
+        'model_variant': 'high-performance'
+    })
     # Your code here
-    pass
 ```
 </Tab>
 </Tabs>

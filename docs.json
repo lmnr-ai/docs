@@ -24,7 +24,8 @@
                   "self-hosting/setup",
                   "self-hosting/access-control-setup"
                 ]
-              }
+              },
+              "cursor"
             ]
           },
           {
