@@ -176,12 +176,12 @@ const { traceId, responseText } = await observe(
       model: "gpt-4.1-nano",
       messages: [{ role: "user", content: message }],
     });
-    const response = response.choices[0].message.content;
+    const responseText = response.choices[0].message.content;
     return {
       // ✅ Correct usage. We are inside an `observe`d function,
       // so `getTraceId` returns a string UUID.
       traceId: Laminar.getTraceId(),
-      responseText: response
+      responseText,
     }
   },
   "Hello, world!"
