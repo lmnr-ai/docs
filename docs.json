@@ -56,7 +56,9 @@
                   "tracing/structure/observe",
                   "tracing/structure/session",
                   "tracing/structure/user-id",
-                  "tracing/structure/metadata"
+                  "tracing/structure/metadata",
+                  "tracing/structure/tags",
+                  "tracing/structure/tracing-level"
                 ]
               },
               {
@@ -87,13 +89,6 @@
               "evaluations/configuration",
               "evaluations/reference",
               "evaluations/cookbook"
-            ]
-          },
-          {
-            "group": "Tagging",
-            "pages": [
-              "tags/introduction",
-              "tags/tagging-from-code"
             ]
           },
           {
