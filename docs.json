@@ -93,13 +93,6 @@
             ]
           },
           {
-            "group": "Tagging",
-            "pages": [
-              "tags/introduction",
-              "tags/tagging-from-code"
-            ]
-          },
-          {
             "group": "Datasets",
             "pages": [
               "datasets/introduction",
