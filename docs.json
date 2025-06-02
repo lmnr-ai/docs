@@ -56,7 +56,9 @@
                   "tracing/structure/observe",
                   "tracing/structure/session",
                   "tracing/structure/user-id",
-                  "tracing/structure/metadata"
+                  "tracing/structure/metadata",
+                  "tracing/structure/image",
+                  "tracing/structure/pdf"
                 ]
               },
               {

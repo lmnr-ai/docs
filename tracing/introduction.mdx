@@ -1,5 +1,6 @@
 ---
-title: Introduction
+title: LLM Observability with Laminar Tracing
+sidebarTitle: Introduction
 description: Comprehensive observability for your LLM applications with OpenTelemetry-based tracing
 ---
 
@@ -14,34 +15,35 @@ Laminar offers comprehensive observability for your LLM applications, capturing 
 
 ## Key Concepts
 
+Example of a trace view on the Laminar platform:
+
+<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
+<img src="/images/traces/trace-view.png" alt="Screenshot of a trace visualization" style={{ margin: '0px' }}/>
+</div>
+
 ### Span
 
-A single operation in your application's execution flow, such as a function call or an API request. Spans include:
+A single operation in your application's execution flow, such as LLM call, function call, or API request. In the screenshot above, the spans are the nodes in the tree view.
+Selected span `gemini.generate_content` is highlighted in red and represents the LLM call to Gemini model.
 
-- **Attributes**: Input parameters, return values, and other metadata
-- **Path**: Hierarchical location in your code (e.g., `get_user.validate.api_call`)
+Each span has:
+
+- **Name**: The name of the span (e.g., `gemini.generate_content`)
+- **Input**: The input of the function representing a span. In case of an LLM call, this is the prompt.
+- **Output**: The output of the function representing a span. In case of an LLM call, this is the response from the model.
 - **Duration**: How long the operation took to execute
+- **Path**: Hierarchical path of the span in the trace (e.g., `get_user.validate.api_call`).
+- **Attributes**: Input parameters, return values, and other metadata
 
 ### Trace
 
-A collection of spans that form a complete execution path. Traces show parent-child relationships between operations, helping you understand how your code executes.
+Trace is a collection of spans that form a complete execution path. In the screenshot above, spans of the trace are highlighted in blue.
+Traces spans within a trace show parent-child relationships between operations, helping you understand how your code executes.
 
 ### Session
 
-A group of related traces belonging to the same user interaction or conversation, allowing you to analyze complete user journeys.
-
-### Visualization Example
-
-<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
-<img src="/images/traces/trace-example.png" alt="Screenshot of a trace visualization" style={{ margin: '0px' }}/>
-</div>
-
-The tree view on the left shows a trace of an LLM application. The hierarchy displays how functions call each other:
-- `answer_question` calls `fetch_page_and_check`
-- which calls `check_presence` 
-- which calls `OpenAI`
-
-Each node in this tree is a span, giving you a complete picture of your application's execution.
+Laminar helps you group related traces belonging to the same user interaction or conversation under a session.
+It can be used to group traces of a multi-turn conversation, or a complex workflows.
 
 ## What Laminar Captures
 
@@ -66,15 +68,6 @@ For every execution of your application, Laminar automatically records:
 - Parent-child relationships
 - Complete call hierarchy
 - Cross-service transactions
-
-<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
-<img src="/images/traces/trace-attr.png" alt="Screenshot of trace attributes" style={{ margin: '0px' }}/>
-</div>
-
-
-
-
-
 
 ## Next Steps
 
