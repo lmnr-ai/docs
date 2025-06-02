@@ -103,6 +103,15 @@
               "datasets/adding-data",
               "datasets/queues"
             ]
+          },
+          {
+            "group": "Playground",
+            "pages": [
+              "playground/introduction",
+              "playground/playground-from-span",
+              "playground/tools",
+              "playground/history"
+            ]
           }
         ]
       },
