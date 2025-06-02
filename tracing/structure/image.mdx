@@ -1,0 +1,239 @@
+---
+title: "Tracing Images sent to LLM models with Laminar"
+sidebarTitle: "Image Tracing"
+description: "Automatic tracing of image data in LLM calls"
+---
+
+## Automatic Image Data Capture
+
+Laminar automatically captures and stores image data sent to vision-capable LLM models across any SDK or framework you use. Whether you're using OpenAI, Anthropic, Google, or any other provider's SDK, Laminar seamlessly:
+
+- **Automatically detects and saves** all image content in your LLM requests.
+- **Saves both Base64 encoded images and URLs**.
+- **Operates without interruption** to your main application flow or performance.
+
+This happens transparently in the background - no code changes required.
+
+## OpenAI example
+
+Laminar automatically detects images when you send them using the standard OpenAI SDK patterns. No additional configuration is required - simply use images in your LLM calls as you normally would.
+
+<Tabs>
+
+<Tab title="JavaScript/TypeScript">
+```javascript
+import { OpenAI } from 'openai';
+import { Laminar, observe } from '@lmnr-ai/lmnr';
+import fs from 'fs';
+
+// Initialize Laminar
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+});
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+const analyzeImage = async (imagePath, userQuestion) => 
+  await observe({ name: 'analyzeImage' }, async () => {
+    // Encode image to base64
+    const imageBuffer = fs.readFileSync(imagePath);
+    const base64Image = imageBuffer.toString('base64');
+    
+    // Make LLM call with image - Laminar automatically traces the image data
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: userQuestion
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:image/jpeg;base64,${base64Image}`
+              }
+            }
+          ]
+        }
+      ],
+      max_tokens: 500
+    });
+    
+    return response.choices[0].message.content;
+  });
+
+// Example usage
+const result = await analyzeImage('eiffel_tower.jpg', 'What information is shown in this image?');
+console.log(result);
+```
+</Tab>
+<Tab title="Python">
+```python
+import os
+import base64
+from openai import OpenAI
+from lmnr import Laminar, observe
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Initialize Laminar
+Laminar.initialize(
+    project_api_key=os.environ["LMNR_PROJECT_API_KEY"]
+)
+
+# Initialize OpenAI client
+client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+
+@observe()
+def analyze_image(image_path: str, user_question: str):
+    # Encode image to base64
+    with open(image_path, "rb") as image_file:
+        base64_image = base64.b64encode(image_file.read()).decode('utf-8')
+    
+    # Make LLM call with image - Laminar automatically traces the image data
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": user_question
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{base64_image}"
+                        }
+                    }
+                ]
+            }
+        ],
+        max_tokens=500
+    )
+    
+    return response.choices[0].message.content
+
+# Example usage
+result = analyze_image("eiffel_tower.jpg", "What information is shown in this image?")
+print(result)
+```
+</Tab>
+</Tabs>
+
+## Image URLs from External Sources
+
+Laminar also traces images when you reference them by URL instead of uploading them directly:
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```javascript
+const analyzeWebImage = async (imageUrl, analysisPrompt) => 
+  await observe({ name: 'analyzeWebImage' }, async () => {
+    // Reference image by URL - Laminar traces the URL and metadata
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text', 
+              text: analysisPrompt
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: imageUrl,
+                detail: 'high'  // Optional: control image resolution
+              }
+            }
+          ]
+        }
+      ]
+    });
+    
+    return response.choices[0].message.content;
+  });
+
+// Example usage
+const result = await analyzeWebImage(
+  'https://example.com/product-image.jpg',
+  'Describe this product and its key features.'
+);
+```
+</Tab>
+<Tab title="Python">
+```python
+@observe()
+def analyze_web_image(image_url: str, analysis_prompt: str):
+    # Reference image by URL - Laminar traces the URL and metadata
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {
+                "role": "user", 
+                "content": [
+                    {
+                        "type": "text",
+                        "text": analysis_prompt
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": image_url,
+                            "detail": "high"  # Optional: control image resolution
+                        }
+                    }
+                ]
+            }
+        ]
+    )
+    
+    return response.choices[0].message.content
+
+# Example usage
+result = analyze_web_image(
+    "https://example.com/product-image.jpg", 
+    "Describe this product and its key features."
+)
+```
+</Tab>
+</Tabs>
+
+## Viewing Images in Laminar Platform
+
+When you send images to LLM models, Laminar renders them in the trace view:
+
+<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
+<img src="/images/traces/trace-image.png" alt="Screenshot of image trace" style={{ margin: '0px' }}/>
+</div>
+
+In the Laminar platform, you can:
+- View the actual images that were sent to the model.
+- Click on the image to view in the larger view.
+- Correlate images with model responses for debugging.
+- Track image usage across different traces and sessions.
+
+## Start Tracing Images with these Integrations
+
+Get started with automatic image tracing using any of our supported integrations. No configuration required - just install and your images will be automatically captured:
+
+| Integration | Description |
+| --- | --- |
+| [OpenAI](/tracing/integrations/openai) | Trace images sent to GPT-4o, GPT-4-turbo, and other vision models |
+| [Anthropic](/tracing/integrations/anthropic) | Automatically trace images in Claude conversations |
+| [Gemini](/tracing/integrations/gemini) | Capture images sent to Google's Gemini Pro Vision models |
+| [LangChain](/tracing/integrations/langchain) | Automatic image tracing for LangChain vision chains |
+| [Vercel AI SDK](/tracing/integrations/vercel-ai-sdk) | Trace images in Vercel AI SDK multimodal applications |
+| [LiteLLM](/tracing/integrations/litellm) | Universal image tracing across 100+ LLM providers via LiteLLM |
+| [Browser Use](/tracing/integrations/browser-use) | Trace images in Browser Use applications |
+| [Stagehand](/tracing/integrations/stagehand) | Trace images in Stagehand applications |
