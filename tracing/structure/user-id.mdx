@@ -12,32 +12,31 @@ Tracking which user triggered a particular trace is crucial for:
 - Filtering traces in the dashboard
 - Compliance with data regulations
 
-In Laminar, you can associate traces with users by setting a user ID in the trace metadata.
+In Laminar, you can associate traces with users by setting user ID on a trace.
 
 ## Setting User ID
 
-The recommended approach is to add the user ID as metadata to your traces. This allows you to filter and search for traces by user ID later.
+This allows you to filter and search for traces by user ID later.
 
 <Tabs>
 <Tab title="JavaScript/TypeScript">
 
 ```javascript
-import { Laminar } from '@lmnr-ai/lmnr';
+import { Laminar, observe } from '@lmnr-ai/lmnr';
 
-// Option 1: Using withMetadata
-Laminar.withMetadata({
-    userId: 'user_123'
-}, () => {
-    // All traces created inside this function will have userId: user_123
-});
-
-// Option 2: With the observe wrapper
-import { observe } from '@lmnr-ai/lmnr';
-
-await observe({ 
+// Option 1. directly pass userId to observe
+await observe({
     name: 'processUserRequest',
     userId: 'user_123'
 }, async () => {
+    // Process user request here
+});
+
+// Option 2.Use Laminar.setTraceUserId
+await observe({
+    name: 'processUserRequest',
+}, async () => {
+    Laminar.setTraceUserId('user_123');
     // Process user request here
 });
 ```
@@ -47,26 +46,21 @@ await observe({
 ```python
 from lmnr import Laminar, observe
 
-# Option 1: Using set_metadata within a span context
-@observe()
-def process_user_request(user_id):
-    # IMPORTANT: set_metadata must be called within an active span context
-    # Here, the @observe decorator creates that context
-    Laminar.set_metadata({
-        'userId': user_id
-    })
-    # Process user request here
-
-# Option 2: Directly in the observe decorator (preferred method)
+# Option 1: Directly in the observe decorator
+# Note that this is static, i.e. you can't change this at runtime.
 @observe(user_id='user_123')
-def process_user_request_alt():
+def process_user_request():
     # Process user request here
     pass
-```
 
-<Note>
-In Python, `Laminar.set_metadata()` must be called within an active span context (such as within a function decorated with `@observe()` or inside a `Laminar.start_as_current_span` block). If called outside of any span context, it will have no effect.
-</Note>
+# Option 2: Use Laminar.set_trace_user_id
+@observe()
+def process_user_request(req):
+    # IMPORTANT: set_trace_user_id must be called within an active span context
+    # Here, the @observe decorator creates that context
+    Laminar.set_trace_user_id('user_123')
+    # Process user request here
+```
 
 Another approach using `start_as_current_span`:
 
@@ -76,19 +70,15 @@ from lmnr import Laminar
 def process_user_request(user_id):
     with Laminar.start_as_current_span(name="process_request") as span:
         # Now we have an active span context
-        Laminar.set_metadata({'userId': user_id})
-        
+        Laminar.set_trace_user_id('user_123')
         # Your code here
-        
-        # Clear when done if needed
-        Laminar.clear_metadata()
 ```
 
 ❌ **Incorrect usage** (will not work):
 
 ```python
 # This won't work because it's outside any span context
-Laminar.set_metadata({'userId': 'user_123'})
+Laminar.set_trace_user_id('user_123')
 
 @observe()
 def my_function():
@@ -102,7 +92,7 @@ def my_function():
 @observe()
 def my_function():
     # Set metadata inside the span context
-    Laminar.set_metadata({'userId': 'user_123'})
+    Laminar.set_trace_user_id('user_123')
     # Your code here
 ```
 </Tab>
@@ -114,7 +104,7 @@ When including user IDs in traces, consider the following privacy practices:
 
 - Use anonymous or pseudonymous IDs rather than personally identifiable information
 - Consider your data retention policies
-- Use Laminar's [tracing level](/tracing/structure#dynamically-disabling-tracing) settings to control sensitive data
+- Use Laminar's [tracing level](/tracing/structure/tracing-level) settings to control sensitive data
 - Follow relevant data protection regulations
 
 <Tabs>
@@ -123,7 +113,7 @@ When including user IDs in traces, consider the following privacy practices:
 // Use TracingLevel.META_ONLY for sensitive user operations
 import { withTracingLevel, TracingLevel } from "@lmnr-ai/lmnr";
 
-withTracing(TracingLevel.META_ONLY, () => {
+withTracingLevel(TracingLevel.META_ONLY, () => {
     // Sensitive operations here will only record metadata
     // Input/output content won't be saved
 });
@@ -139,33 +129,3 @@ with Laminar.set_tracing_level(TracingLevel.META_ONLY):
 ```
 </Tab>
 </Tabs>
-
-## Combining User ID with Sessions
-
-For a complete picture of user interactions, combine user IDs with session tracking:
-
-<Tabs>
-<Tab title="JavaScript/TypeScript">
-```javascript
-// Track both user and session
-Laminar.withMetadata({
-    userId: 'user_123'
-}, () => {
-    Laminar.withSession({ sessionId: 'session_456' }, () => {
-        // All operations here are tracked with both user ID and session ID
-    });
-});
-```
-</Tab>
-<Tab title="Python">
-```python
-@observe()
-def process_request(user_id, session_id):
-    # Set both user ID and session in the same span context
-    Laminar.set_metadata({'userId': user_id})
-    Laminar.set_session(session_id=session_id)
-    
-    # Your code here
-```
-</Tab>
-</Tabs> 
