@@ -57,7 +57,9 @@
                   "tracing/structure/session",
                   "tracing/structure/user-id",
                   "tracing/structure/metadata",
-                  "tracing/structure/image"
+                  "tracing/structure/tags",
+                  "tracing/structure/image",
+                  "tracing/structure/tracing-level"
                 ]
               },
               {
