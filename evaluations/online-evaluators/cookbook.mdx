@@ -1,0 +1,79 @@
+---
+sidebarTitle: Cookbook
+title: Online Evaluators Cookbook
+description: Step-by-step examples of setting up online evaluators in Laminar
+---
+
+## Creating a Basic Online Evaluator
+
+This example walks through setting up a simple online evaluator that checks if an LLM response contains specific keywords, useful for content moderation or topic classification.
+
+<Steps>
+<Step title="1. Navigate to Evaluators Page">
+
+From your Laminar dashboard, go to the Evaluators page and click "New Evaluator" to start creating your custom evaluation logic.
+
+</Step>
+<Step title="2. Define Your Evaluator Function">
+
+Create a Python function that analyzes the LLM output. This example checks for the presence of specific keywords and assigns a score based on relevance.
+
+**Important**: Online evaluator functions must return a single number as the score. The system automatically attaches this score to the span for monitoring and analysis.
+
+```python
+def keyword_checker(input):
+    """
+    Evaluator that checks if the output contains relevant keywords
+    Returns a score from 0 to 1 based on keyword presence
+    Note: Must return a single number as the score
+    """
+    def extract_text(data):
+        if isinstance(data, str):
+            return data
+        if isinstance(data, dict) and 'content' in data:
+            content = data['content']
+            if isinstance(content, str):
+                return content
+            if isinstance(content, list) and content:
+                first = content[0]
+                return first.get('text', str(first)) if isinstance(first, dict) else str(first)
+        return str(data)
+    
+    text_content = extract_text(input)
+    important_keywords = ['solution', 'help', 'recommend', 'suggest']
+    
+    keyword_count = sum(1 for keyword in important_keywords if keyword in text_content.lower())
+    return min(keyword_count / len(important_keywords), 1.0)
+```
+
+![Create evaluator function](/images/evaluations/online-evaluators/create-evaluator-function.png)
+
+</Step>
+<Step title="3. Test Your Evaluator">
+
+Use the test interface to verify your evaluator works correctly with sample inputs.
+```python
+{
+    "content": [
+        {"text": "Let me suggest a helpful approach"}
+    ]
+}
+```
+
+![Test evaluator](/images/evaluations/online-evaluators/test.png)
+
+</Step>
+<Step title="4. Register to Span Path">
+
+Navigate to your traces, find a span representing the LLM call you want to evaluate, and register your evaluator to that specific span path by clicking evaluators on span view.
+
+![Register to span path](/images/evaluations/online-evaluators/span-path.png)
+
+</Step>
+<Step title="5. Verify Automatic Execution">
+
+After registration, new spans on that path will automatically trigger your evaluator. Check the span details to see the attached evaluation scores.
+![Verify execution](/images/evaluations/online-evaluators/score.png)
+
+</Step>
+</Steps>
