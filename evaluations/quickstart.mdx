@@ -77,6 +77,8 @@ evaluate<D, T, O>(
 )
 ```
 
+See full reference [here](/evaluations/reference#typescript-evaluation-types).
+
 ## Create your first evaluation
 
 ### Prerequisites
@@ -96,24 +98,19 @@ import { OpenAI } from 'openai';
 
 const client = new OpenAI();
 
-const writePoem = async (data: {country: string}) => {
+const capitalOfCountry = async (data: {country: string}) => {
   // replace this with your LLM call or custom logic
   const response = await client.chat.completions.create({
     model: 'gpt-4.1-nano',
     messages: [
       {
         role: 'user',
-        content: `Generate a poem about ${data['country']}. ` +
-          'Answer only with the poem, no other text.'
+        content: `What is the capital of ${data['country']}? ` +
+          'Answer only with the capital, no other text.'
       }
     ]
   });
   return response.choices[0].message.content || '';
-}
-
-const accuracy = (output: string, target: string | undefined): number => {
-  if (!target) return 0;
-  return output.includes(target) ? 1 : 0;
 }
 
 evaluate({
@@ -127,8 +124,13 @@ evaluate({
       target: 'Berlin',
     },
   ],
-  executor: writePoem,
-  evaluators: { 'accuracy': accuracy },
+  executor: capitalOfCountry,
+  evaluators: {
+    accuracy: (output: string, target: string | undefined): number => {
+      if (!target) return 0;
+      return output.includes(target) ? 1 : 0;
+    } 
+  },
   config: { 
     instrumentModules: {
       openAI: OpenAI
@@ -151,7 +153,7 @@ from openai import OpenAI
 
 client = OpenAI()
 
-def write_poem(data: dict) -> str:
+def capital_of_country(data: dict) -> str:
     # replace this with your LLM call or custom logic
     return client.chat.completions.create(
         model="gpt-4.1-nano",
@@ -178,7 +180,7 @@ evaluate(
             "target": "Berlin"
         },
     ],
-    executor=write_poem,
+    executor=capital_of_country,
     evaluators={"accuracy": accuracy}
 )
 ```
