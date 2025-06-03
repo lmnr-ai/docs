@@ -8,12 +8,14 @@ You can add datapoints either from file or by manually adding datapoints one-by-
 ## 1. Export from a span
 
 You can export a span as a datapoint from both Traces and Evaluation traces. To do so,
-select a span and click "Export to dataset" in the top right corner.
+select a span and click "Add to dataset" in the top right corner.
 
-Select the dataset you want to export to and click "Export".
+Select the dataset you want to export to and click "Add to dataset".
 
 This will fill the `data` field of the datapoint with the input of the span and
 the `target` field with the output of the span.
+
+<img src="/images/datasets/export-span.png" alt="Export span to dataset" />
 
 ## 2. File upload
 
@@ -40,12 +42,14 @@ If a single value in the file does not conform to format, it will be silently ig
 
 ## 3. Add manually
 
-Click "Add datapoint" at the top of the Datasets page and new empty row will be added.
+Click "Add row" at the top of the Datasets page and new empty row will be added.
 You can any value as long as it is a valid JSON that contains a `data` field.
+
+<img src="/images/datasets/manual-add-dp.png" alt="Add datapoint" />
 
 ## 4. Enrich using a queue
 
 You can create new datapoints by editing existing ones or copying span data using the queues.
 
 Humans can then edit the datapoints in the queue and save them to new datapoints either
-in the same dataset or in a new one. [Learn more about queues](./queues).
+in the same dataset or in a new one. [Learn more about queues](/queues/quickstart).
