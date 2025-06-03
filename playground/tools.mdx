@@ -1,0 +1,52 @@
+---
+sidebarTitle: Tools
+title: Playground Tools and Features
+---
+
+The Laminar Playground provides the ability to add tools to your LLM calls. The playground supports configuring custom tools that AI models can call during conversations.
+
+## Tool Definition Structure
+
+<div style={{ borderRadius: '8px', overflow: 'hidden' }}>
+    <img src="/images/playground/tools.png" alt="Laminar Playground Tools" style={{ margin: '0px' }}/>
+</div>
+
+Tools in the playground have the following structure:
+
+- **JSON object** with keys as function names
+- Each function contains two main entries:
+  - **`description`** - Clear explanation of what the function does
+  - **`parameters`** - JSON schema defining the input parameters structure
+- **Tool choice** - Controls when tools are used: `none`, `auto`, `required`, or specific function name
+
+Learn more about tool choice options in the [AI SDK documentation](https://ai-sdk.dev/docs/ai-sdk-core/tools-and-tool-calling#tool-choice).
+
+## Example Tool Configuration
+
+```json
+{
+  "searchDatabase": {
+    "description": "Search for information in the company database",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Search query or keywords"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["users", "orders", "products"],
+          "description": "Database category to search"
+        },
+        "limit": {
+          "type": "number",
+          "description": "Maximum number of results to return",
+          "default": 10
+        }
+      },
+      "required": ["query", "category"]
+    }
+  }
+}
+```
