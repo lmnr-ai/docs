@@ -106,7 +106,7 @@ FROM spans WHERE path = 'outer.inner'
 SELECT 
     name,
     input,
-    output,
+    output
 FROM spans
 -- this applies the necessary joins behind the scenes
 WHERE tag = 'my_tag'
