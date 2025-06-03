@@ -120,6 +120,14 @@
               "playground/tools",
               "playground/history"
             ]
+          },
+          {
+            "group": "SQL Editor",
+            "pages": [
+              "sql-editor/introduction",
+              "sql-editor/examples",
+              "sql-editor/reference"
+            ]
           }
         ]
       },
