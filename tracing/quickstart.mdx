@@ -34,6 +34,9 @@ Once initialized, Laminar automatically traces LLM API calls. For example, after
 <Tabs>
 <Tab title="JavaScript/TypeScript">
 ```javascript
+
+// Laminar was initialized before this code
+
 import { OpenAI } from 'openai';
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -46,6 +49,9 @@ const response = await client.chat.completions.create({
 <Tab title="Python">
 
 ```python
+
+# Laminar was initialized before this code
+
 from openai import OpenAI
 
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])

@@ -56,7 +56,10 @@
                   "tracing/structure/observe",
                   "tracing/structure/session",
                   "tracing/structure/user-id",
-                  "tracing/structure/metadata"
+                  "tracing/structure/metadata",
+                  "tracing/structure/tags",
+                  "tracing/structure/image",
+                  "tracing/structure/tracing-level"
                 ]
               },
               {
@@ -90,18 +93,16 @@
             ]
           },
           {
-            "group": "Tagging",
-            "pages": [
-              "tags/introduction",
-              "tags/tagging-from-code"
-            ]
-          },
-          {
             "group": "Datasets",
             "pages": [
               "datasets/introduction",
-              "datasets/adding-data",
-              "datasets/queues"
+              "datasets/adding-data"
+            ]
+          },
+          {
+            "group": "Labeling Queues",
+            "pages": [
+              "queues/quickstart"
             ]
           },
           {

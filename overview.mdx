@@ -1,28 +1,29 @@
 ---
 title: Laminar
-description: Laminar is an open-source platform for observability and evaluations of AI applications.
+sidebarTitle: Laminar
 ---
 
-- **Open-source** - Laminar is fully open-source and easy to self-host. Give us a ⭐ [here](https://github.com/lmnr-ai/lmnr).
-- **Cloud** - Laminar provides fully managed cloud service for easier setup and scaling [lmnr.ai](https://lmnr.ai).
+Laminar is a comprehensive **open-source platform** for observability and evaluations of AI applications.
 
-## Tracing
+- **Open-source** - Fully open-source and easy to self-host. Give us a ⭐ [here](https://github.com/lmnr-ai/lmnr)
+- **Cloud** - Managed cloud service available at [lmnr.ai](https://lmnr.ai)
 
-- Laminar tracing is framework-agnostic and based on **OpenTelemetry**.
-- Laminar auto-instruments popular LLM SDKs and frameworks, such as OpenAI, Anthropic, Langchain, and more with just 2 lines of code.
-- Traces are sent via gRPC and processed by blazing fast Rust 🦀 backend, delivering extremely low-latency and high-throughput.
-- Tracing of images is supported out of the box.
+## Get Started
 
-Get started with [Tracing](/tracing/introduction).
+<Columns>
+    <Card title="Tracing" href="/tracing/introduction">
+    Automatically trace popular LLM SDKs and frameworks, such as OpenAI, Anthropic, Langchain, and more with just 2 lines of code.
+    </Card>
 
-![Screenshot of observability dashboard](/images/traces/traces.png)
+    <Card title="Evaluations" href="/evaluations/introduction">
+    Measure, track, and improve your AI application performance with powerful evaluation tools.
+    </Card>
 
-## Evaluations
+    <Card title="Playgrounds" href="/playground/introduction">
+    Experiment with prompts, test different models, and iterate on your AI application in an interactive environment.
+    </Card>
 
-- Evaluations are a way of tracking progress of your AI application. Without them, any iteration on your AI application becomes a guessing game.
-- Laminar gives you powerful tools to quickly setup evaluations and efficiently run them at scale.
-- All evaluations results data is tracked and managed by Laminar, so you can focus on building your AI application.
-
-![Screenshot of evaluations dashboard](/images/evaluations/evals.png)
-
-Get started with [evaluations](/evaluations/introduction).
+    <Card title="Labeling Queues" href="/queues/quickstart">
+    Use streamlined UI to quickly label and build datasets for evaluations from trace data and other datasets.
+    </Card>
+</Columns>
