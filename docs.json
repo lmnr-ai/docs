@@ -89,7 +89,14 @@
               "evaluations/using-dataset",
               "evaluations/configuration",
               "evaluations/reference",
-              "evaluations/cookbook"
+              "evaluations/cookbook",
+              {
+                "group": "Online Evaluators",
+                "pages": [
+                  "evaluations/online-evaluators/introduction",
+                  "evaluations/online-evaluators/quick-start"
+                ]
+              }
             ]
           },
           {
