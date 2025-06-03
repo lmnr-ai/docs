@@ -13,11 +13,9 @@ The core concept:
 
 1. **Custom Evaluators**: You define your own evaluator logic by writing Python functions that analyze the outputs of your LLM calls. These can range from simple checks to sophisticated analysis. It should always return **number**.
 
-2. **Evaluator Testing**: Test them
-3. **Span Path Registration**: Each evaluator is registered to a specific **span path** - a unique identifier that corresponds to a particular LLM function or call location in your code.
+2. **Span Path Registration**: Each evaluator is registered to a specific **span path** - a unique identifier that corresponds to a particular LLM function or call location in your code.
 
-4. **Automatic Execution**: Once registered, evaluators run automatically whenever a span matches their registered path. The evaluator score immediately attached to the span.
-
+3. **Automatic Execution**: Once registered, evaluators run automatically whenever a span matches their registered path. The evaluator score is immediately attached to the span.
 ## Getting Started
 
 1. **Go to the Evaluators page** in your Laminar dashboard
