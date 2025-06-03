@@ -96,8 +96,13 @@
             "group": "Datasets",
             "pages": [
               "datasets/introduction",
-              "datasets/adding-data",
-              "datasets/queues"
+              "datasets/adding-data"
+            ]
+          },
+          {
+            "group": "Labeling Queues",
+            "pages": [
+              "queues/quickstart"
             ]
           }
         ]
