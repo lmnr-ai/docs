@@ -1,0 +1,263 @@
+---
+title: SQL Editor Reference
+sidebarTitle: Reference
+description: Reference of the table schemas and Laminar-specific syntax
+---
+
+This page contains a reference of the table schemas and Laminar-specific syntax.
+For examples of SQL queries you can write with the Laminar SQL Editor, see the [examples](/sql-editor/examples) page.
+
+## Table schemas and enum types
+
+This section contains subsets of the table schemas and enumerated_types that are relevant to the SQL Editor.
+
+### spans
+
+```sql [expandable]
+create table spans (
+  span_id uuid not null,
+  created_at timestamp with time zone not null default now(),
+  parent_span_id uuid null,
+  name text not null,
+  attributes jsonb null,
+  input jsonb null,
+  output jsonb null,
+  span_type span_type not null,
+  start_time timestamp with time zone not null,
+  end_time timestamp with time zone not null,
+  trace_id uuid not null,
+  status text null,
+  constraint
+    spans_trace_id_fkey foreign KEY (trace_id) 
+    references traces (id)
+);
+```
+
+### traces
+
+```sql [expandable]
+
+create table traces (
+  id uuid not null default gen_random_uuid (),
+  session_id text null,
+  metadata jsonb null,
+  end_time timestamp with time zone null,
+  start_time timestamp with time zone null,
+  total_token_count bigint not null default '0'::bigint,
+  cost double precision not null default '0'::double precision,
+  created_at timestamp with time zone not null default now(),
+  trace_type trace_type not null default 'DEFAULT'::trace_type,
+  input_token_count bigint not null default '0'::bigint,
+  output_token_count bigint not null default '0'::bigint,
+  input_cost double precision not null default '0'::double precision,
+  output_cost double precision not null default '0'::double precision,
+  top_span_id uuid null,  -- soft references spans.span_id
+  status text null,
+  -- this is not your user ID, but the user ID you've sent with the trace
+  user_id text null,
+  constraint traces_pkey primary key (id)
+);
+```
+
+### datasets
+
+```sql [expandable]
+create table datasets (
+  id uuid not null default gen_random_uuid (),
+  created_at timestamp with time zone not null default now(),
+  name text not null,
+  constraint datasets_pkey primary key (id),
+);
+```
+
+### dataset_datapoints
+
+```sql [expandable]
+create table dataset_datapoints (
+  id uuid not null default gen_random_uuid (),
+  dataset_id uuid not null,
+  created_at timestamp with time zone not null default now(),
+  data jsonb not null,
+  target jsonb null default '{}'::jsonb,
+  index_in_batch bigint null,
+  metadata jsonb null default '{}'::jsonb,
+  constraint dataset_datapoints_pkey primary key (id),
+  constraint
+    dataset_datapoints_dataset_id_fkey foreign KEY (dataset_id)
+    references datasets (id)
+);
+```
+
+### evaluations
+
+```sql [expandable]
+create table evaluations (
+  id uuid not null default gen_random_uuid (),
+  created_at timestamp with time zone not null default now(),
+  name text not null,
+  group_id text not null default 'default'::text,
+  constraint evaluations_pkey primary key (id),
+);
+```
+
+### evaluation_results
+
+```sql [expandable]
+create table public.evaluation_results (
+  id uuid not null default gen_random_uuid (),
+  created_at timestamp with time zone not null default now(),
+  evaluation_id uuid not null,
+  data jsonb not null,
+  target jsonb not null default '{}'::jsonb,
+  metadata jsonb null,
+  executor_output jsonb null,
+  trace_id uuid not null,  -- soft references traces.id, spans.trace_id
+  index integer not null default 0,
+  constraint evaluation_results_pkey primary key (id),
+
+  constraint evaluation_results_evaluation_id_fkey foreign KEY (evaluation_id)
+    references evaluations (id)
+);
+```
+
+### trace_type enum
+
+```sql [expandable]
+create type trace_type as enum ('DEFAULT', 'EVALUATION');
+```
+
+### span_type enum
+
+```sql [expandable]
+create type span_type as enum (
+    'DEFAULT',
+    'LLM',
+    'EXECUTOR',
+    'EVALUATOR',
+    'EVALUATION',
+    'TOOL'
+);
+```
+
+- `DEFAULT` - most of the spans fall into this category
+- `LLM` - a manual or automatically traced LLM call
+- `EVALUATION` - a span that represents an evaluation run. One datapoint is evaluated by one evaluation run.
+- `EXECUTOR` - a span that represents an executor run. One datapoint is evaluated by one executor run.
+- `EVALUATOR` - a span that represents an evaluator run. One datapoint may have multiple evaluator spans.
+- `TOOL` - a span that represents a tool call.
+
+
+## Laminar-specific syntax
+
+### `"spans"."path"`
+
+[Span path](/tracing/introduction#span) is the hierarchical path of the span.
+
+For example, if your code looks like this:
+
+```python [expandable]
+@observe
+def outer():
+    @observe
+    def inner():
+        return "Hello, world!"
+    return inner()
+```
+
+Then the span path of the `inner` function will be `["outer", "inner"]`.
+
+However, Laminar SQL provides syntactic sugar for you to query, filter, order, or group by span path
+items joined by a dot. That is, you can write `WHERE path = 'outer.inner'` instead of `WHERE attributes->'path' = '["outer", "inner"]'::jsonb`.
+
+### evaluator_scores
+
+Evaluatior scores is a virtual table CTE that allows you to quickly filter spans by their evaluator scores.
+
+This is triggered only when you select from `spans` table.
+
+For example, if your have an evaluator named `"Task alignment"` that scores between 0 and 1,
+you can write `WHERE evaluator_scores."Task alignment" > 0.5` to filter spans by their evaluator scores.
+
+For example,
+```sql
+-- note that you don't need to join anything else,
+-- the SQL Editor will do the necessary joins for you
+SELECT
+    name,
+    input,
+    output,
+    evaluator_scores."Task alignment"
+FROM spans
+WHERE evaluator_scores."Task alignment" > 0.5
+```
+
+### evaluation_scores
+
+Evaluation scores is a virtual table CTE that allows you to quickly filter evaluation results by their scores.
+
+This is triggered only when you select from `evaluation_results` table.
+
+For example, if your have an evaluator named `"My Score"` that scores between 0 and 1,
+you can write `WHERE evaluation_scores."My Score" > 0.5` to filter evaluation results by their evaluator scores.
+
+For example,
+```sql
+-- note that you don't need to join anything else,
+-- the SQL Editor will do the necessary joins for you
+SELECT
+    id,
+    index,
+    duration,
+    evaluation_scores."My Score"
+FROM evaluation_results
+WHERE evaluation_scores."My Score" >= 0
+```
+
+### `evaluation_name` and `evaluation_id` in `traces` and `spans` tables
+
+`evaluation_name` and `evaluation_id` are virtual columns that are automatically populated by the SQL Editor.
+
+This sugar joins in the following way:
+
+```
+spans.trace_id
+-> traces.id
+-> evaluation_results.trace_id
+-> evaluation_results.evaluation_id
+-> evaluations.id 
+-> evaluations.name
+```
+
+This is triggered when you select `evaluation_name` or `evaluation_id` in the `traces` or `spans` tables.
+
+### `tag` in the `spans` table
+
+If your span has tags `my_tag` and `my_other_tag`, you can write `WHERE tag = 'my_tag'` to filter spans by their tags.
+
+This is triggered when you select `tag` in the `spans` table.
+
+### Trace details in the `evaluation_results` table
+
+Each evaluation result is associated with a trace. You can query the following
+trace details directly from the `evaluation_results` table:
+
+- `cost`
+- `total_token_count`
+- `start_time`
+- `end_time`
+- `duration` ([Learn more](#duration))
+
+### Duration
+
+Duration is the time taken to execute the evaluation.
+
+It is calculated as `end_time - start_time` in seconds.
+
+Whenever you query `duration` in the `evaluation_results` table or the `traces` table, the SQL Editor will automatically
+replace that with `EXTRACT(EPOCH FROM end_time - start_time)`.
+
+## Indexing considerations
+
+Spans table is better indexed on `start_time` than `created_at`.
+
+We will add more indexes as we see emerging usage patterns from the SQL Editor.

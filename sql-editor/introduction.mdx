@@ -1,0 +1,100 @@
+---
+title: Introduction to Laminar SQL Editor
+sidebarTitle: Introduction
+---
+
+# Introduction to Laminar SQL Editor
+
+Laminar SQL Editor is a tool that allows you to write and execute SQL queries on your data stored at Laminar.
+
+<Tip>
+    The SQL Editor is currently in beta.
+    Some functionality may change.
+    We value your feedback and suggestions.
+</Tip>
+
+Laminar provides some useful syntactic sugar over standard PostgreSQL so that you don't
+have to write explicit `join`s and you don't depend on our internal data model too much.
+
+For detailed reference of the syntax, see the [reference](/sql-editor/reference) page.
+
+## Features and benefits
+
+- Write and execute SQL queries on your data stored at Laminar
+- Filtering:
+    - By date range
+    - By span name and path
+    - By span tags
+    - By trace costs, metadata, duration, etc.
+    - By evaluator scores
+    - By evaluation results
+- Fast analytics on your data, e.g.
+    - Detailed breakdown of token count and cost by operation
+    - Detailed latency analysis
+- Exporting results to Laminar datasets or labelling queues
+
+## Allowed queries and limitations
+
+- Only `SELECT` queries are allowed.
+- Allowed tables:
+    - `spans`
+    - `traces`
+    - `evaluation_results`
+    - `evaluation_scores`
+    - `evaluations`
+    - `datasets`
+    - `dataset_datapoints`
+- Currently, adding `WITH` CTEs is not supported.
+
+For detailed information about the tables and columns, see the [reference](/sql-editor/reference) page.
+
+## Getting started
+
+### Prerequisites
+
+- You must have some data stored at Laminar, such as traces, evaluation results,
+or datasets.
+
+### Using the SQL Editor
+
+In any page in your dashboard, click the Terminal icon in the top right corner.
+
+You will see a sheet with an SQL editor.
+
+<img src="/images/sql-editor/sql-editor-example.png" alt="SQL Editor" />
+
+### Example query
+
+```sql
+SELECT
+    input,
+    output,
+    start_time
+FROM spans
+WHERE start_time BETWEEN now() - INTERVAL '3 days' AND now()
+```
+
+This query will return the input and output of the spans in the last 3 days.
+
+For more examples, see the [examples](/sql-editor/examples) page.
+
+### Viewing results
+
+Results are displayed in a table or raw JSON view.
+
+<img src="/images/sql-editor/json-view.png" alt="JSON View of the results" />
+
+### Exporting results
+
+Once you have selected the results you want to export, click the "Export to Dataset" button.
+
+Choose the dataset you want to export to and map the columns to the dataset `data`, `metadata`, and `target` fields.
+
+<img src="/images/sql-editor/export-to-dataset.png" alt="Export to Dataset" />
+
+[Learn more about datasets](/datasets/introduction)
+
+## Next steps
+
+- [Examples](/sql-editor/examples) – Examples of SQL queries you can write with the Laminar SQL Editor
+- [Reference](/sql-editor/reference) – Reference of the table schemas and Laminar-specific syntax
