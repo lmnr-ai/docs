@@ -162,7 +162,8 @@
         "pages": [
           "guides/fastapi",
           "guides/nextjs-aisdk",
-          "guides/nextjs"
+          "guides/nextjs",
+          "guides/evaluating-tool-calls"
         ]
       },
       {
