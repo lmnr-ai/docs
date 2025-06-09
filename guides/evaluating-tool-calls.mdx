@@ -13,23 +13,20 @@ Tool-calling agents are powerful but complex - they need to select the right too
 
 ### **What You'll Learn**
 
-**Step 1: Production Deployment & Tracing**  
+**Step 1: Tracing agent in production**  
 Capture real user interactions automatically to understand how the agent behaves in production.
 
-**Step 2: User Feedback Collection**  
+**Step 2: Collecting user feedback**  
 Collect user feedback via tagging with Laminar SDK to understand when the agent helps vs. frustrates users.
 
-**Step 3: Pattern Analysis with SQL**  
+**Step 3: Identifying failure patterns with SQL query editor**  
 Identify systematic issues by querying the traced interactions to find failure patterns.
 
-**Step 4: Dataset Creation via Labeling**  
-Convert real production failures into structured evaluation datasets with proper human annotation.
+**Step 4: Label data and create evaluation dataset**  
+Label the problematic cases and create an evaluation dataset using Laminar's labeling queue interface.
 
-**Step 5: Building Evaluation Datasets**  
-Organize labeled cases into systematic test suites that measure specific agent capabilities.
-
-**Step 6: Systematic Evaluation & Improvement**  
-Run repeatable evaluations to measure progress and catch regressions as you improve your agent.
+**Step 5: Running evaluations**  
+Experiment with the agent prompt to see whether the agent is improving with the new prompt.
 
 This end-to-end approach ensures our Data Analysis Assistant continuously improves based on real user interactions rather than hypothetical test cases.
 
@@ -138,110 +135,141 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Initialize Laminar for automatic tracing
-Laminar.initialize(project_api_key=os.environ["LMNR_PROJECT_API_KEY"])
+Laminar.initialize()
 
 client = OpenAI()
 
 @observe(name="analyze_data")
-def analyze_data(user_query: str):
-    """Main agent function that gets traced automatically"""
+def analyze_data(messages: list):
+    """Main agent function that accepts input messages and handles tool calls"""
     
-    response = client.chat.completions.create(
-        model="o4-mini",
-        messages=[
-            {
-                "role": "system",
-                "content": """You are a data analysis assistant. Use the available tools to help users analyze their data and generate insights. Always:
+    # Hardcode system message at the beginning
+    full_messages = [
+        {
+            "role": "system",
+            "content": """You are a data analysis assistant. Use the available tools to help users analyze their data and generate insights. Always:
 1. Query the appropriate database first
 2. Create visualizations when helpful
 3. Provide clear summaries of findings
-4. Compare time periods when relevant"""
-            },
-            {
-                "role": "user",
-                "content": user_query
-            }
-        ],
-        tools=tools,
-        tool_choice="auto"
-    )
-    
-    # Execute tool calls if any
-    if response.choices[0].message.tool_calls:
-        return execute_tool_calls(response.choices[0].message.tool_calls, user_query)
-    
-    return response.choices[0].message.content
+4. Compare time periods when relevant
 
-# This will mark this function as a tool call span
-@observe(name="tool_call", span_type="TOOL")
-def execute_tool_calls(tool_calls, original_query):
-    """Execute the tool calls and return final response"""
-    messages = [
-        {"role": "system", "content": "You are a data analysis assistant."},
-        {"role": "user", "content": original_query},
-        {"role": "assistant", "content": "", "tool_calls": tool_calls}
+IMPORTANT: Always start by understanding what data you need, then query it, then process it."""
+        }
     ]
     
-    # Execute each tool call
-    for tool_call in tool_calls:
-        tool_name = tool_call.function.name
-        tool_args = json.loads(tool_call.function.arguments)
-        
-        # Simulate tool execution (replace with actual implementations)
-        result = simulate_tool_execution(tool_name, tool_args)
-        
-        messages.append({
-            "role": "tool",
-            "tool_call_id": tool_call.id,
-            "name": tool_name,
-            "content": result
-        })
+    # Add input messages (skip any existing system messages)
+    for msg in messages:
+        if msg["role"] != "system":
+            full_messages.append(msg)
     
-    # Get final response with tool results
-    final_response = client.chat.completions.create(
-        model="o4-mini",
-        messages=messages,
-        tools=tools
-    )
+    # Loop to handle multiple rounds of tool calls
+    max_iterations = 5  # Prevent infinite loops
+    iteration = 0
     
-    return final_response.choices[0].message.content
+    while iteration < max_iterations:
+        iteration += 1
+        
+        # Make LLM call
+        response = client.chat.completions.create(
+            model="o4-mini",
+            messages=full_messages,
+            tools=tools,
+            tool_choice="auto"
+        )
+        
+        # Add assistant's response to messages
+        assistant_message = {
+            "role": "assistant",
+            "content": response.choices[0].message.content
+        }
+        if response.choices[0].message.tool_calls:
+            assistant_message["tool_calls"] = response.choices[0].message.tool_calls
+        full_messages.append(assistant_message)
+        
+        # If no tool calls, we have our final response
+        if not response.choices[0].message.tool_calls:
+            return response.choices[0].message.content
+        
+        # Execute tool calls
+        for tool_call in response.choices[0].message.tool_calls:
+            tool_name = tool_call.function.name
+            tool_args = json.loads(tool_call.function.arguments)
+            
+            # Simulate tool execution (replace with actual implementations)
+            result = simulate_tool_execution(tool_name, tool_args)
+            
+            # Add tool result to messages
+            full_messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "name": tool_name,
+                "content": result
+            })
+    
+    # If we've hit max iterations, return what we have
+    return response.choices[0].message.content or "Analysis completed with multiple tool calls."
 
 def simulate_tool_execution(tool_name, args):
-    """Simulate tool execution - replace with real implementations"""
-    if tool_name == "query_database":
-        return "Sample data: Revenue Q4 2024: $1.2M, Q3 2024: $1.0M"
-    elif tool_name == "create_visualization":
-        return "Chart created successfully"
-    elif tool_name == "generate_summary":
-        return "Key insight: 20% revenue growth quarter-over-quarter"
-    elif tool_name == "compare_periods":
-        return "Q4 vs Q3: +20% increase in revenue"
-    elif tool_name == "detect_anomalies":
-        return "No significant anomalies detected"
-    
-    return "Tool executed successfully"
+    # this will mark this span as a tool span
+    with Laminar.start_as_current_span(name=tool_name, span_type="TOOL"):
+        """Simulate tool execution - replace with real implementations"""
+        if tool_name == "query_database":
+            return "Sample data: Revenue Q4 2024: $1.2M, Q3 2024: $1.0M"
+        elif tool_name == "create_visualization":
+            return "Chart created successfully"
+        elif tool_name == "generate_summary":
+            return "Key insight: 20% revenue growth quarter-over-quarter"
+        elif tool_name == "compare_periods":
+            return "Q4 vs Q3: +20% increase in revenue"
+        elif tool_name == "detect_anomalies":
+            return "No significant anomalies detected"
+        
+        return "Tool executed successfully"
 
 # Example usage in production
 if __name__ == "__main__":
-    result = analyze_data("How did our revenue perform last quarter compared to the previous quarter?")
+    messages = [
+        {
+            "role": "user",
+            "content": "How did our revenue perform last quarter compared to the previous quarter?"
+        }
+    ]
+    result = analyze_data(messages)
     print(result)
 ```
 
-With this setup, every interaction with your Data Analysis Assistant is automatically traced in Laminar, capturing:
-- Which tools were called and in what order
-- The exact parameters passed to each tool
-- Tool execution results
-- User queries and final responses
+### How Laminar Tracing Works
+
+This agent demonstrates several key tracing concepts:
+
+1. **Top-Level Span**: The `@observe(name="analyze_data")` decorator creates a top-level span that captures the entire agent execution
+2. **Automatic LLM Tracing**: Laminar automatically traces the LLM call made via OpenAI API (and other supported popular LLM frameworks and SDKs, such as Langchain, Anthropic, etc.)
+3. **Manual Tool Spans**: Each tool execution is wrapped in `Laminar.start_as_current_span(name=tool_name, span_type="TOOL")` to create dedicated tool spans
+
+With this setup, every interaction creates a hierarchical trace in Laminar:
+```
+📊 analyze_data (top-level span)
+├── 🤖 LLM call #1 (automatic)
+├── 🔧 query_database (manual tool span)  
+├── 🤖 LLM call #2 (automatic)
+├── 🔧 create_visualization (manual tool span)
+└── 🤖 LLM call #3 (automatic)
+```
+
+This captures:
+- Which tools were called and in what sequence
+- Tool execution results and timing
+- All LLM requests/responses throughout the conversation
 - Performance metrics and any errors
 
 Here's a screenshot of the traced interactions in Laminar:
 <Frame caption="Traced interactions in Laminar">
-<img src="/images/guides/tools.png" alt="Traced interactions in Laminar" />
+<img src="/images/guides/eval-tools/tools.png" alt="Traced interactions in Laminar" />
 </Frame>
 
 ## Step 2: Capturing User Feedback
 
-Now let's add user feedback collection using Laminar's tagging system. The key is to save the trace ID during execution and tag it later when you receive user feedback.
+Now let's add user feedback collection using Laminar's tagging system. The key is to save the trace ID during execution and tag the trace later when you receive user feedback.
 
 ```python production_agent_with_feedback.py
 import os
@@ -260,37 +288,14 @@ client = OpenAI()
 
 @observe("analyze_data")
 def analyze_data(user_query: str):
-    """Main agent function that gets traced automatically"""
     
-    response = client.chat.completions.create(
-        model="o1-mini",
-        messages=[
-            {
-                "role": "system",
-                "content": """You are a data analysis assistant. Use the available tools to help users analyze their data and generate insights. Always:
-1. Query the appropriate database first
-2. Create visualizations when helpful
-3. Provide clear summaries of findings
-4. Compare time periods when relevant"""
-            },
-            {
-                "role": "user",
-                "content": user_query
-            }
-        ],
-        tools=tools,
-        tool_choice="auto"
-    )
-    
-    # Get trace ID from current span context
+    # ... rest of the code ...
+
+    # get trace id from the current span
     trace_id = Laminar.get_trace_id()
     
-    # Execute tool calls if any
-    if response.choices[0].message.tool_calls:
-        final_response = execute_tool_calls(response.choices[0].message.tool_calls, user_query)
-        return {"trace_id": trace_id, "response": final_response}
-    
-    return {"trace_id": trace_id, "response": response.choices[0].message.content}
+    # add trace id to the response
+    return {"trace_id": trace_id, "response": # ... original response ...}
 
 # Example of how to add tag with feedback to the trace
 def add_negative_feedback(trace_id: str):
@@ -303,161 +308,126 @@ def add_negative_feedback(trace_id: str):
 
 ### Key Points About Tagging
 
-1. **Get Trace ID in Context**: Call `Laminar.get_trace_id()` inside the `@observe`d function to capture the trace ID
+1. **Get Trace ID in span context**: Call `Laminar.get_trace_id()` inside the `@observe`d function or inside manually created span to capture the trace ID
 2. **Store for Later**: Save the trace ID along with your session data so you can tag it when feedback arrives
-3. **Tag the Trace**: Use `laminar_client.tags.tag(trace_id, tag_name)` to apply tags to the entire trace
+3. **Tag the Trace**: Use `laminar_client.tags.tag(trace_id, tag_name)` to apply tags to the entire trace. For example, you can have a user feedback feature in your app that tags the trace with `unhelpful` when the user provides feedback.
 4. **Top-Level Span**: When you tag a trace, it applies the tag to the top-level span, making it easy to filter in SQL queries
 
 This approach allows you to collect feedback asynchronously - users can provide feedback minutes or hours after the interaction, and you can still associate it with the correct trace.
 
 ## Step 3: Analyzing Problematic Cases with SQL Editor
 
-After collecting feedback in production, use Laminar's SQL Editor to identify patterns in unsuccessful interactions:
+After collecting feedback in production, use Laminar's SQL Editor to identify patterns in unsuccessful interactions.
+SQL editor is available from any page in Laminar and can be accessed by clicking the "console" button in the top right corner in the navigation bar.
 
 ```sql
--- Find all interactions tagged as "unhelpful"
+-- Get the LLM spans from traces tagged as "unhelpful"
 SELECT 
-    span_id,
-    trace_id,
-    input_text,
-    output_text,
-    tool_calls,
-    tags,
-    created_at
-FROM spans 
-WHERE 'unhelpful' = ANY(tags) 
-    AND 'data_analysis' = ANY(tags)
-    AND created_at >= '2024-01-01'
-ORDER BY created_at DESC;
-```
-
-```sql
--- Analyze common failure patterns in unhelpful interactions
-SELECT 
-    JSON_EXTRACT(tool_calls, '$[0].function.name') as first_tool_called,
-    COUNT(*) as failure_count,
-    AVG(latency_ms) as avg_latency
-FROM spans 
-WHERE 'unhelpful' = ANY(tags)
-    AND tool_calls IS NOT NULL
-GROUP BY first_tool_called
-ORDER BY failure_count DESC;
-```
-
-```sql
--- Compare helpful vs unhelpful tool selection patterns
-SELECT 
-    CASE 
-        WHEN 'helpful' = ANY(tags) THEN 'helpful'
-        WHEN 'unhelpful' = ANY(tags) THEN 'unhelpful'
-        ELSE 'no_feedback'
-    END as feedback_type,
-    JSON_EXTRACT(tool_calls, '$[0].function.name') as first_tool_called,
-    COUNT(*) as count
-FROM spans 
-WHERE 'data_analysis' = ANY(tags)
-    AND tool_calls IS NOT NULL
-GROUP BY feedback_type, first_tool_called
-ORDER BY feedback_type, count DESC;
+  input,
+  output
+FROM spans
+WHERE span_type = 'LLM' 
+  AND trace_id IN (SELECT trace_id FROM spans WHERE tag = 'unhelpful')
+ORDER BY start_time DESC;
 ```
 
 <Frame caption="Example of using Laminar's SQL Editor to query traced interactions">
-<img src="/images/sql-editor/sql-editor-example.png" alt="SQL Editor showing query results for unhelpful interactions" />
+<img src="/images/guides/eval-tools/sql.png" alt="SQL Editor showing query results for unhelpful interactions" />
 </Frame>
 
-## Step 4: Creating Labeled Datasets via Queues
+Then click on the `export to dataset` button to export the results to a dataset.
+Drag `output` field to the `target` column and `input` field to the `data` column.
+Then click on the `create dataset` button to create new dataset.
 
-After identifying problematic interactions through SQL analysis, export them to Laminar's labeling queue for human annotation. This process is done through the Laminar UI.
-
-### Export to Labeling Queue (UI)
-
-From your SQL query results in the previous step:
-
-1. **Select Cases to Label**: Choose the most representative problematic interactions
-2. **Export to Queue**: Use the "Export to Labeling Queue" button in the SQL Editor
-3. **Configure Labeling Schema**: Define what labels you want human annotators to provide
-
-<Frame caption="Export problematic cases to the labeling queue">
-<img src="/images/sql-editor/export-to-dataset.png" alt="Exporting query results to dataset for labeling" />
+<Frame caption="Exporting query results to dataset for labeling">
+<img src="/images/guides/eval-tools/export.png" alt="Exporting query results to dataset for labeling" />
 </Frame>
 
-### Labeling Schema
+### Push dataset to labeling queue
 
-For tool call evaluation, configure your labeling queue to collect:
+Now navigate to the newly created dataset from the previous step. In the dataset view:
 
-- **Correct Tools**: What tools should have been called?
-- **Correct Parameters**: What parameters should have been used?  
-- **Correct Sequence**: What order should tools be called in?
-- **Expected Outcome**: What should the final result look like?
-- **Difficulty Level**: How complex is this case? (easy/medium/hard)
+1. **Export to labeling queue**: Click the "Add all to labeling queue" button  
+2. **Choose labeling queue**: Either create a new labeling queue or select an existing one
 
-### Human Annotation Process
+This process moves your problematic cases from the dataset into a structured labeling workflow where human annotators can provide the correct expected outputs for tool calls.
 
-Human labelers will then review each case and provide:
+## Step 4: Label data and create evaluation dataset
 
-```json
-{
-  "correct_tools": ["query_database", "compare_periods", "create_visualization"],
-  "correct_parameters": [
-    {"query": "SELECT revenue FROM sales WHERE quarter='Q4'", "database": "sales"},
-    {"metric": "revenue", "period1": "Q4 2024", "period2": "Q3 2024"},
-    {"data": "revenue_comparison", "chart_type": "line", "title": "Revenue Trend"}
-  ],
-  "correct_sequence": ["query_database", "compare_periods", "create_visualization"],
-  "expected_outcome": "A clear revenue comparison with visualization showing 20% growth",
-  "difficulty": "medium"
-}
-```
+Laminar provides a convenient split-screen labeling interface that makes it easy to quickly label your data and build evaluation datasets.
+In this step, we will use labeling queue from the previous step to label the data and create an evaluation dataset.
 
-## Step 5: Building Evaluation Datasets
+### The Labeling Interface
 
-Once human labeling is complete, convert the labeled cases into structured evaluation datasets. This is done through the Laminar UI.
+When you open your labeling queue, you'll see an efficient split-screen interface:
 
-### Create Dataset from Labeled Cases (UI)
+**Left Panel - Payload View**: Shows the full JSON structure of the current item, including the user's original query in the `data` field and the agent's problematic response in the `target` field.
 
-1. **Navigate to Labeled Data**: Go to your completed labeling queue
-2. **Review Labels**: Ensure label quality meets your standards
-3. **Export to Dataset**: Use "Create Dataset" to convert labeled cases into evaluation format
-4. **Name Your Dataset**: e.g., "data_analysis_tool_evaluation_v1"
+**Right Panel - Target Editor**: This is where you provide the correct expected output. You can:
+- Edit the existing response to fix tool selection issues
+- Write completely new target responses with correct tool calls
+- Use proper JSON formatting with syntax highlighting
 
-The UI automatically structures each labeled case into evaluation format:
+<Frame caption="Laminar's labeling interface for tool call evaluation">
+<img src="/images/guides/eval-tools/labeling-interface.png" alt="Split-screen labeling interface showing payload and target editor" />
+</Frame>
+
+### Labeling Workflow
+
+For each problematic tool call case:
+
+1. **Review the original query** in the payload view (left panel)
+2. **Analyze what went wrong** with the agent's response 
+3. **Write the correct expected output** in the target editor (right panel)
+4. **Select your target dataset** from the dropdown. You can create a new dataset or select an existing one.
+5. **Click "Complete"** to save and move to the next item
+
+Each `completed` datapoint will be automatically added to the target dataset.
+This dataset will be used for evaluation in the next step.
+
+As you type in the target editor, the left panel updates in real-time, showing exactly what will be saved to your evaluation dataset. This immediate feedback helps ensure accuracy in your labeling.
+
+Once your dataset is created, we can reference it in evaluations using `LaminarDataset("eval_dataset")`.
+
+## Step 5: Running Tool Call Evaluations
+
+With our labeled dataset ready, we can now run systematic evaluations.
+The key insight is that our dataset contains the original conversation messages in the OpenAI format, which allows us to test different system prompts while keeping the user queries consistent.
+
+### Understanding the Dataset Structure
+
+From the labeling process, each datapoint in our evaluation dataset has this structure:
 
 ```json
 {
   "data": {
-    "user_query": "What was our revenue last quarter compared to the previous quarter?"
+    "input": [
+      {"role": "system", "content": "You are a data analysis assistant..."},
+      {"role": "user", "content": "Show me sales performance compared to last quarter"}
+      {"role": "assistant", "content": "..."},
+      {"role": "tool", "tool_call_id": "call_9tNpqAft21sjn8UgSojJN5b8"}
+    ]
   },
   "target": {
-    "expected_tools": ["query_database", "compare_periods", "create_visualization"],
-    "expected_parameters": [
-      {"query": "SELECT revenue FROM sales WHERE quarter='Q4'", "database": "sales"},
-      {"metric": "revenue", "period1": "Q4 2024", "period2": "Q3 2024"},
-      {"data": "revenue_comparison", "chart_type": "line", "title": "Revenue Trend"}
-    ],
-    "expected_sequence": ["query_database", "compare_periods", "create_visualization"],
-    "expected_outcome": "A clear revenue comparison with visualization showing 20% growth"
-  },
-  "metadata": {
-    "original_failure": "Agent only queried database but didn't create comparison or visualization",
-    "difficulty": "medium",
-    "category": "sales_analysis"
+    "output": [
+        {
+            "id": "call_9tNpqAft21sjn8UgSojJN5b8",
+            "name": "create_visualization",
+            "arguments": {
+            "data": "[{\"quarter\":\"Q3 2024\",\"revenue\":1000000},{\"quarter\":\"Q4 2024\",\"revenue\":1200000}]",
+            "title": "Revenue by Quarter: Q3 vs Q4 2024",
+            "chart_type": "bar"
+            }
+        }
+    ]
   }
 }
 ```
 
-### Dataset Quality Control
-
-Before creating your dataset, review:
-- **Label Consistency**: Are similar cases labeled similarly?
-- **Coverage**: Do you have cases for different tool combinations?
-- **Difficulty Distribution**: Mix of easy/medium/hard cases
-- **Failure Types**: Different types of tool selection errors
-
-Once your dataset is created, you can reference it in evaluations using `LaminarDataset("your_dataset_name")`.
-
-## Step 6: Running Tool Call Evaluations
-
-Now we can run systematic evaluations to improve our agent. Create evaluation files that follow Laminar's evaluation patterns:
+This structure allows us to:
+1. **Test new system prompts** by replacing the system message
+2. **Keep user queries consistent** for fair comparison
+3. **Compare against expected tool calls** from human labeling
 
 ### Create evaluation directory structure
 
@@ -474,10 +444,13 @@ from lmnr import evaluate, LaminarDataset
 from openai import OpenAI
 import json
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 client = OpenAI()
 
-# Tool definitions (same as production)
+# Same tools as production - consistency is key
 tools = [
     {
         "type": "function",
@@ -529,99 +502,120 @@ tools = [
 ]
 
 def data_analysis_agent(data):
-    """Simple executor function for evaluation"""
-    response = client.chat.completions.create(
-        model="o1-mini",
-        messages=[
-            {
-                "role": "system",
-                "content": """You are a data analysis assistant. Use the available tools to help users analyze their data and generate insights. Always:
+    """Executor function that tests new system prompts"""
+    
+    # Get the original messages from the dataset
+    original_messages = data["input"]
+    
+    # Create new messages with improved system prompt
+    # This is where you test prompt improvements!
+    messages = [
+        {
+            "role": "system", 
+            "content": """You are a data analysis assistant. Use the available tools to help users analyze their data and generate insights. Always:
 1. Query the appropriate database first
-2. Create visualizations when helpful
+2. Create visualizations when helpful  
 3. Provide clear summaries of findings
-4. Compare time periods when relevant"""
-            },
-            {
-                "role": "user",
-                "content": data["user_query"]
-            }
-        ],
-        tools=tools
+4. Compare time periods when relevant
+
+IMPORTANT: Always start by understanding what data you need, then query it, then process it."""
+        }
+    ]
+    
+    # Add all non-system messages from the original conversation
+    for msg in original_messages:
+        if msg["role"] != "system":
+            messages.append(msg)
+    
+    response = client.chat.completions.create(
+        model="o4-mini",
+        messages=messages,
+        tools=tools,
+        tool_choice="auto"
     )
+    
     return response
 
-# Evaluation Functions
 def evaluate_tool_selection(output, target):
-    """Check if the correct tools were selected"""
-    tool_calls = output.choices[0].message.tool_calls if hasattr(output.choices[0].message, 'tool_calls') else []
-    called_tools = [call.function.name for call in tool_calls]
-    expected_tools = target.get("expected_tools", [])
+    """Evaluator to check if correct tools were selected"""
     
-    if not expected_tools:
-        return 1
+    # Extract actual tool calls from the response
+    actual_tool_calls = []
+    if hasattr(output.choices[0].message, 'tool_calls') and output.choices[0].message.tool_calls:
+        actual_tool_calls = [
+            {
+                "name": call.function.name,
+                "arguments": json.loads(call.function.arguments)
+            }
+            for call in output.choices[0].message.tool_calls
+        ]
     
-    # Check if all expected tools were called
-    for expected_tool in expected_tools:
-        if expected_tool not in called_tools:
+    # Extract expected tool calls from target - fix based on actual structure
+    if isinstance(target, dict):
+        expected_tool_calls = target.get("output", [])
+        # Handle nested list structure: [[{tool_objects}]] -> [{tool_objects}]
+        if expected_tool_calls and isinstance(expected_tool_calls[0], list):
+            expected_tool_calls = expected_tool_calls[0]
+    elif isinstance(target, list):
+        expected_tool_calls = target
+    else:
+        # If target is something else (like a string), try to parse it
+        try:
+            if isinstance(target, str):
+                parsed_target = json.loads(target)
+                expected_tool_calls = parsed_target.get("output", []) if isinstance(parsed_target, dict) else parsed_target
+            else:
+                expected_tool_calls = []
+        except:
+            expected_tool_calls = []
+    
+    # Check if we called the expected tools
+    expected_tool_names = [tool["name"] for tool in expected_tool_calls]
+    actual_tool_names = [tool["name"] for tool in actual_tool_calls]
+
+    # Simple binary check: did we call all expected tools?
+    for expected_tool in expected_tool_names:
+        if expected_tool not in actual_tool_names:
             return 0
     
     return 1
 
-def evaluate_database_selection(output, target):
-    """Specific evaluator for database selection accuracy"""
-    tool_calls = output.choices[0].message.tool_calls if hasattr(output.choices[0].message, 'tool_calls') else []
-    
-    for call in tool_calls:
-        if call.function.name == "query_database":
-            try:
-                params = json.loads(call.function.arguments)
-                database = params.get("database", "")
-                query = params.get("query", "").lower()
-                
-                # Simple heuristics for database selection
-                if "revenue" in query or "sales" in query:
-                    return 1 if database == "sales" else 0
-                elif "user" in query or "engagement" in query:
-                    return 1 if database == "users" else 0
-                elif "analytics" in query or "metrics" in query:
-                    return 1 if database == "analytics" else 0
-                    
-            except json.JSONDecodeError:
-                return 0
-    
-    return 1  # No database queries to evaluate
-
-# Sample evaluation data
-evaluation_data = [
-    {
-        "data": {"user_query": "What was our revenue last quarter?"},
-        "target": {"expected_tools": ["query_database"]},
-        "metadata": {"category": "sales_analysis"}
-    },
-    {
-        "data": {"user_query": "Show me user engagement trends over time"},
-        "target": {"expected_tools": ["query_database", "create_visualization"]},
-        "metadata": {"category": "user_analysis"}
-    },
-    {
-        "data": {"user_query": "Compare this month's sales to last month"},
-        "target": {"expected_tools": ["query_database", "compare_periods"]},
-        "metadata": {"category": "comparison"}
-    }
-]
-
 # Run the evaluation
 evaluate(
-    data=evaluation_data,
+    data=LaminarDataset("eval_dataset"),
     executor=data_analysis_agent,
     evaluators={
-        "tool_selection": evaluate_tool_selection,
-        "database_selection": evaluate_database_selection
+        "tool_selection": evaluate_tool_selection
     },
     project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
-    group_name="data_analysis_agent_v1"
+    group_name="improved_system_prompt_v1"
 )
 ```
+
+### Testing Different System Prompts
+
+The power of this approach is that you can easily test different system prompts:
+
+```python
+# Version 1: Original prompt
+system_prompt_v1 = """You are a data analysis assistant. Use available tools to analyze data."""
+
+# Version 2: More detailed instructions  
+system_prompt_v2 = """You are a data analysis assistant. Always:
+1. Query appropriate database first
+2. Create visualizations when helpful
+3. Provide clear summaries"""
+
+# Version 3: Emphasize tool sequencing
+system_prompt_v3 = """You are a data analysis assistant. CRITICAL: Always follow this sequence:
+1. Understand what data is needed
+2. Query the database to get that data  
+3. Process/analyze the results
+4. Create visualizations if helpful
+5. Summarize findings clearly"""
+```
+
+Simply swap the `content` field in the system message to test different versions and see which performs better on your real production failure cases.
 
 ### Running the evaluation
 
@@ -631,10 +625,10 @@ You can run this evaluation in two ways:
 
 ```bash
 # Set your project API key
-export LMNR_PROJECT_API_KEY=<YOUR_PROJECT_API_KEY>
+export LMNR_PROJECT_API_KEY=<YOUR_PROJECT_API_KEY> # skip if you set LMNR_PROJECT_API_KEY in .env file
 
 # Run single evaluation file
-lmnr eval evals/eval_data_analysis_agent.py
+lmnr eval evals/eval_tool_selection.py
 
 # Or run all evaluations in the evals directory
 lmnr eval
@@ -643,39 +637,20 @@ lmnr eval
 #### Running as a standalone script
 
 ```bash
-python evals/eval_data_analysis_agent.py
-```
-
-### Using LaminarDataset
-
-For larger evaluation sets, you can use LaminarDataset:
-
-```python evals/eval_with_dataset.py
-from lmnr import evaluate, LaminarDataset
-import os
-
-# Using a dataset created from labeled cases
-evaluate(
-    data=LaminarDataset("data_analysis_tool_evaluation"),
-    executor=data_analysis_agent,
-    evaluators={
-        "tool_selection": evaluate_tool_selection,
-        "database_selection": evaluate_database_selection
-    },
-    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
-    group_name="data_analysis_agent_v2"
-)
+python evals/eval_tool_selection.py
 ```
 
 ## Viewing Results and Iteration
 
-After running evaluations, the Laminar dashboard shows:
+<Frame caption="Evaluation results in Laminar">
+<img src="/images/guides/eval-tools/eval_1.png" alt="Evaluation results in Laminar" />
+</Frame>
+
+After running evaluations, the Laminar evaluation view shows:
 
 1. **Overall Scores**: How your agent performs across all metrics
-2. **Individual Cases**: Detailed breakdown of each evaluation
-3. **Tool Call Traces**: Visual timeline of tool execution
-4. **Performance Trends**: How scores improve over iterations
-5. **Failure Analysis**: Common patterns in failed cases
+2. **Individual Cases**: Traces of each evaluation
+3. **Performance Trends**: How scores improve over iterations
 
 Use these insights to:
 - **Improve Prompts**: Refine system prompts based on failure patterns
@@ -683,15 +658,11 @@ Use these insights to:
 - **Add New Tools**: Identify missing capabilities from user feedback
 - **Update Training Data**: Create more diverse evaluation cases
 
-## Complete Workflow Summary
+This approach ensures the Data Analysis Assistant continuously improves based on real user interactions and systematic evaluation, leading to more reliable and useful AI agents.
 
-1. **🔍 Production Tracing**: Deploy agent with Laminar tracing enabled
-2. **👍 Feedback Collection**: Tag interactions with user satisfaction ratings
-3. **📊 Data Analysis**: Use SQL Editor to identify problematic patterns  
-4. **🏷️ Dataset Creation**: Export cases to labeling queue for annotation
-5. **📈 Systematic Evaluation**: Run evaluations on LaminarDataset
-6. **🔄 Continuous Improvement**: Iterate based on evaluation results
+## Learn More
 
-This approach ensures your Data Analysis Assistant continuously improves based on real user interactions and systematic evaluation, leading to more reliable and useful AI agents.
+To dive deeper into the concepts covered in this guide:
 
-For more advanced patterns and examples, explore the [Evaluation Cookbook](/evaluations/cookbook) and [Evaluation Reference](/evaluations/reference).
+- **[Tracing Documentation](/tracing/introduction)**: Learn more about automatic instrumentation, manual span creation, and advanced tracing patterns
+- **[Evaluations Documentation](/evaluations/introduction)**: Explore advanced evaluation patterns, custom evaluators, and evaluation best practices
