@@ -68,7 +68,7 @@ Additional optional configuration parameters are passed as a `config` object in 
 <Tab title="JavaScript/TypeScript">
 - `projectApiKey`: The API key of the project where the evaluation results will be stored.
 Required, unless you set the `LMNR_PROJECT_API_KEY` environment variable.
-- `batchSize`: The number of evaluations to run in parallel. Default is `5`.
+- `concurrencyLimit`: The number of evaluations to run in parallel. Default is `5`.
 - `baseUrl`: The base URL of the Laminar instance. Do NOT include port here. Default is `https://api.lmnr.ai`.
 - `httpPort`: The port of the Laminar instance for HTTP. Used to send evaluation results and metadata.
 Default is 443. For local self-hosted Laminar, use 8000.
