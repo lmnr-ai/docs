@@ -17,6 +17,9 @@ pip install -U lmnr[all]
 ```
 </Step>
 <Step title="Initialize Laminar and integrate the callback">
+
+You need to initialize Laminar **before** adding the callback to LiteLLM.
+
 ```python
 import litellm
 from lmnr import Laminar, LaminarLiteLLMCallback
@@ -56,10 +59,10 @@ response = litellm.completion(
 
 ### Disabling OpenAI double-instrumentation
 
-If you use OpenAI, enabling Laminar LiteLLM callback may result in OpenAI calls being double-traced – once by Laminar LiteLLM callback and once by Laminar auto-instrumentation.
+If you call OpenAI models via LiteLLM, adding Laminar LiteLLM callback may result in OpenAI calls being traced twice – once by Laminar LiteLLM callback and once by Laminar auto-instrumentation of OpenAI SDK.
 This is because LiteLLM uses OpenAI SDK under the hood to call some of the models and Laminar automatically instruments OpenAI SDK.
 
-To avoid this, you can disable OpenAI instrumentation at initialization:
+To avoid this, you can disable OpenAI SDK instrumentation at Laminar initialization:
 
 ```python {4}
 from lmnr import Laminar, Instruments
