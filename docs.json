@@ -90,6 +90,9 @@
               "evaluations/configuration",
               "evaluations/reference",
               "evaluations/cookbook",
+              "evaluations/sdk",
+              "evaluations/sdk-cookbook",
+              "evaluations/sdk-reference",
               {
                 "group": "Online Evaluators",
                 "pages": [

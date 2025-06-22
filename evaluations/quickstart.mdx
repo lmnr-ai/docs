@@ -6,6 +6,24 @@ import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
 
 This guide will walk you through running your first evaluation using Laminar's evaluation system.
 
+## Choosing Your Approach
+
+Laminar offers two ways to run evaluations:
+
+### evaluate() Function (This Guide)
+- **Best for**: Quick evaluations, prototyping, getting started
+- **Pros**: Simple setup, automatic handling of lifecycle, built-in error handling
+- **Cons**: Less flexibility, fixed workflow structure
+
+### Evaluation SDK
+- **Best for**: Production systems, complex workflows, custom integrations
+- **Pros**: Full programmatic control, custom error handling, flexible async operations
+- **Cons**: More setup required, manual lifecycle management
+
+For detailed information on using the SDK approach, see our [Evaluation SDK guide](/evaluations/sdk).
+
+## Core Components
+
 Laminar provides a structured approach to create, run, and track your AI system's performance through these key components:
 
 - **Executors** - Functions that process inputs and produce outputs, such as prompt templates, LLM calls, or production logic

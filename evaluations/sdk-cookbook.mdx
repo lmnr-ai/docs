@@ -1,0 +1,795 @@
+---
+title: Evaluation SDK Cookbook
+sidebarTitle: SDK Cookbook
+---
+
+This cookbook contains practical examples and patterns for using the Laminar Evaluation SDK in real-world scenarios.
+
+## Pattern 1: Custom Multi-Step Evaluation Pipeline
+
+This example shows how to create a complex evaluation pipeline with multiple evaluators and custom error handling.
+
+<Tabs>
+<Tab title="Python">
+
+```python
+import asyncio
+import logging
+from typing import List, Dict, Any
+from lmnr import AsyncLaminarClient, observe, Laminar
+from openai import OpenAI
+
+# Initialize
+Laminar.initialize()
+client = AsyncLaminarClient()
+openai_client = OpenAI()
+
+logger = logging.getLogger(__name__)
+
+@observe(name="multi_step_executor", span_type="EXECUTOR")
+async def multi_step_executor(data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    A complex executor that performs multiple LLM calls and processes results.
+    """
+    question = data.get("question")
+    context = data.get("context", "")
+    
+    # Step 1: Generate initial response
+    initial_response = openai_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": f"Context: {context}\n\nQuestion: {question}"}
+        ]
+    )
+    
+    initial_answer = initial_response.choices[0].message.content
+    
+    # Step 2: Self-critique the response
+    critique_response = openai_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "Review the following answer and provide a score from 1-10 and brief feedback."},
+            {"role": "user", "content": f"Question: {question}\nAnswer: {initial_answer}"}
+        ]
+    )
+    
+    critique = critique_response.choices[0].message.content
+    
+    # Step 3: Generate final response based on critique
+    final_response = openai_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "Improve your answer based on the critique."},
+            {"role": "user", "content": f"Original question: {question}\nOriginal answer: {initial_answer}\nCritique: {critique}\nProvide an improved answer:"}
+        ]
+    )
+    
+    final_answer = final_response.choices[0].message.content
+    
+    return {
+        "initial_answer": initial_answer,
+        "critique": critique,
+        "final_answer": final_answer,
+        "steps_completed": 3
+    }
+
+@observe(name="accuracy_evaluator", span_type="EVALUATOR")
+def accuracy_evaluator(output: Dict[str, Any], target: str) -> float:
+    """Evaluate accuracy of the final answer."""
+    final_answer = output.get("final_answer", "")
+    return 1.0 if target.lower() in final_answer.lower() else 0.0
+
+@observe(name="completeness_evaluator", span_type="EVALUATOR") 
+def completeness_evaluator(output: Dict[str, Any], target: str) -> float:
+    """Evaluate completeness based on answer length and detail."""
+    final_answer = output.get("final_answer", "")
+    
+    # Simple completeness heuristic
+    word_count = len(final_answer.split())
+    detail_score = min(1.0, word_count / 50)  # Expect ~50 words for complete answer
+    
+    return detail_score
+
+@observe(name="improvement_evaluator", span_type="EVALUATOR")
+def improvement_evaluator(output: Dict[str, Any], target: str) -> float:
+    """Evaluate if the final answer improved over the initial answer."""
+    initial = output.get("initial_answer", "")
+    final = output.get("final_answer", "")
+    
+    # Simple improvement heuristic: final answer should be longer and more detailed
+    improvement_score = 1.0 if len(final) > len(initial) * 1.2 else 0.0
+    return improvement_score
+
+@observe(name="multi_step_evaluation", span_type="EVALUATION")
+async def run_multi_step_evaluation():
+    """
+    Run a comprehensive evaluation with multiple evaluators.
+    """
+    
+    # Create evaluation
+    eval_id = await client.evals.create_evaluation(
+        name="Multi-Step QA Evaluation",
+        group_name="qa-pipeline-tests"
+    )
+    
+    test_cases = [
+        {
+            "data": {
+                "question": "What are the benefits of renewable energy?",
+                "context": "Environmental sustainability and climate change are major global concerns."
+            },
+            "target": "renewable energy reduces carbon emissions and helps fight climate change"
+        },
+        {
+            "data": {
+                "question": "How does photosynthesis work?",
+                "context": "Plants convert sunlight into energy through biological processes."
+            },
+            "target": "plants use sunlight, water, and carbon dioxide to produce glucose and oxygen"
+        },
+        # Add more test cases...
+    ]
+    
+    results = []
+    
+    for i, test_case in enumerate(test_cases):
+        try:
+            # Create datapoint
+            datapoint_id = await client.evals.create_datapoint(
+                eval_id=eval_id,
+                data=test_case["data"],
+                target=test_case["target"],
+                metadata={"category": "qa", "complexity": "medium"},
+                index=i
+            )
+            
+            # Execute multi-step process
+            executor_output = await multi_step_executor(test_case["data"])
+            
+            # Run multiple evaluators
+            accuracy_score = accuracy_evaluator(executor_output, test_case["target"])
+            completeness_score = completeness_evaluator(executor_output, test_case["target"])
+            improvement_score = improvement_evaluator(executor_output, test_case["target"])
+            
+            # Calculate composite score
+            composite_score = (accuracy_score + completeness_score + improvement_score) / 3
+            
+            # Update datapoint with all scores
+            await client.evals.update_datapoint(
+                eval_id=eval_id,
+                datapoint_id=datapoint_id,
+                executor_output=executor_output,
+                scores={
+                    "accuracy": accuracy_score,
+                    "completeness": completeness_score,
+                    "improvement": improvement_score,
+                    "composite": composite_score
+                }
+            )
+            
+            results.append({
+                "question": test_case["data"]["question"],
+                "scores": {
+                    "accuracy": accuracy_score,
+                    "completeness": completeness_score,
+                    "improvement": improvement_score,
+                    "composite": composite_score
+                }
+            })
+            
+            logger.info(f"Completed test case {i+1}: Composite score {composite_score:.2f}")
+            
+        except Exception as e:
+            logger.error(f"Error processing test case {i}: {e}")
+            
+            # Still update datapoint with error information
+            await client.evals.update_datapoint(
+                eval_id=eval_id,
+                datapoint_id=datapoint_id,
+                executor_output=f"Error: {str(e)}",
+                scores={"error": 1.0, "accuracy": 0.0, "completeness": 0.0, "improvement": 0.0}
+            )
+    
+    return eval_id, results
+
+# Run the evaluation
+if __name__ == "__main__":
+    asyncio.run(run_multi_step_evaluation())
+```
+
+</Tab>
+</Tabs>
+
+## Pattern 2: Parallel Batch Processing with Rate Limiting
+
+This example shows how to process large datasets efficiently while respecting API rate limits.
+
+<Tabs>
+<Tab title="Python">
+
+```python
+import asyncio
+import aiohttp
+from asyncio import Semaphore
+from typing import List, Dict, Any
+from lmnr import AsyncLaminarClient, observe
+
+@observe(name="rate_limited_executor", span_type="EXECUTOR")
+async def rate_limited_executor(data: Dict[str, Any], semaphore: Semaphore) -> str:
+    """
+    Executor with built-in rate limiting using semaphore.
+    """
+    async with semaphore:  # Limit concurrent API calls
+        # Simulate API call with delay
+        await asyncio.sleep(0.1)  # Prevent hitting rate limits
+        
+        # Your actual executor logic here
+        prompt = data.get("prompt", "")
+        
+        # Simulate processing
+        result = f"Processed: {prompt[:50]}..."
+        
+        return result
+
+@observe(name="batch_parallel_evaluation", span_type="EVALUATION")
+async def run_batch_parallel_evaluation(
+    test_cases: List[Dict[str, Any]], 
+    max_concurrent: int = 5
+):
+    """
+    Process large batches with controlled concurrency.
+    """
+    client = AsyncLaminarClient()
+    semaphore = Semaphore(max_concurrent)  # Limit concurrent operations
+    
+    # Create evaluation
+    eval_id = await client.evals.create_evaluation(
+        name="Batch Parallel Processing",
+        group_name="batch-tests"
+    )
+    
+    # Create all datapoints first
+    datapoint_ids = []
+    for i, test_case in enumerate(test_cases):
+        datapoint_id = await client.evals.create_datapoint(
+            eval_id=eval_id,
+            data=test_case["data"],
+            target=test_case.get("target"),
+            metadata=test_case.get("metadata", {}),
+            index=i
+        )
+        datapoint_ids.append(datapoint_id)
+    
+    async def process_single_datapoint(datapoint_id: str, test_case: Dict[str, Any]):
+        """Process a single datapoint with error handling."""
+        try:
+            # Execute with rate limiting
+            executor_output = await rate_limited_executor(test_case["data"], semaphore)
+            
+            # Simple evaluation
+            score = 1.0 if executor_output and "Error" not in executor_output else 0.0
+            
+            # Update datapoint
+            await client.evals.update_datapoint(
+                eval_id=eval_id,
+                datapoint_id=datapoint_id,
+                executor_output=executor_output,
+                scores={"success": score}
+            )
+            
+            return {"datapoint_id": datapoint_id, "success": True, "score": score}
+            
+        except Exception as e:
+            # Handle errors gracefully
+            await client.evals.update_datapoint(
+                eval_id=eval_id,
+                datapoint_id=datapoint_id,
+                executor_output=f"Error: {str(e)}",
+                scores={"success": 0.0, "error": 1.0}
+            )
+            
+            return {"datapoint_id": datapoint_id, "success": False, "error": str(e)}
+    
+    # Process all datapoints in parallel with controlled concurrency
+    tasks = [
+        process_single_datapoint(dp_id, test_case)
+        for dp_id, test_case in zip(datapoint_ids, test_cases)
+    ]
+    
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    # Summarize results
+    successful = sum(1 for r in results if isinstance(r, dict) and r.get("success"))
+    total = len(results)
+    
+    print(f"Processed {total} datapoints: {successful} successful, {total - successful} failed")
+    
+    return eval_id, results
+
+# Example usage
+test_data = [
+    {"data": {"prompt": f"Test prompt {i}"}, "metadata": {"batch": 1}}
+    for i in range(100)  # 100 test cases
+]
+
+asyncio.run(run_batch_parallel_evaluation(test_data, max_concurrent=10))
+```
+
+</Tab>
+</Tabs>
+
+## Pattern 3: Progressive Evaluation with Checkpointing
+
+This pattern shows how to implement checkpointing for long-running evaluations that can be resumed.
+
+<Tabs>
+<Tab title="Python">
+
+```python
+import asyncio
+import json
+import os
+from pathlib import Path
+from typing import List, Dict, Any, Optional
+from lmnr import AsyncLaminarClient, observe
+
+@observe(name="checkpointed_evaluation", span_type="EVALUATION")
+async def run_checkpointed_evaluation(
+    test_cases: List[Dict[str, Any]],
+    checkpoint_file: str = "evaluation_checkpoint.json",
+    resume: bool = True
+):
+    """
+    Evaluation that can be resumed from checkpoint if interrupted.
+    """
+    client = AsyncLaminarClient()
+    
+    # Load checkpoint if exists and resume is True
+    checkpoint_data = {}
+    if resume and os.path.exists(checkpoint_file):
+        with open(checkpoint_file, 'r') as f:
+            checkpoint_data = json.load(f)
+        print(f"Resuming from checkpoint: {len(checkpoint_data.get('completed', []))} completed")
+    
+    # Get or create evaluation ID
+    eval_id = checkpoint_data.get('eval_id')
+    if not eval_id:
+        eval_id = await client.evals.create_evaluation(
+            name="Checkpointed Evaluation",
+            group_name="long-running-tests"
+        )
+        checkpoint_data['eval_id'] = str(eval_id)
+    
+    # Track completed datapoints
+    completed = set(checkpoint_data.get('completed', []))
+    
+    # Process each test case
+    for i, test_case in enumerate(test_cases):
+        if i in completed:
+            print(f"Skipping already completed test case {i}")
+            continue
+        
+        try:
+            # Create datapoint
+            datapoint_id = await client.evals.create_datapoint(
+                eval_id=eval_id,
+                data=test_case["data"],
+                target=test_case.get("target"),
+                metadata={"index": i},
+                index=i
+            )
+            
+            # Execute (simulate long-running operation)
+            executor_output = await simulate_long_operation(test_case["data"])
+            
+            # Evaluate
+            score = simple_evaluator(executor_output, test_case.get("target"))
+            
+            # Update datapoint
+            await client.evals.update_datapoint(
+                eval_id=eval_id,
+                datapoint_id=datapoint_id,
+                executor_output=executor_output,
+                scores={"score": score}
+            )
+            
+            # Update checkpoint
+            completed.add(i)
+            checkpoint_data['completed'] = list(completed)
+            
+            # Save checkpoint every 5 completions
+            if len(completed) % 5 == 0:
+                with open(checkpoint_file, 'w') as f:
+                    json.dump(checkpoint_data, f)
+                print(f"Checkpoint saved: {len(completed)}/{len(test_cases)} completed")
+            
+        except Exception as e:
+            print(f"Error processing test case {i}: {e}")
+            # Continue with next test case instead of failing entirely
+            continue
+    
+    # Final checkpoint save
+    with open(checkpoint_file, 'w') as f:
+        json.dump(checkpoint_data, f)
+    
+    print(f"Evaluation completed: {len(completed)}/{len(test_cases)} successful")
+    return eval_id
+
+@observe(name="long_operation", span_type="EXECUTOR")
+async def simulate_long_operation(data: Dict[str, Any]) -> str:
+    """Simulate a long-running operation that might fail."""
+    await asyncio.sleep(2)  # Simulate processing time
+    return f"Processed: {data.get('input', 'N/A')}"
+
+def simple_evaluator(output: str, target: Optional[str]) -> float:
+    """Simple evaluator for demonstration."""
+    if not target:
+        return 1.0
+    return 1.0 if target in output else 0.0
+
+# Example usage
+large_dataset = [
+    {"data": {"input": f"Test case {i}"}, "target": f"Test case {i}"}
+    for i in range(50)  # Large dataset
+]
+
+# Run with checkpointing
+asyncio.run(run_checkpointed_evaluation(large_dataset))
+```
+
+</Tab>
+</Tabs>
+
+## Pattern 4: A/B Testing Evaluation Framework
+
+This pattern demonstrates how to compare different models or prompts systematically.
+
+<Tabs>
+<Tab title="Python">
+
+```python
+import asyncio
+from typing import List, Dict, Any, Callable
+from lmnr import AsyncLaminarClient, observe
+
+@observe(name="ab_testing_evaluation", span_type="EVALUATION")
+async def run_ab_testing_evaluation(
+    test_cases: List[Dict[str, Any]],
+    variant_a_executor: Callable,
+    variant_b_executor: Callable,
+    variant_a_name: str = "Variant A",
+    variant_b_name: str = "Variant B"
+):
+    """
+    Run A/B testing between two different approaches.
+    """
+    client = AsyncLaminarClient()
+    
+    # Create separate evaluations for each variant
+    eval_a_id = await client.evals.create_evaluation(
+        name=f"A/B Test - {variant_a_name}",
+        group_name="ab-testing"
+    )
+    
+    eval_b_id = await client.evals.create_evaluation(
+        name=f"A/B Test - {variant_b_name}",
+        group_name="ab-testing"
+    )
+    
+    results_a = []
+    results_b = []
+    
+    for i, test_case in enumerate(test_cases):
+        # Test Variant A
+        try:
+            datapoint_a_id = await client.evals.create_datapoint(
+                eval_id=eval_a_id,
+                data=test_case["data"],
+                target=test_case.get("target"),
+                metadata={"variant": "A", "test_case": i},
+                index=i
+            )
+            
+            output_a = await variant_a_executor(test_case["data"])
+            score_a = evaluate_output(output_a, test_case.get("target"))
+            
+            await client.evals.update_datapoint(
+                eval_id=eval_a_id,
+                datapoint_id=datapoint_a_id,
+                executor_output=output_a,
+                scores=score_a
+            )
+            
+            results_a.append(score_a)
+            
+        except Exception as e:
+            print(f"Variant A failed for test case {i}: {e}")
+            results_a.append({"error": 1.0})
+        
+        # Test Variant B
+        try:
+            datapoint_b_id = await client.evals.create_datapoint(
+                eval_id=eval_b_id,
+                data=test_case["data"],
+                target=test_case.get("target"),
+                metadata={"variant": "B", "test_case": i},
+                index=i
+            )
+            
+            output_b = await variant_b_executor(test_case["data"])
+            score_b = evaluate_output(output_b, test_case.get("target"))
+            
+            await client.evals.update_datapoint(
+                eval_id=eval_b_id,
+                datapoint_id=datapoint_b_id,
+                executor_output=output_b,
+                scores=score_b
+            )
+            
+            results_b.append(score_b)
+            
+        except Exception as e:
+            print(f"Variant B failed for test case {i}: {e}")
+            results_b.append({"error": 1.0})
+    
+    # Compare results
+    avg_score_a = calculate_average_scores(results_a)
+    avg_score_b = calculate_average_scores(results_b)
+    
+    print(f"\n=== A/B Test Results ===")
+    print(f"{variant_a_name}: {avg_score_a}")
+    print(f"{variant_b_name}: {avg_score_b}")
+    
+    # Determine winner
+    primary_metric = "accuracy"  # Choose your primary metric
+    if avg_score_a.get(primary_metric, 0) > avg_score_b.get(primary_metric, 0):
+        print(f"Winner: {variant_a_name}")
+    elif avg_score_b.get(primary_metric, 0) > avg_score_a.get(primary_metric, 0):
+        print(f"Winner: {variant_b_name}")
+    else:
+        print("Tie!")
+    
+    return {
+        "eval_a_id": eval_a_id,
+        "eval_b_id": eval_b_id,
+        "variant_a_scores": avg_score_a,
+        "variant_b_scores": avg_score_b
+    }
+
+@observe(name="variant_a_executor", span_type="EXECUTOR")
+async def variant_a_executor(data: Dict[str, Any]) -> str:
+    """First variant - e.g., GPT-4"""
+    # Simulate different approach
+    return f"Variant A processed: {data.get('input', '')}"
+
+@observe(name="variant_b_executor", span_type="EXECUTOR")
+async def variant_b_executor(data: Dict[str, Any]) -> str:
+    """Second variant - e.g., Claude"""
+    # Simulate different approach
+    return f"Variant B analyzed: {data.get('input', '')}"
+
+def evaluate_output(output: str, target: str = None) -> Dict[str, float]:
+    """Multi-metric evaluation."""
+    return {
+        "accuracy": 1.0 if target and target in output else 0.0,
+        "length": min(1.0, len(output) / 100),  # Normalize length score
+        "completeness": 1.0 if len(output) > 20 else 0.0
+    }
+
+def calculate_average_scores(results: List[Dict[str, float]]) -> Dict[str, float]:
+    """Calculate average scores across all metrics."""
+    if not results:
+        return {}
+    
+    # Get all unique metrics
+    all_metrics = set()
+    for result in results:
+        all_metrics.update(result.keys())
+    
+    averages = {}
+    for metric in all_metrics:
+        scores = [r.get(metric, 0.0) for r in results if metric in r]
+        averages[metric] = sum(scores) / len(scores) if scores else 0.0
+    
+    return averages
+
+# Example usage
+test_dataset = [
+    {"data": {"input": "Explain machine learning"}, "target": "machine learning"},
+    {"data": {"input": "What is Python?"}, "target": "Python"},
+    # Add more test cases...
+]
+
+# Run A/B test
+asyncio.run(run_ab_testing_evaluation(
+    test_dataset,
+    variant_a_executor,
+    variant_b_executor,
+    "GPT-4 Approach",
+    "Claude Approach"
+))
+```
+
+</Tab>
+</Tabs>
+
+## Pattern 5: Integration with External Systems
+
+This example shows how to integrate the evaluation SDK with external monitoring and alerting systems.
+
+<Tabs>
+<Tab title="Python">
+
+```python
+import asyncio
+import aiohttp
+from typing import List, Dict, Any
+from lmnr import AsyncLaminarClient, observe
+
+class EvaluationMonitor:
+    """Monitor evaluation progress and send alerts."""
+    
+    def __init__(self, webhook_url: str = None):
+        self.webhook_url = webhook_url
+        self.metrics = {
+            "total_processed": 0,
+            "successful": 0,
+            "failed": 0,
+            "average_score": 0.0
+        }
+    
+    async def send_alert(self, message: str, severity: str = "info"):
+        """Send alert to external system."""
+        if not self.webhook_url:
+            print(f"[{severity.upper()}] {message}")
+            return
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                await session.post(
+                    self.webhook_url,
+                    json={
+                        "message": message,
+                        "severity": severity,
+                        "metrics": self.metrics
+                    }
+                )
+        except Exception as e:
+            print(f"Failed to send alert: {e}")
+    
+    def update_metrics(self, success: bool, score: float = 0.0):
+        """Update internal metrics."""
+        self.metrics["total_processed"] += 1
+        if success:
+            self.metrics["successful"] += 1
+        else:
+            self.metrics["failed"] += 1
+        
+        # Update running average
+        current_avg = self.metrics["average_score"]
+        total = self.metrics["total_processed"]
+        self.metrics["average_score"] = (current_avg * (total - 1) + score) / total
+
+@observe(name="monitored_evaluation", span_type="EVALUATION")
+async def run_monitored_evaluation(
+    test_cases: List[Dict[str, Any]],
+    monitor: EvaluationMonitor
+):
+    """
+    Evaluation with integrated monitoring and alerting.
+    """
+    client = AsyncLaminarClient()
+    
+    await monitor.send_alert(
+        f"Starting evaluation with {len(test_cases)} test cases",
+        "info"
+    )
+    
+    eval_id = await client.evals.create_evaluation(
+        name="Monitored Production Evaluation",
+        group_name="production-monitoring"
+    )
+    
+    for i, test_case in enumerate(test_cases):
+        try:
+            datapoint_id = await client.evals.create_datapoint(
+                eval_id=eval_id,
+                data=test_case["data"],
+                target=test_case.get("target"),
+                metadata={"index": i, "timestamp": asyncio.get_event_loop().time()},
+                index=i
+            )
+            
+            # Execute
+            output = await your_production_executor(test_case["data"])
+            
+            # Evaluate
+            scores = evaluate_production_output(output, test_case.get("target"))
+            primary_score = scores.get("primary", 0.0)
+            
+            # Update datapoint
+            await client.evals.update_datapoint(
+                eval_id=eval_id,
+                datapoint_id=datapoint_id,
+                executor_output=output,
+                scores=scores
+            )
+            
+            # Update monitoring
+            success = primary_score > 0.5  # Define success threshold
+            monitor.update_metrics(success, primary_score)
+            
+            # Check for alerts
+            if not success:
+                await monitor.send_alert(
+                    f"Low score detected: {primary_score:.2f} for test case {i}",
+                    "warning"
+                )
+            
+            # Progress updates
+            if (i + 1) % 10 == 0:
+                progress = (i + 1) / len(test_cases) * 100
+                await monitor.send_alert(
+                    f"Progress: {progress:.1f}% complete ({i + 1}/{len(test_cases)})",
+                    "info"
+                )
+        
+        except Exception as e:
+            monitor.update_metrics(False, 0.0)
+            await monitor.send_alert(
+                f"Error processing test case {i}: {str(e)}",
+                "error"
+            )
+    
+    # Final summary
+    await monitor.send_alert(
+        f"Evaluation completed. Success rate: {monitor.metrics['successful'] / monitor.metrics['total_processed']:.1%}",
+        "info"
+    )
+    
+    return eval_id, monitor.metrics
+
+@observe(name="production_executor", span_type="EXECUTOR")
+async def your_production_executor(data: Dict[str, Any]) -> str:
+    """Your production system executor."""
+    # Simulate production logic
+    await asyncio.sleep(0.5)
+    return f"Production result for: {data.get('input', '')}"
+
+def evaluate_production_output(output: str, target: str = None) -> Dict[str, float]:
+    """Production evaluation metrics."""
+    return {
+        "primary": 0.8,  # Your primary metric
+        "latency": 0.9,
+        "quality": 0.85
+    }
+
+# Example usage
+monitor = EvaluationMonitor(webhook_url="https://your-webhook-url.com/alerts")
+
+test_data = [
+    {"data": {"input": f"Production test {i}"}}
+    for i in range(50)
+]
+
+# Run monitored evaluation
+asyncio.run(run_monitored_evaluation(test_data, monitor))
+```
+
+</Tab>
+</Tabs>
+
+## Common Patterns Summary
+
+1. **Multi-Step Evaluation**: Use multiple evaluators for comprehensive assessment
+2. **Rate Limiting**: Control concurrency to respect API limits
+3. **Checkpointing**: Resume long-running evaluations from interruptions
+4. **A/B Testing**: Compare different approaches systematically
+5. **Monitoring**: Integrate with external systems for production use
+
+## Next Steps
+
+- **[SDK API Reference](/evaluations/sdk-reference)** - Complete method documentation
+- **[Main SDK Guide](/evaluations/sdk)** - Core concepts and basic usage
+- **[Configuration](/evaluations/configuration)** - Advanced configuration options 

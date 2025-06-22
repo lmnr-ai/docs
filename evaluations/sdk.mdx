@@ -1,0 +1,744 @@
+---
+title: Using the Evaluation SDK
+sidebarTitle: Evaluation SDK
+---
+import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
+
+The Laminar evaluation SDK provides low-level access to create and manage evaluations programmatically. This approach gives you full control over the evaluation lifecycle, making it ideal for complex evaluation scenarios, custom workflows, or integration into existing systems.
+
+## SDK vs. evaluate() Function
+
+The evaluation SDK offers a more granular approach compared to the high-level `evaluate()` function:
+
+| Feature | `evaluate()` Function | Evaluation SDK |
+|---------|---------------------|----------------|
+| **Ease of use** | Simple, declarative | More control, requires setup |
+| **Flexibility** | Limited customization | Full programmatic control |
+| **Async operations** | Handled automatically | Manual async management |
+| **Custom workflows** | Fixed workflow | Completely customizable |
+| **Error handling** | Built-in | Manual implementation |
+| **Use cases** | Quick evaluations, prototyping | Production systems, complex logic |
+
+## Core Concepts
+
+### Evaluation Lifecycle
+
+When using the SDK directly, you manage the complete evaluation lifecycle:
+
+1. **Initialize** - Create a new evaluation
+2. **Create Datapoints** - Add test cases to the evaluation
+3. **Execute** - Run your custom executor logic
+4. **Evaluate** - Run your evaluator functions
+5. **Update** - Save results back to the evaluation
+
+### Key Components
+
+- **Evaluation** - Container for related test runs
+- **Datapoints** - Individual test cases with data, target, and metadata
+- **Executor** - Your custom logic that processes inputs
+- **Evaluator** - Functions that score outputs against targets
+- **Spans** - Observability traces for monitoring execution
+
+## Getting Started
+
+### Prerequisites
+
+<GetProjectApiKey />
+
+### Basic Example
+
+<Tabs>
+<Tab title="Python">
+
+```python
+import asyncio
+from lmnr import AsyncLaminarClient, observe
+from openai import OpenAI
+
+# Initialize clients
+client = AsyncLaminarClient()
+openai_client = OpenAI()
+
+@observe(name="executor", span_type="EXECUTOR")
+async def my_executor(data: dict) -> str:
+    """Custom executor function with observability"""
+    response = openai_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{
+            "role": "user", 
+            "content": f"What is the capital of {data['country']}? Answer with just the city name."
+        }]
+    )
+    return response.choices[0].message.content.strip()
+
+@observe(name="evaluator", span_type="EVALUATOR") 
+def accuracy_evaluator(output: str, target: str) -> float:
+    """Custom evaluator function with observability"""
+    return 1.0 if target.lower() in output.lower() else 0.0
+
+@observe(name="evaluation", span_type="EVALUATION")
+async def run_custom_evaluation():
+    """Main evaluation function with observability"""
+    
+    # Step 1: Create evaluation
+    eval_id = await client.evals.create_evaluation(
+        name="Custom Capital Cities Evaluation",
+        group_name="geography-tests"
+    )
+    print(f"Created evaluation: {eval_id}")
+    
+    # Step 2: Prepare test data
+    test_cases = [
+        {"data": {"country": "France"}, "target": "Paris"},
+        {"data": {"country": "Germany"}, "target": "Berlin"},
+        {"data": {"country": "Japan"}, "target": "Tokyo"},
+    ]
+    
+    # Step 3: Process each test case
+    for i, test_case in enumerate(test_cases):
+        # Create datapoint
+        datapoint_id = await client.evals.create_datapoint(
+            eval_id=eval_id,
+            data=test_case["data"],
+            target=test_case["target"],
+            metadata={"category": "geography"},
+            index=i
+        )
+        
+        # Execute your logic
+        executor_output = await my_executor(test_case["data"])
+        
+        # Evaluate the output
+        score = accuracy_evaluator(executor_output, test_case["target"])
+        
+        # Update datapoint with results
+        await client.evals.update_datapoint(
+            eval_id=eval_id,
+            datapoint_id=datapoint_id,
+            executor_output=executor_output,
+            scores={"accuracy": score}
+        )
+        
+        print(f"Test {i+1}: {test_case['data']['country']} -> {executor_output} (Score: {score})")
+
+# Run the evaluation
+if __name__ == "__main__":
+    asyncio.run(run_custom_evaluation())
+```
+
+</Tab>
+<Tab title="TypeScript">
+
+```typescript
+import { LaminarClient, observe } from '@lmnr-ai/lmnr';
+import { OpenAI } from 'openai';
+
+// Initialize clients
+const client = new LaminarClient();
+const openai = new OpenAI();
+
+const myExecutor = observe({
+  name: "executor",
+  spanType: "EXECUTOR"
+})(async (data: { country: string }): Promise<string> => {
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `What is the capital of ${data.country}? Answer with just the city name.`
+    }]
+  });
+  return response.choices[0].message.content?.trim() || '';
+});
+
+const accuracyEvaluator = observe({
+  name: "evaluator", 
+  spanType: "EVALUATOR"
+})((output: string, target: string): number => {
+  return target.toLowerCase().includes(output.toLowerCase()) ? 1.0 : 0.0;
+});
+
+const runCustomEvaluation = observe({
+  name: "evaluation",
+  spanType: "EVALUATION"
+})(async () => {
+  // Step 1: Create evaluation
+  const evalId = await client.evals.createEvaluation({
+    name: "Custom Capital Cities Evaluation",
+    groupName: "geography-tests"
+  });
+  console.log(`Created evaluation: ${evalId}`);
+  
+  // Step 2: Prepare test data
+  const testCases = [
+    { data: { country: "France" }, target: "Paris" },
+    { data: { country: "Germany" }, target: "Berlin" },
+    { data: { country: "Japan" }, target: "Tokyo" },
+  ];
+  
+  // Step 3: Process each test case
+  for (let i = 0; i < testCases.length; i++) {
+    const testCase = testCases[i];
+    
+    // Create datapoint
+    const datapointId = await client.evals.createDatapoint({
+      evalId,
+      data: testCase.data,
+      target: testCase.target,
+      metadata: { category: "geography" },
+      index: i
+    });
+    
+    // Execute your logic
+    const executorOutput = await myExecutor(testCase.data);
+    
+    // Evaluate the output
+    const score = accuracyEvaluator(executorOutput, testCase.target);
+    
+    // Update datapoint with results
+    await client.evals.updateDatapoint({
+      evalId,
+      datapointId,
+      executorOutput,
+      scores: { accuracy: score }
+    });
+    
+    console.log(`Test ${i+1}: ${testCase.data.country} -> ${executorOutput} (Score: ${score})`);
+  }
+});
+
+// Run the evaluation
+runCustomEvaluation();
+```
+
+</Tab>
+</Tabs>
+
+## Advanced Usage
+
+### Batch Processing
+
+<Tabs>
+<Tab title="Python">
+
+```python
+import asyncio
+from typing import List, Dict, Any
+from lmnr import AsyncLaminarClient, observe
+
+@observe(name="batch_evaluation", span_type="EVALUATION")
+async def run_batch_evaluation(test_cases: List[Dict[str, Any]]):
+    client = AsyncLaminarClient()
+    
+    # Create evaluation
+    eval_id = await client.evals.create_evaluation(
+        name="Batch Processing Evaluation",
+        group_name="batch-tests"
+    )
+    
+    # Create all datapoints first
+    datapoint_ids = []
+    for i, test_case in enumerate(test_cases):
+        datapoint_id = await client.evals.create_datapoint(
+            eval_id=eval_id,
+            data=test_case["data"],
+            target=test_case.get("target"),
+            metadata=test_case.get("metadata", {}),
+            index=i
+        )
+        datapoint_ids.append(datapoint_id)
+    
+    # Process in parallel
+    async def process_datapoint(datapoint_id, test_case):
+        # Your custom executor logic here
+        executor_output = await your_executor(test_case["data"])
+        
+        # Your custom evaluator logic here
+        scores = await your_evaluator(executor_output, test_case.get("target"))
+        
+        # Update datapoint
+        await client.evals.update_datapoint(
+            eval_id=eval_id,
+            datapoint_id=datapoint_id,
+            executor_output=executor_output,
+            scores=scores
+        )
+        
+        return {"datapoint_id": datapoint_id, "scores": scores}
+    
+    # Execute all datapoints in parallel
+    tasks = [
+        process_datapoint(dp_id, test_case) 
+        for dp_id, test_case in zip(datapoint_ids, test_cases)
+    ]
+    
+    results = await asyncio.gather(*tasks)
+    return eval_id, results
+```
+
+</Tab>
+<Tab title="TypeScript">
+
+```typescript
+import { LaminarClient, observe } from '@lmnr-ai/lmnr';
+
+interface TestCase {
+  data: any;
+  target?: any;
+  metadata?: Record<string, any>;
+}
+
+const runBatchEvaluation = observe({
+  name: "batch_evaluation",
+  spanType: "EVALUATION"
+})(async (testCases: TestCase[]) => {
+  const client = new LaminarClient();
+  
+  // Create evaluation
+  const evalId = await client.evals.createEvaluation({
+    name: "Batch Processing Evaluation",
+    groupName: "batch-tests"
+  });
+  
+  // Create all datapoints first
+  const datapointIds: string[] = [];
+  for (let i = 0; i < testCases.length; i++) {
+    const testCase = testCases[i];
+    const datapointId = await client.evals.createDatapoint({
+      evalId,
+      data: testCase.data,
+      target: testCase.target,
+      metadata: testCase.metadata || {},
+      index: i
+    });
+    datapointIds.push(datapointId);
+  }
+  
+  // Process in parallel
+  const processDatapoint = async (datapointId: string, testCase: TestCase) => {
+    // Your custom executor logic here
+    const executorOutput = await yourExecutor(testCase.data);
+    
+    // Your custom evaluator logic here
+    const scores = await yourEvaluator(executorOutput, testCase.target);
+    
+    // Update datapoint
+    await client.evals.updateDatapoint({
+      evalId,
+      datapointId,
+      executorOutput,
+      scores
+    });
+    
+    return { datapointId, scores };
+  };
+  
+  // Execute all datapoints in parallel
+  const tasks = datapointIds.map((dpId, i) => 
+    processDatapoint(dpId, testCases[i])
+  );
+  
+  const results = await Promise.all(tasks);
+  return { evalId, results };
+});
+```
+
+</Tab>
+</Tabs>
+
+### Error Handling and Retry Logic
+
+<Tabs>
+<Tab title="Python">
+
+```python
+import asyncio
+import logging
+from typing import Optional
+from lmnr import AsyncLaminarClient, observe
+
+logger = logging.getLogger(__name__)
+
+@observe(name="robust_evaluation", span_type="EVALUATION")
+async def run_robust_evaluation():
+    client = AsyncLaminarClient()
+    
+    async def safe_execute_with_retry(
+        eval_id: str, 
+        datapoint_id: str, 
+        test_case: dict, 
+        max_retries: int = 3
+    ) -> Optional[dict]:
+        """Execute with retry logic and error handling"""
+        
+        for attempt in range(max_retries):
+            try:
+                # Execute with observability
+                executor_output = await your_executor_with_retry(
+                    test_case["data"], 
+                    attempt=attempt
+                )
+                
+                # Evaluate with error handling
+                scores = await safe_evaluate(
+                    executor_output, 
+                    test_case.get("target")
+                )
+                
+                # Update datapoint
+                await client.evals.update_datapoint(
+                    eval_id=eval_id,
+                    datapoint_id=datapoint_id,
+                    executor_output=executor_output,
+                    scores=scores
+                )
+                
+                return {"success": True, "scores": scores}
+                
+            except Exception as e:
+                logger.warning(
+                    f"Attempt {attempt + 1} failed for datapoint {datapoint_id}: {e}"
+                )
+                
+                if attempt == max_retries - 1:
+                    # Final attempt failed, update with error
+                    await client.evals.update_datapoint(
+                        eval_id=eval_id,
+                        datapoint_id=datapoint_id,
+                        executor_output=f"Error: {str(e)}",
+                        scores={"error": 1.0, "success": 0.0}
+                    )
+                    return {"success": False, "error": str(e)}
+                
+                # Exponential backoff
+                await asyncio.sleep(2 ** attempt)
+        
+        return None
+
+@observe(name="executor_with_retry", span_type="EXECUTOR")
+async def your_executor_with_retry(data: dict, attempt: int = 0) -> str:
+    """Custom executor with retry awareness"""
+    # Your executor logic here
+    # You can adjust behavior based on attempt number
+    pass
+
+@observe(name="safe_evaluator", span_type="EVALUATOR")
+async def safe_evaluate(output: str, target: Optional[str] = None) -> dict:
+    """Safe evaluator with comprehensive error handling"""
+    try:
+        if target is None:
+            return {"no_target": 1.0}
+        
+        # Your evaluation logic here
+        accuracy = 1.0 if target.lower() in output.lower() else 0.0
+        
+        return {
+            "accuracy": accuracy,
+            "has_output": 1.0 if output.strip() else 0.0,
+            "output_length": len(output)
+        }
+        
+    except Exception as e:
+        logger.error(f"Evaluation error: {e}")
+        return {"evaluation_error": 1.0}
+```
+
+</Tab>
+<Tab title="TypeScript">
+
+```typescript
+import { LaminarClient, observe } from '@lmnr-ai/lmnr';
+
+interface SafeExecutionResult {
+  success: boolean;
+  scores?: Record<string, number>;
+  error?: string;
+}
+
+const runRobustEvaluation = observe({
+  name: "robust_evaluation",
+  spanType: "EVALUATION"
+})(async () => {
+  const client = new LaminarClient();
+  
+  const safeExecuteWithRetry = async (
+    evalId: string,
+    datapointId: string,
+    testCase: any,
+    maxRetries: number = 3
+  ): Promise<SafeExecutionResult | null> => {
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        // Execute with observability
+        const executorOutput = await yourExecutorWithRetry(
+          testCase.data, 
+          attempt
+        );
+        
+        // Evaluate with error handling
+        const scores = await safeEvaluate(
+          executorOutput, 
+          testCase.target
+        );
+        
+        // Update datapoint
+        await client.evals.updateDatapoint({
+          evalId,
+          datapointId,
+          executorOutput,
+          scores
+        });
+        
+        return { success: true, scores };
+        
+      } catch (error) {
+        console.warn(
+          `Attempt ${attempt + 1} failed for datapoint ${datapointId}:`, 
+          error
+        );
+        
+        if (attempt === maxRetries - 1) {
+          // Final attempt failed, update with error
+          await client.evals.updateDatapoint({
+            evalId,
+            datapointId,
+            executorOutput: `Error: ${error}`,
+            scores: { error: 1.0, success: 0.0 }
+          });
+          return { success: false, error: String(error) };
+        }
+        
+        // Exponential backoff
+        await new Promise(resolve => 
+          setTimeout(resolve, Math.pow(2, attempt) * 1000)
+        );
+      }
+    }
+    
+    return null;
+  };
+  
+  // Rest of your evaluation logic...
+});
+
+const yourExecutorWithRetry = observe({
+  name: "executor_with_retry",
+  spanType: "EXECUTOR"
+})(async (data: any, attempt: number = 0): Promise<string> => {
+  // Your executor logic here
+  // You can adjust behavior based on attempt number
+  return "example output";
+});
+
+const safeEvaluate = observe({
+  name: "safe_evaluator", 
+  spanType: "EVALUATOR"
+})(async (output: string, target?: string): Promise<Record<string, number>> => {
+  try {
+    if (!target) {
+      return { no_target: 1.0 };
+    }
+    
+    // Your evaluation logic here
+    const accuracy = target.toLowerCase().includes(output.toLowerCase()) ? 1.0 : 0.0;
+    
+    return {
+      accuracy,
+      has_output: output.trim() ? 1.0 : 0.0,
+      output_length: output.length
+    };
+    
+  } catch (error) {
+    console.error('Evaluation error:', error);
+    return { evaluation_error: 1.0 };
+  }
+});
+```
+
+</Tab>
+</Tabs>
+
+## Best Practices
+
+### 1. Use Observability Spans
+
+Always wrap your executor and evaluator functions with `@observe` decorators:
+
+```python
+@observe(name="my_executor", span_type="EXECUTOR")
+async def my_executor(data):
+    # Your logic here
+    pass
+
+@observe(name="my_evaluator", span_type="EVALUATOR") 
+def my_evaluator(output, target):
+    # Your evaluation logic here
+    pass
+
+@observe(name="full_evaluation", span_type="EVALUATION")
+async def run_evaluation():
+    # Your complete evaluation workflow
+    pass
+```
+
+### 2. Handle Errors Gracefully
+
+- Implement retry logic for transient failures
+- Log errors appropriately
+- Update datapoints with error information
+- Use try-catch blocks around critical operations
+
+### 3. Optimize for Performance
+
+- Use batch operations when possible
+- Process datapoints in parallel with `asyncio.gather()` or `Promise.all()`
+- Consider memory usage for large datasets
+- Implement proper timeout handling
+
+### 4. Organize Your Evaluations
+
+- Use meaningful evaluation names and group names
+- Add comprehensive metadata to datapoints
+- Structure your test cases consistently
+- Document your evaluation criteria
+
+## Real-World Example
+
+Here's a simplified version of how a customer uses the SDK for browser automation evaluation:
+
+<Tabs>
+<Tab title="Python">
+
+```python
+import asyncio
+from lmnr import AsyncLaminarClient, observe, Laminar
+
+# Initialize
+Laminar.initialize()
+client = AsyncLaminarClient()
+
+@observe(name="browser_executor", span_type="EXECUTOR")
+async def browser_executor(task_data: dict) -> dict:
+    """Execute browser automation task"""
+    # Your browser automation logic
+    # This could involve Playwright, Selenium, etc.
+    
+    result = {
+        "actions_taken": ["navigate", "click", "type"],
+        "final_state": "task_completed",
+        "screenshot_paths": ["/path/to/screenshot.png"],
+        "execution_time": 45.2
+    }
+    return result
+
+@observe(name="browser_evaluator", span_type="EVALUATOR")
+def evaluate_browser_task(output: dict, target: dict) -> dict:
+    """Evaluate browser automation results"""
+    
+    # Custom evaluation logic based on your criteria
+    success_score = 1.0 if output.get("final_state") == "task_completed" else 0.0
+    efficiency_score = min(1.0, 60.0 / output.get("execution_time", 60.0))
+    
+    return {
+        "task_success": success_score,
+        "efficiency": efficiency_score,
+        "overall_score": (success_score + efficiency_score) / 2
+    }
+
+@observe(name="browser_evaluation", span_type="EVALUATION")
+async def run_browser_evaluation():
+    """Complete browser automation evaluation"""
+    
+    eval_id = await client.evals.create_evaluation(
+        name="Browser Automation Test Suite",
+        group_name="automation-tests"
+    )
+    
+    test_tasks = [
+        {
+            "data": {"url": "https://example.com", "task": "Fill login form"},
+            "target": {"expected_result": "logged_in"},
+            "metadata": {"category": "authentication", "complexity": "simple"}
+        },
+        # Add more test cases...
+    ]
+    
+    for i, task in enumerate(test_tasks):
+        datapoint_id = await client.evals.create_datapoint(
+            eval_id=eval_id,
+            data=task["data"],
+            target=task["target"],
+            metadata=task["metadata"],
+            index=i
+        )
+        
+        # Execute browser task
+        execution_result = await browser_executor(task["data"])
+        
+        # Evaluate result
+        scores = evaluate_browser_task(execution_result, task["target"])
+        
+        # Update datapoint
+        await client.evals.update_datapoint(
+            eval_id=eval_id,
+            datapoint_id=datapoint_id,
+            executor_output=execution_result,
+            scores=scores
+        )
+    
+    return eval_id
+
+# Run the evaluation
+if __name__ == "__main__":
+    asyncio.run(run_browser_evaluation())
+```
+
+</Tab>
+</Tabs>
+
+## Migration from evaluate()
+
+If you're currently using the `evaluate()` function and want to migrate to the SDK:
+
+### Before (evaluate function):
+```python
+from lmnr import evaluate
+
+evaluate({
+    data: [...],
+    executor: my_executor,
+    evaluators: {"accuracy": my_evaluator},
+    group_name: "test-group"
+})
+```
+
+### After (SDK approach):
+```python
+from lmnr import AsyncLaminarClient, observe
+
+@observe(name="evaluation", span_type="EVALUATION")
+async def run_evaluation():
+    client = AsyncLaminarClient()
+    eval_id = await client.evals.create_evaluation(
+        group_name="test-group"
+    )
+    
+    # Manual datapoint processing...
+    for test_case in data:
+        datapoint_id = await client.evals.create_datapoint(...)
+        output = await my_executor(test_case["data"])
+        score = my_evaluator(output, test_case["target"])
+        await client.evals.update_datapoint(...)
+
+asyncio.run(run_evaluation())
+```
+
+The SDK approach requires more setup but provides complete control over the evaluation process, making it ideal for production systems and complex evaluation workflows.
+
+## Next Steps
+
+- **[SDK Cookbook](/evaluations/sdk-cookbook)** - Practical examples and real-world patterns
+- **[SDK API Reference](/evaluations/sdk-reference)** - Complete API documentation with all methods and parameters
+- **[Quickstart Guide](/evaluations/quickstart)** - Simple evaluate() function approach
+- **[Configuration](/evaluations/configuration)** - Advanced configuration options 

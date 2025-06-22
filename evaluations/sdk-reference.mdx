@@ -1,0 +1,563 @@
+---
+title: Evaluation SDK API Reference
+sidebarTitle: SDK Reference
+---
+
+This reference covers the complete API for the Laminar Evaluation SDK. For usage examples and guides, see the [Evaluation SDK documentation](/evaluations/sdk).
+
+## Client Initialization
+
+### Python
+
+```python
+from lmnr import AsyncLaminarClient
+
+# Initialize client
+client = AsyncLaminarClient(
+    api_key="your_api_key",  # Optional, defaults to LMNR_PROJECT_API_KEY env var
+    base_url="https://api.lmnr.ai"  # Optional, defaults to official API
+)
+```
+
+### TypeScript
+
+```typescript
+import { LaminarClient } from '@lmnr-ai/lmnr';
+
+// Initialize client
+const client = new LaminarClient({
+  apiKey: "your_api_key",  // Optional, defaults to LMNR_PROJECT_API_KEY env var
+  baseUrl: "https://api.lmnr.ai"  // Optional, defaults to official API
+});
+```
+
+## AsyncEvals Methods
+
+### create_evaluation()
+
+Create a new evaluation and return its ID.
+
+<Tabs>
+<Tab title="Python">
+
+```python
+async def create_evaluation(
+    name: str | None = None,
+    group_name: str | None = None,
+) -> uuid.UUID
+```
+
+**Parameters:**
+- `name` (str, optional): Name of the evaluation
+- `group_name` (str, optional): Group name to organize related evaluations
+
+**Returns:**
+- `uuid.UUID`: The evaluation ID
+
+**Example:**
+```python
+eval_id = await client.evals.create_evaluation(
+    name="My Custom Evaluation",
+    group_name="production-tests"
+)
+```
+
+</Tab>
+<Tab title="TypeScript">
+
+```typescript
+async createEvaluation(params: {
+    name?: string;
+    groupName?: string;
+}): Promise<string>
+```
+
+**Parameters:**
+- `name` (string, optional): Name of the evaluation
+- `groupName` (string, optional): Group name to organize related evaluations
+
+**Returns:**
+- `string`: The evaluation ID
+
+**Example:**
+```typescript
+const evalId = await client.evals.createEvaluation({
+    name: "My Custom Evaluation",
+    groupName: "production-tests"
+});
+```
+
+</Tab>
+</Tabs>
+
+### create_datapoint()
+
+Create a datapoint for an evaluation.
+
+<Tabs>
+<Tab title="Python">
+
+```python
+async def create_datapoint(
+    eval_id: uuid.UUID,
+    data: Any,
+    target: Any = None,
+    metadata: dict[str, Any] | None = None,
+    index: int | None = None,
+    trace_id: uuid.UUID | None = None,
+) -> uuid.UUID
+```
+
+**Parameters:**
+- `eval_id` (uuid.UUID): The evaluation ID
+- `data` (Any): Input data for the executor
+- `target` (Any, optional): Expected output for evaluators
+- `metadata` (dict, optional): Additional metadata for the datapoint
+- `index` (int, optional): Index of the datapoint in the evaluation
+- `trace_id` (uuid.UUID, optional): Trace ID for observability
+
+**Returns:**
+- `uuid.UUID`: The datapoint ID
+
+**Example:**
+```python
+datapoint_id = await client.evals.create_datapoint(
+    eval_id=eval_id,
+    data={"question": "What is 2+2?"},
+    target="4",
+    metadata={"category": "math", "difficulty": "easy"},
+    index=0
+)
+```
+
+</Tab>
+<Tab title="TypeScript">
+
+```typescript
+async createDatapoint(params: {
+    evalId: string;
+    data: any;
+    target?: any;
+    metadata?: Record<string, any>;
+    index?: number;
+    traceId?: string;
+}): Promise<string>
+```
+
+**Parameters:**
+- `evalId` (string): The evaluation ID
+- `data` (any): Input data for the executor
+- `target` (any, optional): Expected output for evaluators
+- `metadata` (Record<string, any>, optional): Additional metadata for the datapoint
+- `index` (number, optional): Index of the datapoint in the evaluation
+- `traceId` (string, optional): Trace ID for observability
+
+**Returns:**
+- `string`: The datapoint ID
+
+**Example:**
+```typescript
+const datapointId = await client.evals.createDatapoint({
+    evalId,
+    data: { question: "What is 2+2?" },
+    target: "4",
+    metadata: { category: "math", difficulty: "easy" },
+    index: 0
+});
+```
+
+</Tab>
+</Tabs>
+
+### update_datapoint()
+
+Update a datapoint with execution results and scores.
+
+<Tabs>
+<Tab title="Python">
+
+```python
+async def update_datapoint(
+    eval_id: uuid.UUID,
+    datapoint_id: uuid.UUID,
+    scores: dict[str, float | int],
+    executor_output: Any | None = None,
+) -> None
+```
+
+**Parameters:**
+- `eval_id` (uuid.UUID): The evaluation ID
+- `datapoint_id` (uuid.UUID): The datapoint ID
+- `scores` (dict): Evaluation scores (numeric values)
+- `executor_output` (Any, optional): Output from the executor
+
+**Example:**
+```python
+await client.evals.update_datapoint(
+    eval_id=eval_id,
+    datapoint_id=datapoint_id,
+    executor_output="The answer is 4",
+    scores={
+        "accuracy": 1.0,
+        "response_time": 0.5,
+        "confidence": 0.95
+    }
+)
+```
+
+</Tab>
+<Tab title="TypeScript">
+
+```typescript
+async updateDatapoint(params: {
+    evalId: string;
+    datapointId: string;
+    scores: Record<string, number>;
+    executorOutput?: any;
+}): Promise<void>
+```
+
+**Parameters:**
+- `evalId` (string): The evaluation ID
+- `datapointId` (string): The datapoint ID
+- `scores` (Record<string, number>): Evaluation scores (numeric values)
+- `executorOutput` (any, optional): Output from the executor
+
+**Example:**
+```typescript
+await client.evals.updateDatapoint({
+    evalId,
+    datapointId,
+    executorOutput: "The answer is 4",
+    scores: {
+        accuracy: 1.0,
+        response_time: 0.5,
+        confidence: 0.95
+    }
+});
+```
+
+</Tab>
+</Tabs>
+
+### save_datapoints()
+
+Save multiple evaluation datapoints at once (batch operation).
+
+<Tabs>
+<Tab title="Python">
+
+```python
+async def save_datapoints(
+    eval_id: uuid.UUID,
+    datapoints: list[EvaluationResultDatapoint | PartialEvaluationDatapoint],
+    group_name: str | None = None,
+) -> None
+```
+
+**Parameters:**
+- `eval_id` (uuid.UUID): The evaluation ID
+- `datapoints` (list): List of datapoint objects to save
+- `group_name` (str, optional): Group name for the datapoints
+
+**Example:**
+```python
+# This is typically used internally by other methods
+# You'll usually use create_datapoint() and update_datapoint() instead
+```
+
+</Tab>
+<Tab title="TypeScript">
+
+```typescript
+async saveDatapoints(params: {
+    evalId: string;
+    datapoints: Array<EvaluationResultDatapoint | PartialEvaluationDatapoint>;
+    groupName?: string;
+}): Promise<void>
+```
+
+**Parameters:**
+- `evalId` (string): The evaluation ID
+- `datapoints` (Array): List of datapoint objects to save
+- `groupName` (string, optional): Group name for the datapoints
+
+**Example:**
+```typescript
+// This is typically used internally by other methods
+// You'll usually use createDatapoint() and updateDatapoint() instead
+```
+
+</Tab>
+</Tabs>
+
+### init()
+
+Initialize a new evaluation (lower-level method).
+
+<Tabs>
+<Tab title="Python">
+
+```python
+async def init(
+    name: str | None = None,
+    group_name: str | None = None
+) -> InitEvaluationResponse
+```
+
+**Parameters:**
+- `name` (str, optional): Name of the evaluation
+- `group_name` (str, optional): Group name for the evaluation
+
+**Returns:**
+- `InitEvaluationResponse`: Response object with evaluation details
+
+**Note:** Usually you'll use `create_evaluation()` instead, which wraps this method.
+
+</Tab>
+<Tab title="TypeScript">
+
+```typescript
+async init(params: {
+    name?: string;
+    groupName?: string;
+}): Promise<InitEvaluationResponse>
+```
+
+**Parameters:**
+- `name` (string, optional): Name of the evaluation
+- `groupName` (string, optional): Group name for the evaluation
+
+**Returns:**
+- `InitEvaluationResponse`: Response object with evaluation details
+
+**Note:** Usually you'll use `createEvaluation()` instead, which wraps this method.
+
+</Tab>
+</Tabs>
+
+## Observability Decorators
+
+### @observe Decorator
+
+Use the `@observe` decorator to add observability to your functions.
+
+<Tabs>
+<Tab title="Python">
+
+```python
+from lmnr import observe
+
+@observe(name="my_function", span_type="EXECUTOR")
+async def my_executor(data: dict) -> str:
+    # Your logic here
+    pass
+
+@observe(name="my_evaluator", span_type="EVALUATOR")
+def my_evaluator(output: str, target: str) -> float:
+    # Your evaluation logic here
+    pass
+
+@observe(name="full_evaluation", span_type="EVALUATION")
+async def run_evaluation():
+    # Your complete evaluation workflow
+    pass
+```
+
+**Parameters:**
+- `name` (str): Name of the span
+- `span_type` (str): Type of span. Common values:
+  - `"EVALUATION"`: Top-level evaluation workflow
+  - `"EXECUTOR"`: Executor function
+  - `"EVALUATOR"`: Evaluator function
+  - `"CUSTOM"`: Custom span type
+
+</Tab>
+<Tab title="TypeScript">
+
+```typescript
+import { observe } from '@lmnr-ai/lmnr';
+
+const myExecutor = observe({
+  name: "my_function",
+  spanType: "EXECUTOR"
+})(async (data: any): Promise<string> => {
+  // Your logic here
+  return "result";
+});
+
+const myEvaluator = observe({
+  name: "my_evaluator",
+  spanType: "EVALUATOR"
+})((output: string, target: string): number => {
+  // Your evaluation logic here
+  return 1.0;
+});
+
+const runEvaluation = observe({
+  name: "full_evaluation",
+  spanType: "EVALUATION"
+})(async () => {
+  // Your complete evaluation workflow
+});
+```
+
+**Parameters:**
+- `name` (string): Name of the span
+- `spanType` (string): Type of span. Common values:
+  - `"EVALUATION"`: Top-level evaluation workflow
+  - `"EXECUTOR"`: Executor function
+  - `"EVALUATOR"`: Evaluator function
+  - `"CUSTOM"`: Custom span type
+
+</Tab>
+</Tabs>
+
+## Type Definitions
+
+### EvaluationResultDatapoint
+
+<Tabs>
+<Tab title="Python">
+
+```python
+class EvaluationResultDatapoint:
+    id: uuid.UUID
+    data: Any
+    target: Any | None
+    index: int
+    trace_id: uuid.UUID
+    executor_span_id: uuid.UUID
+    executor_output: Any | None
+    scores: dict[str, float | int] | None
+    metadata: dict[str, Any] | None
+```
+
+</Tab>
+<Tab title="TypeScript">
+
+```typescript
+interface EvaluationResultDatapoint {
+  id: string;
+  data: any;
+  target?: any;
+  index: number;
+  traceId: string;
+  executorSpanId: string;
+  executorOutput?: any;
+  scores?: Record<string, number>;
+  metadata?: Record<string, any>;
+}
+```
+
+</Tab>
+</Tabs>
+
+### PartialEvaluationDatapoint
+
+<Tabs>
+<Tab title="Python">
+
+```python
+class PartialEvaluationDatapoint:
+    id: uuid.UUID
+    data: Any
+    target: Any | None
+    index: int
+    trace_id: uuid.UUID
+    executor_span_id: uuid.UUID
+    metadata: dict[str, Any] | None
+```
+
+</Tab>
+<Tab title="TypeScript">
+
+```typescript
+interface PartialEvaluationDatapoint {
+  id: string;
+  data: any;
+  target?: any;
+  index: number;
+  traceId: string;
+  executorSpanId: string;
+  metadata?: Record<string, any>;
+}
+```
+
+</Tab>
+</Tabs>
+
+### InitEvaluationResponse
+
+<Tabs>
+<Tab title="Python">
+
+```python
+class InitEvaluationResponse:
+    id: uuid.UUID
+    name: str | None
+    group_name: str | None
+```
+
+</Tab>
+<Tab title="TypeScript">
+
+```typescript
+interface InitEvaluationResponse {
+  id: string;
+  name?: string;
+  groupName?: string;
+}
+```
+
+</Tab>
+</Tabs>
+
+## Error Handling
+
+The SDK methods may raise the following exceptions:
+
+### Python
+
+```python
+# ValueError: For invalid inputs or authentication errors
+try:
+    eval_id = await client.evals.create_evaluation(name="test")
+except ValueError as e:
+    if "Unauthorized" in str(e):
+        print("Check your API key")
+    else:
+        print(f"Invalid input: {e}")
+
+# General Exception: For network or other unexpected errors
+try:
+    await client.evals.update_datapoint(...)
+except Exception as e:
+    print(f"Unexpected error: {e}")
+```
+
+### TypeScript
+
+```typescript
+// Error: For invalid inputs, authentication, or network errors
+try {
+  const evalId = await client.evals.createEvaluation({ name: "test" });
+} catch (error) {
+  if (error.message.includes("Unauthorized")) {
+    console.log("Check your API key");
+  } else {
+    console.log(`Error: ${error.message}`);
+  }
+}
+```
+
+## Best Practices
+
+1. **Always use observability decorators** for better tracing and debugging
+2. **Handle errors gracefully** with try-catch blocks
+3. **Use meaningful names** for evaluations and datapoints
+4. **Add metadata** to datapoints for better organization
+5. **Process datapoints in parallel** when possible for better performance
+6. **Use appropriate span types** (EVALUATION, EXECUTOR, EVALUATOR) for clear observability
+
+For more examples and usage patterns, see the [Evaluation SDK guide](/evaluations/sdk). 
