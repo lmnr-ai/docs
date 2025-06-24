@@ -151,7 +151,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Evaluation"
+                  "$ref": "#/components/schemas/InitEvalResponse"
                 }
               }
             }
@@ -212,7 +212,15 @@
         "responses": {
           "200": {
             "description": "Evaluation datapoints saved successfully",
-            "content": {}
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "The UUID of the evaluation"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad request. Cannot parse the JSON payload into a valid request.",
@@ -291,7 +299,15 @@
         "responses": {
           "200": {
             "description": "Evaluation datapoint updated successfully",
-            "content": {}
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "The UUID of the datapoint"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad request. Cannot parse the JSON payload into a valid request.",
@@ -390,11 +406,12 @@
           },
           "groupName": {
             "description": "Group name for the evaluation. Defaults to 'default'.",
+            "nullable": true,
             "type": "string"
           }
         }
       },
-      "Evaluation": {
+      "InitEvalResponse": {
         "type": "object",
         "required": ["id", "name", "projectId", "groupName"],
         "properties": {
@@ -425,24 +442,38 @@
       },
       "EvaluationDatapointResult": {
         "type": "object",
-        "required": [],
+        "required": ["data"],
         "properties": {
           "id": {
             "type": "string",
             "format": "uuid",
             "description": "Unique datapoint ID. If not specified, a UUID v4 will be generated."
           },
-          "input": {
-            "description": "Input of the datapoint. Can be any JSON value."
+          "data": {
+            "description": "Input data of the datapoint. Can be any JSON value.",
           },
-          "output": {
-            "description": "Output of the datapoint. Can be any JSON value."
+          "index": {
+            "type": "integer",
+            "description": "Index of the datapoint. Defaults to 0.",
+            "default": 0
           },
-          "expectedOutput": {
-            "description": "Expected output of the datapoint. Can be any JSON value."
+          "target": {
+            "description": "Target/expected output of the datapoint. Can be any JSON value."
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Additional metadata for the datapoint. Defaults to empty object.",
+            "nullable": true
           },
           "executorOutput": {
-            "description": "Executor output of the datapoint. Can be any JSON value."
+            "description": "Executor output of the datapoint. Can be any JSON value.",
+            "nullable": true
+          },
+          "traceId": {
+            "type": "string",
+            "format": "uuid", 
+            "description": "Trace ID associated with the datapoint. If not specified, a UUID v4 will be generated."
           },
           "scores": {
             "type": "object",
@@ -450,11 +481,8 @@
               "type": "number",
               "nullable": true
             },
-            "description": "Scores for the datapoint as key-value pairs"
-          },
-          "metadata": {
-            "type": "object",
-            "description": "Additional metadata for the datapoint"
+            "description": "Scores for the datapoint as key-value pairs",
+            "default": {}
           }
         }
       },
@@ -480,7 +508,8 @@
         "required": ["scores"],
         "properties": {
           "executorOutput": {
-            "description": "Updated executor output of the datapoint. Can be any JSON value."
+            "description": "Updated executor output of the datapoint. Can be any JSON value.",
+            "nullable": true
           },
           "scores": {
             "type": "object",
