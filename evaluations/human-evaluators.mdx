@@ -145,7 +145,7 @@ def generate_customer_response(data: dict) -> str:
     return response.choices[0].message.content
 
 def llm_judge_helpfulness(output: str, target: dict) -> int:
-    """LLM-as-a-judge evaluator for helpfulness (1-5 scale)"""
+    """LLM-as-a-judge evaluator for helpfulness (1-3 scale)"""
     response = client.chat.completions.create(
         model="o4-mini",
         messages=[
