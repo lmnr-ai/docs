@@ -53,7 +53,7 @@
               "text/plain": {
                 "schema": {
                   "type": "string",
-                  "example": "Json deserialize error."
+                  "example": "JSON deserialize error."
                 }
               }
             }
@@ -110,7 +110,7 @@
               "text/plain": {
                 "schema": {
                   "type": "string",
-                  "example": "Json deserialize error."
+                  "example": "JSON deserialize error."
                 }
               }
             }
@@ -162,7 +162,7 @@
               "text/plain": {
                 "schema": {
                   "type": "string",
-                  "example": "Json deserialize error."
+                  "example": "JSON deserialize error."
                 }
               }
             }
@@ -220,7 +220,7 @@
               "text/plain": {
                 "schema": {
                   "type": "string",
-                  "example": "Json deserialize error."
+                  "example": "JSON deserialize error."
                 }
               }
             }
@@ -299,7 +299,7 @@
               "text/plain": {
                 "schema": {
                   "type": "string",
-                  "example": "Json deserialize error."
+                  "example": "JSON deserialize error."
                 }
               }
             }
