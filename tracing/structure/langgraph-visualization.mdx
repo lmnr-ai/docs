@@ -35,7 +35,7 @@ Laminar.initialize(project_api_key="your-project-api-key")
 
 ```python
 from typing import TypedDict, List
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 
 class AgentState(TypedDict):
