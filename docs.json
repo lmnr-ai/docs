@@ -59,7 +59,8 @@
                   "tracing/structure/metadata",
                   "tracing/structure/tags",
                   "tracing/structure/image",
-                  "tracing/structure/tracing-level"
+                  "tracing/structure/tracing-level",
+                  "tracing/structure/langgraph-visualization"
                 ]
               },
               {

@@ -1,0 +1,129 @@
+---
+title: "LangGraph Visualization"
+sidebarTitle: "LangGraph Visualization"
+description: "View LangGraph structure in trace view"
+---
+
+When you trace a LangGraph graph execution, Laminar automatically captures the graph structure and workflow, allowing you to visualize the entire graph flow directly in the trace view.
+
+## Prerequisites
+
+You'll need to install LangChain to work with LangGraph:
+
+```bash
+pip install langchain langchain-openai langgraph
+```
+
+## Overview
+
+LangGraph creates complex, stateful, multi-actor applications with Large Language Models. When these graphs are traced with Laminar, you can see:
+
+- The complete graph structure and node relationships
+- Execution flow between different nodes
+- State transitions and data flow
+- Individual node performance and outputs
+
+## Example: Multi-Step Research Workflow
+
+Here's how to set up a LangGraph workflow with Laminar tracing:
+
+### 1. Initialize Laminar
+
+```python
+from lmnr import observe, Laminar
+
+# Initialize Laminar
+Laminar.initialize(project_api_key="your-project-api-key")
+```
+
+### 2. Define Your Graph State
+
+```python
+from typing import TypedDict, List
+from langchain_core.messages import BaseMessage
+
+class AgentState(TypedDict):
+    messages: List[BaseMessage]
+    research_results: str
+    analysis: str
+    final_recommendation: str
+```
+
+### 3. Create Traced Graph Nodes
+
+```python
+@observe(name="research_step")
+async def research_step(state: AgentState) -> AgentState:
+    """Research step: Gather information about the topic"""
+    # Your research logic here
+    result = await llm.ainvoke([HumanMessage(content=research_prompt)])
+    state["research_results"] = result.content
+    return state
+
+@observe(name="analysis_step")
+async def analysis_step(state: AgentState) -> AgentState:
+    """Analysis step: Analyze the research results"""
+    # Your analysis logic here
+    result = await llm.ainvoke([HumanMessage(content=analysis_prompt)])
+    state["analysis"] = result.content
+    return state
+
+@observe(name="recommendation_step")
+async def recommendation_step(state: AgentState) -> AgentState:
+    """Final step: Generate recommendations"""
+    # Your recommendation logic here
+    result = await llm.ainvoke([HumanMessage(content=recommendation_prompt)])
+    state["final_recommendation"] = result.content
+    return state
+```
+
+### 4. Build the Graph Workflow
+
+```python
+from langgraph.graph import StateGraph, END, START
+from langgraph.checkpoint.memory import MemorySaver
+
+@observe(name="langchain_graph_workflow")
+async def create_and_run_graph(user_input: str):
+    # Create the state graph
+    workflow = StateGraph(AgentState)
+
+    # Add nodes
+    workflow.add_node("research_node", research_step)
+    workflow.add_node("analysis_node", analysis_step)
+    workflow.add_node("recommendation_node", recommendation_step)
+
+    # Define the flow
+    workflow.add_edge(START, "research_node")
+    workflow.add_edge("research_node", "analysis_node")
+    workflow.add_edge("analysis_node", "recommendation_node")
+    workflow.add_edge("recommendation_node", END)
+
+    # Add memory and compile
+    memory = MemorySaver()
+    app = workflow.compile(checkpointer=memory)
+
+    # Run the graph
+    config = {"configurable": {"thread_id": "demo-thread"}}
+    async for event in app.astream(initial_state, config=config):
+        # Process events
+        pass
+
+    return final_state
+```
+
+## Viewing LangGraph Visualizations
+
+After tracing your LangGraph execution, navigate to the trace view in the Laminar dashboard. The trace will include a visual representation of your graph structure, showing:
+
+- **Nodes**: Individual components of your graph (research_step, analysis_step, recommendation_step)
+- **Edges**: Connections and flow between nodes (START → research → analysis → recommendation → END)
+- **Execution Path**: The actual path taken during execution
+- **State Changes**: How data flows and transforms between nodes
+- **Performance Metrics**: Timing and performance data for each node
+
+<Frame>
+    <img src="../../../images/traces/langgraph-visualization.png" />
+</Frame>
+
+This visualization makes it easy to view graph executions.
