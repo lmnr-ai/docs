@@ -13,7 +13,73 @@ Thanks to Laminar's native integration with Playwright, you can trace your Stage
 
 ## Usage
 
+### Complete example
+
+```javascript {2, 4-9, 32}
+import { Stagehand } from '@browserbase/stagehand';
+import { Laminar } from '@lmnr-ai/lmnr';
+
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_API_KEY,
+  instrumentModules: {
+    stagehand: Stagehand,
+  },
+});
+
+const main = async () => {
+  const stagehand = new Stagehand();
+  await stagehand.init({
+    modelName: 'gpt-4.1-mini',
+    modelClientOptions: {
+      apiKey: process.env.OPENAI_API_KEY,
+    },
+  });
+  const page = stagehand.page;
+  await page.goto('https://www.lmnr.ai');
+  await page.act('go to Laminar blogs page');
+  const blogPosts = await page.extract({
+    instruction: "get the blog posts",
+    schema: z.object({
+      posts: z.array(z.object({
+        title: z.string(),
+        date: z.date(),
+      }))
+    })
+  });
+  await stagehand.close();
+  await Laminar.flush();
+  return blogPosts;
+};
+
+main().then(console.log).catch(console.error);
+```
+
+### Step-by-step guide
+
 <Steps>
+<Step title="Start with Stagehand Browser quickstart">
+
+```sh
+npx create-browser-app@latest
+```
+
+Choose "Yes" when prompted to start with a quickstart app and follow other instructions.
+
+Finally go to the newly created directory and install dependencies.
+
+```sh
+cd YOUR_APP_NAME
+npm install
+```
+
+</Step>
+<Step title="Install Laminar">
+
+```sh
+npm install @lmnr-ai/lmnr
+```
+
+</Step>
 <Step title="Initialize Laminar">
 
 First, we need to initialize Laminar and pass the Stagehand module to `instrumentModules`.
@@ -31,27 +97,9 @@ Laminar.initialize({
 ```
 
 </Step>
-<Step title="Using Stagehand">
-
-You can now use the Stagehand API as usual.
-
-```javascript
-const stagehand = new Stagehand();
-await stagehand.init({
-  modelName: 'gpt-4.1-mini',
-  modelClientOptions: {
-    apiKey: process.env.OPENAI_API_KEY,
-  },
-});
-
-const page = stagehand.page;
-await page.act("...");
-```
-</Step>
 <Step title="Finalizing Stagehand traces">
 
-In order to finalize Stagehand traces, make sure to call `stagehand.close()` and `Laminar.flush()`,
-especially if you are using Laminar and Stagehand in standalone scripts or edge runtimes.
+In order to finalize Stagehand traces, make sure to call `stagehand.close()` and `Laminar.flush()`.
 
 ```javascript
 await stagehand.close(); // closes the browser and the parent span
