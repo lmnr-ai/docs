@@ -43,10 +43,10 @@ Initialize a new evaluation to start collecting datapoints and results.
 ```javascript
 const client = new LaminarClient({ projectApiKey: 'YOUR_PROJECT_API_KEY' });
 
-const evalId = await client.evals.createEvaluation(
-  "Mixed Evaluator Q&A",
-  "AI Testing Suite with Human Evaluation"
-);
+const evalId = await client.evals.create({
+  name: "Mixed Evaluator Q&A",
+  groupName: "AI Testing Suite with Human Evaluation"
+});
 ```
 
 ### 2. Save Evaluation Datapoints
