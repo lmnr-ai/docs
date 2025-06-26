@@ -5,17 +5,21 @@ sidebarTitle: Stagehand
 
 ## Overview
 
-[Stagehand](https://github.com/browserbase/stagehand) is an AI-native framework for building browser agents in JavaScript.
+[Stagehand](https://github.com/browserbase/stagehand) is a AI Browser Automation Framework developed by [Browserbase](https://browserbase.com/).
 
-Stagehand is designed to be a seamless extension of Playwright, and in particular, its Page API.
+Laminar provides native integration with Stagehand, allowing you to trace your Stagehand code with just a few lines of code.
 
-Thanks to Laminar's native integration with Playwright, you can trace your Stagehand agents with ease.
+Laminar observability captures:
+- Full recording of a browser window while the code is running
+- Execution steps, such as, `act`, `extract`, `observe` and `agent` calls.
+- LLM cost of the execution steps
+- Latency of the execution steps and LLM calls
 
-## Usage
+## Quickstart
 
-### Complete example
+Below is an example of a simple Stagehand script. Highlighted lines are the ones that are required to trace Stagehand with Laminar.
 
-```javascript {2, 4-9, 32}
+```javascript {2, 4-10, 32}
 import { Stagehand } from '@browserbase/stagehand';
 import { Laminar } from '@lmnr-ai/lmnr';
 import { z } from 'zod';
@@ -83,7 +87,7 @@ npm install @lmnr-ai/lmnr
 </Step>
 <Step title="Initialize Laminar">
 
-First, we need to initialize Laminar and pass the Stagehand module to `instrumentModules`.
+First, we need to initialize Laminar at the start of your application and pass the Stagehand module to `instrumentModules`.
 
 ```javascript
 import { Stagehand } from '@browserbase/stagehand';
@@ -100,7 +104,7 @@ Laminar.initialize({
 </Step>
 <Step title="Finalizing Stagehand traces">
 
-In order to finalize Stagehand traces, make sure to call `stagehand.close()` and `Laminar.flush()`.
+If you run Stagehand in a standalone script, in order to flush queued Stagehand traces, make sure to call `stagehand.close()` and `Laminar.flush()`.
 
 ```javascript
 await stagehand.close(); // closes the browser and the parent span
@@ -110,8 +114,9 @@ await Laminar.flush(); // sends any remaining spans to Laminar
 </Step>
 </Steps>
 
+## Example of a Stagehand trace
 
-## Example result
+You can see entire session recording of a browser window while the code was running, along with execution steps, such as `act` and `extract`. You can also see LLM cost of the entire execution and of each execution step. For LLM spans you can see the prompt, the response and the model name.
 
 <Frame caption="An example trace for page.act('go to Laminar blogs page')">
 <img width="600" src="/images/traces/stagehand.png" alt="Stagehand example" />
