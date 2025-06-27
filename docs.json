@@ -89,7 +89,7 @@
               "evaluations/using-dataset",
               "evaluations/configuration",
               "evaluations/reference",
-              "evaluations/api-reference",
+              "evaluations/manual-evaluation",
               "evaluations/cookbook",
               {
                 "group": "Online Evaluators",
