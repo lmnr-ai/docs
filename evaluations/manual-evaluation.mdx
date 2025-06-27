@@ -165,6 +165,10 @@ This makes it possible to attach the created spans to a trace, which can then be
     You need to call `Laminar.getTraceId()` / `Laminar.get_trace_id()` inside of context of span to get id of trace.
 </Note>
 
+<Note>
+    We strongly advice to call `createDatapoint` / `create_datapoint` before calling executor/evaluator so trace can be associated as evaluation trace type.
+</Note>
+
 <CodeGroup>
 ```javascript JavaScript highlight={7}
 const datapointId = await client.evals.createDatapoint({
@@ -283,11 +287,8 @@ async function runEvaluation() {
                 { name: 'evaluation', spanType: 'EVALUATION', input: { testCase: testData[i] } },
                 async () => {
                     const testCase = testData[i];
-                    
-                    const output = await executeTestCase(testCase);
 
-                    const accuracyScore = await accuracy(output, testCase.target)
-
+                    // Save datapoint first to associate trace as evaluation type
                     const datapointId = await client.evals.createDatapoint({
                         evalId,
                         data: testCase.data,
@@ -296,6 +297,10 @@ async function runEvaluation() {
                         // Must be called within span context
                         traceId: Laminar.getTraceId(),
                     });
+
+                    const output = await executeTestCase(testCase);
+
+                    const accuracyScore = await accuracy(output, testCase.target)
 
                     await client.evals.updateDatapoint({
                         evalId,
@@ -352,10 +357,7 @@ async def accuracy(output, target):
 
 @observe(name='evaluation', span_type='EVALUATION')
 async def run_evaluation_session(eval_id, i, test_case):
-    output = await execute_test_case(test_case)
-
-    accuracy_score = await accuracy(output, test_case['target'])
-
+    # Save datapoint first to associate trace as evaluation type
     datapoint_id = client.evals.create_datapoint(
         eval_id=eval_id,
         data=test_case['data'],
@@ -364,6 +366,10 @@ async def run_evaluation_session(eval_id, i, test_case):
         # Must be called within span context
         trace_id=Laminar.get_trace_id(),
     )
+
+    output = await execute_test_case(test_case)
+
+    accuracy_score = await accuracy(output, test_case['target'])
 
     client.evals.update_datapoint(
         eval_id=eval_id,
