@@ -16,9 +16,9 @@ Laminar provides comprehensive instrumentation of Skyvern with all core function
 
 ## Quickstart
 
-To trace Skyvern workflows with Laminar, initialize Laminar and configure LiteLLM callbacks at the top of your project. This will automatically capture all LLM calls, browser session recordings, and workflow execution details.
+To trace Skyvern workflows with Laminar, **initialize Laminar and configure LiteLLM callbacks at the top of your project**. This will automatically capture all LLM calls, browser session recordings, and workflow execution details.
 
-```python {8-12}
+```python {3-4} {8-12} {14-15}
 from skyvern import Skyvern
 import asyncio
 import litellm
