@@ -46,7 +46,8 @@
                   "tracing/integrations/playwright",
                   "tracing/integrations/puppeteer",
                   "tracing/integrations/browser-use",
-                  "tracing/integrations/stagehand"
+                  "tracing/integrations/stagehand",
+                  "tracing/integrations/skyvern"
                 ]
               },
               {
