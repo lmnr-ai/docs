@@ -53,7 +53,7 @@
               "text/plain": {
                 "schema": {
                   "type": "string",
-                  "example": "Json deserialize error."
+                  "example": "JSON deserialize error."
                 }
               }
             }
@@ -110,7 +110,7 @@
               "text/plain": {
                 "schema": {
                   "type": "string",
-                  "example": "Json deserialize error."
+                  "example": "JSON deserialize error."
                 }
               }
             }
@@ -122,6 +122,222 @@
                 "schema": {
                   "type": "string",
                   "example": "Invalid project API key."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/evals": {
+      "post": {
+        "tags": [
+          "api::evaluations"
+        ],
+        "operationId": "init_eval",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitEvalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Evaluation created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InitEvalResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request. Cannot parse the JSON payload into a valid request.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "JSON deserialize error."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Project API key is invalid.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "Invalid project API key."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/evals/{eval_id}/datapoints": {
+      "post": {
+        "tags": [
+          "api::evaluations"
+        ],
+        "operationId": "save_eval_datapoints",
+        "parameters": [
+          {
+            "name": "eval_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The UUID of the evaluation"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveEvalDatapointsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Evaluation datapoints saved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "The UUID of the evaluation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request. Cannot parse the JSON payload into a valid request.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "JSON deserialize error."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Project API key is invalid.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "Invalid project API key."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Evaluation not found.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "Evaluation not found."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/evals/{eval_id}/datapoints/{datapoint_id}": {
+      "post": {
+        "tags": [
+          "api::evaluations"
+        ],
+        "operationId": "update_eval_datapoint",
+        "parameters": [
+          {
+            "name": "eval_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The UUID of the evaluation"
+          },
+          {
+            "name": "datapoint_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The UUID of the datapoint"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEvalDatapointRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Evaluation datapoint updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "The UUID of the datapoint"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request. Cannot parse the JSON payload into a valid request.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "JSON deserialize error."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Project API key is invalid.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "Invalid project API key."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Evaluation or datapoint not found.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "Evaluation or datapoint not found."
                 }
               }
             }
@@ -177,6 +393,131 @@
           "queueName": {
             "description": "Name of the queue to push to. Must be an existing queue.",
             "type": "string"
+          }
+        }
+      },
+      "InitEvalRequest": {
+        "type": "object",
+        "required": [],
+        "properties": {
+          "name": {
+            "description": "Name of the evaluation. If not specified, a random name will be generated.",
+            "type": "string"
+          },
+          "groupName": {
+            "description": "Group name for the evaluation. Defaults to 'default'.",
+            "nullable": true,
+            "type": "string"
+          }
+        }
+      },
+      "InitEvalResponse": {
+        "type": "object",
+        "required": ["id", "name", "projectId", "groupName"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The unique identifier of the evaluation"
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the evaluation"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The project ID this evaluation belongs to"
+          },
+          "groupName": {
+            "type": "string",
+            "description": "The group name of the evaluation"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the evaluation was created"
+          }
+        }
+      },
+      "EvaluationDatapointResult": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique datapoint ID. If not specified, a UUID v4 will be generated."
+          },
+          "data": {
+            "description": "Input data of the datapoint. Can be any JSON value.",
+          },
+          "index": {
+            "type": "integer",
+            "description": "Index of the datapoint. Defaults to 0.",
+            "default": 0
+          },
+          "target": {
+            "description": "Target/expected output of the datapoint. Can be any JSON value."
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Additional metadata for the datapoint. Defaults to empty object.",
+            "nullable": true
+          },
+          "executorOutput": {
+            "description": "Executor output of the datapoint. Can be any JSON value.",
+            "nullable": true
+          },
+          "traceId": {
+            "type": "string",
+            "format": "uuid", 
+            "description": "Trace ID associated with the datapoint. If not specified, a UUID v4 will be generated."
+          },
+          "scores": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number",
+              "nullable": true
+            },
+            "description": "Scores for the datapoint as key-value pairs",
+            "default": {}
+          }
+        }
+      },
+      "SaveEvalDatapointsRequest": {
+        "type": "object",
+        "required": ["points"],
+        "properties": {
+          "groupName": {
+            "description": "Group name for the evaluation datapoints. Defaults to 'default'.",
+            "type": "string"
+          },
+          "points": {
+            "type": "array",
+            "description": "List of evaluation datapoint results to save.",
+            "items": {
+              "$ref": "#/components/schemas/EvaluationDatapointResult"
+            }
+          }
+        }
+      },
+      "UpdateEvalDatapointRequest": {
+        "type": "object",
+        "required": ["scores"],
+        "properties": {
+          "executorOutput": {
+            "description": "Updated executor output of the datapoint. Can be any JSON value.",
+            "nullable": true
+          },
+          "scores": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number",
+              "nullable": true
+            },
+            "description": "Updated scores for the datapoint as key-value pairs."
           }
         }
       },
@@ -367,7 +708,7 @@
           "returnStorageState": {
             "type": "boolean",
             "description": "Whether to return the browser storage state at the end of the run. This includes cookies and auth-related data. CAUTION: This may be a very large payload. Defaults to false."
-          } 
+          }
         }
       },
       "ActionResult": {

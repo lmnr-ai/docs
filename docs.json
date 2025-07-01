@@ -92,6 +92,7 @@
               "evaluations/human-evaluators",
               "evaluations/configuration",
               "evaluations/reference",
+              "evaluations/manual-evaluation",
               "evaluations/cookbook",
               {
                 "group": "Online Evaluators",
@@ -182,6 +183,14 @@
             "group": "Agent - API",
             "pages": [
               "api-reference/agent/agent_run"
+            ]
+          },
+          {
+            "group": "Evaluations - API",
+            "pages": [
+              "api-reference/evals/init_eval",
+              "api-reference/evals/save_eval_datapoints",
+              "api-reference/evals/update_eval_datapoint"
             ]
           }
         ]
