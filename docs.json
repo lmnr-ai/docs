@@ -136,32 +136,6 @@
         ]
       },
       {
-        "tab": "Index - Browser Agent",
-        "groups": [
-          {
-            "group": "Index",
-            "pages": [
-              "index-agent/getting-started",
-              "index-agent/models",
-              "index-agent/streaming",
-              "index-agent/cli",
-              "index-agent/configuration",
-              "index-agent/tracing"
-            ]
-          },
-          {
-            "group": "Serverless API",
-            "pages": [
-              "index-agent/api/getting-started",
-              "index-agent/api/streaming",
-              "index-agent/api/tracing",
-              "index-agent/api/sdk-reference",
-              "index-agent/api/models"
-            ]
-          }
-        ]
-      },
-      {
         "tab": "Guides",
         "pages": [
           "guides/fastapi",
