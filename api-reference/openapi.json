@@ -344,6 +344,54 @@
           }
         }
       }
+    },
+    "/v1/evaluators/score": {
+      "post": {
+        "tags": [
+          "api::evaluators"
+        ],
+        "operationId": "create_evaluator_score",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEvaluatorScoreRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Evaluator score created successfully"
+          },
+          "400": {
+            "description": "Bad request. Cannot parse the JSON payload into a valid request."
+          },
+          "401": {
+            "description": "Unauthorized. Project API key is invalid.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "Invalid project API key."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No matching spans found.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "No matching spans found"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -450,7 +498,7 @@
             "description": "Unique datapoint ID. If not specified, a UUID v4 will be generated."
           },
           "data": {
-            "description": "Input data of the datapoint. Can be any JSON value.",
+            "description": "Input data of the datapoint. Can be any JSON value."
           },
           "index": {
             "type": "integer",
@@ -520,6 +568,103 @@
             "description": "Updated scores for the datapoint as key-value pairs."
           }
         }
+      },
+      "CreateEvaluatorScoreBase": {
+        "type": "object",
+        "required": ["name", "score", "source"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the evaluator score"
+          },
+          "score": {
+            "type": "number",
+            "description": "The score value (float)"
+          },
+          "source": {
+            "type": "string",
+            "enum": ["Code", "Evaluator"],
+            "description": "Source of the score"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Additional metadata for the score",
+            "nullable": true
+          }
+        }
+      },
+      "CreateEvaluatorScoreRequestWithTraceId": {
+        "type": "object",
+        "required": ["name", "score", "source", "traceId"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the evaluator score"
+          },
+          "score": {
+            "type": "number",
+            "description": "The score value (float)"
+          },
+          "source": {
+            "type": "string",
+            "enum": ["Code", "Evaluator"],
+            "description": "Source of the score"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Additional metadata for the score",
+            "nullable": true
+          },
+          "traceId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The trace ID to score (will be attached to root span)"
+          }
+        }
+      },
+      "CreateEvaluatorScoreRequestWithSpanId": {
+        "type": "object",
+        "required": ["name", "score", "source", "spanId"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the evaluator score"
+          },
+          "score": {
+            "type": "number",
+            "description": "The score value (float)"
+          },
+          "source": {
+            "type": "string",
+            "enum": ["Code", "Evaluator"],
+            "description": "Source of the score"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Additional metadata for the score",
+            "nullable": true
+          },
+          "spanId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The span ID to score"
+          }
+        }
+      },
+      "CreateEvaluatorScoreRequest": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/CreateEvaluatorScoreRequestWithTraceId",
+            "description": "Create evaluator score with trace ID"
+          },
+          {
+            "$ref": "#/components/schemas/CreateEvaluatorScoreRequestWithSpanId",
+            "description": "Create evaluator score with span ID"
+          }
+        ]
       },
       "AgentChatMessageContentBlockText": {
         "type": "object",

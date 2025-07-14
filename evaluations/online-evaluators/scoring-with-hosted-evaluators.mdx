@@ -1,6 +1,6 @@
 ---
-sidebarTitle: Quick Start
-title: Quick Start to Online Evaluators
+sidebarTitle: Scoring with Hosted Evaluators
+title: Scoring with Hosted Evaluators
 description: Step-by-step examples of setting up online evaluators in Laminar
 ---
 
@@ -46,7 +46,9 @@ def keyword_checker(input):
     return min(keyword_count / len(important_keywords), 1.0)
 ```
 
-![Create evaluator function](/images/evaluations/online-evaluators/create-evaluator-function.png)
+<Frame>
+  <img src="/images/evaluations/online-evaluators/create-evaluator-function.png" alt="Create evaluator function" />
+</Frame>
 
 </Step>
 <Step title="3. Test Your Evaluator">
@@ -60,20 +62,26 @@ Use the test interface to verify your evaluator works correctly with sample inpu
 }
 ```
 
-![Test evaluator](/images/evaluations/online-evaluators/test.png)
+<Frame>
+  <img src="/images/evaluations/online-evaluators/test.png" alt="Test evaluator" />
+</Frame>
 
 </Step>
 <Step title="4. Register to Span Path">
 
 Navigate to your traces, find a span representing the LLM call you want to evaluate, and register your evaluator to that specific span path by clicking evaluators on span view.
 
-![Register to span path](/images/evaluations/online-evaluators/span-path.png)
+<Frame>
+  <img src="/images/evaluations/online-evaluators/span-path.png" alt="Register to span path" />
+</Frame>
 
 </Step>
 <Step title="5. Verify Automatic Execution">
 
 After registration, new spans on that path will automatically trigger your evaluator. Check the span details to see the attached evaluation scores.
-![Verify execution](/images/evaluations/online-evaluators/score.png)
+<Frame>
+  <img src="/images/evaluations/online-evaluators/score.png" alt="Verify execution - evaluator scores displayed in span" />
+</Frame>
 
 </Step>
-</Steps>
+</Steps> 
