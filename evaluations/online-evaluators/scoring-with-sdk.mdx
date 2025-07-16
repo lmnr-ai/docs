@@ -1,0 +1,121 @@
+---
+title: 'Scoring with SDK'
+sidebarTitle: 'Scoring with SDK'
+description: 'Programmatically create evaluator scores using our SDK'
+---
+
+## Create Evaluator Score
+
+Create a score for a span using either a trace ID or span ID. When using a trace ID, the score will be attached to the root span of that trace.
+
+### Code Examples
+
+<CodeGroup>
+
+```typescript TypeScript
+import { LaminarClient, Laminar } from "@lmnr-ai/laminar";
+
+const laminarClient = new LaminarClient({
+  apiKey: "your-project-api-key"
+});
+
+// First, capture your LLM calls
+await laminarClient.observe({
+  name: "chat_completion",
+  input: { messages: [...] },
+  output: { content: "AI response" }
+});
+
+// IMPORTANT: Flush data to ensure it reaches the backend
+await laminarClient.flush();
+
+// Score by trace ID (attaches to root span)
+const traceId = Laminar.getTraceId();
+if (!traceId) {
+  throw new Error("No active trace found");
+}
+
+await laminarClient.evaluators.score({
+  name: "quality",
+  traceId: traceId,
+  score: 0.95,
+  metadata: { model: "gpt-4" }
+});
+
+// Score by span ID 
+// IMPORTANT: This code must be run after span is already recorded
+// In production, ensure this runs later or add sleep to ensure span reaches backend
+await new Promise(resolve => setTimeout(resolve, 1000));
+
+const spanContext = Laminar.getLaminarSpanContext();
+if (!spanContext) {
+  throw new Error("No active span found");
+}
+
+await laminarClient.evaluators.score({
+  name: "relevance", 
+  spanId: spanContext.spanId,
+  score: 0.87
+});
+```
+
+```python Python
+from laminar import LaminarClient, Laminar
+import asyncio
+
+laminar_client = LaminarClient(api_key="your-project-api-key")
+
+# First, capture your LLM calls
+with laminar_client.observe("chat_completion") as span:
+    span.set_input({"messages": [...]})
+    # Your LLM call here
+    span.set_output({"content": "AI response"})
+
+# IMPORTANT: Flush data to ensure it reaches the backend
+await laminar_client.flush()
+
+# Score by trace ID (attaches to root span)
+trace_id = Laminar.get_trace_id()
+if not trace_id:
+    raise ValueError("No active trace found")
+
+await laminar_client.evaluators.score(
+    name="quality",
+    trace_id=trace_id, 
+    score=0.95,
+    metadata={"model": "gpt-4"}
+)
+
+# Score by span ID
+# IMPORTANT: This code must be run after span is already recorded
+# In production, ensure this runs later or add sleep to ensure span reaches backend
+await asyncio.sleep(1)
+
+span_context = Laminar.get_laminar_span_context()
+if not span_context:
+    raise ValueError("No active span found")
+
+await laminar_client.evaluators.score(
+    name="relevance",
+    span_id=span_context.span_id,
+    score=0.87
+)
+```
+
+</CodeGroup>
+
+## Viewing Scores in UI
+
+When you create evaluator scores, they will appear in your Laminar dashboard attached to the corresponding spans:
+
+<Frame>
+    <img src="/images/evaluations/online-evaluators/score.png" alt="Evaluator scores displayed in span details" />
+</Frame>
+
+## API Reference
+
+For detailed API specifications including request/response schemas, visit:
+
+<Card title="Create Evaluator Score" icon="file" href="/api-reference/evaluators/create-evaluator-score">
+  Create scores for spans using trace ID or span ID
+</Card>

@@ -98,7 +98,8 @@
                 "group": "Online Evaluators",
                 "pages": [
                   "evaluations/online-evaluators/introduction",
-                  "evaluations/online-evaluators/quick-start"
+                  "evaluations/online-evaluators/scoring-with-hosted-evaluators",
+                  "evaluations/online-evaluators/scoring-with-sdk"
                 ]
               }
             ]
@@ -165,6 +166,12 @@
               "api-reference/evals/init_eval",
               "api-reference/evals/save_eval_datapoints",
               "api-reference/evals/update_eval_datapoint"
+            ]
+          },
+          {
+            "group": "Evaluators - API",
+            "pages": [
+              "api-reference/evaluators/create-evaluator-score"
             ]
           }
         ]
