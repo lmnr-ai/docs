@@ -100,16 +100,72 @@ SELECT
 FROM spans WHERE path = 'outer.inner'
 ```
 
-### Filtering spans by tags
+### Tags
+
+Tags are returned as an SQL `text[]` array. Tags are stored outside of the `spans` table,
+but Laminar SQL Editor joins them to the `spans` table by `span_id` and aggregates them
+as an array.
+
+SQL array syntax is not exactly trivial, so here are a few examples:
+
+#### Filtering by a presence of a tag
 
 ```sql
 SELECT 
     name,
     input,
-    output
+    output,
+    tags
 FROM spans
 -- this applies the necessary joins behind the scenes
-WHERE tag = 'my_tag'
+WHERE 'my_tag' = ANY(tags)
+```
+
+#### Filtering by multiple tags
+
+```sql
+SELECT
+    name,
+    input,
+    output,
+    tags
+FROM spans
+-- the `@>` operator is the SQL array containment operator
+WHERE tags @> ARRAY['tag1', 'tag2']
+-- this is equivalent to
+-- WHERE 'tag1' = ANY(tags) AND 'tag2' = ANY(tags)
+-- and equivalent to
+-- WHERE tags @> '{tag1, tag2}'::text[]
+```
+
+#### Filtering by any of the tags
+
+```sql
+SELECT
+    name,
+    input,
+    output,
+    tags
+FROM spans
+WHERE tags && ARRAY['tag1', 'tag2']
+-- this is equivalent to
+-- WHERE 'tag1' = ANY(tags) OR 'tag2' = ANY(tags)
+```
+
+#### Filtering based on the number of tags
+
+This query will return all spans with more than 2 tags.
+
+```sql
+SELECT
+    name,
+    input,
+    output,
+    tags
+FROM spans
+-- second argument of `array_length` is the dimension of the array
+-- in this case, it is 1 because `tags` is a 1-dimensional array
+WHERE array_length(tags, 1) > 2
 ```
 
 ### Filtering spans by evaluator scores

@@ -70,24 +70,6 @@ create table datasets (
 );
 ```
 
-### dataset_datapoints
-
-```sql [expandable]
-create table dataset_datapoints (
-  id uuid not null default gen_random_uuid (),
-  dataset_id uuid not null,
-  created_at timestamp with time zone not null default now(),
-  data jsonb not null,
-  target jsonb null default '{}'::jsonb,
-  index_in_batch bigint null,
-  metadata jsonb null default '{}'::jsonb,
-  constraint dataset_datapoints_pkey primary key (id),
-  constraint
-    dataset_datapoints_dataset_id_fkey foreign KEY (dataset_id)
-    references datasets (id)
-);
-```
-
 ### evaluations
 
 ```sql [expandable]
@@ -148,6 +130,27 @@ create type span_type as enum (
 
 
 ## Laminar-specific syntax
+
+### Note on virtual columns
+
+Virtual columns are either computed on the fly, or are joined in the background from
+other tables. This gives you the flexibility to use them in simpler queries, but it
+comes with a few caveats:
+
+- Some virtual columns may be slow to compute or join, so queries may take longer to run.
+- Virtual columns may not work properly with aliased table selects, for example
+
+```sql
+SELECT s1.span_id, s1.name, s1.path
+FROM spans s1 
+WHERE s1.span_type = 'LLM' 
+  AND s1.trace_id IN (
+    SELECT s2.trace_id 
+    FROM spans s2
+    -- Notice, how here we just use `tags` instead of `s2.tags`
+    WHERE 'my_tag' = ANY(tags)
+  )
+```
 
 ### `"spans"."path"`
 
@@ -249,12 +252,21 @@ trace details directly from the `evaluation_results` table:
 
 ### Duration
 
-Duration is the time taken to execute the evaluation.
+Duration is the time taken to execute the evaluation, or the duration of a trace or a span.
 
 It is calculated as `end_time - start_time` in seconds.
 
-Whenever you query `duration` in the `evaluation_results` table or the `traces` table, the SQL Editor will automatically
+Whenever you query `duration` in the `evaluation_results` table, the `traces` table,
+or the `spans` table, the SQL Editor will automatically
 replace that with `EXTRACT(EPOCH FROM end_time - start_time)`.
+
+### `tags` in the `spans` table
+
+Even though `tags` are actually stored separately from the `spans` table,
+in the SQL Editor they are joined to the spans by `span_id` and aggregated
+as a `text[]` array.
+
+For examples on how to use tags in your queries, see the [examples](/sql-editor/examples#tags) page.
 
 ## Indexing considerations
 
