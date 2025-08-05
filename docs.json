@@ -33,6 +33,7 @@
             "pages": [
               "tracing/introduction",
               "tracing/quickstart",
+              "tracing/automatic-instrumentation",
               {
                 "group": "Integrations",
                 "pages": [
@@ -55,22 +56,20 @@
                 "pages": [
                   "tracing/structure/index",
                   "tracing/structure/observe",
+                  "tracing/structure/manual-span-creation",
                   "tracing/structure/session",
                   "tracing/structure/user-id",
                   "tracing/structure/metadata",
                   "tracing/structure/tags",
                   "tracing/structure/image",
                   "tracing/structure/tracing-level",
+                  "tracing/structure/span-attributes",
+                  "tracing/structure/continuing-traces",
+                  "tracing/structure/providers",
                   "tracing/structure/langgraph-visualization"
                 ]
               },
-              {
-                "group": "Instrumentation",
-                "pages": [
-                  "tracing/automatic-instrumentation",
-                  "tracing/manual-instrumentation"
-                ]
-              },
+              "tracing/manual-instrumentation",
               "tracing/realtime",
               "tracing/browser-agent-observability",
               "tracing/otel",
