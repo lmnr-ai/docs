@@ -191,15 +191,18 @@ Laminar automatically calculates costs using:
 1. **Token counts** (`gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`)
 2. **Model name** (`gen_ai.response.model`)  
 3. **Provider name** (`gen_ai.system`)
+<Note>
+Laminar also takes into account cached tokens to calculate cost for providers that support it, like OpenAI, Anthropic, and so on.
+</Note>
 
 The cost calculation uses current pricing from each provider. If explicit cost attributes are provided, they take precedence over calculated costs.
 
 ### Viewing Costs
 
 Costs appear in the Laminar UI on:
-- **Trace details** - Individual span costs
-- **Analytics dashboard** - Aggregated cost metrics  
-- **Usage reports** - Cost breakdowns by model, user, etc.
+- **Trace details** - Sum of all LLM calls within the trace
+- **LLM spans** - Individual LLM call costs
+- **Analytics dashboard** - Aggregated cost metrics by models
 
 ## Pricing Data
 

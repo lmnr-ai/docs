@@ -325,28 +325,4 @@ def safe_deserialize_context(context_str: str):
         return None
 ```
 
-### Timeouts and Cleanup
-Set reasonable timeouts for span context validity:
-
-```python
-import time
-import json
-
-def serialize_with_timestamp():
-    context = Laminar.serialize_span_context()
-    return json.dumps({
-        'context': context,
-        'timestamp': time.time()
-    })
-
-def deserialize_with_timeout(serialized: str, timeout_hours: int = 24):
-    try:
-        data = json.loads(serialized)
-        if time.time() - data['timestamp'] > timeout_hours * 3600:
-            return None  # Context too old
-        return Laminar.deserialize_span_context(data['context'])
-    except:
-        return None
-```
-
 Trace continuation enables you to maintain observability across complex, distributed systems while preserving the logical flow of operations.

@@ -42,7 +42,8 @@ Laminar.initialize({
 
 // Create a parent span for the entire request
 await observe({ name: 'processUserRequest' }, async (userId, requestId) => {
-  // Your LLM calls and other operations will be children of this 'processUserRequest' span
+  // Your LLM calls and other operations will be children 
+  // of this 'processUserRequest' span
   // and inherit the session id, user id, and metadata
 
   Laminar.setTraceUserId(userId);
@@ -70,7 +71,8 @@ Laminar.initialize(
 
 @observe()
 def process_user_request(user_id, request_id):  
-    # Your LLM calls and other operations will be children of this 'processUserRequest' span
+    # Your LLM calls and other operations will be children 
+    # of this 'processUserRequest' span
     # and inherit the session id, user id, and metadata.
 
     Laminar.set_trace_session_id(f"session-{request_id}")

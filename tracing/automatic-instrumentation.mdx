@@ -101,7 +101,7 @@ anthropic_client = Anthropic()
 ```
 
 <Note>
-This is the default behavior in Python. No additional configuration needed.
+The recommended way is to install all instrumentation libraries with `pip install 'lmnr[all]'`. Then, initializing Laminar will automatically instrument all supported libraries.
 </Note>
 
 </Tab>
@@ -174,9 +174,7 @@ anthropic_client = Anthropic() # Traced ✓
 </Tab>
 </Tabs>
 
-## Disable Instrumentation
-
-To disable automatic instrumentation entirely:
+## Disable Automatic Instrumentation
 
 <Tabs>
 <Tab title="JavaScript/TypeScript">
@@ -208,6 +206,16 @@ Laminar.initialize(
 # Use manual instrumentation instead
 ```
 
+You can also use `disable_instruments` parameter to disable specific instruments.
+
+```python
+from lmnr import Laminar, Instruments
+
+Laminar.initialize(
+    project_api_key="your-api-key",
+    disable_instruments=[Instruments.OPENAI]
+)
+```
 </Tab>
 </Tabs>
 
@@ -223,7 +231,6 @@ Laminar supports automatic instrumentation for a wide range of libraries:
 - Anthropic (`@anthropic-ai/sdk`)
 - Google AI (`@google/generative-ai`)
 - Cohere (`cohere-ai`)
-- Replicate (`replicate`)
 
 **Frameworks:**
 - Vercel AI SDK (`ai`)
@@ -243,15 +250,16 @@ Laminar supports automatic instrumentation for a wide range of libraries:
 **LLM Providers:**
 - OpenAI (`openai`)
 - Anthropic (`anthropic`)
-- Google AI (`google-generativeai`)
+- Google AI (`google-genai)
 - Cohere (`cohere`)
 - Ollama (`ollama`)
 - Together AI (`together`)
 
 **Frameworks:**
 - LangChain (`langchain`)
+- LiteLLM (`litellm`)
 - LlamaIndex (`llama-index`)
-- DSPy (`dspy`)
+
 
 **Vector Databases:**
 - Pinecone (`pinecone-client`)
@@ -259,7 +267,7 @@ Laminar supports automatic instrumentation for a wide range of libraries:
 - Chroma (`chromadb`)
 - Weaviate (`weaviate-client`)
 
-For the complete list, import `Instruments` from `lmnr` or [view the source](https://github.com/lmnr-ai/lmnr-python/blob/main/src/lmnr/opentelemetry_lib/tracing/instruments.py).
+For the complete list, import `Instruments` from `lmnr`.
 
 </Tab>
 </Tabs>
