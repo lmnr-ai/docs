@@ -1,41 +1,24 @@
 ---
-title: Automatic LLM tracing
+title: Automatic LLM tracing with Laminar
 sidebarTitle: Automatic LLM tracing
-description: Automatically trace LLM calls with zero code changes
 ---
 
 import AutoInstrumentableJSModules from "/snippets/autoinstrumentable-js-modules.mdx"
 
 ## Overview
 
-Automatic instrumentation is the easiest way to start tracing your LLM applications. When enabled, Laminar automatically captures:
+Simply by initializing Laminar at the start of your application, you can start tracing **prompts, responses, token usage, and costs** of LLM calls from:
+- **LLM providers SDKs** (OpenAI, Anthropic, Gemini, etc.)
+- **LLM Frameworks** (LangChain, LangGraph, Vercel AI SDK, Browser Use, etc.)
+- **Vector database operations** (Pinecone, Qdrant, etc.)
 
-- **LLM API calls** with request/response data, token usage, and costs
-- **Vector database operations** for retrieval and storage
-- **Framework calls** from LangChain, LlamaIndex, and other libraries
-- **Request metadata** like latency, errors, and model parameters
+<Tip>
+To learn more about the integrations with the LLM frameworks and SDKs, see the [integrations](/tracing/integrations/) section.
+</Tip>
 
 <Tabs>
-<Tab title="Python">
-**Default behavior**: All supported libraries are automatically instrumented when you call `Laminar.initialize()`.
-
-```python
-from lmnr import Laminar
-from openai import OpenAI
-
-# Enable automatic instrumentation for all supported libraries
-Laminar.initialize(project_api_key="your-api-key")
-
-# All OpenAI calls are now automatically traced
-client = OpenAI()
-response = client.chat.completions.create(
-    model="gpt-4o-mini",
-    messages=[{"role": "user", "content": "Hello!"}]
-)
-```
-</Tab>
 <Tab title="JavaScript/TypeScript">
-**Recommended approach**: Specify which modules to instrument using the `instrumentModules` parameter.
+In JavaScript/TypeScript, **recommended approach** is to specify which modules to instrument using the `instrumentModules` parameter.
 
 ```javascript
 import { Laminar } from '@lmnr-ai/lmnr';
@@ -57,33 +40,31 @@ const response = await client.chat.completions.create({
 });
 ```
 </Tab>
-</Tabs>
-
-## Enable All Libraries
-
-This approach instruments all supported libraries automatically.
-
-<Tabs>
 <Tab title="Python">
+All supported libraries are automatically instrumented when you call `Laminar.initialize()`.
 
 ```python
 from lmnr import Laminar
 from openai import OpenAI
-from anthropic import Anthropic
 
-# Automatically instrument all supported libraries
+# Enable automatic instrumentation for all supported libraries
 Laminar.initialize(project_api_key="your-api-key")
 
-# All LLM calls from any supported library are now traced
-openai_client = OpenAI()
-anthropic_client = Anthropic()
+# All OpenAI calls are now automatically traced
+client = OpenAI()
+response = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
 ```
-
-<Note>
-This is the default behavior in Python. No additional configuration needed.
-</Note>
-
 </Tab>
+</Tabs>
+
+## Instrument all supported libraries
+
+This approach instruments all supported libraries automatically.
+
+<Tabs>
 <Tab title="JavaScript/TypeScript">
 
 ```javascript
@@ -104,9 +85,29 @@ This approach may not work with all bundlers. If you encounter issues, use [sele
 </Warning>
 
 </Tab>
+<Tab title="Python">
+
+```python
+from lmnr import Laminar
+from openai import OpenAI
+from anthropic import Anthropic
+
+# Automatically instrument all supported libraries
+Laminar.initialize(project_api_key="your-api-key")
+
+# All LLM calls from any supported library are now traced
+openai_client = OpenAI()
+anthropic_client = Anthropic()
+```
+
+<Note>
+This is the default behavior in Python. No additional configuration needed.
+</Note>
+
+</Tab>
 </Tabs>
 
-## Instrument Specific Libraries
+## Instrument specific libraries
 
 For better control and compatibility, instrument only the libraries you need.
 
@@ -132,25 +133,6 @@ Laminar.initialize({
 const openaiClient = new OpenAI();
 const anthropicClient = new Anthropic();
 ```
-
-**Selective instrumentation** (instrument only some libraries):
-
-```javascript
-import { OpenAI } from 'openai';
-import Anthropic from '@anthropic-ai/sdk';
-import { Laminar } from '@lmnr-ai/lmnr';
-
-Laminar.initialize({
-  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
-  instrumentModules: {
-    anthropic: Anthropic // Only Anthropic calls are traced
-  }
-});
-
-const openaiClient = new OpenAI();     // NOT traced
-const anthropicClient = new Anthropic(); // Traced ✓
-```
-
 </Tab>
 <Tab title="Python">
 
@@ -219,7 +201,7 @@ from lmnr import Laminar
 
 Laminar.initialize(
     project_api_key="your-api-key",
-    instruments=set() # Empty set = no instrumentation
+    instruments=[] # Empty list = no instrumentation
 )
 
 # No LLM calls will be automatically traced

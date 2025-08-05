@@ -54,7 +54,7 @@
               {
                 "group": "Tracing Structure",
                 "pages": [
-                  "tracing/structure/index",
+                  "tracing/structure/overview",
                   "tracing/structure/observe",
                   "tracing/structure/manual-span-creation",
                   "tracing/structure/session",
@@ -62,16 +62,13 @@
                   "tracing/structure/metadata",
                   "tracing/structure/tags",
                   "tracing/structure/image",
-                  "tracing/structure/tracing-level",
-                  "tracing/structure/span-attributes",
                   "tracing/structure/continuing-traces",
-                  "tracing/structure/providers",
-                  "tracing/structure/langgraph-visualization"
+                  "tracing/structure/providers"
                 ]
               },
-              "tracing/manual-instrumentation",
               "tracing/realtime",
               "tracing/browser-agent-observability",
+              "tracing/langgraph-visualization",
               "tracing/otel",
               {
                 "group": "Troubleshooting",
