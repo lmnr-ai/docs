@@ -1,0 +1,328 @@
+---
+title: Continuing Traces
+description: Techniques for continuing traces across function boundaries and services
+---
+
+## Overview
+
+When building complex applications, you often need to continue traces across different parts of your system:
+
+- **Function boundaries** where traces need to span multiple function calls
+- **Service boundaries** where traces cross different microservices  
+- **Async operations** where traces need to be maintained across async boundaries
+- **Request handlers** where different API endpoints handle parts of the same user journey
+
+## Passing Span Objects
+
+The most direct way to continue traces is by passing span objects between functions.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+Use `Laminar.startSpan()` and `Laminar.withSpan()` to create and continue spans:
+
+```javascript
+import { Laminar, observe, Span } from '@lmnr-ai/lmnr';
+
+const processData = (span: Span, data: any) => {
+  return Laminar.withSpan(span, async () => {
+    // This code runs within the provided span context
+    await observe({ name: 'dataValidation' }, async () => {
+      // Child span - will be nested under the passed span
+      return validateData(data);
+    });
+  });
+};
+
+const generateResponse = async (span: Span, processedData: any) => {
+  await Laminar.withSpan(span, async () => {
+    await observe({ name: 'responseGeneration' }, async () => {
+      // Another child span under the same parent
+      return await generateLLMResponse(processedData);
+    });
+  });
+};
+
+// Main orchestrator
+const handleRequest = async (userInput: string) => {
+  const rootSpan = Laminar.startSpan('handleUserRequest');
+  
+  try {
+    const processedData = await processData(rootSpan, userInput);
+    const response = await generateResponse(rootSpan, processedData);
+    return response;
+  } finally {
+    // Always end the span!
+    rootSpan.end();
+  }
+};
+```
+
+<Warning>
+Remember to call `span.end()` to complete the trace. You can also pass `true` as the third argument (`endOnExit`) to the last `Laminar.withSpan()` call to automatically end the span.
+</Warning>
+
+</Tab>
+<Tab title="Python">
+
+Use `Laminar.start_span()` and `use_span` to create and continue spans:
+
+```python
+from lmnr import Laminar, use_span, observe
+from opentelemetry.trace import Span
+
+def process_data(span: Span, data: dict):
+    with use_span(span):
+        # This code runs within the provided span context
+        with Laminar.start_as_current_span(name="data_validation"):
+            # Child span - will be nested under the passed span
+            return validate_data(data)
+
+def generate_response(span: Span, processed_data: dict):
+    with use_span(span):
+        with Laminar.start_as_current_span(name="response_generation"):
+            # Another child span under the same parent  
+            return generate_llm_response(processed_data)
+
+def handle_request(user_input: str):
+    root_span = Laminar.start_span(name="handle_user_request")
+    
+    try:
+        processed_data = process_data(root_span, user_input)
+        response = generate_response(root_span, processed_data)
+        return response
+    finally:
+        # Always end the span!
+        root_span.end()
+```
+
+<Warning>
+Remember to call `span.end()` to complete the trace. You can also pass `end_on_exit=True` to the last `use_span()` call to automatically end the span.
+</Warning>
+
+</Tab>
+</Tabs>
+
+## Using Span Context Serialization
+
+When you can't pass span objects directly (e.g., across service boundaries or through message queues), use span context serialization.
+
+### LaminarSpanContext
+
+LaminarSpanContext allows you to serialize and deserialize span context as strings, making it possible to continue traces across services.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+import { Laminar } from '@lmnr-ai/lmnr';
+
+// Serialize span context to string (e.g., in first service)
+let spanContext: string | null = null;
+
+const firstHandler = async () => {
+    const span = Laminar.startSpan({ name: 'firstHandler' });
+    
+    // Serialize the span context
+    spanContext = Laminar.serializeLaminarSpanContext(span);
+    
+    // Store spanContext in database, send via HTTP header, etc.
+    
+    span.end();
+};
+
+// Deserialize and continue trace (e.g., in second service)  
+const secondHandler = async () => {
+    const span = Laminar.startSpan({
+        name: 'secondHandler',
+        parentSpanContext: spanContext ?? undefined,
+    });
+    
+    // This span will be a child of the first handler's span
+    // Your code here...
+    
+    span.end();
+};
+```
+
+### Passing Context via HTTP Headers
+
+```javascript
+// Service A - serialize and send
+const response = await fetch('/api/service-b', {
+  headers: {
+    'x-laminar-span-context': Laminar.serializeLaminarSpanContext()
+  }
+});
+
+// Service B - deserialize and continue
+app.post('/api/service-b', (req, res) => {
+  const spanContext = req.headers['x-laminar-span-context'];
+  
+  const span = Laminar.startSpan({
+    name: 'serviceBHandler',
+    parentSpanContext: spanContext
+  });
+  
+  // Handle request...
+  span.end();
+});
+```
+
+</Tab>
+<Tab title="Python">
+
+```python
+from lmnr import Laminar
+
+# Serialize span context to string (e.g., in first service)
+def first_handler(request: str) -> str:
+    with Laminar.start_as_current_span(name="first_handler") as span:
+        # Serialize the span context
+        span_context = Laminar.serialize_span_context(span)
+        
+        # Store in database, pass via message queue, etc.
+        save_context_to_db(span_context)
+        
+        return "Processing started"
+
+# Deserialize and continue trace (e.g., in second service)
+def second_handler(context_id: str) -> str:
+    # Retrieve serialized context
+    serialized_context = get_context_from_db(context_id)
+    
+    # Deserialize span context
+    parent_span_context = (
+        Laminar.deserialize_span_context(serialized_context)
+        if serialized_context
+        else None
+    )
+    
+    with Laminar.start_as_current_span(
+        name="second_handler",
+        parent_span_context=parent_span_context
+    ):
+        # This span will be a child of the first handler's span
+        return "Processing completed"
+```
+
+### Passing Context via HTTP Headers
+
+```python
+import requests
+from flask import Flask, request
+
+app = Flask(__name__)
+
+# Service A - serialize and send
+def call_service_b():
+    with Laminar.start_as_current_span(name="service_a_call"):
+        span_context = Laminar.serialize_span_context()
+        
+        response = requests.post('http://service-b/api/process', 
+            headers={'X-Laminar-Span-Context': span_context},
+            json={'data': 'some data'}
+        )
+        return response.json()
+
+# Service B - deserialize and continue
+@app.route('/api/process', methods=['POST'])
+def process_request():
+    span_context = request.headers.get('X-Laminar-Span-Context')
+    
+    parent_span_context = (
+        Laminar.deserialize_span_context(span_context)
+        if span_context 
+        else None
+    )
+    
+    with Laminar.start_as_current_span(
+        name="service_b_handler",
+        parent_span_context=parent_span_context
+    ):
+        # Handle the request...
+        return {'status': 'processed'}
+```
+
+</Tab>
+</Tabs>
+
+## Common Patterns
+
+### Database Storage Pattern
+
+For long-running workflows where traces span multiple user sessions:
+
+```python
+# Store trace context with workflow state
+def start_workflow(user_id: str, workflow_data: dict):
+    with Laminar.start_as_current_span(name="workflow_start") as span:
+        span_context = Laminar.serialize_span_context(span)
+        
+        # Store in database with workflow
+        db.save_workflow({
+            'user_id': user_id,
+            'span_context': span_context,
+            'data': workflow_data,
+            'status': 'started'
+        })
+
+# Continue trace when workflow resumes
+def continue_workflow(workflow_id: str):
+    workflow = db.get_workflow(workflow_id)
+    parent_context = Laminar.deserialize_span_context(workflow['span_context'])
+    
+    with Laminar.start_as_current_span(
+        name="workflow_continue",
+        parent_span_context=parent_context
+    ):
+        # Continue processing...
+        pass
+```
+
+### Message Queue Pattern
+
+For async processing across services:
+
+```python
+# Producer - send with trace context
+def enqueue_task(task_data: dict):
+    with Laminar.start_as_current_span(name="task_enqueued"):
+        span_context = Laminar.serialize_span_context()
+        
+        message = {
+            'data': task_data,
+            'trace_context': span_context
+        }
+        queue.send(message)
+
+# Consumer - continue trace
+def process_task(message: dict):
+    parent_context = Laminar.deserialize_span_context(
+        message.get('trace_context')
+    )
+    
+    with Laminar.start_as_current_span(
+        name="task_processed",
+        parent_span_context=parent_context
+    ):
+        # Process the task...
+        pass
+```
+
+## Best Practices
+
+### Context Validation
+Always validate span context before using it:
+
+```python
+def safe_deserialize_context(context_str: str):
+    try:
+        return Laminar.deserialize_span_context(context_str) if context_str else None
+    except Exception as e:
+        # Log error and continue without parent context
+        logger.warning(f"Failed to deserialize span context: {e}")
+        return None
+```
+
+Trace continuation enables you to maintain observability across complex, distributed systems while preserving the logical flow of operations.

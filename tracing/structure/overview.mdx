@@ -9,7 +9,8 @@ Effective trace structuring enhances the value of your tracing data, making it e
 
 | Component | Description |
 | --- | --- |
-| [Observe](/tracing/structure/observe) | Create structured traces with the `observe` decorator/wrapper |
+| [Observe](/tracing/structure/observe) | Create a span with `observe` function decorator or wrapper |
+| [Manual span creation](/tracing/structure/manual-span-creation) | Create a span manually within a function |
 | [Sessions](/tracing/structure/session) | Group related traces together for better organization |
 | [User ID](/tracing/structure/user-id) | Associate traces with specific users for targeted analysis |
 | [Metadata](/tracing/structure/metadata) | Add contextual information to your traces for filtering and grouping |
@@ -24,9 +25,9 @@ Without structure, each LLM call creates an isolated trace, making it difficult 
 
 Properly structured traces provide a clear picture of your application's flow, making it easier to identify bottlenecks, debug issues, and optimize performance.
 
-## Getting Started
+## Quickstart
 
-Start by implementing the `observe` wrapper or decorator to create parent spans that group your LLM calls into meaningful traces. Then, enhance these traces with sessions, user IDs, and metadata to create a comprehensive tracing structure.
+Start by implementing the `observe` wrapper or decorator to create parent spans that group your LLM calls into meaningful traces. Then, enhance these traces with session id, user id, and metadata to create a comprehensive tracing structure.
 
 <Tabs>
 <Tab title="JavaScript/TypeScript">
@@ -39,18 +40,21 @@ Laminar.initialize({
   projectApiKey: process.env.LMNR_PROJECT_API_KEY,
 });
 
-// Set up session and metadata for all traces in this request
-Laminar.withSession({ sessionId: `session-${requestId}` }, () => {
-  Laminar.withMetadata({
-    userId: user.id,
+// Create a parent span for the entire request
+await observe({ name: 'processUserRequest' }, async (userId, requestId) => {
+  // Your LLM calls and other operations will be children 
+  // of this 'processUserRequest' span
+  // and inherit the session id, user id, and metadata
+
+  Laminar.setTraceUserId(userId);
+
+  Laminar.setTraceSessionId(`session-${requestId}`);
+
+  Laminar.setTraceMetadata({
     environment: process.env.NODE_ENV
-  }, async () => {
-    // Create a parent span for the entire request
-    await observe({ name: 'processUserRequest' }, async () => {
-      // Your LLM calls and other operations will be grouped 
-      // under this parent span and inherit the session and metadata
-    });
   });
+
+  // ... you LLM calls here ...
 });
 ```
 </Tab>
@@ -66,24 +70,21 @@ Laminar.initialize(
 )
 
 @observe()
-def process_user_request(user_id, request_id):
-    # Set session for this request
-    Laminar.set_session(session_id=f"session-{request_id}")
-    
-    # Add metadata to all spans in this trace
-    Laminar.set_metadata({
-        "userId": user_id,
-        "environment": os.environ.get("ENVIRONMENT", "development")
-    })
-    
-    # Your LLM calls and other operations will be grouped
-    # under this parent span and inherit the session and metadata
-    
-    # Process the request...
-    
-    # Optionally, clear session and metadata at the end
-    # Laminar.clear_session()
-    # Laminar.clear_metadata()
+def process_user_request(user_id, request_id):  
+    # Your LLM calls and other operations will be children 
+    # of this 'processUserRequest' span
+    # and inherit the session id, user id, and metadata.
+
+    Laminar.set_trace_session_id(f"session-{request_id}")
+
+    Laminar.set_trace_user_id(user_id)
+
+    Laminar.set_trace_metadata(
+        environment=os.environ.get("ENVIRONMENT", "development")
+    )
+  
+    # ... you LLM calls here ...
+
 
 # Example usage
 process_user_request(user_id="user_123", request_id="req_456")

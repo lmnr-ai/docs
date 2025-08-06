@@ -1,0 +1,252 @@
+---
+title: LLM cost tracking
+description: Overview of supported LLM providers and model names for accurate cost tracking
+---
+
+## Overview
+
+Laminar automatically calculates costs for LLM calls when the correct provider and model names are set. This page lists the supported providers and their corresponding model names that Laminar recognizes for cost calculation.
+
+## Supported Providers
+
+Laminar uses provider names consistent with OpenLLMetry standards. When manually instrumenting LLM calls, set the `gen_ai.system` attribute to one of these values:
+
+| Provider | Provider Name | Example Model | Documentation |
+|----------|---------------|---------------|---------------|
+| **OpenAI** | `openai` | `gpt-4o`, `gpt-4o-2024-11-20` | [platform.openai.com](https://platform.openai.com/docs/models) |
+| **Anthropic** | `anthropic` | `claude-3-5-sonnet`, `claude-3-5-sonnet-20241022` | [docs.anthropic.com](https://docs.anthropic.com/en/docs/about-claude/models#model-names) |
+| **Google Gemini** | `gemini`, `google-genai` | `models/gemini-1.5-pro` | [ai.google.dev](https://ai.google.dev/gemini-api/docs/models/gemini) |
+| **Azure OpenAI** | `azure-openai` | `gpt-4o-mini`, `gpt-4o-mini-2024-07-18` | [learn.microsoft.com](https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models) |
+| **AWS Bedrock** | `bedrock-anthropic` | `claude-3-5-sonnet-20241022-v2:0` | [docs.aws.amazon.com](https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-claude.html) |
+| **Mistral AI** | `mistral` | `mistral-large-2407` | [docs.mistral.ai](https://docs.mistral.ai/getting-started/models/models_overview/) |
+| **Groq** | `groq` | `llama-3.1-70b-versatile` | [console.groq.com](https://console.groq.com/docs/models) |
+
+<Tip>
+Missing a provider or can't see cost information? [Create an issue](https://github.com/lmnr-ai/lmnr/issues/new) and we'll add it.
+</Tip>
+
+## Setting Provider Information
+
+When manually instrumenting LLM calls, ensure you set the correct provider and model attributes:
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+import { Laminar, LaminarAttributes, observe } from '@lmnr-ai/lmnr';
+
+await observe(
+  { name: 'anthropicCall', spanType: 'LLM' },
+  async () => {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-sonnet-20241022',
+        messages: [{ role: 'user', content: 'Hello!' }],
+        max_tokens: 100
+      })
+    }).then(res => res.json());
+
+    // Set provider and model for cost calculation
+    Laminar.setSpanAttributes({
+      [LaminarAttributes.PROVIDER]: 'anthropic',
+      [LaminarAttributes.RESPONSE_MODEL]: response.model,
+      [LaminarAttributes.INPUT_TOKEN_COUNT]: response.usage.input_tokens,
+      [LaminarAttributes.OUTPUT_TOKEN_COUNT]: response.usage.output_tokens,
+    });
+
+    return response;
+  }
+);
+```
+
+</Tab>
+<Tab title="Python">
+
+```python
+from lmnr import Laminar, Attributes
+import requests
+
+with Laminar.start_as_current_span(
+    name="anthropic_call",
+    span_type="LLM"
+):
+    response = requests.post(
+        "https://api.anthropic.com/v1/messages",
+        headers={
+            "Content-Type": "application/json",
+            "x-api-key": os.environ["ANTHROPIC_API_KEY"]
+        },
+        json={
+            "model": "claude-3-5-sonnet-20241022",
+            "messages": [{"role": "user", "content": "Hello!"}],
+            "max_tokens": 100
+        }
+    ).json()
+
+    # Set provider and model for cost calculation
+    Laminar.set_span_attributes({
+        Attributes.PROVIDER: "anthropic",
+        Attributes.RESPONSE_MODEL: response["model"],
+        Attributes.INPUT_TOKEN_COUNT: response["usage"]["input_tokens"],
+        Attributes.OUTPUT_TOKEN_COUNT: response["usage"]["output_tokens"],
+    })
+```
+
+</Tab>
+</Tabs>
+
+## Model Name Formats
+
+Different providers use different model name formats. Use the exact names as returned by the provider's API:
+
+### OpenAI
+```javascript
+// Standard models
+"gpt-4o"
+"gpt-4o-mini" 
+"gpt-3.5-turbo"
+
+// Versioned models  
+"gpt-4o-2024-11-20"
+"gpt-4o-mini-2024-07-18"
+```
+
+### Anthropic
+```javascript
+// Standard models
+"claude-3-5-sonnet"
+"claude-3-haiku"
+"claude-3-opus"
+
+// Versioned models
+"claude-3-5-sonnet-20241022"
+"claude-3-5-sonnet-20241022-v2:0"
+```
+
+### Google Gemini
+```javascript
+// Full model paths
+"models/gemini-1.5-pro"
+"models/gemini-1.5-flash"
+"models/gemini-1.0-pro"
+```
+
+### Azure OpenAI
+```javascript
+// Same as OpenAI models
+"gpt-4o"
+"gpt-4o-mini-2024-07-18"
+```
+
+## Custom Providers
+
+For providers not listed above, you can still track usage by setting custom attributes:
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+// For custom or unsupported providers
+Laminar.setSpanAttributes({
+  [LaminarAttributes.PROVIDER]: 'custom-provider',
+  [LaminarAttributes.RESPONSE_MODEL]: 'custom-model-v1',
+  [LaminarAttributes.INPUT_TOKEN_COUNT]: response.usage.input_tokens,
+  [LaminarAttributes.OUTPUT_TOKEN_COUNT]: response.usage.output_tokens,
+  // Set explicit costs if known
+  'gen_ai.usage.input_cost': 0.001,
+  'gen_ai.usage.output_cost': 0.002,
+  'gen_ai.usage.cost': 0.003
+});
+```
+
+</Tab>
+<Tab title="Python">
+
+```python
+# For custom or unsupported providers
+Laminar.set_span_attributes({
+    Attributes.PROVIDER: "custom-provider",
+    Attributes.RESPONSE_MODEL: "custom-model-v1", 
+    Attributes.INPUT_TOKEN_COUNT: response["usage"]["input_tokens"],
+    Attributes.OUTPUT_TOKEN_COUNT: response["usage"]["output_tokens"],
+    # Set explicit costs if known
+    "gen_ai.usage.input_cost": 0.001,
+    "gen_ai.usage.output_cost": 0.002, 
+    "gen_ai.usage.cost": 0.003
+})
+```
+
+</Tab>
+</Tabs>
+
+## Cost Calculation
+
+Laminar automatically calculates costs using:
+
+1. **Token counts** (`gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`)
+2. **Model name** (`gen_ai.response.model`)  
+3. **Provider name** (`gen_ai.system`)
+<Note>
+Laminar also takes into account cached tokens to calculate cost for providers that support it, like OpenAI, Anthropic, and so on.
+</Note>
+
+The cost calculation uses current pricing from each provider. If explicit cost attributes are provided, they take precedence over calculated costs.
+
+### Viewing Costs
+
+Costs appear in the Laminar UI on:
+- **Trace details** - Sum of all LLM calls within the trace
+- **LLM spans** - Individual LLM call costs
+- **Analytics dashboard** - Aggregated cost metrics by models
+
+## Pricing Data
+
+Laminar maintains current pricing information for supported providers. For the complete list of supported models and their pricing, see the [pricing data in our GitHub repository](https://github.com/lmnr-ai/lmnr/blob/main/frontend/lib/db/initial-data.json#L25).
+
+## Best Practices
+
+### Always Set Provider Info
+```javascript
+// ✅ Good - complete provider information
+Laminar.setSpanAttributes({
+  [LaminarAttributes.PROVIDER]: 'openai',
+  [LaminarAttributes.RESPONSE_MODEL]: response.model,
+  [LaminarAttributes.INPUT_TOKEN_COUNT]: response.usage.prompt_tokens,
+  [LaminarAttributes.OUTPUT_TOKEN_COUNT]: response.usage.completion_tokens,
+});
+
+// ❌ Bad - missing provider or model
+Laminar.setSpanAttributes({
+  [LaminarAttributes.INPUT_TOKEN_COUNT]: response.usage.prompt_tokens,
+});
+```
+
+### Use Exact Model Names
+```javascript
+// ✅ Good - exact model name from API response
+[LaminarAttributes.RESPONSE_MODEL]: response.model
+
+// ❌ Bad - hardcoded or modified model name  
+[LaminarAttributes.RESPONSE_MODEL]: 'gpt-4'
+```
+
+### Handle Missing Usage Data
+```javascript
+// Gracefully handle missing usage information
+const inputTokens = response.usage?.prompt_tokens || 0;
+const outputTokens = response.usage?.completion_tokens || 0;
+
+if (inputTokens > 0 || outputTokens > 0) {
+  Laminar.setSpanAttributes({
+    [LaminarAttributes.INPUT_TOKEN_COUNT]: inputTokens,
+    [LaminarAttributes.OUTPUT_TOKEN_COUNT]: outputTokens,
+  });
+}
+```
+
+Proper provider configuration ensures accurate cost tracking and better insights into your LLM usage patterns.
