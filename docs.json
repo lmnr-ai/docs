@@ -133,6 +133,13 @@
               "sql-editor/examples",
               "sql-editor/reference"
             ]
+          },
+          {
+            "group": "Custom Dashboard",
+            "pages": [
+              "custom-dashboard/introduction",
+              "custom-dashboard/chart-builder"
+            ]
           }
         ]
       },
