@@ -1,14 +1,28 @@
 ---
-title: "Chart Builder"
-description: "Step-by-step guide to creating custom charts and visualizations using the Chart Builder"
+title: "Custom Dashboards"
+sidebarTitle: "Overview"
 ---
+
+Laminar Dashboards let you track key metrics and build visualizations from your trace, evaluation, and other data on the platform using SQL.
+Each project has pre-built dashboards that track key LLM metrics for your project. You can also create your own custom dashboards by writing custom SQL queries.
+
+## What you can do
+
+- Query your trace, evaluation, and other data using SQL
+- Create visualizations tailored to your needs
+- Add parameters to make charts interactive
+
+
+<Frame>
+    <img src="/images/custom-dashboard/introduction.png" alt="Laminar Dashboard overview with example charts and filters" />
+</Frame>
 
 ## Getting Started
 
 The Chart Builder workflow consists of four main steps:
 
 1. **Query**: Write Clickhouse SQL queries to retrieve your data
-2. **Configure Parameters** (optional): Set up dynamic parameters for interactivity
+2. **Configure Parameters** (optional): Set up dynamic parameters (start and end date, interval unit, etc.) for interactivity
 3. **Query Data**: Execute query to get data
 4. **Build Chart**: Configure chart type and visualization settings
 5. **Export to Dashboard**: Save your chart and add it to a dashboard
@@ -19,7 +33,8 @@ The Chart Builder workflow consists of four main steps:
 
 ## Query
 
-Start by writing a Clickhouse SQL query that returns the data you want to visualize:
+Start by writing a Clickhouse SQL query that returns the data you want to visualize.
+Here is an example query that returns the number of traces created over the last 30 days grouped by day:
 
 ```sql
 SELECT
