@@ -5,9 +5,10 @@ sidebarTitle: Introduction
 
 Laminar SQL Editor is a tool that allows you to write and execute SQL queries on your data stored at Laminar.
 
-The main use cases for this are:
-- Advanced analytics on your data
-- Exporting any trace or evaluation result to a dataset
+This allows you to:
+- Perform advanced analytics on your data
+- Export any trace or evaluation result to a dataset
+- Run queries on your data in the API and collect results in your preferred format
 
 <Tip>
     The SQL Editor is currently in beta.
@@ -15,8 +16,8 @@ The main use cases for this are:
     We value your feedback and suggestions.
 </Tip>
 
-Laminar provides some useful syntactic sugar over standard PostgreSQL so that you don't
-have to write explicit `join`s and you don't depend on our internal data model too much.
+Laminar SQL editor queries data stored in [ClickHouse](https://clickhouse.com/).
+Queries must be written in [ClickHouse SQL](https://clickhouse.com/docs/sql-reference).
 
 For detailed reference of the syntax, see the [reference](/sql-editor/reference) page.
 
@@ -31,12 +32,11 @@ For detailed reference of the syntax, see the [reference](/sql-editor/reference)
     - By date range
     - By span name and path
     - By span tags
-    - By trace costs, metadata, duration, etc.
-    - By evaluator scores
-    - By evaluation results
+    - By trace costs, duration, etc.
 - Fast analytics on your data, e.g.
     - Detailed breakdown of token count and cost by operation
     - Detailed latency analysis
+    - Dashboarding
 - Exporting results to Laminar datasets or labelling queues
 
 ## Allowed queries and limitations
@@ -45,10 +45,9 @@ For detailed reference of the syntax, see the [reference](/sql-editor/reference)
 - Allowed tables (to select from):
     - `spans`
     - `traces`
-    - `evaluation_results`
+    - `events`
     - `evaluation_scores`
-    - `evaluations`
-    - `datasets`
+    - `evaluation_datapoints`
 
 For detailed information about the tables and columns, see the [reference](/sql-editor/reference) page.
 
@@ -56,16 +55,15 @@ For detailed information about the tables and columns, see the [reference](/sql-
 
 ### Prerequisites
 
-- You must have some data stored at Laminar, such as traces, evaluation results,
-or datasets.
+- You must have some data stored at Laminar, such as traces or evaluation results.
 
 ### Using the SQL Editor
 
-In any page in your dashboard, click the Terminal icon in the top right corner.
+SQL Editor is available in the sidebar.
 
-You will see a sheet with an SQL editor.
+<img src="/images/sql-editor/sidebar.png" alt="SQL Editor in sidebar on Laminar" />
 
-<img src="/images/sql-editor/sql-editor-example.png" alt="SQL Editor" />
+You can also run queries directly from the API. Read the [API reference](/api-reference/sql/sql_query) page for more information.
 
 ### Example query
 
@@ -100,5 +98,5 @@ Choose the dataset you want to export to and map the columns to the dataset `dat
 
 ## Next steps
 
-- [Examples](/sql-editor/examples) – Examples of SQL queries you can write with the Laminar SQL Editor
-- [Reference](/sql-editor/reference) – Reference of the table schemas and Laminar-specific syntax
+- [In-depth guide](/sql-editor/guide) – In-depth guide to the Laminar SQL Editor with examples
+- [Reference](/sql-editor/reference) – Reference of the table schemas and best practices
