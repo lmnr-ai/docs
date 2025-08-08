@@ -1,0 +1,17 @@
+---
+title: SQL Query
+sidebarTitle: SQL Query
+openapi: /api-reference/openapi.json POST /v1/sql/query 
+---
+
+## SQL Query
+
+You can run SQL queries on your data stored in Laminar using the SQL query API. Learn more in the [SQL Editor](/sql-editor/introduction) reference.
+
+### Example request
+
+```json
+{
+    "query": "SELECT * FROM spans where start_time > now() - interval '1 hour' LIMIT 10"
+}
+```

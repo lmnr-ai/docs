@@ -335,6 +335,58 @@
           }
         }
       }
+    },
+    "/v1/sql/query": {
+      "post": {
+        "tags": [
+          "api::sql"
+        ],
+        "operationId": "sql_query",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SqlQueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "SQL query executed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SqlQueryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request. Cannot parse the JSON payload into a valid request.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "JSON deserialize error."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Project API key is invalid.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "Invalid project API key."
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -624,6 +676,37 @@
           "isRemote": {
             "type": "boolean",
             "description": "Whether the span is remote."
+          }
+        }
+      },
+      "SqlQueryRequest": {
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "The SQL query to execute.",
+            "example": "SELECT name, input_tokens FROM spans WHERE start_time > now() - interval '1 hour' LIMIT 10"
+          }
+        }
+      },
+      "SqlQueryResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "description": "The data returned from the SQL query.",
+            "example": [
+              {
+                "name": "workflow",
+                "input_tokens": 0
+              },
+              {
+                "name": "openai.chat",
+                "input_tokens": 369
+              }
+            ]
           }
         }
       }
