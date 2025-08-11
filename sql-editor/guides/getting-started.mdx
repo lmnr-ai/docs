@@ -48,9 +48,9 @@ AND start_time > now() - INTERVAL '1 month'
 
 ### Filtering by start time
 
-You almost certainly want to add a `start_time` filter to your query. This will speed up the query and prevent it from failing because of running out of memory.
+You almost certainly want to add a `start_time` filter to your `spans` or `traces` query even if you filter by other columns, e.g. `trace_id`.
+This will speed up the query and prevent it from failing because of running out of memory.
 
 ### Avoid using JOINs
 
 Clickhouse is an OLAP database, so it's not optimized for joins. If you need to join data, you can do it in the application layer.
-

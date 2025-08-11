@@ -67,8 +67,10 @@ Here are the values of the `span_type` column and their meanings:
 
 #### Input and output
 
-The `input` and `output` columns are stored as strings in JSON format. That is, you can safely `JSON.parse` / `json.loads` them. In addition,
-you can use JSON* and simpleJSON* functions on them right in the queries.
+The `input` and `output` columns are stored as either raw strings or stringified JSONs. The best way to parse them is to try
+to parse them as JSON, and if it fails, use the raw string. You can also use `isValidJSON` [function](https://clickhouse.com/docs/sql-reference/functions/json-functions#isvalidjson) right in the query to test for this.
+
+`input` and `output` columns are also indexed on content, so you can use them in WHERE conditions. Use `ILIKE` instead of `LIKE`, because the index is case-insensitive.
 
 #### Attributes
 
@@ -206,3 +208,15 @@ Advantages:
 - Queries run faster
 - Queries will never fail because of running out of memory
 
+### Searching in span input or output
+
+You can search in the `input` and `output` columns of the `spans` table.
+The search is optimized to be case-insensitive, so use `ILIKE` instead of `LIKE`.
+
+#### Example
+
+```sql
+SELECT name, input, output
+FROM spans
+WHERE input ILIKE '%france%' AND output ILIKE '%paris%'
+```

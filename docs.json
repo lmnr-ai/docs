@@ -127,12 +127,12 @@
             "pages": [
               "sql-editor/introduction",
               "sql-editor/reference",
-              "sql-editor/api",
               {
                 "group": "Guides",
                 "pages": [
                   "sql-editor/guides/guides",
-                  "sql-editor/guides/getting-started"
+                  "sql-editor/guides/getting-started",
+                  "sql-editor/guides/clickhouse-specifics"
                 ]
               }
             ]
