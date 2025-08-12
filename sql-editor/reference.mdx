@@ -1,275 +1,221 @@
 ---
-title: SQL Editor Reference
-sidebarTitle: Reference
-description: Reference of the table schemas and Laminar-specific syntax
+title: Table Schemas for SQL Editor
+sidebarTitle: Table schemas
 ---
 
 This page contains a reference of the table schemas and Laminar-specific syntax.
-For examples of SQL queries you can write with the Laminar SQL Editor, see the [examples](/sql-editor/examples) page.
 
 ## Table schemas and enum types
 
-This section contains subsets of the table schemas and enumerated_types that are relevant to the SQL Editor.
+This section contains subsets of the table schemas and enumerated types (enums) that are relevant to the SQL Editor.
 
 ### spans
 
-```sql [expandable]
-create table spans (
-  span_id uuid not null,
-  created_at timestamp with time zone not null default now(),
-  parent_span_id uuid null,
-  name text not null,
-  attributes jsonb null,
-  input jsonb null,
-  output jsonb null,
-  span_type span_type not null,
-  start_time timestamp with time zone not null,
-  end_time timestamp with time zone not null,
-  trace_id uuid not null,
-  status text null,
-  constraint
-    spans_trace_id_fkey foreign KEY (trace_id) 
-    references traces (id)
-);
+| Column | Type | Example value |
+|--------|------|-------------|
+| `span_id` | `UUID` | `"00000000-0000-0000-1234-426614174000"` |
+| `status` | `String` | `"error"` |
+| `name` | `String` | `"openai.chat"` |
+| `path` | `String` | `"workflow.process.step1.openai.chat"` |
+| `trace_id` | `UUID` | `"12345678-90ab-cdef-1234-426614174000"` |
+| `parent_span_id` | `UUID` | `"00000000-0000-0000-a456-abcd5667ef09"` |
+| `span_type` | `UInt8` | `1` |
+| `start_time` | `DateTime64` | `"2021-01-01 00:00:00+00"` |
+| `end_time` | `DateTime64` | `"2021-01-01 00:00:00+00"` |
+| `input` | `String` | `"[{\"role\": \"user\", \"content\": \"Hello, world!\"}]"` |
+| `output` | `String` | `"[{\"role\": \"assistant\", \"content\": \"Hi! How can I help you today?\"}]"` |
+| `attributes` | `String` | `"{\"gen_ai.system\": \"openai\", \"gen_ai.model\": \"gpt-4o\"}"` |
+| `request_model` | `String` | `"gpt-4.1-mini"` |
+| `response_model` | `String` | `"gpt-4.1-mini-2025-04-14"` |
+| `model` | `String` | `"gpt-4.1-mini-2025-04-14"` |
+| `provider` | `String` | `"openai"` |
+| `input_tokens` | `UInt64` | `150` |
+| `output_tokens` | `UInt64` | `100` |
+| `total_tokens` | `UInt64` | `250` |
+| `total_cost` | `Float64` | `0.6897` |
+| `input_cost` | `Float64` | `0.5667` |
+| `output_cost` | `Float64` | `0.123` |
+
+
+#### Path
+
+Laminar span path is stored as an array of span names in span attributes. However, in the SQL queries,
+it is stored as a string with items joined by a dot.
+
+For example, if the span path is `["outer", "inner"]`, the `path` column will be `"outer.inner"`.
+
+If needed, you can still access the array value by accessing the `attributes` using `simpleJSONExtractRaw(attributes, 'lmnr.span.path')`.
+
+#### Parent span ID
+
+If the current span is the top span of the trace, the `parent_span_id` will be a 0 UUID, i.e. `"00000000-0000-0000-0000-000000000000"`.
+
+#### Span type
+
+Here are the values of the `span_type` column and their meanings:
+
 ```
+0: Default
+1: LLM
+3: Executor
+4: Evaluator
+5: Evaluation
+6: Tool
+7: HumanEvaluator
+```
+
+#### Input and output
+
+The `input` and `output` columns are stored as either raw strings or stringified JSONs. The best way to parse them is to try
+to parse them as JSON, and if it fails, use the raw string. You can also use `isValidJSON` [function](https://clickhouse.com/docs/sql-reference/functions/json-functions#isvalidjson) right in the query to test for this.
+
+`input` and `output` columns are also indexed on content, so you can use them in WHERE conditions. Use `ILIKE` instead of `LIKE`, because the index is case-insensitive.
+
+#### Attributes
+
+The `attributes` column is stored as a string in JSON format. That is, you can safely `JSON.parse` / `json.loads` them. In addition,
+you can use JSON* and simpleJSON* functions on them right in the queries. Attributes are guaranteed to be a valid JSON object.
+
+#### Model
+
+The `model` column is set to the response model if present, otherwise it is set to the request model.
+
+#### Total tokens and total cost
+
+Usually, the `total_tokens = input_tokens + output_tokens` and `total_cost = input_cost + output_cost`.
+
+However, you can manually report these values using the relevant attributes. In this case, totals may
+not be equal to the sum of the input and output tokens and costs.
+
 
 ### traces
 
-```sql [expandable]
+| Column | Type | Example value |
+|--------|------|-------------|
+| `trace_id` | `UUID` | `"01234567-1234-cdef-1234-426614174000"` |
+| `trace_type` | `UInt8` | `0` |
+| `start_time` | `DateTime64` | `"2021-01-01 00:00:00+00"` |
+| `end_time` | `DateTime64` | `"2021-01-01 00:00:00+00"` |
+| `duration` | `Float64` | `1.23` |
+| `input_tokens` | `UInt64` | `150` |
+| `output_tokens` | `UInt64` | `100` |
+| `total_tokens` | `UInt64` | `250` |
+| `total_cost` | `Float64` | `0.6897` |
+| `input_cost` | `Float64` | `0.5667` |
+| `output_cost` | `Float64` | `0.123` |
+| `status` | `String` | `"error"` |
+| `user_id` | `String` | `"user_123"` |
+| `session_id` | `String` | `"session_123"` |
+| `metadata` | `String` | `"{\"key\": \"value\"}"` |
+| `top_span_id` | `UUID` | `"00000000-0000-0000-1234-426614174000"` |
 
-create table traces (
-  id uuid not null default gen_random_uuid (),
-  session_id text null,
-  metadata jsonb null,
-  end_time timestamp with time zone null,
-  start_time timestamp with time zone null,
-  total_token_count bigint not null default '0'::bigint,
-  cost double precision not null default '0'::double precision,
-  created_at timestamp with time zone not null default now(),
-  trace_type trace_type not null default 'DEFAULT'::trace_type,
-  input_token_count bigint not null default '0'::bigint,
-  output_token_count bigint not null default '0'::bigint,
-  input_cost double precision not null default '0'::double precision,
-  output_cost double precision not null default '0'::double precision,
-  top_span_id uuid null,  -- soft references spans.span_id
-  status text null,
-  -- this is not your user ID, but the user ID you've sent with the trace
-  user_id text null,
-  constraint traces_pkey primary key (id)
-);
+
+#### Trace type
+
+Here are the values of the `trace_type` column and their meanings:
+
+```
+0: Default
+2: Evaluation
+3: Playground
 ```
 
-### datasets
+#### Duration
 
-```sql [expandable]
-create table datasets (
-  id uuid not null default gen_random_uuid (),
-  created_at timestamp with time zone not null default now(),
-  name text not null,
-  constraint datasets_pkey primary key (id)
-);
-```
+The duration is in seconds, and is calculated as `end_time - start_time`.
 
-### evaluations
+#### Status
 
-```sql [expandable]
-create table evaluations (
-  id uuid not null default gen_random_uuid (),
-  created_at timestamp with time zone not null default now(),
-  name text not null,
-  group_id text not null default 'default'::text,
-  constraint evaluations_pkey primary key (id),
-);
-```
+Status is set to error if any of the spans in the trace have status `error`. Empty status means success.
 
-### evaluation_results
+#### Metadata
 
-```sql [expandable]
-create table public.evaluation_results (
-  id uuid not null default gen_random_uuid (),
-  created_at timestamp with time zone not null default now(),
-  evaluation_id uuid not null,
-  data jsonb not null,
-  target jsonb not null default '{}'::jsonb,
-  metadata jsonb null,
-  executor_output jsonb null,
-  trace_id uuid not null,  -- soft references traces.id, spans.trace_id
-  index integer not null default 0,
-  constraint evaluation_results_pkey primary key (id),
-
-  constraint evaluation_results_evaluation_id_fkey foreign KEY (evaluation_id)
-    references evaluations (id)
-);
-```
-
-### trace_type enum
-
-```sql [expandable]
-create type trace_type as enum ('DEFAULT', 'EVALUATION');
-```
-
-### span_type enum
-
-```sql [expandable]
-create type span_type as enum (
-    'DEFAULT',
-    'LLM',
-    'EXECUTOR',
-    'EVALUATOR',
-    'EVALUATION',
-    'TOOL'
-);
-```
-
-- `DEFAULT` - most of the spans fall into this category
-- `LLM` - a manual or automatically traced LLM call
-- `EVALUATION` - a span that represents an evaluation run. One datapoint is evaluated by one evaluation run.
-- `EXECUTOR` - a span that represents an executor run. One datapoint is evaluated by one executor run.
-- `EVALUATOR` - a span that represents an evaluator run. One datapoint may have multiple evaluator spans.
-- `TOOL` - a span that represents a tool call.
+Metadata is stored as a string in JSON format. That is, you can safely `JSON.parse` / `json.loads` it. In addition,
+you can use JSON* and simpleJSON* functions on it right in the queries. Metadata is guaranteed to be a valid JSON object.
 
 
-## Laminar-specific syntax
+### events
 
-### Note on virtual columns
+| Column | Type | Example value |
+|--------|------|-------------|
+| `id` | `UUID` | `"01234567-89ab-4def-1234-426614174000"` |
+| `span_id` | `UUID` | `"00000000-0000-0000-1234-426614174000"` |
+| `name` | `String` | `"My custom event"` |
+| `timestamp` | `DateTime` | `"2021-01-01 00:00:00+00"` |
+| `attributes` | `String` | `"{\"key\": \"value\"}"` |
+| `user_id` | `String` | `"user_123"` |
+| `session_id` | `String` | `"session_123"` |
 
-Virtual columns are either computed on the fly, or are joined in the background from
-other tables. This gives you the flexibility to use them in simpler queries, but it
-comes with a few caveats:
+#### Notes
 
-- Some virtual columns may be slow to compute or join, so queries may take longer to run.
-- Virtual columns may not work properly with aliased table selects, for example
+**Attributes**
 
-```sql
-SELECT s1.span_id, s1.name, s1.path
-FROM spans s1 
-WHERE s1.span_type = 'LLM' 
-  AND s1.trace_id IN (
-    SELECT s2.trace_id 
-    FROM spans s2
-    -- Notice, how here we just use `tags` instead of `s2.tags`
-    WHERE 'my_tag' = ANY(tags)
-  )
-```
+The `attributes` column is stored as a string in JSON format. That is, you can safely `JSON.parse` / `json.loads` it. In addition,
+you can use JSON* and simpleJSON* functions on it right in the queries. Attributes are guaranteed to be a valid JSON object.
 
-### `"spans"."path"`
+### evaluation_datapoints
 
-[Span path](/tracing/introduction#span) is the hierarchical path of the span.
-
-For example, if your code looks like this:
-
-```python [expandable]
-@observe
-def outer():
-    @observe
-    def inner():
-        return "Hello, world!"
-    return inner()
-```
-
-Then the span path of the `inner` function will be `["outer", "inner"]`.
-
-However, Laminar SQL provides syntactic sugar for you to query, filter, order, or group by span path
-items joined by a dot. That is, you can write `WHERE path = 'outer.inner'` instead of `WHERE attributes->'path' = '["outer", "inner"]'::jsonb`.
-
-### evaluator_scores
-
-Evaluator scores is a virtual table CTE that allows you to quickly filter spans by their evaluator scores.
-
-This is triggered only when you select from `spans` table.
-
-For example, if you have an evaluator named `"Task alignment"` that scores between 0 and 1,
-you can write `WHERE evaluator_scores."Task alignment" > 0.5` to filter spans by their evaluator scores.
-
-For example,
-```sql
--- note that you don't need to join anything else,
--- the SQL Editor will do the necessary joins for you
-SELECT
-    name,
-    input,
-    output,
-    evaluator_scores."Task alignment"
-FROM spans
-WHERE evaluator_scores."Task alignment" > 0.5
-```
+| Column | Type | Example value |
+|--------|------|-------------|
+| `id` | `UUID` | `"01234567-89ab-4def-1234-426614174000"` |
+| `trace_id` | `UUID` | `"01234567-1234-cdef-1234-426614174000"` |
+| `evaluation_id` | `UUID` | `"98765432-1098-4654-3210-987654321098"` |
+| `created_at` | `DateTime64` | `"2021-01-01 00:00:00+00"` |
+| `data` | `String` | `"{\"key\": \"value\"}"` |
+| `target` | `String` | `"{\"key\": \"value\"}"` |
+| `metadata` | `String` | `"{\"key\": \"value\"}"` |
+| `index` | `UInt64` | `0` |
 
 ### evaluation_scores
 
-Evaluation scores is a virtual table CTE that allows you to quickly filter evaluation results by their scores.
+Evaluation scores are stored in a separate table, linked to the evaluation datapoints.
 
-This is triggered only when you select from `evaluation_results` table.
+The scores are flattened into a single row per score. For example, if your evaluation has 3 scores,
+`{ "score1": 0.85, "score2": 0.90, "score3": 0.95 }` will be stored as 3 rows in the `evaluation_scores` table.
 
-For example, if you have an evaluator named "My Score" that scores between 0 and 1,
-you can write `WHERE evaluation_scores."My Score" > 0.5` to filter evaluation results by their evaluator scores.
+| Column | Type | Example value |
+|--------|------|-------------|
+| `evaluation_id` | `UUID` | `"01234567-89ab-cdef-1234-426614174000"` |
+| `evaluation_datapoint_id` | `UUID` | `"98765432-1098-7654-3210-987654321098"` |
+| `timestamp` | `DateTime64` | `"2021-01-01 00:00:00+00"` |
+| `name` | `String` | `"My custom score"` |
+| `value` | `Float64` | `0.85` |
+| `metadata` | `String` | `"{\"key\": \"value\"}"` |
+| `trace_id` | `UUID` | `"01234567-89ab-cdef-1234-426614174000"` |
 
-For example,
+
+## Best practices
+
+### Avoid joins
+
+ClickHouse is a columnar database, so, while JOINs are supported, they are not efficient.
+
+If you are joining tables with more than a few hundred rows, the query will likely timeout or fail.
+
+#### Solution
+
+Query the data you need, and join the relevant data in your application.
+
+### Add start_time filter
+
+You almost certainly want to add a `start_time` filter to your query.
+
+Spans table (and thus `traces` aggregation on it) is sorted by `start_time` and `trace_id`, so if you
+apply a `start_time` WHERE condition, the query will run faster.
+
+Advantages:
+- Queries run faster
+- Queries will never fail because of running out of memory
+
+### Searching in span input or output
+
+You can search in the `input` and `output` columns of the `spans` table.
+The search is optimized to be case-insensitive, so use `ILIKE` instead of `LIKE`.
+
+#### Example
+
 ```sql
--- note that you don't need to join anything else,
--- the SQL Editor will do the necessary joins for you
-SELECT
-    id,
-    index,
-    duration,
-    evaluation_scores."My Score"
-FROM evaluation_results
-WHERE evaluation_scores."My Score" >= 0
+SELECT name, input, output
+FROM spans
+WHERE input ILIKE '%france%' AND output ILIKE '%paris%'
 ```
-
-### `evaluation_name` and `evaluation_id` in `traces` and `spans` tables
-
-`evaluation_name` and `evaluation_id` are virtual columns that are automatically populated by the SQL Editor.
-
-This sugar joins in the following way:
-
-```
-spans.trace_id
--> traces.id
--> evaluation_results.trace_id
--> evaluation_results.evaluation_id
--> evaluations.id 
--> evaluations.name
-```
-
-This is triggered when you select `evaluation_name` or `evaluation_id` in the `traces` or `spans` tables.
-
-### `tag` in the `spans` table
-
-If your span has tags `my_tag` and `my_other_tag`, you can write `WHERE tag = 'my_tag'` to filter spans by their tags.
-
-This is triggered when you select `tag` in the `spans` table.
-
-### Trace details in the `evaluation_results` table
-
-Each evaluation result is associated with a trace. You can query the following
-trace details directly from the `evaluation_results` table:
-
-- `cost`
-- `total_token_count`
-- `start_time`
-- `end_time`
-- `duration` ([Learn more](#duration))
-
-### Duration
-
-Duration is the time taken to execute the evaluation, or the duration of a trace or a span.
-
-It is calculated as `end_time - start_time` in seconds.
-
-Whenever you query `duration` in the `evaluation_results` table, the `traces` table,
-or the `spans` table, the SQL Editor will automatically
-replace that with `EXTRACT(EPOCH FROM end_time - start_time)`.
-
-### `tags` in the `spans` table
-
-Even though `tags` are actually stored separately from the `spans` table,
-in the SQL Editor they are joined to the spans by `span_id` and aggregated
-as a `text[]` array.
-
-For examples on how to use tags in your queries, see the [examples](/sql-editor/examples#tags) page.
-
-## Indexing considerations
-
-Spans table is better indexed on `start_time` than `created_at`.
-
-We will add more indexes as we see emerging usage patterns from the SQL Editor.
