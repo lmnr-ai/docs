@@ -1,6 +1,6 @@
 ---
-title: Understanding Clickhouse SQL syntax used in Laminar SQL Editor
-sidebarTitle: Clickhouse SQL
+title: Overview of Laminar SQL syntax and approach
+sidebarTitle: Overview
 ---
 
 ## Introduction
@@ -27,17 +27,18 @@ SELECT [DISTINCT [ON (column1, column2, ...)]] expr_list
 [HAVING expr]
 [WINDOW window_expr_list]
 [QUALIFY expr]
-[ORDER BY expr_list] [WITH FILL] [FROM expr] [TO expr] [STEP expr] [INTERPOLATE [(expr_list)]]
+[ORDER BY expr_list]
+  [WITH FILL] [FROM expr] [TO expr] [STEP expr] [INTERPOLATE [(expr_list)]]
 [LIMIT [offset_value, ]n BY columns]
 [LIMIT [n, ]m] [WITH TIES]
 ```
 
-As you can see, the very basics are similar to standard SQL, that is you can perform any
+The very basics are similar to standard SQL. That is, you can perform any
 `SELECT FROM WHERE GROUP BY HAVING ORDER BY LIMIT` query.
 
 ## Data types
 
-Clickhouse has numerous data types, and many of them carry implementation specifics. Here are some of the most important and relevant ones.
+Clickhouse has numerous data types. Here are some of the most important and relevant ones.
 
 - `DateTime64` - represents a date and time with a precision of nanoseconds. All datetimes in Laminar are in UTC.
 - `String` - represents a string.
@@ -57,7 +58,7 @@ AND start_time < '2025-01-02'::DateTime
 
 ### JSON
 
-Even though Clickhouse has a (recently stabilized) JSON data type, we don't use it. Instead, we store JSONs as strings.
+Laminar stores JSONs as strings in Clickhouse.
 See [Working with JSONs](#working-with-jsons) for more details.
 
 ## Filtering by start_time
@@ -179,7 +180,9 @@ Generally, there are two families of functions to work with JSONs:
 - `JSON*` functions - comprehensive set of functions that work on the JSON strings
 - `simpleJSON*` functions - simpler subset that works much faster, and under a few assumptions.
 
+<Tip>
 We recommend using `simpleJSON*` functions, especially if you know the data type of the value you want to extract.
+</Tip>
 
 ### Extracting values from JSON by key
 
@@ -188,8 +191,11 @@ Most of the time, you will want to extract a value from JSON by `key`. If you kn
 For example,
 
 ```sql
-SELECT simpleJSONExtractInt(attributes, 'gen_ai.usage.cache_read_input_tokens')
-    AS cache_hit_tokens
+SELECT
+    simpleJSONExtractInt(
+        attributes, 
+        'gen_ai.usage.cache_read_input_tokens'
+    ) AS cache_hit_tokens
 FROM spans
 WHERE start_time > now() - INTERVAL '1 day' AND span_type = 1 -- LLM
 ```

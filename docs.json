@@ -101,6 +101,14 @@
             ]
           },
           {
+            "group": "SQL Editor",
+            "pages": [
+              "sql-editor/introduction",
+              "sql-editor/overview",
+              "sql-editor/reference"
+            ]
+          },
+          {
             "group": "Datasets",
             "pages": [
               "datasets/introduction",
@@ -120,21 +128,6 @@
               "playground/playground-from-span",
               "playground/tools",
               "playground/history"
-            ]
-          },
-          {
-            "group": "SQL Editor",
-            "pages": [
-              "sql-editor/introduction",
-              "sql-editor/reference",
-              {
-                "group": "Guides",
-                "pages": [
-                  "sql-editor/guides/guides",
-                  "sql-editor/guides/getting-started",
-                  "sql-editor/guides/clickhouse-specifics"
-                ]
-              }
             ]
           }
         ]
