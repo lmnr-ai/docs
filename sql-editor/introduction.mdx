@@ -3,13 +3,7 @@ title: Introduction to Laminar SQL Editor
 sidebarTitle: Introduction
 ---
 
-Laminar SQL Editor is a tool that allows you to write and execute SQL queries on your data stored at Laminar.
-
-This allows you to:
-- Perform advanced analytics on your data
-- Export any trace or evaluation result to a dataset
-- Run queries on your data in the API and collect results in your preferred format
-
+Laminar SQL Editor allows you to query all your data stored at Laminar using SQL.
 <Tip>
     The SQL Editor is currently in beta.
     Some functionality may change.
@@ -22,26 +16,19 @@ Queries must be written in [ClickHouse SQL](https://clickhouse.com/docs/sql-refe
 
 For detailed reference of the syntax, see the [reference](/sql-editor/reference) page.
 
-<Tip>
-    You can only access data from the current project in the SQL Editor.
-</Tip>
+## Features
 
-## Features and benefits
-
-- Write and execute SQL queries on your data stored at Laminar
-- Filtering:
-    - By date range
-    - By span name and path
-    - By span tags
-    - By trace costs, duration, etc.
+- Query all your data stored at Laminar using SQL
+- Write custom complex queries to connect different data within your project
 - Fast analytics on your data, e.g.
     - Detailed breakdown of token count and cost by operation
-    - Detailed latency analysis
-    - Dashboarding
-- Exporting results to Laminar datasets or labelling queues
+    - Detailed latency analysis by operation
+    - Dig into deeply nested trace data
+- Create custom dashboards
+- Export query results to Laminar datasets or labelling queues
+- Query data via API to connect to your own tools and workflows
 
-## Allowed queries and limitations
-
+## Allowed queries
 - Only `SELECT` queries are allowed.
 - Allowed tables (to select from):
     - `spans`
