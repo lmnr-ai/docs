@@ -1,0 +1,174 @@
+---
+title: Sending custom events to Laminar
+sidebarTitle: Custom events
+---
+
+Laminar allows you to send custom events to the platform. This can be useful for tracking any events that are not covered by the spans and tracing;
+
+## Introduction
+
+You can think of events as a data payload attached to a single timestamp.
+
+Main difference between events and spans is that events have a single timestamp and don't have a duration.
+
+## Sending events
+
+To send an event, simply use the `event` function on `Laminar` class.
+
+<Tabs>
+<Tab title="TypeScript">
+
+```javascript
+import { Laminar } from "@lmnr-ai/lmnr"
+
+Laminar.initialize();
+
+Laminar.event({
+    name: "my-event",
+    attributes: {
+        "user-feedback": "positive"
+        "user_data": JSON.stringify({
+            "name": "John Doe",
+            "age": 30,
+            "email": "john.doe@example.com"
+        })
+    }
+})
+```
+</Tab>
+<Tab title="Python">
+
+```python
+import json
+from lmnr import Laminar
+
+Laminar.initialize()
+
+Laminar.event(
+    name="my-event",
+    attributes={
+        "user-feedback": "positive",
+        "user_data": json.dumps({
+            "name": "John Doe",
+            "age": 30,
+            "email": "john.doe@example.com"
+        })
+    }
+)
+```
+</Tab>
+</Tabs>
+
+### Timestamp
+
+By default, event will have the current timestamp.
+
+You can also specify the timestamp manually:
+
+<Tabs>
+<Tab title="TypeScript">
+
+```javascript
+import { Laminar } from "@lmnr-ai/lmnr"
+
+Laminar.initialize();
+
+Laminar.event({
+    name: "my-event",
+    timestamp: new Date("2025-01-01T00:00:00.000Z")
+})
+```
+</Tab>
+<Tab title="Python">
+
+```python
+from datetime import datetime
+from lmnr import Laminar
+
+Laminar.initialize()
+
+Laminar.event(
+    name="my-event",
+    timestamp=datetime(2025, 1, 1, 0, 0, 0)
+)
+```
+</Tab>
+</Tabs>
+
+### Attributes
+
+Attributes are passed as an object/dictionary. Allowed attribute types are `string`, `number`, `boolean`, `string[]`, `number[]`, `boolean[]`.
+
+<Tip>
+
+If you want to pass a JSON object as an attribute, you need to stringify it first.
+
+</Tip>
+
+
+## Specifying session or user id
+
+You can associate an event with a session id or user id.
+
+<Tabs>
+<Tab title="TypeScript">
+
+```javascript
+import { Laminar } from "@lmnr-ai/lmnr"
+
+Laminar.initialize();
+
+Laminar.event({
+    name: "my-event",
+    sessionId: "123",
+    userId: "456"
+})
+```
+</Tab>
+<Tab title="Python">
+
+```python
+from lmnr import Laminar
+
+Laminar.initialize()
+
+Laminar.event(
+    name="my-event",
+    session_id="123",
+    user_id="456"
+)
+```
+
+<Note>
+Python SDK also supports inferring session and user id from the current trace.
+</Note>
+
+```python
+from lmnr import Laminar, observe
+Laminar.initialize()
+
+
+def handler():
+    # This event will be associated with session id "123", because
+    # we set it in the main function
+    Laminar.event(name="my-event")
+
+@observe
+def main():
+    Laminar.set_session_id("123")
+    handler()
+
+main()
+```
+</Tab>
+</Tabs>
+
+## Querying events
+
+You can query events using the `events` table in Clickhouse.
+
+```sql
+SELECT * FROM events
+WHERE session_id = '123'
+AND timestamp >= '2025-01-01T00:00:00'
+```
