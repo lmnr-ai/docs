@@ -109,6 +109,12 @@
             ]
           },
           {
+            "group": "Custom Dashboards",
+            "pages": [
+              "custom-dashboards/overview"
+            ]
+          },
+          {
             "group": "Datasets",
             "pages": [
               "datasets/introduction",
