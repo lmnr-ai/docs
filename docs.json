@@ -101,6 +101,14 @@
             ]
           },
           {
+            "group": "SQL Editor",
+            "pages": [
+              "sql-editor/introduction",
+              "sql-editor/overview",
+              "sql-editor/reference"
+            ]
+          },
+          {
             "group": "Custom Dashboards",
             "pages": [
               "custom-dashboards/overview"
@@ -127,14 +135,6 @@
               "playground/tools",
               "playground/history"
             ]
-          },
-          {
-            "group": "SQL Editor",
-            "pages": [
-              "sql-editor/introduction",
-              "sql-editor/examples",
-              "sql-editor/reference"
-            ]
           }
         ]
       },
@@ -153,7 +153,21 @@
           {
             "group": "API Documentation",
             "pages": [
-              "api-reference/introduction"
+              "api-reference/introduction",
+              {
+                "group": "Evaluations",
+                "pages": [
+                  "api-reference/evals/init_eval",
+                  "api-reference/evals/save_eval_datapoints",
+                  "api-reference/evals/update_eval_datapoint"
+                ]
+              },
+              {
+                "group": "SQL",
+                "pages": [
+                  "api-reference/sql/sql_query"
+                ]
+              }
             ]
           }
         ]
