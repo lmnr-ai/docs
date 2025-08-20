@@ -56,18 +56,3 @@ response = litellm.completion(
 </div>
 </Step>
 </Steps>
-
-### Disabling OpenAI double-instrumentation
-
-If you call OpenAI models via LiteLLM, adding Laminar LiteLLM callback may result in OpenAI calls being traced twice – once by Laminar LiteLLM callback and once by Laminar auto-instrumentation of OpenAI SDK.
-This is because LiteLLM uses OpenAI SDK under the hood to call some of the models and Laminar automatically instruments OpenAI SDK.
-
-To avoid this, you can disable OpenAI SDK instrumentation at Laminar initialization:
-
-```python {4}
-from lmnr import Laminar, Instruments
-Laminar.initialize(
-  project_api_key="LMNR_PROJECT_API_KEY",
-  disabled_instruments=set([Instruments.OPENAI])
-)
-```
