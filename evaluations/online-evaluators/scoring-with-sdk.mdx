@@ -12,26 +12,34 @@ Create a score for a span using either a trace ID or span ID. When using a trace
 
 <CodeGroup>
 
-```typescript TypeScript
-import { LaminarClient, Laminar } from "@lmnr-ai/laminar";
+```javascript TypeScript
+import { LaminarClient, Laminar, observe } from "@lmnr-ai/lmnr";
 
 const laminarClient = new LaminarClient({
   apiKey: "your-project-api-key"
 });
 
 // First, capture your LLM calls
-await laminarClient.observe({
-  name: "chat_completion",
-  input: { messages: [...] },
-  output: { content: "AI response" }
-});
+await observe(
+  {
+    name: "chat_completion",
+    input: { messages: [...] },
+  },
+  () => {
+    // Your LLM call here
+    return {
+      output: { content: "AI response" }
+    };
+  }
+);
 
 // IMPORTANT: Flush data to ensure it reaches the backend
-await laminarClient.flush();
+await Laminar.flush();
 
 // Score by trace ID (attaches to root span)
 const traceId = Laminar.getTraceId();
 if (!traceId) {
+  // To avoid this, we must be inside an observed function
   throw new Error("No active trace found");
 }
 
@@ -44,7 +52,7 @@ await laminarClient.evaluators.score({
 
 // Score by span ID 
 // IMPORTANT: This code must be run after span is already recorded
-// In production, ensure this runs later or add sleep to ensure span reaches backend
+// In production, ensure this runs later
 await new Promise(resolve => setTimeout(resolve, 1000));
 
 const spanContext = Laminar.getLaminarSpanContext();
@@ -60,26 +68,32 @@ await laminarClient.evaluators.score({
 ```
 
 ```python Python
-from laminar import LaminarClient, Laminar
-import asyncio
+from lmnr import LaminarClient, Laminar
+import time
 
 laminar_client = LaminarClient(api_key="your-project-api-key")
 
 # First, capture your LLM calls
-with laminar_client.observe("chat_completion") as span:
-    span.set_input({"messages": [...]})
+with Laminar.start_as_current_span(
+    name = "chat_completion",
+    input = {"messages": [
+      # ...
+    ]},
+) as span:
+
     # Your LLM call here
-    span.set_output({"content": "AI response"})
+    Laminar.set_span_output({"content": "AI response"})
 
 # IMPORTANT: Flush data to ensure it reaches the backend
-await laminar_client.flush()
+Laminar.flush()
 
 # Score by trace ID (attaches to root span)
 trace_id = Laminar.get_trace_id()
 if not trace_id:
+    # To avoid this, we must be inside an observed function
     raise ValueError("No active trace found")
 
-await laminar_client.evaluators.score(
+laminar_client.evaluators.score(
     name="quality",
     trace_id=trace_id, 
     score=0.95,
@@ -88,14 +102,14 @@ await laminar_client.evaluators.score(
 
 # Score by span ID
 # IMPORTANT: This code must be run after span is already recorded
-# In production, ensure this runs later or add sleep to ensure span reaches backend
-await asyncio.sleep(1)
+# In production, ensure this runs later
+time.sleep(1)
 
 span_context = Laminar.get_laminar_span_context()
 if not span_context:
     raise ValueError("No active span found")
 
-await laminar_client.evaluators.score(
+laminar_client.evaluators.score(
     name="relevance",
     span_id=span_context.span_id,
     score=0.87
