@@ -16,10 +16,6 @@ Laminar automatically instruments the official Cohere Python SDK with a single l
 pip install 'lmnr[all]' cohere python-dotenv
 ```
 
-<Note>
-To see an example of how to integrate Laminar within a FastAPI application, check out our [FastAPI integration guide](/guides/fastapi).
-</Note>
-
 ### 2. Set up your environment variables
 
 Store your API keys in a `.env` file:
@@ -82,26 +78,37 @@ for chunk in res:
         print(chunk.delta.message.content.text, end="")
 ```
 
-### RAG with Documents
+### RAG with Documents (Observed Pipeline)
 
 ```python
-documents = [
-    {"data": {"text": "Reimbursing Travel Expenses: Submit expenses via the finance tool."}},
-    {"data": {"text": "Working from Abroad: Coordinate with your manager and keep core hours."}},
-    {"data": {"text": "Health Benefits: Gym memberships, on-site yoga, and health insurance."}},
-]
+from lmnr import observe
 
-response = co.chat(
-    model="command-a-03-2025",
-    messages=[{"role": "user", "content": "Are there health benefits?"}],
-    documents=documents,
-)
+@observe(name="retrieve_documents")
+def retrieve_documents(query: str):
+    return [
+        {"data": {"text": "Reimbursing Travel Expenses: Submit expenses via the finance tool."}},
+        {"data": {"text": "Working from Abroad: Coordinate with your manager and keep core hours."}},
+        {"data": {"text": "Health Benefits: Gym memberships, on-site yoga, and health insurance."}},
+    ]
 
-print(response.message.content[0].text)
+@observe(name="generate_answer")
+def generate_answer(query: str, documents: list):
+    return co.chat(
+        model="command-a-03-2025",
+        messages=[{"role": "user", "content": query}],
+        documents=documents,
+    )
 
-# Optional: show citations
-if response.message.citations:
-    for citation in response.message.citations:
+@observe(name="rag_pipeline")
+def rag_pipeline(query: str):
+    docs = retrieve_documents(query)
+    return generate_answer(query, docs)
+
+resp = rag_pipeline("Are there health benefits?")
+print(resp.message.content[0].text)
+
+if resp.message.citations:
+    for citation in resp.message.citations:
         print(citation, "\n")
 ```
 
