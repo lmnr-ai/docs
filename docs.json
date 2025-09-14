@@ -41,6 +41,7 @@
                   "tracing/integrations/anthropic",
                   "tracing/integrations/gemini",
                   "tracing/integrations/langchain",
+                  "tracing/integrations/cohere",
                   "tracing/integrations/nextjs",
                   "tracing/integrations/vercel-ai-sdk",
                   "tracing/integrations/litellm",
