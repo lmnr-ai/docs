@@ -121,6 +121,8 @@ AND end_time - start_time > 90 -- 90 seconds
 SELECT duration
 FROM traces
 WHERE trace_id IN ({traceIds: Array(UUID)})
+-- traces work much faster if you add a start_time filter
+AND start_time > now() - INTERVAL '1 day'
 ```
 
 This may seem counter-intuitive at first, but this is the fastest and the most efficient way to do it.

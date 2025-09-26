@@ -12,16 +12,17 @@ This section contains subsets of the table schemas and enumerated types (enums) 
 ### spans
 
 | Column | Type | Example value |
-|--------|------|-------------|
+|--------|------|---------------|
 | `span_id` | `UUID` | `"00000000-0000-0000-1234-426614174000"` |
 | `status` | `String` | `"error"` |
 | `name` | `String` | `"openai.chat"` |
 | `path` | `String` | `"workflow.process.step1.openai.chat"` |
 | `trace_id` | `UUID` | `"12345678-90ab-cdef-1234-426614174000"` |
 | `parent_span_id` | `UUID` | `"00000000-0000-0000-a456-abcd5667ef09"` |
-| `span_type` | `UInt8` | `1` |
+| `span_type` | `String` (Enum) | `LLM` |
 | `start_time` | `DateTime64` | `"2021-01-01 00:00:00+00"` |
 | `end_time` | `DateTime64` | `"2021-01-01 00:00:00+00"` |
+| `duration` | `Float64` | `1.23` |
 | `input` | `String` | `"[{\"role\": \"user\", \"content\": \"Hello, world!\"}]"` |
 | `output` | `String` | `"[{\"role\": \"assistant\", \"content\": \"Hi! How can I help you today?\"}]"` |
 | `attributes` | `String` | `"{\"gen_ai.system\": \"openai\", \"gen_ai.model\": \"gpt-4o\"}"` |
@@ -32,9 +33,10 @@ This section contains subsets of the table schemas and enumerated types (enums) 
 | `input_tokens` | `UInt64` | `150` |
 | `output_tokens` | `UInt64` | `100` |
 | `total_tokens` | `UInt64` | `250` |
-| `total_cost` | `Float64` | `0.6897` |
 | `input_cost` | `Float64` | `0.5667` |
 | `output_cost` | `Float64` | `0.123` |
+| `total_cost` | `Float64` | `0.6897` |
+| `tags` | `Array<String>` | `["tag1", "tag2"]` |
 
 
 #### Path
@@ -52,16 +54,16 @@ If the current span is the top span of the trace, the `parent_span_id` will be a
 
 #### Span type
 
-Here are the values of the `span_type` column and their meanings:
+Here are the possible values of the `span_type` column:
 
 ```
-0: Default
-1: LLM
-3: Executor
-4: Evaluator
-5: Evaluation
-6: Tool
-7: HumanEvaluator
+DEFAULT
+LLM
+EXECUTOR
+EVALUATOR
+EVALUATION
+TOOL
+HUMAN_EVALUATOR
 ```
 
 #### Input and output
@@ -87,27 +89,38 @@ Usually, the `total_tokens = input_tokens + output_tokens` and `total_cost = inp
 However, you can manually report these values using the relevant attributes. In this case, totals may
 not be equal to the sum of the input and output tokens and costs.
 
+#### Duration
+
+The duration is in seconds, and is calculated as `end_time - start_time`.
+
+#### Tags
+
+Tags is a ClickHouse SQL array, so you can index it from 1. To filter by presence of a tag, you can use `has(tags, 'my_tag')`.
 
 ### traces
 
 | Column | Type | Example value |
 |--------|------|-------------|
-| `trace_id` | `UUID` | `"01234567-1234-cdef-1234-426614174000"` |
-| `trace_type` | `UInt8` | `0` |
+| `id` | `UUID` | `"01234567-1234-cdef-1234-426614174000"` |
+| `type` | `String` (Enum) | `DEFAULT` |
 | `start_time` | `DateTime64` | `"2021-01-01 00:00:00+00"` |
 | `end_time` | `DateTime64` | `"2021-01-01 00:00:00+00"` |
 | `duration` | `Float64` | `1.23` |
+| `status` | `String` | `"error"` |
 | `input_tokens` | `UInt64` | `150` |
 | `output_tokens` | `UInt64` | `100` |
 | `total_tokens` | `UInt64` | `250` |
-| `total_cost` | `Float64` | `0.6897` |
 | `input_cost` | `Float64` | `0.5667` |
 | `output_cost` | `Float64` | `0.123` |
+| `total_cost` | `Float64` | `0.6897` |
 | `status` | `String` | `"error"` |
 | `user_id` | `String` | `"user_123"` |
 | `session_id` | `String` | `"session_123"` |
 | `metadata` | `String` | `"{\"key\": \"value\"}"` |
 | `top_span_id` | `UUID` | `"00000000-0000-0000-1234-426614174000"` |
+| `top_span_name` | `String` | `"My span"` |
+| `top_span_type` | `String` (Enum) | `DEFAULT` |
+| `tags` | `Array<String>` | `["tag1", "tag2"]` |
 
 
 #### Trace type
@@ -115,9 +128,9 @@ not be equal to the sum of the input and output tokens and costs.
 Here are the values of the `trace_type` column and their meanings:
 
 ```
-0: Default
-2: Evaluation
-3: Playground
+DEFAULT
+EVALUATION
+PLAYGROUND
 ```
 
 #### Duration
@@ -165,24 +178,31 @@ you can use JSON* and simpleJSON* functions on it right in the queries. Attribut
 | `target` | `String` | `"{\"key\": \"value\"}"` |
 | `metadata` | `String` | `"{\"key\": \"value\"}"` |
 | `index` | `UInt64` | `0` |
+| `executor_output` | `String` | `"{\"key\": \"value\"}"` |
+| `scores` | `String` | `"{\"key\": 3.14}"` |
 
-### evaluation_scores
-
-Evaluation scores are stored in a separate table, linked to the evaluation datapoints.
-
-The scores are flattened into a single row per score. For example, if your evaluation has 3 scores,
-`{ "score1": 0.85, "score2": 0.90, "score3": 0.95 }` will be stored as 3 rows in the `evaluation_scores` table.
+### tags
 
 | Column | Type | Example value |
 |--------|------|-------------|
-| `evaluation_id` | `UUID` | `"01234567-89ab-cdef-1234-426614174000"` |
-| `evaluation_datapoint_id` | `UUID` | `"98765432-1098-7654-3210-987654321098"` |
-| `timestamp` | `DateTime64` | `"2021-01-01 00:00:00+00"` |
-| `name` | `String` | `"My custom score"` |
-| `value` | `Float64` | `0.85` |
-| `metadata` | `String` | `"{\"key\": \"value\"}"` |
-| `trace_id` | `UUID` | `"01234567-89ab-cdef-1234-426614174000"` |
+| `id` | `UUID` | `"01234567-89ab-4def-1234-426614174000"` |
+| `name` | `String` | `"My tag"` |
+| `created_at` | `DateTime64` | `"2021-01-01 00:00:00+00"` |
+| `span_id` | `UUID` | `"00000000-0000-0000-1234-426614174000"` |
+| `source` | `String` | `"CODE"` |
 
+
+#### Source
+
+Here are the possible values of the `source` column:
+
+```
+CODE
+HUMAN
+```
+
+CODE means that the tag was created in code, either using `tags` parameter or by calling `Laminar.addSpanTags`.
+HUMAN means that the tag was created by a human in the Laminar UI.
 
 ## Best practices
 
