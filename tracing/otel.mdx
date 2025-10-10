@@ -117,7 +117,7 @@ The default base url for the endpoint is `https://api.lmnr.ai` listening
 for gRPC traffic on port `8443`.
 
 For the self-hosted backend, the base url is `http://<your-self-hosted-backend-url>`
-and the default port is `8001`, unless you have changed the configuration.
+and the default port is `8001` for gRPC or `8000` for HTTP, unless you have changed the configuration.
 
 The `/v1/traces` path is the default OpenTelemetry trace endpoint, and Laminar listens
 at this path. In both JavaScript (OpenTelemetry Node SDK) and Python OpenTelemetry SDKs,
