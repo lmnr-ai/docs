@@ -42,14 +42,15 @@
                   "tracing/integrations/gemini",
                   "tracing/integrations/langchain",
                   "tracing/integrations/cohere",
-                  "tracing/integrations/nextjs",
                   "tracing/integrations/vercel-ai-sdk",
+                  "tracing/integrations/nextjs",
                   "tracing/integrations/litellm",
-                  "tracing/integrations/playwright",
-                  "tracing/integrations/puppeteer",
+                  "tracing/integrations/kernel",
                   "tracing/integrations/browser-use",
                   "tracing/integrations/stagehand",
-                  "tracing/integrations/skyvern"
+                  "tracing/integrations/skyvern",
+                  "tracing/integrations/playwright",
+                  "tracing/integrations/puppeteer"
                 ]
               },
               {
