@@ -58,7 +58,7 @@ const result = await observe({ name: 'my_span' }, async (param1, param2) => {
 ```
 
 In this case, the span will have the following attributes:
-- Span input (`lmnr.span.input`) will be `{"param1": 1, "param2": 2}`
+- Span input (`lmnr.span.input`) will be `[1, 2]`
 - Span output (`lmnr.span.output`) will be `3`
 </Tab>
 <Tab title="Python">
@@ -84,6 +84,10 @@ def my_function(): # the span will be named "my_function"
 - `ignore_input` (`bool`): if `True`, the input will not be recorded.
 - `ignore_output` (`bool`): if `True`, the output will not be recorded.
 - `ignore_inputs` (`list[str]`): list of input parameters to skip.
+- `input_formatter` (`Callable[P, str]`)*: a function to format the input parameters. Must take same parameters as the observed function and return a string.
+- `output_formatter` (`Callable[[R], str]`)*: a function to format the output value. Must take the return value of the observed function and return a string.
+
+\* P and R indicate that the observed function is of type `Callable[P, R]` or `Callable[P, Awaitable[R]]`.
 
 ### Inputs and outputs
 - Function parameters and their values are serialized to JSON and recorded as span input.
