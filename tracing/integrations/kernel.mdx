@@ -75,13 +75,14 @@ you will get full observability of both the browser agent and the computer inter
 ```python {7-8, 11-16, 22, 49-50}
 import os
 import asyncio
-from lmnr import Laminar
+from lmnr import Laminar, observe
 from browser_use import Agent, Browser, ChatGoogle
 from kernel import Kernel
 
 # Initialize Laminar
 Laminar.initialize(project_api_key=os.environ["LMNR_PROJECT_API_KEY"])
 
+@observe()
 async def main():
     # Initialize Kernel and create a browser
     client = Kernel()
@@ -118,13 +119,13 @@ async def main():
     result = await agent.run()
     print(f"Job URLs found:\n{result.final_result()}")
 
-    # Flush traces to Laminar
-    Laminar.flush()
 
     # Delete the browser for those who left open the live view url
     client.browsers.delete_by_id(kernel_browser.session_id)
 
 asyncio.run(main())
+# Flush traces to Laminar
+Laminar.flush()
 ```
 
 ### Playwright
