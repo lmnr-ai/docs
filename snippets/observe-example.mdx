@@ -9,10 +9,10 @@ separate functions into a single trace.
 import { observe } from '@lmnr-ai/lmnr';
 
 const myFunction = async () => observe(
-  { name: 'myFunction'}, 
+  { name: 'my_function'}, 
   async () => {
     const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5-nano",
       messages: [{ role: "user", content: "What is the capital of France?" }],
     });
     return response.choices[0].message.content;
@@ -35,7 +35,7 @@ from lmnr import observe
 @observe()  # annotate all functions you want to trace
 def my_function():
     res = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-5-nano",
         messages=[{"role": "user", "content": "What is the capital of France?"}],
     )
     return res.choices[0].message.content
@@ -59,15 +59,15 @@ you can have better visualization of execution flow which is useful for debuggin
 
 Input arguments to the function are automatically recorded as inputs of the span. The return value is automatically recorded as the output of the span.
 
-Passing arguments to the function in TypeScript is slightly non-obvious. Example:
+To pass arguments to the observed function, you can pass them as additional arguments to the `observe` call after the function. Example:
 
 ```javascript
 const myFunction = async () => observe(
-  { name: 'myFunction' }, 
+  { name: 'sum' }, 
   async (param1, param2) => {
-    // ...
-  }
-  'argValue1',
-  'argValue2'
+    return param1 + param2;
+  },
+  42,
+  1337,
 );
 ```
