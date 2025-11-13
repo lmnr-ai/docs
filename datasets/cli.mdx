@@ -1,0 +1,397 @@
+---
+sidebarTitle: CLI
+title: Laminar datasets CLI
+---
+
+The `lmnr datasets` command is used to manage datasets in Laminar.
+
+## Usage
+
+### Creating a new dataset and iterating on it
+
+<Steps>
+<Step title="Prepare input files">
+
+Prepare input files for the dataset. Supported formats are: `.json`, `.jsonl`, `.csv`.
+Every datapoint must at least have a `data` field. Save this file as `data.json` (or `data.jsonl` or `data.csv`).
+
+For JSON, the file must contain **one array** of datapoints.
+
+For JSONL, the file must contain **one datapoint per line**.
+
+For CSV, the file must contain **a header row and one datapoint per row**.
+
+Examples:
+<Expandable title="JSON">
+```json
+[
+    { "data": { "color": "red", "size": "large" } },
+    { "data": { "color": "blue", "size": "small" } },
+]
+```
+</Expandable>
+<Expandable title="JSONL">
+```jsonl
+{"data": {"color": "red", "size": "large"}}
+{"data": {"color": "blue", "size": "small"}}
+```
+</Expandable>
+<Expandable title="CSV">
+```csv
+data,target
+"{""color"": ""red"", ""size"": ""large""}","{""expected_output"": ""red""}"
+"{""color"": ""blue"", ""size"": ""small""}","{""expected_output"": ""blue""}"
+```
+
+</Expandable>
+</Step>
+
+<Step title="Set the project API key">
+
+```bash
+export LMNR_PROJECT_API_KEY=<your-project-api-key>
+```
+
+Alternatively, you can set it in the `.env` file in the same directory where you run the CLI.
+
+```bash
+echo "\nLMNR_PROJECT_API_KEY=<your-project-api-key>" >> .env
+```
+
+Or, you can also pass the `--project-api-key` flag to the global datasets command, e.g.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets --project-api-key "<your-project-api-key>" list
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets --project-api-key "<your-project-api-key>" list
+```
+</Tab>
+</Tabs>
+</Step>
+
+<Step title="Create a new dataset">
+
+Create a new dataset from the input file. This command will create a new dataset with the name `my-cli-dataset` and save the datapoints to the file `my-cli-dataset.json`.
+
+The datapoints are saved to a new file in order to:
+- Store datasets in the Laminar format. In particular, datapoint id is crucial for versioning ([Learn more](/datasets/introduction#versioning)).
+- Not overwrite existing files.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets create my-cli-dataset data.json -o my-cli-dataset.json
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets create my-cli-dataset data.json -o my-cli-dataset.json
+```
+</Tab>
+</Tabs>
+</Step>
+
+<Step title="Work on the dataset locally">
+Make any changes required to the dataset by editing the file `my-cli-dataset.json`.
+
+Make sure to not edit the `id` field of the datapoints.
+
+<Note>
+If you delete a datapoint, this will not affect the dataset in Laminar.
+This is because the push operation only pushes new datapoint (versions) to the dataset.
+</Note>
+
+</Step>
+
+<Step title="Push the changes to Laminar">
+Push the changes to Laminar.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets push -n my-cli-dataset my-cli-dataset.json
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets push -n my-cli-dataset my-cli-dataset.json
+```
+</Tab>
+</Tabs>
+
+This will push the changes to the dataset in Laminar.
+</Step>
+
+<Step title="Pull the changes from Laminar">
+If you need to update the local dataset with the latest changes from Laminar, you can pull the changes.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets pull -n my-cli-dataset my-cli-dataset.json
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets pull -n my-cli-dataset my-cli-dataset.json
+```
+</Tab>
+</Tabs>
+
+This will pull the changes from the dataset in Laminar to the local file `my-cli-dataset.json`.
+
+<Warning>
+This will overwrite the contents of the current file `my-cli-dataset.json`.
+</Warning>
+
+</Step>
+</Steps>
+
+### Working on an existing dataset
+
+<Steps>
+<Step title="Set the project API key">
+
+```bash
+export LMNR_PROJECT_API_KEY=<your-project-api-key>
+```
+
+Alternatively, you can set it in the `.env` file in the same directory where you run the CLI.
+
+```bash
+echo "\nLMNR_PROJECT_API_KEY=<your-project-api-key>" >> .env
+```
+
+Or, you can also pass the `--project-api-key` flag to the global datasets command, e.g.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets --project-api-key "<your-project-api-key>" list
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets --project-api-key "<your-project-api-key>" list
+```
+</Tab>
+</Tabs>
+
+</Step>
+<Step title="Select the dataset to work on">
+
+List all datasets and select the one you want to work on.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets list
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets list
+```
+</Tab>
+</Tabs>
+</Step>
+
+<Step title="Pull the data from Laminar">
+Pull the data from Laminar to a local file.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets pull -n my-dataset my-dataset.json
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets pull -n my-dataset my-dataset.json
+```
+</Tab>
+</Tabs>
+
+This will pull the changes from the dataset in Laminar to the local file `my-dataset.json`.
+
+<Warning>
+If `my-dataset.json` already exists, this will overwrite the contents of the file.
+</Warning>
+
+</Step>
+<Step title="Work on the dataset locally">
+Make any changes required to the dataset by editing the file `my-dataset.json`.
+
+Make sure to not edit the `id` field of the datapoints.
+
+<Note>
+If you delete a datapoint, this will not affect the dataset in Laminar.
+This is because the push operation only pushes new datapoint (versions) to the dataset.
+</Note>
+
+</Step>
+
+<Step title="Push the changes to Laminar">
+Push the changes to Laminar.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets push -n my-dataset my-dataset.json
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets push -n my-dataset my-dataset.json
+```
+</Tab>
+</Tabs>
+
+This will push the changes to the dataset in Laminar.
+</Step>
+</Steps>
+
+### Setting the CLI to call a local Laminar instance
+
+Global `datasets` command has optional arguments:
+
+- `--base-url`: The base URL of the Laminar instance. Do NOT include port here. Default is `https://api.lmnr.ai`.
+- `--port`: The HTTP port of the Laminar instance. Default is 443. For local self-hosted Laminar, use 8000.
+- `--project-api-key`: The API key of the project. If not provided, reads from `LMNR_PROJECT_API_KEY` environment variable.
+
+## Reference
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets [command]
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets [command]
+```
+</Tab>
+</Tabs>
+
+## General options
+
+These are useful if you want to call a local Laminar instance.
+
+```
+  --project-api-key <key>  Project API key. If not provided, reads from LMNR_PROJECT_API_KEY env variable
+  --base-url <url>         Base URL for the Laminar API. Defaults to https://api.lmnr.ai or LMNR_BASE_URL env variable
+  --port <port>            Port for the Laminar API. Defaults to 443
+```
+
+## Commands
+
+### List all datasets
+
+List all datasets.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets list
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets list
+```
+</Tab>
+</Tabs>
+
+### Create a new dataset
+
+Create a dataset from input files.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets create [options] <name> <paths...>
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets create [options] <name> <paths...>
+```
+</Tab>
+</Tabs>
+
+```
+Arguments:
+  name                      Name of the dataset to create
+  paths                     Paths to files or directories containing data to push
+
+Options:
+  -o, --output-file <file>  Path to save the pulled data
+  --output-format <format>  Output format (json, csv, jsonl). Inferred from file extension if not provided
+  -r, --recursive           Recursively read files in directories (default: false)
+  --batch-size <size>       Batch size for pushing/pulling data (default: 100)
+```
+
+### Push datapoints to a dataset
+
+Push datapoints to an existing dataset from a file or files.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets push -n [options] <paths...>
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets push -n [options] <paths...>
+```
+</Tab>
+</Tabs>
+
+```
+Arguments:
+  paths                Paths to files or directories containing data to push
+
+Options:
+  -n, --name <name>    Name of the dataset (either name or id must be provided)
+  --id <id>            ID of the dataset (either name or id must be provided)
+  -r, --recursive      Recursively read files in directories (default: false)
+  --batch-size <size>  Batch size for pushing data (default: 100)
+```
+
+### Pull datapoints from a dataset
+
+Pull datapoints from a dataset to a file or print them to the console.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets pull [options] [output-path]
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets pull [options] [output-path]
+```
+</Tab>
+</Tabs>
+
+```
+Arguments:
+  output-path               Path to save the data. If not provided, prints to console
+
+Options:
+  -n, --name <name>         Name of the dataset (either name or id must be provided)
+  --id <id>                 ID of the dataset (either name or id must be provided)
+  --output-format <format>  Output format (json, csv, jsonl). Inferred from file extension if not provided
+  --batch-size <size>       Batch size for pulling data (default: 100)
+  --limit <limit>           Limit number of datapoints to pull
+  --offset <offset>         Offset for pagination (default: 0)
+  -h, --help                display help for command
+```
