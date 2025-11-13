@@ -121,7 +121,8 @@
             "group": "Datasets",
             "pages": [
               "datasets/introduction",
-              "datasets/adding-data"
+              "datasets/adding-data",
+              "datasets/cli"
             ]
           },
           {

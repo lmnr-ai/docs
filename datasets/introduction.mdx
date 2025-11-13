@@ -56,4 +56,57 @@ See more in the [Evaluations](/evaluations/introduction) page.
 ## Editing
 
 Datasets are editable. You can edit the datapoints by clicking on the datapoint and
-editing the data in JSON. The changes are saved automatically.
+editing the data in JSON. Changes are saved as a new datapoint version.
+
+### Versioning
+
+Each datapoint has a unique id and a `created_at` timestamp. Every time you
+edit a datapoint, under the hood,
+a new datapoint version is created with the same id,
+but the `created_at` timestamp is updated.
+
+The version stack is push-only. That is, when you revert to a previous version,
+a copy of that version is created and added as a current version.
+
+Example:
+
+- Initial version (v1):
+```json
+{
+  "id": "019a3122-ca78-7d75-91a7-a860526895b2",
+  "created_at": "2025-01-01T00:00:00.000Z",
+  "data": { "key": "initial value" }
+}
+```
+- Version 2 (v2):
+```json
+{
+  "id": "019a3122-ca78-7d75-91a7-a860526895b2",
+  "created_at": "2025-01-05T00:00:05.000Z",
+  "data": { "key": "value at v2" }
+}
+```
+- Version 3 (v3):
+```json
+{
+  "id": "019a3122-ca78-7d75-91a7-a860526895b2",
+  "created_at": "2025-01-10T00:00:10.000Z",
+  "data": { "key": "value at v3" }
+}
+```
+
+After this, you want to update to version 1 (initial version). This will create a new version (v4) with the same id, but the `created_at` timestamp is updated.
+
+- Version 4 (v4):
+```json
+{
+  "id": "019a3122-ca78-7d75-91a7-a860526895b2",
+  "created_at": "2025-01-15T00:00:15.000Z",
+  "data": { "key": "initial value" }
+}
+```
+
+### Datapoint id
+
+When you push a new datapoint to a dataset, a UUIDv7 is generated for it.
+This allows to sort datapoints by their creation order and preserver the order of insertion.
