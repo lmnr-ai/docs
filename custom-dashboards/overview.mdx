@@ -1,165 +1,67 @@
 ---
-title: "Custom Dashboards"
+title: "Creating dashboards to track metrics of AI agents"
 sidebarTitle: "Overview"
 ---
-
-Laminar Dashboards let you track key metrics and build visualizations from your trace, evaluation, and other data on the platform using SQL.
-Each project has pre-built dashboards that track key LLM metrics for your project. You can also create your own custom dashboards by writing custom SQL queries.
-
-## What you can do
-
-- Query your trace, evaluation, and other data using SQL
-- Resize and rearrange charts as you want
-- Add parameters to make charts interactive
-
 
 <Frame>
     <img src="/images/custom-dashboard/introduction.gif" alt="Laminar Custom Dashboard Introduction" />
 </Frame>
 
-## Getting Started
+## What You Can Track
 
-The Chart Builder workflow consists of the following steps:
+Custom Dashboards are built on top of our powerful query engine, working across all your observability data - `traces`, `spans`, `events`, and `tags`. You can track any metric that matters to your application.
 
-1. **Query**: Write Clickhouse SQL queries to retrieve your data
-2. **Configure Parameters** (optional): Set up dynamic parameters (start and end date, interval unit, etc.) for interactivity
-3. **Query Data**: Execute query to get data
-4. **Build Chart**: Configure chart type and visualization settings
-5. **Export to Dashboard**: Save your chart and add it to a dashboard
+For detailed information on available entities, fields, and how to select the right data for your charts, see the [SQL Editor Reference](/sql-editor/reference). 
+## How to Build Charts
 
-<Frame>
-<img src="/images/custom-dashboard/chart-builder-example.png" alt="Chart Builder overview" />
-</Frame>
-
-## Query
-
-Start by writing a Clickhouse SQL query that returns the data you want to visualize.
-Here is an example query that returns the number of traces created over the last 30 days grouped by day:
-
-```sql
-SELECT
-    -- Convert timestamp to start of day for daily grouping
-    toStartOfDay(created_at) as date,
-    COUNT(*) as total_traces
-FROM traces
-WHERE created_at >= now() - INTERVAL 30 DAY
-GROUP BY date
-ORDER BY date
-```
-
-## Parameters
-
-To make your chart interactive with dashboard controls, you can configure these in `Parameters` tab:
-
-- `{start_time: DateTime64}` - Start date from the date range picker
-- `{end_time: DateTime64}` - End date from the date range picker
-- `{interval_unit: String}` - Grouping interval (`HOUR`, `DAY`, `WEEK`, `MONTH`)
+To create a chart, navigate to **dashboard** menu and click the **`+ Chart`** button in the upper right corner.
 
 <Frame>
-    <img src="/images/custom-dashboard/chart-builder-parameters.png" alt="chart-builder-parameters" />
+    <img src="/images/custom-dashboard/chart-builder-flow.gif" alt="Chart Builder flow" />
 </Frame>
 
-Example query with parameters:
+**The process:**
 
-```sql
-SELECT
-    toStartOfInterval(created_at, toInterval(1, {interval_unit: String})) as time_bucket,
-    COUNT(*) as count,
-    AVG(duration_ms) as avg_duration
-FROM traces
-WHERE created_at >= {start_time: DateTime64}
-    AND created_at <= {end_time: DateTime64}
-GROUP BY time_bucket
-ORDER BY time_bucket
-```
+1. **Pick visualization**: 
+   - **Line Chart**: For time series visualization. We automatically prefill and group data by time range, perfect for tracking trends over time.
+   - **Bar Chart**: Another alternative to visualize time series data, useful when you want to emphasize individual time periods.
+   - **Horizontal Bar Chart**: For visualizations that need to be ranked, similar to a sortable table. Use this to compare and rank items (e.g., top users, models by cost).
 
-<Note>
-    By default, if you save query of the chart with parameters, chart will be sensitive to built-in filters on dashboard page.
-    This can be useful if you want to see your query over different periods of time, or groupings.
-</Note>
+2. **Select data source**: Traces, Spans, Events, and Tags
+
+3. **Define metrics**: What to measure (count, sum, avg, min, max, p90, p95, p99)
+
+4. **Add context**: Filters to narrow scope, grouping to break down by dimensions, order by fields, limits for top N results
+
+5. **Save and customize**: Add to dashboard, resize as needed
+
+## Examples
+
+### Total Tokens by Model
+
+See which models consume the most tokens to identify where your LLM costs are going. Use this to decide if you're using the right model for each use case.
 
 <Frame>
-    <img src="/images/custom-dashboard/dashboard-parameters.png" alt="dashboard-parameters" />
+    <img src="/images/custom-dashboard/total-tokens-by-model.png" alt="Total tokens by model chart" />
 </Frame>
 
-## Chart Settings
+**How to build:**
+- Chart type: Line Chart
+- Table: `spans`
+- Metric: `total_tokens` with `sum` aggregation
+- Group by: `model`
+- Filter: `span_type` = `LLM` (to include only LLM calls)
 
-- Ensure you run your query to retrieve the data before configuring your chart.
+### p90 Cost by Provider
+
+Track cost trends across different LLM providers over time. The p90 metric shows what most of your expensive requests cost, helping you compare provider pricing and spot cost increases.
 
 <Frame>
-    <img src="/images/custom-dashboard/chart-builder-settings.png" alt="chart-builder-settings" />
+    <img src="/images/custom-dashboard/p90-cost-by-provider.png" alt="p90 cost by provider chart" />
 </Frame>
 
-<Note>
-    Only Line Charts support multiple metrics visualization, using `Break down lines by` option. If you need to display multiple metrics,
-    use a Line Chart or create separate charts for each metric.
-</Note>
-
-## Export to Dashboard
-
-- Once you've configured your chart, export it with a name to add it to your dashboard.
-
-<Frame>
-    <img src="/images/custom-dashboard/chart-builder-export.png" alt="chart-builder-export" />
-</Frame>
-
-
-## Customizing Charts
-
-After adding your chart to the dashboard, you can resize it to fit your layout needs. Simply click and drag the corners or edges of the chart to adjust its dimensions.
-
-<Frame>
-    <img src="/images/custom-dashboard/chart-builder-resize.gif" alt="Resizing charts on dashboard" />
-</Frame>
-
-## More Examples
-
-#### Trace average duration over time
-
-```sql
-SELECT
-    -- Round start_time to the beginning of the specified interval (MINUTE, HOUR, DAY, WEEK, MONTH)
-    toStartOfInterval(start_time, toInterval(1, {interval_unit:String})) AS time,
-    -- Calculate average duration for each time bucket, defaulting to 0 if no data
-    toFloat64(COALESCE(AVG(duration), 0)) AS value
-FROM traces
-WHERE
-    -- Filter traces within the specified time range
-    start_time >= {start_time:DateTime64}
-  AND start_time <= {end_time:DateTime64}
-GROUP BY time
-ORDER BY time
--- Fill gaps in time series with zero values for missing intervals
-WITH FILL
-FROM toStartOfInterval({start_time:DateTime64}, toInterval(1, {interval_unit:String}))
-    TO toStartOfInterval({end_time:DateTime64}, toInterval(1, {interval_unit:String}))
-    STEP toInterval(1, {interval_unit:String})
-```
-
-#### Total tokens over time
-
-```sql
-SELECT
-    -- Round start_time to the beginning of the specified interval (MINUTE, HOUR, DAY, WEEK, MONTH)
-    toStartOfInterval(start_time, toInterval(1, {interval_unit:String})) AS time,
-    -- Sum total tokens consumed across all LLM spans in each time bucket
-    sum(total_tokens) AS value
-FROM spans
-WHERE
-    -- Filter for LLM spans only (span_type = 1 indicates LLM calls)
-    span_type = 1
-  -- Filter spans within the specified time range
-  AND start_time >= {start_time:DateTime64}
-  AND start_time <= {end_time:DateTime64}
-GROUP BY time
-ORDER BY time
--- Fill gaps in time series with zero values for missing intervals
-WITH FILL
-FROM toStartOfInterval({start_time:DateTime64}, toInterval(1, {interval_unit:String}))
-    TO toStartOfInterval({end_time:DateTime64}, toInterval(1, {interval_unit:String}))
-    STEP toInterval(1, {interval_unit:String})
-```
-
-## Learn More
-
-For more advanced SQL capabilities, syntax references, and examples, check out the [SQL Editor documentation](/sql-editor/introduction).
+**How to build:**
+- Chart type: Line Chart
+- Table: `spans`
+- Metric: `cost` with `p90` aggregation
+- Group by: `provider`
