@@ -10,15 +10,59 @@ sidebarTitle: Stagehand
 Laminar provides native integration with Stagehand, allowing you to trace your Stagehand code with just a few lines of code.
 
 Laminar observability captures:
-- Full recording of a browser window while the code is running
+- Full recording of a browser window while the code is running.
 - Execution steps, such as, `act`, `extract`, `observe` and `agent` calls.
-- LLM cost of the execution steps
-- Latency of the execution steps and LLM calls
+- Full LLM calls, including the prompts and responses.
+- LLM cost of the execution steps.
+- Latency of the execution steps and LLM calls.
 
 ## Quickstart
 
 Below is an example of a simple Stagehand script. Highlighted lines are the ones that are required to trace Stagehand with Laminar.
 
+<Tabs>
+<Tab title="Stagehand v3">
+```javascript {2, 4-10, 32}
+import { Stagehand } from '@browserbase/stagehand';
+import { Laminar } from '@lmnr-ai/lmnr';
+import { z } from 'zod';
+
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_API_KEY,
+  instrumentModules: {
+    stagehand: Stagehand,
+  },
+});
+
+const main = async () => {
+  const stagehand = new Stagehand();
+  await stagehand.init({
+    model: {
+      modelName: 'openai/gpt-4.1-mini',
+      apiKey: process.env.OPENAI_API_KEY,
+    },
+  });
+  const page = stagehand.context.pages()[0];
+  await page.goto('https://www.lmnr.ai');
+  await stagehand.act('go to Laminar pricing page');
+  const pricing = await stagehand.extract(
+    "get the hobby tier pricing",
+    z.object({
+      pricing: z.object({
+        price: z.string(),
+        features: z.array(z.string()),
+      }),
+    }),
+  );
+  await stagehand.close();
+  await Laminar.flush();
+  return pricing;
+};
+
+main().then(console.log).catch(console.error);
+```
+</Tab>
+<Tab title="Stagehand v2">
 ```javascript {2, 4-10, 32}
 import { Stagehand } from '@browserbase/stagehand';
 import { Laminar } from '@lmnr-ai/lmnr';
@@ -41,23 +85,25 @@ const main = async () => {
   });
   const page = stagehand.page;
   await page.goto('https://www.lmnr.ai');
-  await page.act('go to Laminar blogs page');
-  const blogPosts = await page.extract({
-    instruction: "get the blog posts",
+  await page.act('go to Laminar pricing page');
+  const pricing = await page.extract({
+    instruction: "get the hobby tier pricing",
     schema: z.object({
-      posts: z.array(z.object({
-        title: z.string(),
-        date: z.date(),
-      }))
-    })
+      pricing: z.object({
+        price: z.string(),
+        features: z.array(z.string()),
+      }),
+    }),
   });
   await stagehand.close();
   await Laminar.flush();
-  return blogPosts;
+  return pricing;
 };
 
 main().then(console.log).catch(console.error);
 ```
+</Tab>
+</Tabs>
 
 ### Step-by-step guide
 
