@@ -15,7 +15,7 @@ It abstracts away the underlying process management and calls to the model API.
 - Tool calls and their results.
 - Latencies, token counts, and token costs.
 
-## Getting started
+## Python
 
 <Steps>
 <Step title="Installation">
@@ -64,13 +64,62 @@ if __name__ == "__main__":
 ```
 
 </Step>
-<Step title="View the traces in Laminar">
+</Steps>
+
+## TypeScript / JavaScript
+
+<Steps>
+<Step title="Installation">
+
+Ensure you are using `@lmnr-ai/lmnr` version `0.7.10` or higher.
+
+```bash
+npm install @lmnr-ai/lmnr @anthropic-ai/claude-agent-sdk
+# or
+pnpm add @lmnr-ai/lmnr @anthropic-ai/claude-agent-sdk
+```
+
+</Step>
+<Step title="Set up your environment variables">
+
+Store your API keys in a `.env` file or export them as environment variables.
+
+```bash
+export LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+```
+
+</Step>
+<Step title="Usage">
+
+In the JS SDK, you simply wrap the query function.
+
+```typescript
+import { query as origQuery } from "@anthropic-ai/claude-agent-sdk";
+import { Laminar } from "@lmnr-ai/lmnr";
+// 1. Initialize Laminar
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY
+});
+// 2. Wrap the original query function
+const query = Laminar.wrapClaudeAgentQuery(origQuery);
+async function run() {
+  // 3. Use the wrapped query function
+  const result = await query({
+    prompt: "Scan the current directory for TODOs and create a summary markdown file."
+  });
+
+  console.log(result);
+}
+run();
+```
+
+</Step>
+</Steps>
+
+## View the traces in Laminar
 
 Go to the Laminar dashboard, and you will see the traces for the Claude Agent SDK.
 
 Example trace:
 
 <img src="/images/traces/claude-agent-sdk.png" alt="Claude Agent SDK Trace" />
-
-</Step>
-</Steps>
