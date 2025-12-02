@@ -42,13 +42,19 @@ export LMNR_PROJECT_API_KEY=your-laminar-project-api-key
 </Step>
 <Step title="Wrap the query function">
 
-```typescript{4-6,8}
-import { query as origQuery } from "@anthropic-ai/claude-agent-sdk";
-import { Laminar } from "@lmnr-ai/lmnr";
+```typescript {2,5-8,11}
+import { query as origQuery } from '@anthropic-ai/claude-agent-sdk';
+import { Laminar } from '@lmnr-ai/lmnr';
+import 'dotenv/config';
+
+// Initialize Laminar
 Laminar.initialize({
   projectApiKey: process.env.LMNR_PROJECT_API_KEY
 });
+
+// Wrap the original query function
 const query = Laminar.wrapClaudeAgentQuery(origQuery);
+
 async function run() {
   const result = await query({
     prompt: "Scan the current directory for TODOs and create a summary markdown file."
