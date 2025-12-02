@@ -107,6 +107,8 @@ Laminar.initialize({
 await Laminar.flush(); // NOTE: don't forget to await
 ```
 
+Learn more about flushing spans and shutting down Laminar tracing [here](/tracing/structure/flushing).
+
 ## My Python auto-instrumentation is not working.
 
 ### Problem
@@ -122,7 +124,7 @@ Most likely, you have not installed the right extras that enable the auto-instru
 Install the extras for LLM providers you are using and wish to instrument. For instance,
 
 ```sh
-pip install lmnr[openai]
+pip install lmnr[vertexai]
 ```
 
 Read the [installation docs](/installation) for more information.
@@ -138,12 +140,14 @@ LLM spans are instrumented and token counts are shown, but the prices are all at
 LLM providers do not return pricing information in the API responses, but they do return
 token counts.
 
-Laminar calculates the prices based on what's stored in the Laminar database.
+Laminar calculates the prices based on the model name and the provider name stored in the Laminar database.
 
 ### Solution
 
 Make sure the model you are using is supported by Laminar.
 View model formats and full list of models [here](/tracing/structure/providers#model-name-formats).
+
+If the model/provider pair is not supported by Laminar, reach out to us and we'll add it.
 
 ## I can see traces and spans in the UI, but they are not showing inputs and/or outputs.
 
