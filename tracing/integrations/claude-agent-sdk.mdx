@@ -33,24 +33,22 @@ pnpm add @lmnr-ai/lmnr@latest @anthropic-ai/claude-agent-sdk
 </Step>
 <Step title="Set up your environment variables">
 
-Store your API keys in a `.env` file or export them as environment variables.
+Export your API keys as environment variables.
 
 ```bash
 export LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+export ANTHROPIC_API_KEY=your-anthropic-api-key
 ```
 
 </Step>
 <Step title="Wrap the query function">
 
-```typescript {2,5-8,11}
+```typescript {2,5,8}
 import { query as origQuery } from '@anthropic-ai/claude-agent-sdk';
 import { Laminar } from '@lmnr-ai/lmnr';
-import 'dotenv/config';
 
 // Initialize Laminar
-Laminar.initialize({
-  projectApiKey: process.env.LMNR_PROJECT_API_KEY
-});
+Laminar.initialize();
 
 // Wrap the original query function
 const query = Laminar.wrapClaudeAgentQuery(origQuery);
