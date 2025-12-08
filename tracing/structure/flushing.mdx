@@ -82,12 +82,12 @@ Laminar.shutdown()
 
 # IMPORTANT: Laminar CANNOT be re-initialized after shutting it down inside
 # the same process. For force flushing spans, refer to
-# the section below on edge runtimes.
+# the section below on serverless functions.
 ```
 
-### Edge runtimes and AWS Lambda
+### Serverless functions and AWS Lambda
 
-In python, in order not to lose spans at the end of your Lambda or another edge runtime, use `Laminar.force_flush()` to force flush the spans immediately.
+In Python, in order not to lose spans at the end of your Lambda or another serverless function, use `Laminar.force_flush()` to force flush the spans immediately.
 
 ```python
 # Inside your Lambda handler
@@ -104,7 +104,7 @@ Laminar.force_flush()
 
 In Python, Laminar.flush() is a synchronous function. However, the actual flush is done in a background daemon thread.
 This means that if the process exits before the flush is complete, the spans will be lost. This is a common
-failure scenario for edge runtimes like AWS Lambda.
+failure scenario for serverless functions like AWS Lambda.
 
 This is NOT a problem in JavaScript, because the JavaScript OpenTelemetry SDK exposes `shutdown()` and `flush()` as asynchronous functions.
 Lambda will wait for the function to complete, as long as `await` is used on `Laminar.shutdown()` or `Laminar.flush()`.
