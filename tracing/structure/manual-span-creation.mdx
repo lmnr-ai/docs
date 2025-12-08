@@ -11,6 +11,30 @@ Manual span creation gives you fine-grained control over span lifecycle, attribu
 - **Integration with existing tracing** in codebases that already use OpenTelemetry
 - **Passing span context** to other functions and services. ([Learn more](/tracing/structure/continuing-traces))
 
+## Choosing the right Span type
+
+It is crucial to understand the difference between creating a span and creating an **active** span.
+
+### Start Active Span (`withSpan` / `start_as_current_span`)
+
+Active Spans empower you to **automatically capture the entire execution context**. By activating a span, any subsequent operations—including those in third-party libraries—are automatically recorded as children of that span.
+
+<Note>
+**Analogy:** You create a folder and immediately open it. Any file you save now goes inside that folder automatically.
+</Note>
+
+### Start Manual Span (`startSpan`)
+
+Manual Spans give you **control over detached or asynchronous operations**. This is useful when you need to pass a span to a completely different part of your system or when the parent-child relationship isn't defined by the call stack.
+
+<Note>
+**Analogy:** It's like creating a folder on your desktop but not opening it. If you save a file, it still goes to the desktop, not inside your new folder.
+</Note>
+
+### Summary
+
+Active spans are the preferred way to create spans, as they automatically handle nesting. Manual spans are useful for advanced use cases where you need precise control over the span's lifecycle and context.
+
 ## Span creation options
 
 There are several options to create and manage spans manually. 
