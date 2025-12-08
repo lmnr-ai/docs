@@ -232,7 +232,7 @@ await Laminar.withSpan(span, async () => {
   
   // ... your code here ...
 
-  childSpan.end();
+  childSpan2.end();
 });
 
 parentSpan.end();
@@ -286,7 +286,7 @@ parent_span.end()
 This function creates a new span, activates it immediately, and returns it.
 
 <Warning>
-Despite it's simplicity, this function needs to be used with extreme caution.
+Despite its simplicity, this function needs to be used with extreme caution.
 In Python, you must make sure that the span is ended within the same thread (or async context) that it was created in.
 Otherwise, the behavior is undefined, and the trace may have a corrupted hierarchy.
 </Warning>
@@ -346,7 +346,7 @@ span.end()
 
 </Tab>
 </Tabs>
-## Confgiuration examples
+## Configuration examples
 
 ### Manually creating an LLM span
 
