@@ -9,19 +9,78 @@ Manual span creation gives you fine-grained control over span lifecycle, attribu
 
 - **Fine-grained control** over span lifecycle and attributes
 - **Integration with existing tracing** in codebases that already use OpenTelemetry
-- **Custom span hierarchies** that don't fit the function-level `observe` pattern
+- **Passing span context** to other functions and services. ([Learn more](/tracing/structure/continuing-traces))
+
+## Choosing the right method
+
+It is crucial to understand the difference between creating a span and creating an **active** span.
+
+### Start Active Span (`withSpan` / `start_as_current_span`)
+
+Active Spans empower you to **automatically capture the entire execution context**. By activating a span, any subsequent operations—including those in third-party libraries—are automatically recorded as children of that span.
+
+<Note>
+**Analogy:** You create a folder and immediately open it. Any file you save now goes inside that folder automatically.
+</Note>
+
+### Start Manual Span (`startSpan`)
+
+Manual Spans give you **control over detached or asynchronous operations**. This is useful when you need to pass a span to a completely different part of your system or when the parent-child relationship isn't defined by the call stack.
+
+<Note>
+**Analogy:** It's like creating a folder on your desktop but not opening it. If you save a file, it still goes to the desktop, not inside your new folder.
+</Note>
+
+### Summary
+
+Active spans are the preferred way to create spans, as they automatically handle nesting. Manual spans are useful for advanced use cases where you need precise control over the span's lifecycle and context.
+
+## Span creation options
+
+There are several options to create and manage spans manually. 
+<Tip>
+Refer to the [Span lifecycle](/tracing/introduction#span-lifecycle) to understand the differences between the options.
+</Tip>
+
+### Summary of the options
+
+|  | Start as current span | Start span | With span / use span | Start active span | 
+| - | - | - | - | - |
+| Creates a new span (starts it) | ✅ | ✅ | ❌ | ✅ |
+| Activates the span (sets it as current) | ✅ | ❌ | ✅ | ✅ |
+| Ends the span | ✅ | ❌ | ❔ (if `end_on_exit` is passed) | ❌ |
+| Available in Python | ✅ | ✅ | ✅ | ✅ |
+| Available in JavaScript | ❌ (`observe` can be used instead) | ✅ | ✅ | ✅ |
+
+### Start as current span
 
 <Tabs>
+<Tab title="JavaScript/TypeScript">
+Laminar TypeScript SDK does not have a context manager equivalent to `start_as_current_span`.
+
+You can use `observe` function wrapper instead, as it achieves the same effect.
+
+```javascript
+import { Laminar, observe } from '@lmnr-ai/lmnr';
+
+await observe({ name: 'custom_operation' }, async () => {
+  // Any spans created here will be children of the "custom_operation" span
+});
+```
+
+Learn more about `observe` [here](/tracing/structure/observe).
+</Tab>
 <Tab title="Python">
 
+
+
 The `Laminar.start_as_current_span` method is a recommended way to create spans manually in Python.
-It creates a new span and sets it as the current span using a context manager. Context manager properly starts and ends the span.
+This is a context manager that creates a new span, sets it as active (that is, all spans created inside it will be children of this span), and ends the span when the context manager exits.
 
-### Basic Usage
-
-```python {7}
+```python {8-12}
 from lmnr import Laminar
 
+Laminar.initialize()
 
 def process_data(input_data):
   # ... your code here ...
@@ -29,10 +88,12 @@ def process_data(input_data):
     with Laminar.start_as_current_span(
         name="custom_operation", # name of the span
         input=input_data, # input of the span
-        span_type="DEFAULT" # type of the span. If not specified, it will be `'DEFAULT'`
+        span_type="DEFAULT" # type of the span.
     ) as span:
         try:
             # ... your code here ...
+            # Any spans created here will be children of
+            # the "custom_operation" span
             result = process_data(input_data)
             
             # Set span output and custom attributes
@@ -42,26 +103,254 @@ def process_data(input_data):
             })
             
         except Exception as error:
-            # Record error on span
-            span.record_exception(error) # This will create exception event on the span
+            # Record error on span. This will create exception event on the
+            # span.
+            span.record_exception(error)
             raise
 ```
 
-### Parameters
+#### Parameters
 
 - `name` (`str`): name of the span
 - `input` (`Any`): input to the span. It will be serialized to JSON and recorded as span input
-- `span_type` (`Literal['DEFAULT'] | Literal['LLM']`): type of the span. If not specified, it will be `'DEFAULT'`
+- `span_type` (`Literal['DEFAULT'] | Literal['LLM']` | `Literal['TOOL']`): type of the span. If not specified, it will be `'DEFAULT'`
+- `tags` (`list[str]`): list of tags to add to the span.
+- `parent_span_context` (`LaminarSpanContext`): [Advanced] a span context to use as the parent of the new span. (See [Using Span Context Serialization](/tracing/structure/continuing-traces#using-span-context-serialization))
+- `context` (`opentelemetry.context.Context`): [Advanced] an OTEL context to use for the span.
+
 
 </Tab>
 </Tabs>
 
+### Start span
+
+This function creates a new span and returns it. It does not activate the span, so there are two main use cases:
+- As a leaf span, for an operation that does not have children spans.
+- To pass the span object to other functions. Learn more about [passing span objects](/tracing/structure/continuing-traces#passing-span-objects).
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+import { Laminar } from '@lmnr-ai/lmnr';
+
+Laminar.initialize();
+
+const sum = (a: number, b: number): number => a + b;
+
+const span = Laminar.startSpan({ name: 'custom_operation' });
+
+const result = sum(1, 2);
+
+span.setAttributes({
+  'custom.operation.result': result,
+});
+
+span.end();
+```
+
+#### Parameters
+
+- `name` (`str`): name of the span
+- `input` (`any`): input to the span. It will be serialized to JSON and recorded as span input
+- `spanType` (`'DEFAULT' | 'LLM' | 'TOOL'`): type of the span. If not specified, it will be `'DEFAULT'`
+- `tags` (`string[]`): list of tags to add to the span.
+- `userId` (`string`): user ID for the span.
+- `sessionId` (`string`): session ID for the span.
+- `metadata` (`Record<string, any>`): metadata for the span. Must be json serializable.
+- `parentSpanContext` (`LaminarSpanContext`): [Advanced] a span context to use as the parent of the new span. (See [Using Span Context Serialization](/tracing/structure/continuing-traces#using-span-context-serialization))
+- `context` (`Context` (from `@opentelemetry/api`)): [Advanced] an OTEL context to use for the span.
+
+</Tab>
+<Tab title="Python">
+
+```python
+from lmnr import Laminar
+
+Laminar.initialize()
+
+def sum(a: int, b: int) -> int:
+    return a + b
+
+span = Laminar.startSpan(name="custom_operation")
+
+result = sum(1, 2)
+
+span.set_attribute("custom.operation.result", result)
+
+span.end()
+```
+
+#### Parameters
+
+- `name` (`str`): name of the span
+- `input` (`Any`): input to the span. It will be serialized to JSON and recorded as span input
+- `span_type` (`Literal['DEFAULT'] | Literal['LLM']` | `Literal['TOOL']`): type of the span. If not specified, it will be `'DEFAULT'`
+- `tags` (`list[str]`): list of tags to add to the span.
+- `parent_span_context` (`LaminarSpanContext`): [Advanced] a span context to use as the parent of the new span. (See [Using Span Context Serialization](/tracing/structure/continuing-traces#using-span-context-serialization))
+- `context` (`opentelemetry.context.Context`): [Advanced] an OTEL context to use for the span.
+
+</Tab>
+</Tabs>
+
+### With span / use span
+
+This function accepts an existing span and activates it **for the scope of the function / context manager**. That is, all spans created inside it will be children of the passed span.
+Any spans created outside of it will not be children of the passed span (unless the passed span is already activated elsewhere).
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+import { Laminar } from '@lmnr-ai/lmnr';
+
+Laminar.initialize();
+
+const parentSpan = Laminar.startSpan({ name: 'parent' });
+
+await Laminar.withSpan(span, async () => {
+  // 'parent' span is active here
+  const childSpan = Laminar.startSpan({ name: 'child' });
+  
+  // ... your code here ...
+
+  childSpan.end();
+});
+// 'parent' span is not active here anymore
+
+// 'other' span is not a child of 'parent' span, because 'parent'
+// span is not active 
+const otherSpan = Laminar.startSpan({ name: 'other' });
+
+// ... your code here ...
+
+otherSpan.end();
+
+// you can use withSpan multiple times
+await Laminar.withSpan(span, async () => {
+  const childSpan2 = Laminar.startSpan({ name: 'child2' });
+  
+  // ... your code here ...
+
+  childSpan2.end();
+});
+
+parentSpan.end();
+```
+
+#### Parameters
+- `span` (`Span`): the span to activate
+- `fn` (`Function`): the function to run within the span context.
+- `endOnExit` (`bool`): whether to end the passed span when the context manager exits.
+
+</Tab>
+<Tab title="Python">
+```python
+from lmnr import Laminar
+
+Laminar.initialize()
+
+parent_span = Laminar.start_span(name="parent")
+
+with Laminar.use_span(parent_span):
+    # 'parent' span is active here
+    child_span = Laminar.start_span(name="child")
+    # ... your code here ...    
+    child_span.end()
+    
+# 'parent' span is not active here anymore
+# 'other' span is not a child of 'parent' span, because 'parent'
+# span is not active 
+other_span = Laminar.start_span(name="other")
+# ... your code here ...
+other_span.end()
+
+# you can use use_span multiple times
+with Laminar.use_span(parent_span):
+    child_span2 = Laminar.start_span(name="child2")
+    # ... your code here ...
+    child_span2.end()
+
+parent_span.end()
+```
+
+#### Parameters
+
+- `span` (`Span`): the span to activate
+- `end_on_exit` (`bool`): whether to end the passed span when the context manager exits.
+</Tab>
+</Tabs>
+
+### Start active span
+
+This function creates a new span, activates it immediately, and returns it.
+
+<Warning>
+Despite its simplicity, this function needs to be used with extreme caution.
+In Python, you must make sure that the span is ended within the same thread (or async context) that it was created in.
+Otherwise, the behavior is undefined, and the trace may have a corrupted hierarchy.
+</Warning>
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+import { Laminar } from '@lmnr-ai/lmnr';
+
+Laminar.initialize();
+
+const span = Laminar.startActiveSpan({ name: 'custom_operation' });
+
+// ... your code here ...
+// Any spans created here will be children of the 'custom_operation' span
+
+span.end();
+```
+
+#### Parameters
+
+- `name` (`str`): name of the span
+- `input` (`any`): input to the span. It will be serialized to JSON and recorded as span input
+- `spanType` (`'DEFAULT' | 'LLM' | 'TOOL'`): type of the span. If not specified, it will be `'DEFAULT'`
+- `tags` (`string[]`): list of tags to add to the span.
+- `userId` (`string`): user ID for the span.
+- `sessionId` (`string`): session ID for the span.
+- `metadata` (`Record<string, any>`): metadata for the span. Must be json serializable.
+- `parentSpanContext` (`LaminarSpanContext`): [Advanced] a span context to use as the parent of the new span. (See [Using Span Context Serialization](/tracing/structure/continuing-traces#using-span-context-serialization))
+- `context` (`Context` (from `@opentelemetry/api`)): [Advanced] an OTEL context to use for the span.
+
+</Tab>
+<Tab title="Python">
+
+```python
+from lmnr import Laminar
+
+Laminar.initialize()
+
+span = Laminar.start_active_span(name="custom_operation")
+
+# ... your code here ...
+# Any spans created here will be children of the 'custom_operation' span
+
+span.end()
+```
+
+#### Parameters
+
+- `name` (`str`): name of the span
+- `input` (`Any`): input to the span. It will be serialized to JSON and recorded as span input
+- `span_type` (`Literal['DEFAULT'] | Literal['LLM']` | `Literal['TOOL']`): type of the span. If not specified, it will be `'DEFAULT'`
+- `tags` (`list[str]`): list of tags to add to the span.
+- `parent_span_context` (`LaminarSpanContext`): [Advanced] a span context to use as the parent of the new span. (See [Using Span Context Serialization](/tracing/structure/continuing-traces#using-span-context-serialization))
+- `context` (`opentelemetry.context.Context`): [Advanced] an OTEL context to use for the span.
+
+</Tab>
+</Tabs>
+## Configuration examples
+
 ### Manually creating an LLM span
 
 To manually create an LLM span, set `span_type="LLM"` and properly set the span attributes related to LLM calls.
-<Tip>
-It's highly recommended to set input of manual LLM spans in the OpenAI's `messages` format to get see LLM calls-specific rendering in the UI.
-</Tip>
 
 <Tabs>
 <Tab title="JavaScript/TypeScript">
@@ -75,7 +364,9 @@ const response = await fetch('https://api.custom-llm.com/v1/completions', {
   method: 'POST',
   body: JSON.stringify({
     model: 'custom-model-1',
-    messages: [{ role: 'user', content: 'What is the longest river in the world?' }],
+    messages: [
+      { role: 'user', content: 'What is the longest river in the world?' },
+    ],
   }),
 });
 
@@ -130,82 +421,7 @@ with Laminar.start_as_current_span(
 </Tab>
 </Tabs>
 
-
-## Fine-grained control over span creation
-
-If you need absolute control over span creation and completion, Laminar provides methods to start and end spans manually.
-
-<Tabs>
-<Tab title="JavaScript/TypeScript">
-
-You can use `Laminar.startSpan` to create a span manually.
-It doesn't set the span as the current span.
-You need to manually set the span as the current span using `Laminar.withSpan` context manager.
-You also need to manually end the span using `span.end()` method.
-<Tip>
-You can use `Laminar.withSpan` to set the manually created span as the current span.
-</Tip>
-
-```javascript
-import { Laminar } from '@lmnr-ai/lmnr';
-
-const span = Laminar.startSpan({ name: 'operation' });
-
-try {
-  // ... your code here ...
-  const result = await performOperation(); // defined somewhere else
-  
-  Laminar.withSpan(span, async () => {
-
-    await observe({ name: 'nested_operation' }, async () => {
-      // now `nested_operation` will be a child of `operation` span
-    });
-
-  });
-
-  span.setAttributes({
-    'operation.result_count': result.length,
-    'operation.success': true
-  });
-  
-} finally {
-  // Always end the span
-  span.end();
-}
-```
-</Tab>
-<Tab title="Python">
-
-You can use `Laminar.start_span` to create a span manually.
-It doesn't set the span as the current span.
-You need to manually set the span as the current span using `Laminar.use_span` context manager.
-You also need to manually end the span using `span.end()` method.
-
-```python
-from lmnr import Laminar
-
-# Create a span manually (not as current span)
-span = Laminar.start_span(name="batch_operation")
-
-try:
-    # Use the span as context for nested operations
-    with Laminar.use_span(span):
-        # This code runs with 'span' as the active span
-        result = process_batch() # defined somewhere else
-        
-        # Set attributes
-        span.set_attribute("batch.size", len(result))
-        span.set_attribute("batch.success", True)
-        
-finally:
-    # Always end the span
-    span.end()
-```
-
-</Tab>
-</Tabs>
-
-## Custom Span Hierarchies
+### Custom Span Hierarchies
 
 Example of creating complex span hierarchies for detailed tracing of multi-step operations:
 
@@ -268,6 +484,7 @@ const processWorkflow = async (workflowData) => {
 <Tab title="Python">
 
 ```python
+from opentelemetry import trace
 from lmnr import Laminar
 
 def process_workflow(workflow_data):
@@ -281,11 +498,19 @@ def process_workflow(workflow_data):
                 validate_workflow(workflow_data)
             
             # Step 2: Processing
-            with Laminar.start_as_current_span(name="processing") as processing_span:
+            with Laminar.start_as_current_span(
+                name="processing",
+            ) as processing_span:
                 result = process_with_llm(workflow_data)
                 
-                processing_span.set_attribute("processing.items_count", len(result["items"]))
-                processing_span.set_attribute("processing.duration_ms", result["duration"])
+                processing_span.set_attribute(
+                  "processing.items_count",
+                  len(result["items"])
+                )
+                processing_span.set_attribute(
+                  "processing.duration_ms",
+                  result["duration"]
+                )
             
             # Step 3: Finalization  
             with Laminar.start_as_current_span(name="finalization"):
@@ -297,14 +522,16 @@ def process_workflow(workflow_data):
             
         except Exception as error:
             workflow_span.record_exception(error)
-            workflow_span.set_status(trace.Status(trace.StatusCode.ERROR, str(error)))
+            workflow_span.set_status(
+              trace.Status(trace.StatusCode.ERROR, str(error)),
+            )
             raise
 ```
 
 </Tab>
 </Tabs>
 
-## Capturing errors and setting span attributes
+### Capturing errors and setting span attributes
 
 To properly handle errors and set span attributes for better observability, you can use the following pattern.
 
@@ -371,36 +598,3 @@ finally:
 span = Laminar.start_span(name="operation")
 do_work()
 ```
-
-### Meaningful Span Names
-```python
-# ✅ Good - descriptive, hierarchical names
-with Laminar.start_as_current_span(name="user_registration.email_validation"):
-    validate_email()
-
-with Laminar.start_as_current_span(name="user_registration.password_hashing"):
-    hash_password()
-
-# ❌ Bad - generic or unclear names  
-with Laminar.start_as_current_span(name="process"):
-    validate_email()
-```
-
-### Rich Attributes
-```python
-# ✅ Good - structured, queryable attributes
-Laminar.set_span_attributes({
-    "user.id": user_id,
-    "user.tier": "premium", 
-    "operation.batch_size": 100,
-    "operation.retry_count": 2,
-    "feature.experimental_enabled": True
-})
-
-# ❌ Bad - unstructured or missing context
-Laminar.set_span_attributes({
-    "data": "some processing"
-})
-```
-
-Manual span creation provides the flexibility and control needed for complex tracing scenarios while maintaining compatibility with the broader OpenTelemetry ecosystem.

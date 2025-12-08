@@ -69,7 +69,10 @@ const analyzeImage = async (imagePath, userQuestion) =>
   });
 
 // Example usage
-const result = await analyzeImage('eiffel_tower.jpg', 'What information is shown in this image?');
+const result = await analyzeImage(
+  'eiffel_tower.jpg',
+  'What information is shown in this image?',
+);
 console.log(result);
 ```
 </Tab>
@@ -123,7 +126,10 @@ def analyze_image(image_path: str, user_question: str):
     return response.choices[0].message.content
 
 # Example usage
-result = analyze_image("eiffel_tower.jpg", "What information is shown in this image?")
+result = analyze_image(
+  "eiffel_tower.jpg",
+  "What information is shown in this image?",
+)
 print(result)
 ```
 </Tab>

@@ -46,7 +46,7 @@ const generateResponse = async (span: Span, processedData: any) => {
 // Main orchestrator
 const handleRequest = async (userInput: string) => {
   const rootSpan = Laminar.startSpan('handleUserRequest');
-  
+
   try {
     const processedData = await processData(rootSpan, userInput);
     const response = await generateResponse(rootSpan, processedData);
@@ -59,7 +59,8 @@ const handleRequest = async (userInput: string) => {
 ```
 
 <Warning>
-Remember to call `span.end()` to complete the trace. You can also pass `true` as the third argument (`endOnExit`) to the last `Laminar.withSpan()` call to automatically end the span.
+Remember to call `span.end()` to complete the trace.
+You can also pass `true` as the third argument (`endOnExit`) to the last `Laminar.withSpan()` call to automatically end the span.
 </Warning>
 
 </Tab>
@@ -86,7 +87,7 @@ def generate_response(span: Span, processed_data: dict):
 
 def handle_request(user_input: str):
     root_span = Laminar.start_span(name="handle_user_request")
-    
+
     try:
         processed_data = process_data(root_span, user_input)
         response = generate_response(root_span, processed_data)
@@ -122,12 +123,12 @@ let spanContext: string | null = null;
 
 const firstHandler = async () => {
     const span = Laminar.startSpan({ name: 'firstHandler' });
-    
+
     // Serialize the span context
     spanContext = Laminar.serializeLaminarSpanContext(span);
-    
+
     // Store spanContext in database, send via HTTP header, etc.
-    
+
     span.end();
 };
 
@@ -137,10 +138,10 @@ const secondHandler = async () => {
         name: 'secondHandler',
         parentSpanContext: spanContext ?? undefined,
     });
-    
+
     // This span will be a child of the first handler's span
     // Your code here...
-    
+
     span.end();
 };
 ```
@@ -158,12 +159,12 @@ const response = await fetch('/api/service-b', {
 // Service B - deserialize and continue
 app.post('/api/service-b', (req, res) => {
   const spanContext = req.headers['x-laminar-span-context'];
-  
+
   const span = Laminar.startSpan({
     name: 'serviceBHandler',
-    parentSpanContext: spanContext
+    parentSpanContext: spanContext,
   });
-  
+
   // Handle request...
   span.end();
 });
@@ -180,24 +181,24 @@ def first_handler(request: str) -> str:
     with Laminar.start_as_current_span(name="first_handler") as span:
         # Serialize the span context
         span_context = Laminar.serialize_span_context(span)
-        
+
         # Store in database, pass via message queue, etc.
         save_context_to_db(span_context)
-        
+
         return "Processing started"
 
 # Deserialize and continue trace (e.g., in second service)
 def second_handler(context_id: str) -> str:
     # Retrieve serialized context
     serialized_context = get_context_from_db(context_id)
-    
+
     # Deserialize span context
     parent_span_context = (
         Laminar.deserialize_span_context(serialized_context)
         if serialized_context
         else None
     )
-    
+
     with Laminar.start_as_current_span(
         name="second_handler",
         parent_span_context=parent_span_context
@@ -218,7 +219,7 @@ app = Flask(__name__)
 def call_service_b():
     with Laminar.start_as_current_span(name="service_a_call"):
         span_context = Laminar.serialize_span_context()
-        
+
         response = requests.post('http://service-b/api/process', 
             headers={'X-Laminar-Span-Context': span_context},
             json={'data': 'some data'}
@@ -229,13 +230,13 @@ def call_service_b():
 @app.route('/api/process', methods=['POST'])
 def process_request():
     span_context = request.headers.get('X-Laminar-Span-Context')
-    
+
     parent_span_context = (
         Laminar.deserialize_span_context(span_context)
         if span_context 
         else None
     )
-    
+
     with Laminar.start_as_current_span(
         name="service_b_handler",
         parent_span_context=parent_span_context

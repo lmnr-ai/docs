@@ -35,9 +35,31 @@ Each span has:
 - **Name**: The name of the span (e.g., `gemini.generate_content`)
 - **Input**: The input of the function representing a span. In case of an LLM call, this is the prompt.
 - **Output**: The output of the function representing a span. In case of an LLM call, this is the response from the model.
-- **Duration**: How long the operation took to execute
+- **Duration**: How long the operation took to execute.
 - **Path**: Hierarchical path of the span in the trace (e.g., `get_user.validate.api_call`).
-- **Attributes**: Input parameters, return values, and other metadata
+- **Attributes**: Input parameters, return values, and other metadata.
+- **Parent span ID**: A reference to the parent span. If the span is the root span of the trace, the parent span ID is not specified.
+
+#### Span lifecycle
+
+Spans are created, can optionally be activated, and need to be ended.
+
+**Span creation** also known as **starting a span** is a process of creating a new span object with a start timestamp.
+**Span activation** means setting the span as the current active span. This means that spans created afterwards will become the children of the current span.
+**Span ending** is a process of setting the end timestamp on the span and closing the span.
+
+<Note>
+**Analogy:** 
+- **Active Span:** You create a folder and immediately open it. Any file you save now goes inside that folder automatically.
+- **Manual Span:** It's like creating a folder on your desktop but not opening it. If you save a file, it still goes to the desktop, not inside your new folder.
+</Note>
+
+<Tip>
+A span that is not ended will never be visible in the UI.
+</Tip>
+
+Note that it is not required to activate a span. For example, if you know a small operation will not have children spans, you can create it without activating it.
+Ending such a span is still required. These spans do not have children spans, so they are sometimes called **leaf spans**. A common example of a leaf span is a simple LLM call.
 
 ### Trace
 
