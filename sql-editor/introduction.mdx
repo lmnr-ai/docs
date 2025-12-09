@@ -1,94 +1,61 @@
 ---
-title: Introduction to Laminar SQL Editor
+title: Query Laminar with SQL
 sidebarTitle: Introduction
 ---
 
-Laminar SQL Editor allows you to query all your data stored at Laminar using SQL.
+Use the SQL editor to slice traces, spans, events, and eval results with ClickHouse SQL, then turn queries into dashboards or datasets.
+
+<Callout>
+Embed placeholder: GIF of running a query, switching to JSON view, and exporting to a dataset.
+</Callout>
+
+## What you'll do in minutes
+
+- Run ClickHouse SQL over Laminar data (`spans`, `traces`, `events`, `evaluation_scores`, `evaluation_datapoints`).  
+- Visualize results or export them to datasets/queues.  
+- Build dashboards from saved queries.
+
 <Tip>
-    The SQL Editor is currently in beta.
-    Some functionality may change.
-    We value your feedback and suggestions.
-    Please [contact us](mailto:founders@laminar.ai) or join our [Discord](https://discord.gg/nNFUUDAKub) to share your thoughts.
+SQL editor is in beta. Share feedback at founders@laminar.ai or on Discord.
 </Tip>
 
-Laminar SQL editor queries data stored in [ClickHouse](https://clickhouse.com/).
-Queries must be written in [ClickHouse SQL](https://clickhouse.com/docs/sql-reference).
+## Fast start
 
-For detailed reference of the syntax, see the [reference](/sql-editor/reference) page.
+1. Open **SQL Editor** in the sidebar.  
+2. Paste a query and run it (SELECT-only).  
+3. View results as table or JSON.  
+4. Export to a dataset or add to a dashboard.
 
-## Features
-
-- Query all your data stored at Laminar using SQL
-- Write custom complex queries to connect different data within your project
-- Fast analytics on your data, e.g.
-    - Detailed breakdown of token count and cost by operation
-    - Detailed latency analysis by operation
-    - Dig into deeply nested trace data
-- Create custom dashboards
-- Export query results to Laminar datasets or labelling queues
-- Query data via API to connect to your own tools and workflows
-
-## Allowed queries
-- Only `SELECT` queries are allowed.
-- Allowed tables (to select from):
-    - `spans`
-    - `traces`
-    - `events`
-    - `evaluation_scores`
-    - `evaluation_datapoints`
-
-For detailed information about the tables and columns, see the [reference](/sql-editor/reference) page.
-
-## Getting started
-
-### Prerequisites
-
-- You must have some data stored at Laminar, such as traces or evaluation results.
-
-### Using the SQL Editor
-
-SQL Editor is available in the sidebar.
-
-<img src="/images/sql-editor/sidebar.png" alt="SQL Editor in sidebar on Laminar" />
-
-### Using SQL Query API
-
-You can also run queries directly from the API. It is available at the `/v1/sql/query` endpoint.
-
-Querying via API is identical to using the SQL Editor, you simply pass the `query` as a parameter.
-
-Read the [API reference](/api-reference/sql/sql_query) page for more information.
-
-### Example query
+Example query (last 3 days of LLM spans):
 
 ```sql
 SELECT
-    input,
-    output,
-    start_time
+  name,
+  model,
+  total_tokens,
+  cost,
+  start_time
 FROM spans
-WHERE start_time BETWEEN now() - INTERVAL '3 days' AND now()
+WHERE span_type = 'LLM'
+  AND start_time >= now() - INTERVAL 3 DAY
+ORDER BY start_time DESC
+LIMIT 200
 ```
 
-This query will return the input and output of the spans in the last 3 days.
+## Common recipes
 
-### Viewing results
+- **Cost by model**: `SELECT model, sum(cost) FROM spans WHERE span_type='LLM' GROUP BY model ORDER BY 2 DESC`  
+- **Slow routes**: `SELECT route, p95(duration_ms) AS p95_ms FROM traces GROUP BY route ORDER BY p95_ms DESC`  
+- **Eval score drift**: `SELECT group_name, toStartOfDay(created_at) AS day, avg(score) FROM evaluation_scores GROUP BY group_name, day`
 
-Results are displayed in a table or raw JSON view.
+## Exporting results
 
-<img src="/images/sql-editor/json-view.png" alt="JSON View of the results" />
+- **To dataset**: map columns to `data`, `target`, `metadata`.  
+- **To labeling queue**: export via dataset, then queue for review.  
+- **To dashboard**: save query and add it as a chart (line/bar/horizontal bar).
 
-### Exporting results
+## Build this next
 
-Once you have selected the results you want to export, click the "Export to Dataset" button.
-
-Choose the dataset you want to export to and map the columns to the dataset `data`, `metadata`, and `target` fields.
-
-<img src="/images/sql-editor/export-to-dataset.png" alt="Export to Dataset" />
-
-[Learn more about datasets](/datasets/introduction)
-
-## Next steps
-
-- [Overview](/sql-editor/overview) – Overview of the Laminar SQL Editor and how to use it
-- [Reference](/sql-editor/reference) – Reference of the table schemas and best practices
+- Chart your queries → [SQL overview](/sql-editor/overview)  
+- Reference for tables/columns → [SQL reference](/sql-editor/reference)  
+- Turn queries into dashboards → [Custom dashboards](/custom-dashboards/overview)

@@ -1,96 +1,143 @@
 ---
 sidebarTitle: Quickstart
-title: Get started with Laminar tracing.
+title: Get your first Laminar trace in 3 commands
 ---
 
-import LaminarInitialize from '/snippets/laminar-initialize.mdx';
-import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
-import ObserveExample from '/snippets/observe-example.mdx';
+Laminar traces your LLM calls and functions with almost no setup. Follow the copy–paste–run path below to get a live trace (inputs, outputs, tokens, and cost) in under 5 minutes.
 
-### 1. Get Your Project API Key
+<Callout>
+Embed placeholder: live trace viewer or GIF showing a span tree expanding with cost + token breakdown.
+</Callout>
 
-To get your Project API Key, navigate to your project settings page on the Laminar dashboard and create new project API key.
+## What you'll build
 
-Next, you'll need to set this key as an environment variable in your project. Create a `.env` file in the root of your project (if you don't have one already) and add the following line:
+- A captured trace for a single LLM call (inputs/outputs, latency, tokens, cost).
+- Optional custom span wrapping your code so you can see parent/child relationships.
+- A shareable trace link you can open in Playgrounds for fast iteration.
 
-```env
-LMNR_PROJECT_API_KEY=your_project_api_key_here
-```
-
-Replace `your_project_api_key_here` with the actual key you copied.
-
-### 2. Initialize Laminar in Your Application
-
-Adding just two lines to your application enables comprehensive tracing:
-
-<LaminarInitialize />
-
-### 3. That's it! Your LLM API Calls Are Now Traced
-
-Once initialized, Laminar automatically traces LLM API calls. For example, after initialization, this standard OpenAI call:
+## Three commands to first trace
 
 <Tabs>
 <Tab title="JavaScript/TypeScript">
-```javascript
 
-// Laminar was initialized before this code
+```bash
+# 1) Install Laminar + OpenAI client
+npm install @lmnr-ai/lmnr openai
 
+# 2) Add one-line auto-instrumentation (import anywhere before your app code)
+echo "import 'lmnr/auto'" > bootstrap.ts
+
+# 3) Run any OpenAI script with your Laminar key
+LMNR_PROJECT_API_KEY=your_key node app.js
+```
+
+Example app (drop below your import):
+
+```ts
+import 'lmnr/auto';
 import { OpenAI } from 'openai';
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
 const response = await client.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{ role: "user", content: "What is the capital of France?" }],
+  model: 'gpt-4o-mini',
+  messages: [{ role: 'user', content: 'What is the capital of France?' }],
 });
+
+console.log(response.choices[0].message.content);
 ```
+
+</Tab>
+<Tab title="Python">
+
+```bash
+# 1) Install
+pip install lmnr openai
+
+# 2) One-line auto-instrumentation
+echo "import lmnr.auto" > bootstrap.py
+
+# 3) Run any OpenAI script with your Laminar key
+LMNR_PROJECT_API_KEY=your_key python app.py
+```
+
+Example app:
+
+```python
+import lmnr.auto  # traces OpenAI + your functions
+from openai import OpenAI
+import os
+
+client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+
+resp = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[{"role": "user", "content": "What is the capital of France?"}],
+)
+
+print(resp.choices[0].message.content)
+```
+
+</Tab>
+</Tabs>
+
+<Note>
+You can still call `Laminar.initialize()` for advanced options (custom names, module-specific instrumentation, tags), but the auto-import above is the fastest path to value.
+</Note>
+
+## Add a custom span (optional, 1 line)
+
+Wrap any function to see it as a parent span above your LLM calls.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```ts
+import { observe } from '@lmnr-ai/lmnr';
+
+const classify = () =>
+  observe({ name: 'classify_ticket' }, async () => {
+    return await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: 'Classify this ticket: payment bug' }],
+    });
+  });
+
+await classify();
+```
+
 </Tab>
 <Tab title="Python">
 
 ```python
+from lmnr import observe
 
-# Laminar was initialized before this code
+@observe(name="classify_ticket")
+def classify():
+    return client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": "Classify this ticket: payment bug"}],
+    )
 
-from openai import OpenAI
-
-client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-response = client.chat.completions.create(
-    model="gpt-4o-mini",
-    messages=[{"role": "user", "content": "What is the capital of France?"}],
-)
+classify()
 ```
+
 </Tab>
 </Tabs>
 
-Will automatically create a span in your Laminar dashboard:
+<Callout>
+Embed placeholder: screenshot/GIF of the resulting trace tree showing `classify_ticket` as the parent span and the OpenAI call as a child, with token + cost totals.
+</Callout>
 
-<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
-  <img src="/images/traces/trace-openai.png" alt="OpenAI span visualization" style={{ margin: '0px' }}/>
-</div>
+## Why this matters
 
-<Note>
-Laminar automatically captures important LLM metrics including latency, token usage, and cost calculations based on the specific model used.
-</Note>
+- **Faster onboarding**: no project scaffolding or SDK boilerplate before seeing value.
+- **Trustworthy debugging**: inputs/outputs + tokens/costs live with the call stack, not split across logs.
+- **Shareable context**: copy a trace URL to loop in teammates or jump into Playgrounds to iterate.
 
-## Tracing Custom Functions
+## Build this next
 
-Beyond automatic LLM tracing, you can use the `observe` decorator/wrapper to trace specific functions in your application:
-
-<ObserveExample />
-
-## Next Steps
-
-- Explore our integrations to see how Laminar works with your favorite tools:
-    - [OpenAI](/tracing/integrations/openai)
-    - [Anthropic](/tracing/integrations/anthropic)
-    - [Gemini](/tracing/integrations/gemini)
-    - [Langchain](/tracing/integrations/langchain)
-    - [Next.js](/tracing/integrations/nextjs)
-    - [Vercel AI SDK](/tracing/integrations/vercel-ai-sdk)
-    - [LiteLLM](/tracing/integrations/litellm)
-    - [Playwright](/tracing/integrations/playwright)
-    - [Browser Use](/tracing/integrations/browser-use)
-    - [Stagehand](/tracing/integrations/stagehand)
-    - [Puppeteer](/tracing/integrations/puppeteer)
-- Continue to [Trace Structure](/tracing/structure) to learn more about adding structure to your traces.
-- Explore [Browser agent observability](/tracing/browser-agent-observability) to trace browser sessions and agent execution steps.
-- If you want to get into details on OpenTelemetry, check out the in-depth [OpenTelemetry guide](/tracing/otel). 
+- Debug a browser agent with session recordings → [Browser agent observability](/tracing/browser-agent-observability)
+- Trace a LangGraph/Stagehand workflow → [LangGraph visualization](/tracing/langgraph-visualization)
+- Run evals on a RAG pipeline → [Evaluations quickstart](/evaluations/quickstart)
+- Break down costs by feature/team → [Tags and metadata](/tracing/structure/tags)

@@ -1,77 +1,97 @@
 ---
-title: "LLM Observability for AI SDK by Vercel"
+title: Trace Vercel AI SDK calls
 sidebarTitle: Vercel AI SDK
 ---
 import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
 
-[AI SDK](https://sdk.vercel.ai/docs/introduction) is a library that allows you to add LLM features to your JS/TS applications. It supports tracing using [OpenTelemetry](https://opentelemetry.io/). 
+Trace `generateText`/`streamText` calls with Laminar’s OpenTelemetry tracer. You’ll see prompts, responses, tokens, and costs with no app rewrites.
 
-Laminar tracing is based on OpenTelemetry, so it is fully compatible with Vercel AI SDK tracing and you can start sending Vercel AI SDK traces to Laminar right away.
+<Callout>
+Embed placeholder: GIF of running a generateText call and opening the span in Laminar.
+</Callout>
+
+## What you'll build
+
+- Traces for AI SDK calls with inputs/outputs and cost.  
+- Works in Next.js and Node.js with minimal config.  
+- Shareable trace links + Playground for prompt iteration.
+
+## Copy/paste/run
 
 <Steps>
 <Step title="Get your project API key">
 <GetProjectApiKey />
 </Step>
+
 <Step title="Initialize Laminar">
 <Tabs>
 <Tab title="Next.js">
-In Next.js, place `Laminar.initialize` in the `instrumentation.ts` file.
 
-```typescript {3-4, 6-8} instrumentation.ts
+`instrumentation.ts`:
+
+```ts {3-4,6-8}
 export async function register() {
-  // prevent this from running in the edge runtime
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     const { Laminar } = await import('@lmnr-ai/lmnr');
-
-    Laminar.initialize({
-      projectApiKey: process.env.LMNR_PROJECT_API_KEY,
-    });
+    Laminar.initialize({ projectApiKey: process.env.LMNR_PROJECT_API_KEY });
   }
 }
 ```
 
-You will also need to update your `next.config.ts` file to include the `serverExternalPackages` option.
+`next.config.ts` (required for Laminar/OpenTelemetry):
 
-```typescript next.config.ts
+```ts
 const nextConfig = {
   serverExternalPackages: ['@lmnr-ai/lmnr'],
 };
+export default nextConfig;
 ```
 
-This is because Laminar depends on OpenTelemetry, which uses some Node.js-specific functionality, and we need to inform Next.js about it. Learn more in the [Next.js docs](https://nextjs.org/docs/app/api-reference/config/next-config-js/serverExternalPackages).
 </Tab>
 <Tab title="Node.js">
-In Node.js, place `Laminar.initialize` in the entry point to your application.
 
-This must be done once, in an entry point of your application after any other tracing SDK initialization.
-
-```javascript
+```ts
 import { Laminar } from '@lmnr-ai/lmnr';
 
 Laminar.initialize({
-  projectApiKey: process.env.LMNR_API_KEY,
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
 });
 ```
+
 </Tab>
 </Tabs>
 </Step>
-<Step title="Update your AI SDK calls">
 
-We need to pass the Laminar tracer to the `generateText`, or `streamText`, or any other `generate*` calls.
+<Step title="Trace your AI SDK calls">
 
-```javascript {3,8-11}
+```ts {3,8-11}
 import { openai } from '@ai-sdk/openai';
 import { generateText } from 'ai';
 import { getTracer } from '@lmnr-ai/lmnr';
 
 const { text } = await generateText({
-  model: openai('gpt-4.1-nano'),
+  model: openai('gpt-4o-mini'),
   prompt: 'What is Laminar flow?',
   experimental_telemetry: {
     isEnabled: true,
     tracer: getTracer(),
   },
 });
+
+console.log(text);
 ```
+
 </Step>
 </Steps>
+
+## What to look for
+
+- Span name: `ai.generateText` (or `ai.streamText`) with prompt/response captured.  
+- Tokens + cost per call; rollups if you wrap parents with `observe`.  
+- Playground button on each span to tweak prompts.
+
+## Build this next
+
+- Next.js app with OpenAI/Anthropic → [Next.js integration](/tracing/integrations/nextjs)  
+- Tag spans for cost per route/team → [Tags and metadata](/tracing/structure/tags)  
+- Compare model providers → [OpenAI](/tracing/integrations/openai) and [Anthropic](/tracing/integrations/anthropic)

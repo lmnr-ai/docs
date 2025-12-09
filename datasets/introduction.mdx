@@ -1,112 +1,52 @@
 ---
 sidebarTitle: Introduction
-title: Introduction to Laminar datasets
+title: Datasets for evals and training
 ---
 
-## Concept
+Datasets in Laminar hold the examples that power your evals, labeling, and training loops. Each datapoint is JSON you can version, filter, and connect back to traces.
 
-Dataset is a collection of datapoints. It can be used for the following purposes:
-1. Data storage for use in future fine-tuning or prompt-tuning.
-1. Provide inputs and expected outputs for [Evaluations](/evaluations/introduction).
+<Callout>
+Embed placeholder: screenshot of a dataset table with data/target/metadata columns and a “View trace” link.
+</Callout>
 
-## Format
+## What you'll do with datasets
 
-Every datapoint has two fixed JSON objects: `data` and `target`, each with arbitrary keys.
-`target` is only used in evaluations.
+- Store inputs + expected outputs for evaluations.  
+- Turn traces into labeled examples, then iterate in labeling queues.  
+- Export query results (cost outliers, bad traces) straight into a dataset.
 
-- `data` – the actual datapoint data,
-- `target` – data additionally sent to the evaluator function.
-- `metadata` – arbitrary key-value metadata about the datapoint.
-
-For every key inside `data` and `target`, the value can be any JSON value.
-
-### Example
-
-This is an example of a valid datapoint.
+## Datapoint shape
 
 ```json
 {
-    "data": {
-        "color": "red",
-        "size": "large",
-        "messages": [
-            {
-                "role": "user",
-                "content": "Hello, can you help me choose a T-shirt?"
-            },
-            {
-                "role": "assistant",
-                "content": "I'm afraid, we don't sell T-shirts"
-            }
-        ]
-    },
-    "target": {
-        "expected_output": "Of course! What size and color are you looking for?"
-    }
+  "data": { "question": "What is the capital of France?" },
+  "target": { "answer": "Paris" },
+  "metadata": { "category": "geography" }
 }
 ```
 
-## Use case: Evaluations
+- `data`: the input to your executor.  
+- `target`: optional reference passed to evaluators.  
+- `metadata`: tags for filtering and grouping.
 
-Datasets can be used for evaluations to specify inputs and expected outputs.
+## Versioning (built-in)
 
-You will need to make sure the dataset keys match the input and output node names of the pipelines.
-See more in the [Evaluations](/evaluations/introduction) page.
+- Every edit creates a new version with the same id and a new timestamp.  
+- Reverting creates a new top version; history stays intact.  
+- Sort with UUIDv7 to preserve insertion order.
 
-## Editing
+## Common workflows
 
-Datasets are editable. You can edit the datapoints by clicking on the datapoint and
-editing the data in JSON. Changes are saved as a new datapoint version.
+- **Feed evals**: wire a dataset into [evaluate](/evaluations/quickstart) to score prompts/agents.  
+- **Label from traces**: push spans into a queue, label targets, and write back to the dataset.  
+- **Export from SQL**: query outliers in the [SQL editor](/sql-editor/introduction) and export to a dataset.
 
-### Versioning
+<Callout>
+Embed placeholder: GIF of selecting traces → exporting to dataset → running an eval.
+</Callout>
 
-Each datapoint has a unique id and a `created_at` timestamp. Every time you
-edit a datapoint, under the hood,
-a new datapoint version is created with the same id,
-but the `created_at` timestamp is updated.
+## Build this next
 
-The version stack is push-only. That is, when you revert to a previous version,
-a copy of that version is created and added as a current version.
-
-Example:
-
-- Initial version (v1):
-```json
-{
-  "id": "019a3122-ca78-7d75-91a7-a860526895b2",
-  "created_at": "2025-01-01T00:00:00.000Z",
-  "data": { "key": "initial value" }
-}
-```
-- Version 2 (v2):
-```json
-{
-  "id": "019a3122-ca78-7d75-91a7-a860526895b2",
-  "created_at": "2025-01-05T00:00:05.000Z",
-  "data": { "key": "value at v2" }
-}
-```
-- Version 3 (v3):
-```json
-{
-  "id": "019a3122-ca78-7d75-91a7-a860526895b2",
-  "created_at": "2025-01-10T00:00:10.000Z",
-  "data": { "key": "value at v3" }
-}
-```
-
-After this, you want to update to version 1 (initial version). This will create a new version (v4) with the same id, but the `created_at` timestamp is updated.
-
-- Version 4 (v4):
-```json
-{
-  "id": "019a3122-ca78-7d75-91a7-a860526895b2",
-  "created_at": "2025-01-15T00:00:15.000Z",
-  "data": { "key": "initial value" }
-}
-```
-
-### Datapoint id
-
-When you push a new datapoint to a dataset, a UUIDv7 is generated for it.
-This allows to sort datapoints by their creation order and preserve the order of insertion.
+- Create/load datasets programmatically → [Datasets CLI](/datasets/cli)  
+- Label quickly → [Labeling queues](/queues/quickstart)  
+- Run evals on your dataset → [Evaluations quickstart](/evaluations/quickstart)

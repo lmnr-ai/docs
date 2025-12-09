@@ -1,154 +1,99 @@
 ---
-title: LLM Observability for OpenAI SDK in JS and Python
+title: Trace OpenAI in JS and Python (3 steps)
 sidebarTitle: OpenAI
-description: Instrument your OpenAI API calls with Laminar
+description: Copy/paste setup to see OpenAI calls with inputs, outputs, tokens, and cost.
 ---
 
-## Overview
+Instrument OpenAI with a single import. You will get per-call traces with prompts, responses, latency, tokens, and cost, plus links to Playgrounds for fast iteration.
 
-Laminar automatically instruments the official OpenAI package with a single line of code, allowing you to trace and monitor all your OpenAI API calls without modifying your existing code. This provides complete visibility into your AI application's performance, costs, and behavior.
+<Callout>
+Embed placeholder: GIF of running the three commands and opening the OpenAI span with cost breakdown.
+</Callout>
 
-## Getting Started
+## What you'll build
+
+- Traces for every OpenAI call (chat/completions) with inputs/outputs.  
+- Token + cost tracking per call and rolled up.  
+- Shareable trace links; open any span in Playground.
+
+## Copy/paste/run
 
 <Tabs items={['TypeScript', 'Python']}>
   <Tab title="TypeScript">
-    ### 1. Install Laminar and OpenAI
 
-    ```bash
-    npm install @lmnr-ai/lmnr openai
-    ```
+```bash
+npm install @lmnr-ai/lmnr openai
+```
 
-    ### 2. Set up your environment variables
+Add one-line auto-instrumentation before your app code:
 
-    Store your API keys in a `.env` file:
+```ts
+import 'lmnr/auto';
+import { OpenAI } from 'openai';
 
-    ```bash
-    # .env file
-    LMNR_PROJECT_API_KEY=your-laminar-project-api-key
-    OPENAI_API_KEY=your-openai-api-key
-    ```
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    Then load them in your application using a package like [dotenv](https://www.npmjs.com/package/dotenv).
+const res = await client.chat.completions.create({
+  model: 'gpt-4o-mini',
+  messages: [{ role: 'user', content: 'Hello from Laminar' }],
+});
 
-    <Note>
-    If you are using OpenAI with Next.js, please follow the [Next.js integration guide](/tracing/integrations/nextjs) for best practices and setup instructions.
-    </Note>
+console.log(res.choices[0].message.content);
+```
 
-    ### 3. Initialize Laminar
+Run it:
 
-    Just add a single line at the start of your application or file to instrument OpenAI with Laminar.
+```bash
+LMNR_PROJECT_API_KEY=your_key node app.js
+```
 
-    ```typescript
-    import { Laminar } from '@lmnr-ai/lmnr';
-    import OpenAI from 'openai';
-    import 'dotenv/config'; // Load environment variables
+<Note>
+Need explicit control? Replace the auto-import with `Laminar.initialize({ instrumentModules: { OpenAI } });`.
+</Note>
 
-    // This single line instruments all OpenAI API calls
-    Laminar.initialize({
-      instrumentModules: { OpenAI: OpenAI }
-    });
-
-    // Initialize OpenAI client as usual
-    const openai = new OpenAI();
-    ```
-    <Note>
-    It is important to pass `OpenAI` to `instrumentModules` as a named export.
-    </Note>
-
-    ### 4. Use OpenAI as usual
-
-    ```typescript
-    // Make API calls to OpenAI as you normally would
-    const response = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      messages: [
-        { role: "system", content: "You are a helpful assistant." },
-        { role: "user", content: "Hello, how are you?" }
-      ],
-    });
-
-    console.log(response.choices[0].message.content);
-    ```
-
-    All OpenAI API calls are now automatically traced in Laminar.
   </Tab>
   <Tab title="Python">
-    ### 1. Install Laminar and OpenAI
 
-    ```bash
-    pip install 'lmnr[all]' openai python-dotenv
-    ```
+```bash
+pip install "lmnr[openai]" openai
+```
 
-    ### 2. Set up your environment variables
+Add one-line auto-instrumentation:
 
-    Store your API keys in a `.env` file:
+```python
+import lmnr.auto
+from openai import OpenAI
+import os
 
-    ```bash
-    # .env file
-    LMNR_PROJECT_API_KEY=your-laminar-project-api-key
-    OPENAI_API_KEY=your-openai-api-key
-    ```
+client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
-    <Note>
-    To see an example of how to integrate Laminar within a FastAPI application, check out our [FastAPI integration guide](/guides/fastapi).
-    </Note>
+resp = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[{"role": "user", "content": "Hello from Laminar"}],
+)
 
-    ### 3. Initialize Laminar
+print(resp.choices[0].message.content)
+```
 
-    Just add a single line at the start of your application or file to instrument OpenAI with Laminar.
+Run it:
 
-    ```python
-    from lmnr import Laminar
-    from openai import OpenAI
-    import os
-    from dotenv import load_dotenv
+```bash
+LMNR_PROJECT_API_KEY=your_key python app.py
+```
 
-    # Load environment variables from .env file
-    load_dotenv()
-
-    # This single line instruments all OpenAI API calls
-    Laminar.initialize()
-
-    # Initialize OpenAI client as usual
-    client = OpenAI()
-    ```
-
-    ### 4. Use OpenAI as usual
-
-    ```python
-    # Make API calls to OpenAI as you normally would
-    response = client.chat.completions.create(
-        model="gpt-4.1-mini",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": "Hello, how are you?"}
-        ]
-    )
-
-    print(response.choices[0].message.content)
-    ```
-
-    All OpenAI API calls are now automatically traced in Laminar.
   </Tab>
 </Tabs>
 
-These features allow you to build more structured traces, add context to your LLM calls, and gain deeper insights into your AI application's performance.
+## What to look for in the trace
 
-## Monitoring Your OpenAI Usage
+- Span name: `openai.chat.completions.create` (child of your function if wrapped with `observe`).  
+- Inputs/outputs: full prompt and response.  
+- Tokens/cost: per-call totals and rollups.  
+- Playground button: jump into prompt editing directly from the span.
 
-After instrumenting your OpenAI calls with Laminar, you'll be able to:
+## Build this next
 
-1. **View detailed traces** of each OpenAI API call, including request and response
-2. **Track token usage and cost** across different models
-3. **Monitor latency** and performance metrics
-4. **Open LLM span in Playground** for prompt engineering
-5. **Debug issues** with failed API calls or unexpected model outputs
-
-Visit your Laminar dashboard to view your OpenAI traces and analytics.
-
-## Advanced Features
-
-- [Sessions](/tracing/structure/session) - Learn how to add session structure to your traces
-- [Metadata](/tracing/structure/metadata) - Discover how to add additional context to your LLM spans
-- [Trace structure](/tracing/structure) - Explore creating custom spans and more advanced tracing
-- [Realtime Monitoring](/tracing/realtime) - See how to monitor your OpenAI calls in real-time
+- Next.js + OpenAI recipe → [Next.js integration](/tracing/integrations/nextjs)  
+- Vercel AI SDK → [Vercel AI SDK integration](/tracing/integrations/vercel-ai-sdk)  
+- Compare providers with the same code → [Anthropic integration](/tracing/integrations/anthropic)  
+- Add tags to break down cost → [Tags and metadata](/tracing/structure/tags)

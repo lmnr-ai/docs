@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
+  "theme": "maple",
   "name": "Laminar documentation",
   "colors": {
     "primary": "#ED6E40",
@@ -12,9 +12,11 @@
     "tabs": [
       {
         "tab": "Documentation",
+        "icon": "book-open",
         "groups": [
           {
-            "group": "Overview",
+            "group": "Getting Started",
+            "icon": "rocket",
             "pages": [
               "overview",
               "installation",
@@ -25,39 +27,49 @@
                   "self-hosting/access-control-setup"
                 ]
               },
+              "tracing/quickstart",
               "cursor"
             ]
           },
           {
-            "group": "Tracing",
+            "group": "Model providers",
             "pages": [
-              "tracing/introduction",
-              "tracing/quickstart",
+              "tracing/integrations/openai",
+              "tracing/integrations/anthropic",
+              "tracing/integrations/gemini",
+              "tracing/integrations/cohere",
+              "tracing/integrations/litellm"
+            ]
+          },
+          {
+            "group": "Frameworks & SDKs",
+            "pages": [
+              "tracing/integrations/vercel-ai-sdk",
+              "tracing/integrations/nextjs",
+              "tracing/integrations/langchain",
+              "tracing/integrations/kernel",
+              "tracing/integrations/claude-agent-sdk"
+            ]
+          },
+          {
+            "group": "Browser & agents",
+            "pages": [
+              "tracing/integrations/browser-use",
+              "tracing/integrations/stagehand",
+              "tracing/integrations/skyvern",
+              "tracing/integrations/playwright",
+              "tracing/integrations/puppeteer"
+            ]
+          },
+          {
+            "group": "Debug & Optimize",
+            "icon": "bug",
+            "pages": [
               "tracing/automatic-instrumentation",
               {
-                "group": "Integrations",
-                "pages": [
-                  "tracing/integrations/openai",
-                  "tracing/integrations/anthropic",
-                  "tracing/integrations/gemini",
-                  "tracing/integrations/langchain",
-                  "tracing/integrations/cohere",
-                  "tracing/integrations/vercel-ai-sdk",
-                  "tracing/integrations/nextjs",
-                  "tracing/integrations/litellm",
-                  "tracing/integrations/kernel",
-                  "tracing/integrations/claude-agent-sdk",
-                  "tracing/integrations/browser-use",
-                  "tracing/integrations/stagehand",
-                  "tracing/integrations/skyvern",
-                  "tracing/integrations/playwright",
-                  "tracing/integrations/puppeteer"
-                ]
-              },
-              {
                 "group": "Tracing Structure",
+                "icon": "hierarchy",
                 "pages": [
-                  "tracing/structure/overview",
                   "tracing/structure/observe",
                   "tracing/structure/manual-span-creation",
                   "tracing/structure/session",
@@ -74,6 +86,7 @@
               "tracing/browser-agent-observability",
               "tracing/langgraph-visualization",
               "tracing/events",
+              "tracing/share-spans",
               "tracing/otel",
               {
                 "group": "Troubleshooting",
@@ -85,7 +98,8 @@
             ]
           },
           {
-            "group": "Evaluations",
+            "group": "Evaluate",
+            "icon": "chart-line",
             "pages": [
               "evaluations/introduction",
               "evaluations/quickstart",
@@ -106,36 +120,23 @@
             ]
           },
           {
-            "group": "SQL Editor",
-            "pages": [
-              "sql-editor/introduction",
-              "sql-editor/overview",
-              "sql-editor/reference"
-            ]
-          },
-          {
-            "group": "Custom Dashboards",
-            "pages": [
-              "custom-dashboards/overview"
-            ]
-          },
-          {
-            "group": "Datasets",
+            "group": "Datasets & Labeling",
+            "icon": "database",
             "pages": [
               "datasets/introduction",
               "datasets/adding-data",
-              "datasets/cli"
-            ]
-          },
-          {
-            "group": "Labeling Queues",
-            "pages": [
+              "datasets/cli",
               "queues/quickstart"
             ]
           },
           {
-            "group": "Playground",
+            "group": "Analyze & Visualize",
+            "icon": "chart-pie",
             "pages": [
+              "sql-editor/introduction",
+              "sql-editor/overview",
+              "sql-editor/reference",
+              "custom-dashboards/overview",
               "playground/introduction",
               "playground/playground-from-span",
               "playground/tools",
@@ -145,37 +146,33 @@
         ]
       },
       {
-        "tab": "Guides",
+        "tab": "Recipes",
+        "icon": "map",
         "pages": [
           "guides/fastapi",
-          "guides/nextjs-aisdk",
           "guides/nextjs",
+          "guides/nextjs-aisdk",
           "guides/evaluating-tool-calls"
         ]
       },
       {
+        "tab": "Changelog",
+        "icon": "megaphone",
+        "pages": [
+          "changelog/index"
+        ]
+      },
+      {
         "tab": "API Reference",
-        "groups": [
-          {
-            "group": "API Documentation",
-            "pages": [
-              "api-reference/introduction",
-              {
-                "group": "Evaluations",
-                "pages": [
-                  "api-reference/evals/init_eval",
-                  "api-reference/evals/save_eval_datapoints",
-                  "api-reference/evals/update_eval_datapoint"
-                ]
-              },
-              {
-                "group": "SQL",
-                "pages": [
-                  "api-reference/sql/sql_query"
-                ]
-              }
-            ]
-          }
+        "icon": "code",
+        "pages": [
+          "api-reference/introduction",
+          "api-reference/evals/init_eval",
+          "api-reference/evals/save_eval_datapoints",
+          "api-reference/evals/update_eval_datapoint",
+          "api-reference/evaluators/score",
+          "api-reference/queues/push",
+          "api-reference/sql/sql_query"
         ]
       }
     ],
@@ -194,6 +191,12 @@
     }
   },
   "logo": "/logo/logo.png",
+  "styling": {
+    "breadcrumbs": true,
+    "css": [
+      "/style.css"
+    ]
+  },
   "api": {
     "openapi": [
       "api-reference/openapi.json"

@@ -1,67 +1,59 @@
 ---
-title: "Creating dashboards to track metrics of AI agents"
-sidebarTitle: "Overview"
+title: Create dashboards to track your AI app
+sidebarTitle: Overview
 ---
 
-<Frame>
-    <img src="/images/custom-dashboard/introduction.gif" alt="Laminar Custom Dashboard Introduction" />
-</Frame>
+Build dashboards on top of your traces, spans, events, and eval scores without extra infrastructure. Track costs, latency, accuracy, or any custom metric in a few clicks.
 
-## What You Can Track
+<Callout>
+Embed placeholder: GIF of creating a chart from a query and pinning it to a dashboard (tokens/cost by route).
+</Callout>
 
-Custom Dashboards are built on top of our powerful query engine, working across all your observability data - `traces`, `spans`, `events`, and `tags`. You can track any metric that matters to your application.
+## What you'll build
 
-For detailed information on available entities, fields, and how to select the right data for your charts, see the [SQL Editor Reference](/sql-editor/reference). 
-## How to Build Charts
+- A dashboard tile showing the metrics that matter (cost, tokens, latency, accuracy).  
+- Filters and group-bys to break down by model, route, user, team, or tag.  
+- Shareable dashboards for eng/support/research.
 
-To create a chart, navigate to **dashboard** menu and click the **`+ Chart`** button in the upper right corner.
+## Copy/paste workflow
 
-<Frame>
-    <img src="/images/custom-dashboard/chart-builder-flow.gif" alt="Chart Builder flow" />
-</Frame>
+1. Open **Dashboard** → click **`+ Chart`**.  
+2. Choose a visualization (line, bar, horizontal bar for rankings).  
+3. Select a source (`spans`, `traces`, `events`, `evaluation_scores`).  
+4. Define metrics (count/sum/avg/p90/p95/p99) and group by model/route/tag.  
+5. Save to a dashboard and resize/arrange tiles.
 
-**The process:**
+<Tip>
+Need a custom query? Use the SQL editor to craft it, then add the result as a chart.
+</Tip>
 
-1. **Pick visualization**: 
-   - **Line Chart**: For time series visualization. We automatically prefill and group data by time range, perfect for tracking trends over time.
-   - **Bar Chart**: Another alternative to visualize time series data, useful when you want to emphasize individual time periods.
-   - **Horizontal Bar Chart**: For visualizations that need to be ranked, similar to a sortable table. Use this to compare and rank items (e.g., top users, models by cost).
+## Example recipes
 
-2. **Select data source**: Traces, Spans, Events, and Tags
+**Total tokens by model (identify spend hotspots)**  
+- Source: `spans`  
+- Metric: `sum(total_tokens)`  
+- Group by: `model`  
+- Filter: `span_type = 'LLM'`  
+- Visualization: Line chart
 
-3. **Define metrics**: What to measure (count, sum, avg, min, max, p90, p95, p99)
+**p90 cost by provider (compare pricing drift)**  
+- Source: `spans`  
+- Metric: `p90(cost)`  
+- Group by: `provider`  
+- Visualization: Line chart
 
-4. **Add context**: Filters to narrow scope, grouping to break down by dimensions, order by fields, limits for top N results
+**Top slow routes (find regressions)**  
+- Source: `traces`  
+- Metric: `p95(duration_ms)`  
+- Group by: `route`  
+- Visualization: Horizontal bar
 
-5. **Save and customize**: Add to dashboard, resize as needed
+<Callout>
+Embed placeholder: dashboard screenshot with the three example charts; add “View live trace” buttons on hover.
+</Callout>
 
-## Examples
+## Build this next
 
-### Total Tokens by Model
-
-See which models consume the most tokens to identify where your LLM costs are going. Use this to decide if you're using the right model for each use case.
-
-<Frame>
-    <img src="/images/custom-dashboard/total-tokens-by-model.png" alt="Total tokens by model chart" />
-</Frame>
-
-**How to build:**
-- Chart type: Line Chart
-- Table: `spans`
-- Metric: `total_tokens` with `sum` aggregation
-- Group by: `model`
-- Filter: `span_type` = `LLM` (to include only LLM calls)
-
-### p90 Cost by Provider
-
-Track cost trends across different LLM providers over time. The p90 metric shows what most of your expensive requests cost, helping you compare provider pricing and spot cost increases.
-
-<Frame>
-    <img src="/images/custom-dashboard/p90-cost-by-provider.png" alt="p90 cost by provider chart" />
-</Frame>
-
-**How to build:**
-- Chart type: Line Chart
-- Table: `spans`
-- Metric: `cost` with `p90` aggregation
-- Group by: `provider`
+- Write custom queries → [SQL editor](/sql-editor/introduction)  
+- Export query results to datasets → [Export & datasets](/sql-editor/overview)  
+- Pipe eval scores into dashboards → [Evaluations](/evaluations/introduction)

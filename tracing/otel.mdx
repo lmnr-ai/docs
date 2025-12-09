@@ -4,9 +4,9 @@ description: 'Details on Spans and attributes in OpenTelemetry-compatible tracin
 ---
 
 Laminar uses OpenTelemetry for tracing. That is, Laminar's backend is compatible with OpenTelemetry.
-This page details the methods to send your OpenTelemetry traces to Laminar, even if you are not using Laminar's SDK.
+Use these methods to send your OpenTelemetry traces to Laminar, even if you are not using Laminar's SDK.
 
-If you are using Laminar's SDK, refer to the [tracing](/tracing/introduction) page to get started.
+If you are using Laminar's SDK, refer to the [tracing quickstart](/tracing/quickstart) page to get started.
 Still feel free to read this page to get basic understanding of the internals of OpenTelemetry and how it works with Laminar.
 
 ## Introduction
@@ -16,7 +16,7 @@ an extension of OpenTelemetry that is specifically designed for LLM tracing. The
 introduced in OpenLLMetry are gradually being adopted by OpenTelemetry.
 
 OpenTelemetry covers tracing, metrics, and logs, but Laminar only uses tracing. For more details
-about tracing in Laminar, and a quick intro to the core concepts, see the [Tracing](/tracing/introduction) page.
+about tracing in Laminar, and a quick intro to the core concepts, see the [Tracing quickstart](/tracing/quickstart) page.
 
 Processing of OpenTelemetry traces has many concepts and components, namely, exporters,
 processors, propagators, samplers, and collectors.
@@ -128,7 +128,7 @@ Be careful though if you are using the HTTP exporter, as the HTTP implementation
 
 The authorization header is required to send traces to Laminar. We use bearer authentication,
 so the header should start with `Bearer ` and the token is your
-[project API key](http://localhost:3001/tracing/introduction#getting-started).
+[project API key](http://localhost:3001/tracing/quickstart#three-commands-to-first-trace).
 
 The right way to set the headers for gRPC requests is to use the metadata object. Even though
 gRPC is sent over HTTP/2, and metadata is sent as HTTP headers, it is different from

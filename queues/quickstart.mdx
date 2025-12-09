@@ -1,76 +1,39 @@
 ---
 title: Labeling Queues
 sidebarTitle: Quickstart
-description: Labeling queues are a way to quickly label and build datasets for evaluations from span data and other datasets.
+description: Turn traces and datasets into labeled examples fast.
 ---
 
-## What is a Labeling Queue?
+Labeling queues let you turn raw outputs into labeled targets with a fast, focused UI. Push spans or dataset rows into a queue, label them, and write back to datasets for evals or training.
 
-- A labeling queue is a collection of items that need to be labeled.
-- Labeling queue is an actual queue with FIFO (first in, first out) order.
-- Items in the queue have exactly the same shape as datapoints in a dataset.
-- Labeling operation in this context means writing a data to the target field of a datapoint.
+<Callout>
+Embed placeholder: GIF of pushing a span to a queue, editing the target JSON, and saving.
+</Callout>
 
-<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
-<img src="/images/queues/lq-view.png" alt="Screenshot of a trace visualization" style={{ margin: '0px' }}/>
-</div>
+## What you'll do
 
-## How to Use the Labeling Interface
+- Queue items that share the dataset shape (`data`, `target`, `metadata`).  
+- Edit targets quickly with a side-by-side payload + editor.  
+- Save to a dataset in a single click; keep FIFO flow to stay organized.
 
-When you open a labeling queue, you'll see a split-screen interface designed for efficient labeling:
+## Fast path
 
-### Payload view
-The left panel shows you the full JSON payload of the current item you're labeling.
-Payload is a JSON object with the same shape as a datapoint in a dataset. It has `data` and `target` fields.
+1. From any trace span, click **“Send to labeling queue.”** Inputs become `data`; outputs become `target`.  
+2. Open the queue; left pane shows payload, right pane is the target editor.  
+3. Choose the destination dataset, click **Complete**, move to the next item.  
+4. Use **Skip/Prev/Next** to navigate; item counter shows progress.
 
+## Other ways to populate queues
 
-### Target Editor
-This is where you do the actual labeling work:
-- **Edit the JSON in the target editor** to correct, improve, or write new data to the target field.
-- **Use proper JSON formatting** - the editor will help you with syntax highlighting
-
-<Tip>
-As you type in the target editor on the right, watch how the `"target"` section in the left payload updates in real-time. This helps you see exactly what will be saved to your dataset.
-</Tip>
-
-
-### Save Preferences  
-- **Select your target dataset** from the dropdown to choose where completed items should go
-- **Click "Complete"** to save the current item to the dataset and move to the next item in the queue.
-
-### Navigation
-- **Check the item counter** ("Item 5 of 11") to see how many items you've completed and how many remain
-- **Use the navigation buttons** to move through your queue:
-  - Click **"Skip"** if you want to pass on the current item without making changes
-  - Use **"Prev"** and **"Next"** to move between items (helpful for comparing similar cases)
-  - Click **"Complete"** when you're satisfied with your labeling
-
-## Push items to the queue
-
-### From Span View
-You can push individual spans directly to a labeling queue for labeling.
-This is particularly useful when you want to label specific model outputs for evaluation.
-Span input will be added to the `data` field of the datapoint, and span output will be added to the `target` field.
-
-<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
-<img src="/images/queues/push-from-span.png" alt="Screenshot of a trace visualization" style={{ margin: '0px' }}/>
-</div>
-
-### From Dataset View  
-You can also push existing datapoints from datasets into a labeling queue.
-You can either push individual datapoint or select a subset of datapoints in the dataset view.
-
-<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
-<img src="/images/queues/push-from-datapoint.png" alt="Screenshot of a trace visualization" style={{ margin: '0px' }}/>
-</div>
-
-
-
-
+- From a dataset: select rows and push them into a queue for review.  
+- From SQL: export query results into a dataset, then queue them for labeling.
 
 <Tip>
-When pushing items to a queue, they maintain the same JSON structure as datapoints in datasets, ensuring consistency between your labeling workflow and final datasets.
+Queues preserve the dataset JSON shape, so labeled items drop straight back into evals without extra mapping.
 </Tip>
 
+## Build this next
 
-
+- Run evals on your newly labeled data → [Evaluations quickstart](/evaluations/quickstart)  
+- Export tricky cases via SQL → [SQL editor](/sql-editor/introduction)  
+- Capture the traces that feed your queues → [Tracing quickstart](/tracing/quickstart)

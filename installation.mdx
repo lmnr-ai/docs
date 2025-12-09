@@ -1,112 +1,61 @@
 ---
 title: Installation
-description: Laminar installation guide
+description: Copy/paste installs to get your first Laminar trace fast.
 ---
 
-## Install the package
+Laminar is designed to get you to a live trace in minutes. Pick your language, run the three commands, and your LLM calls will show up with inputs, outputs, tokens, and costs.
 
-<Tabs>
-<Tab title="JavaScript/Typescript">
+## What you'll do
 
-Install the package from [npm](https://www.npmjs.com/package/@lmnr-ai/lmnr).
-
-```sh
-npm add @lmnr-ai/lmnr
-```
-
-<Expandable title="other installation options: yarn, pnpm">
-yarn
-
-```sh
-yarn add @lmnr-ai/lmnr
-```
-
-pnpm
-
-```sh
-pnpm add @lmnr-ai/lmnr
-```
-</Expandable>
-</Tab>
-<Tab title="Python">
-
-Install the package from [PyPI](https://pypi.org/project/lmnr/).
-
-```sh
-pip install --upgrade 'lmnr[all]'
-```
-
-This will install the package and enable all the available automatic instrumentations.
-
-However, this installs a lot of dependencies, so you can specify the extras to enable
-specific automatic instrumentations of client SDKs/libraries.
-
-For example, to enable automatic instrumentations of Anthropic and OpenAI, run:
-
-```sh
-pip install --upgrade 'lmnr[anthropic,openai]'
-```
-
-<Warning>
-If you do not specify any extras, no automatic instrumentation will be enabled.
-</Warning>
-
-<Expandable title="other installation options: poetry, uv">
-
-poetry
-
-```sh
-poetry add 'lmnr[anthropic,openai]'
-```
-
-uv
-
-```sh
-uv add lmnr --extra anthropic --extra openai
-```
-
-uv pip
-
-```sh
-uv pip install 'lmnr[anthropic,openai]'
-```
-
-</Expandable>
-
-
-Full list of available extras:
-
-- `alephalpha`
-- `anthropic`
-- `bedrock`
-- `cohere`
-- `google-generativeai`
-- `groq`
-- `haystack`
-- `lancedb`
-- `langchain`
-- `llamaindex`
-- `marqo`
-- `milvus`
-- `mistralai`
-- `ollama`
-- `openai`
-- `pinecone`
-- `qdrant`
-- `replicate`
-- `sagemaker`
-- `together`
-- `transformers`
-- `vertexai`
-- `watsonx`
-- `weaviate`
-
+- Install Laminar alongside your model SDK.
+- Add one import to auto-instrument.
+- Run your existing code and open the trace.
 
 <Note>
-  The extras configuration is only available since version `0.4.39`.
-  Before that, default option would install all the available instruments.
+If you just want the fastest path, use the commands below. For advanced control (selective instrumentation, proxies), see [automatic instrumentation](/tracing/automatic-instrumentation).
 </Note>
 
+## JavaScript/TypeScript
 
-</Tab>
-</Tabs>
+```bash
+# 1) Install Laminar + OpenAI client
+npm install @lmnr-ai/lmnr openai
+
+# 2) One-line auto-instrumentation (import before app code)
+echo "import 'lmnr/auto'" > bootstrap.ts
+
+# 3) Run with your Laminar key
+LMNR_PROJECT_API_KEY=your_key node app.js
+```
+
+<Tip>
+Yarn: `yarn add @lmnr-ai/lmnr openai`  
+pnpm: `pnpm add @lmnr-ai/lmnr openai`
+</Tip>
+
+## Python
+
+```bash
+# 1) Install Laminar + OpenAI client
+pip install --upgrade "lmnr[openai]"
+
+# 2) One-line auto-instrumentation
+echo "import lmnr.auto" > bootstrap.py
+
+# 3) Run with your Laminar key
+LMNR_PROJECT_API_KEY=your_key python app.py
+```
+
+<Expandable title="Pick additional instrumentations (Python extras)">
+Add extras to auto-trace specific SDKs. Examples:
+
+- Anthropic + OpenAI: `pip install --upgrade "lmnr[anthropic,openai]"`
+- LangChain + LlamaIndex: `pip install --upgrade "lmnr[langchain,llamaindex]"`
+- Vector DBs (Pinecone, Weaviate, Qdrant): `pip install --upgrade "lmnr[pinecone,weaviate,qdrant]"`
+
+Full extras list: alephalpha, anthropic, bedrock, cohere, google-generativeai, groq, haystack, lancedb, langchain, llamaindex, marqo, milvus, mistralai, ollama, openai, pinecone, qdrant, replicate, sagemaker, together, transformers, vertexai, watsonx, weaviate.
+</Expandable>
+
+<Callout>
+Embed placeholder: short GIF of running the three commands and opening the resulting trace with cost + tokens visible.
+</Callout>

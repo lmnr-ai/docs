@@ -1,8 +1,8 @@
 ---
-title: 'Initialize Evaluation'
-openapi: 'POST /v1/evals'
+title: "Trigger or update an evaluation"
+method: POST
+path: /v1/evals
+description: Create or trigger an evaluation run.
 ---
 
-### Description
-
-Create a new evaluation with an optional name and group. If no name is provided, a random name will be generated automatically. 
+Create or trigger an evaluation run. If no name is provided, Laminar generates one automatically.

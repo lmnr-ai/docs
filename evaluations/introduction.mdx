@@ -1,48 +1,47 @@
 ---
 sidebarTitle: Introduction
-title: Introduction to Laminar evaluations
+title: Ship reliable AI with Laminar evaluations
 ---
-import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
 
-Evaluation is the process of validating and testing the outputs that your AI applications are producing. Having strong evaluations ("evals") means a more stable, reliable application that is resilient to code and model changes. An eval is a task used to measure the quality of the output of an LLM or LLM system.
+Evals in Laminar give you a fast way to score prompts, agents, and pipelines, then drill into every datapoint via traces. See what you can do and why it matters before diving into reference details.
 
-<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
-<img src="/images/evaluations/evals.png" alt="Screenshot of a trace visualization" style={{ margin: '0px' }}/>
-</div>
+<Callout>
+Hero placeholder: embed a dashboard screenshot/GIF showing eval scores with clickable trace links.
+</Callout>
 
-### Why do we need evals?
+## What you'll build
 
-In short, evaluations bring rigor to AI development process.
+- An evaluation that runs your executor (prompt/agent/code) on a dataset.  
+- Scoring via simple functions or hosted graders.  
+- Results you can sort/filter, with trace links for every datapoint.
 
-When you are building with foundation models, creating high-quality evals is one of the most impactful things you can do. Developing AI solutions involves an iterative design process. Without evals, it can be difficult and time-intensive to understand how different model versions and prompts affect your use case.
+## Copy/paste/run (minimal setup)
 
-With continuous model upgrades from providers, evals allow you to efficiently test model performance for your specific uses in a standardized way. Developing a suite of evals customized to your objectives will help you quickly understand how new models perform for your applications. You can also make evals part of your CI/CD pipeline to ensure desired accuracy before deployment.
+1. Install Laminar + your model SDK.  
+2. Write one `evaluate` call with your executor + evaluator.  
+3. Run `lmnr eval ...` (CLI finds the evaluate call).  
+4. Click the dashboard link to inspect scores and traces.
 
-### Types of evals
+See the [Evaluations quickstart](/evaluations/quickstart) for full code in TypeScript and Python.
 
-There are two main approaches to evaluating outputs:
+## Why evaluations?
 
-**1. Logic-based evaluation**: The simplest and most common type uses code to check outputs against expected answers. For example:
-- String matching to check if the completion includes an expected phrase
-- Parsing to validate proper JSON output
-- Custom logic to verify domain-specific requirements
+- **Guardrails for change**: catch regressions when you update models, prompts, or tools.  
+- **Compare variants**: run side-by-side prompts/agents and sort by scores.  
+- **Trace-first debugging**: every datapoint has a trace so you can see why it passed/failed.  
+- **CI-friendly**: wire into pipelines to block risky changes.
 
-**2. Model-based evaluation**: A two-stage process where:
-- First, the model generates a response to the input
-- Then, another model (ideally more powerful) evaluates the quality of that response
+## How Laminar structures evals
 
-Model-based evaluation works best with powerful models when the desired output has significant variation, such as open-ended questions or creative tasks.
+- **Dataset**: list of datapoints with `data` (input), optional `target`, and metadata for filtering.  
+- **Executor**: your code that produces an output (LLM call, agent step, business logic).  
+- **Evaluator(s)**: functions or hosted graders that score outputs; can return one or many numeric scores.  
+- **Groups**: label related runs to track progress over time.  
+- **Tracing**: automatically records executor + evaluator spans with inputs/outputs.
 
-## How evals differ from traditional unit tests
+## Build this next
 
-Unlike traditional unit tests that focus on binary pass/fail outcomes, evaluations for AI systems require continuous tracking and visualization of performance metrics over time. As models evolve and prompts are refined, being able to compare performance across different versions becomes critical.
-
-What makes evals unique is their ability to:
-- Track nuanced quality metrics beyond simple correctness
-- Visualize performance trends across model versions and prompt iterations
-- Compare multiple implementations side-by-side
-- Detect subtle regressions that might not be obvious in isolated tests
-
-Laminar provides the best developer experience and visualization capabilities for AI evaluations, making it easy to understand how your models are performing and where improvements can be made. With comprehensive dashboards and detailed tracing, you can get deep insights into every aspect of your AI system's behavior.
-
-Check out our [Quickstart Guide](/evaluations/quickstart) to run your first evaluation.
+- Run your first eval in 5 minutes → [Quickstart](/evaluations/quickstart)  
+- Use hosted graders → [Online evaluators](/evaluations/online-evaluators/introduction)  
+- Create/share datasets → [Datasets](/datasets/introduction)  
+- Pipe results into dashboards → [Custom dashboards](/custom-dashboards/overview)

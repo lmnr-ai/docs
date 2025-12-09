@@ -1,24 +1,37 @@
 ---
 sidebarTitle: Introduction
-title: Introduction to Laminar Playground
+title: Iterate faster with Laminar Playground
 ---
 
-Playground is an interactive environment that allows you to experiment with AI models, test prompts, and analyze responses.
+Playground lets you tweak prompts, tools, and models using real trace context without extra wiring. Open any span, reproduce it, and iterate until it is right.
 
-## What is the Playground?
+<Callout>
+Embed placeholder: split view GIF of opening a span in Playground, editing the prompt, and seeing a new output + tokens/cost.
+</Callout>
 
-The Playground serves as a sandbox environment where you can:
+## What you'll do here
 
-- **Prompt experimentation**: Test different prompt variations and input configurations with instant results.
-- [**Playground from span**](/playground/playground-from-span): Reproduce and experiment with exact configurations from any span by opening it directly in playground.
-- [**Tool integration**](/playground/tools): Configure and test custom tools that models can call during conversations.
-- [**Session history**](/playground/history): Access complete traces of all previous runs with full context and configurations.
+- Reproduce any trace span (LLM/tool call) in one click.  
+- Edit prompts, models, and tool configs with instant feedback.  
+- Save variants and compare outputs; keep session history for later.
 
-<div style={{ borderRadius: '8px', overflow: 'hidden' }}>
-    <img src="/images/playground/playground.png" alt="Laminar Playground Interface" style={{ margin: '0px' }}/>
-</div>
+## Fastest way to try it
 
-To access the playground:
-1. Navigate to your Laminar dashboard
-2. Create playground by clicking on "New playground"
-3. Choose your preferred model and start experimenting
+1. Run the [Tracing quickstart](/tracing/quickstart) to generate a trace.  
+2. In the Laminar UI, open that trace and click **“Open in Playground.”**  
+3. Edit the prompt/model/tool settings; run and compare outputs.  
+4. Save the best variant or push it back to your app.
+
+## Key features
+
+- **Playground from span**: jump in directly from any LLM/tool span with the original inputs and settings.  
+- **Tools**: configure custom tools and test tool-calling models end-to-end.  
+- **History**: every run is saved with inputs/outputs, tokens, and cost.  
+- **Shareable**: copy a link to share the exact playground state with teammates.
+
+## Build this next
+
+- Open a trace and reproduce a span → [Playground from span](/playground/playground-from-span)  
+- Add and test tools → [Tools](/playground/tools)  
+- Review previous runs → [History](/playground/history)  
+- Capture the trace that feeds your playground → [Tracing quickstart](/tracing/quickstart)

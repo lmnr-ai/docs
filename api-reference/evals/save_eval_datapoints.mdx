@@ -1,11 +1,11 @@
 ---
-title: 'Save Evaluation Datapoints'
-openapi: 'POST /v1/evals/{eval_id}/datapoints'
+title: "Add evaluation datapoints"
+method: POST
+path: /v1/evals/{eval_id}/datapoints
+description: Add datapoints to an existing evaluation.
 ---
 
-### Description
-
-Save multiple evaluation datapoints to an existing evaluation. Each datapoint can include input, output, expected output, executor output, scores, and metadata.
+Add multiple evaluation datapoints to an existing evaluation. Each datapoint can include input, output, expected output, executor output, scores, and metadata.
 
 <Note>
 The actual datapoints are not saved until you call the [Update Evaluation Datapoint](/api-reference/evals/update_eval_datapoint) endpoint.

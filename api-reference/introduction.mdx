@@ -1,15 +1,24 @@
 ---
-title: 'Overview'
-description: 'General guidelines on using our API'
+title: "API reference"
+description: "Endpoints to trigger evals, push to queues, and query data."
 ---
 
-## General
+## Base URL
 
 Use the following base URL: `https://api.lmnr.ai/v1`
 
-For example, `POST https://api.lmnr.ai/v1/sql/query`
+Example: `POST https://api.lmnr.ai/v1/sql/query`
 
-For more detailed information about each endpoint or schema, check our OpenAPI specification.
+## Endpoints
+
+- `POST /v1/evals` — trigger or update evals (create/trigger an eval run)
+- `POST /v1/evals/{eval_id}/datapoints` — add eval datapoints
+- `POST /v1/evals/{eval_id}/datapoints/{datapoint_id}` — update a specific datapoint
+- `POST /v1/evaluators/score` — score via evaluator
+- `POST /v1/queues/push` — push items to a labeling queue
+- `POST /v1/sql/query` — run a SQL query
+
+For schemas and parameters, see the OpenAPI spec.
 
 <Card
   title="Laminar OpenAPI specification"
@@ -18,8 +27,6 @@ For more detailed information about each endpoint or schema, check our OpenAPI s
 >
   Full OpenAPI specification file
 </Card>
-
-Each endpoint's page in OpenAPI specification specifies the method, path and parameters to be used. Additionally, you can try sending the request from there.
 
 ## Authentication
 
