@@ -1,17 +1,17 @@
 ---
-title: "Run SQL query"
-sidebarTitle: "Run SQL query"
-method: POST
-path: /v1/sql/query
-description: Execute a SQL query against Laminar data.
+title: SQL Query
+sidebarTitle: SQL Query
+openapi: /api-reference/openapi.json POST /v1/sql/query 
 ---
 
-Execute SQL against Laminar data (spans, traces, evals). Learn more in the [SQL Editor](/sql-editor/introduction) reference.
+## SQL Query
+
+You can run SQL queries on your data stored in Laminar using the SQL query API. Learn more in the [SQL Editor](/sql-editor/overview) reference.
 
 ### Example request
 
 ```json
 {
-  "query": "SELECT * FROM spans WHERE start_time > now() - interval '1 hour' LIMIT 10"
+    "query": "SELECT * FROM spans where start_time > now() - interval '1 hour' LIMIT 10"
 }
 ```

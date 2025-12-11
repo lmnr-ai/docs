@@ -6,9 +6,9 @@ description: Copy/paste setup to see OpenAI calls with inputs, outputs, tokens, 
 
 Instrument OpenAI with a single import. You will get per-call traces with prompts, responses, latency, tokens, and cost, plus links to Playgrounds for fast iteration.
 
-<Callout>
-Embed placeholder: GIF of running the three commands and opening the OpenAI span with cost breakdown.
-</Callout>
+<Frame>
+  <img src="/images/traces/trace-openai.png" alt="OpenAI span with prompts, tokens, and cost" />
+</Frame>
 
 ## What you'll build
 
@@ -90,6 +90,12 @@ LMNR_PROJECT_API_KEY=your_key python app.py
 - Inputs/outputs: full prompt and response.  
 - Tokens/cost: per-call totals and rollups.  
 - Playground button: jump into prompt editing directly from the span.
+
+## What just happened?
+
+- `import 'lmnr/auto'` patches the OpenAI SDK before you create a client.
+- Each OpenAI call emits a span with prompt, response, tokens, and cost.
+- Spans flow to your Laminar project automatically, ready for debugging or Playground iteration.
 
 ## Build this next
 

@@ -1,143 +1,134 @@
 ---
 sidebarTitle: Quickstart
-title: Get your first Laminar trace in 3 commands
+title: Quickstart
 ---
 
-Laminar traces your LLM calls and functions with almost no setup. Follow the copy–paste–run path below to get a live trace (inputs, outputs, tokens, and cost) in under 5 minutes.
+Get your first trace in 60 seconds.
 
-<Callout>
-Embed placeholder: live trace viewer or GIF showing a span tree expanding with cost + token breakdown.
-</Callout>
+## 1) Install
 
-## What you'll build
-
-- A captured trace for a single LLM call (inputs/outputs, latency, tokens, cost).
-- Optional custom span wrapping your code so you can see parent/child relationships.
-- A shareable trace link you can open in Playgrounds for fast iteration.
-
-## Three commands to first trace
-
-<Tabs>
-<Tab title="JavaScript/TypeScript">
-
-```bash
-# 1) Install Laminar + OpenAI client
+<CodeGroup>
+```bash npm
 npm install @lmnr-ai/lmnr openai
-
-# 2) Add one-line auto-instrumentation (import anywhere before your app code)
-echo "import 'lmnr/auto'" > bootstrap.ts
-
-# 3) Run any OpenAI script with your Laminar key
-LMNR_PROJECT_API_KEY=your_key node app.js
 ```
 
-Example app (drop below your import):
+```bash pip
+pip install 'lmnr[openai]'
+```
+</CodeGroup>
 
-```ts
-import 'lmnr/auto';
+## 2) Add one import
+
+<CodeGroup>
+```typescript TypeScript
+import 'lmnr/auto';  // ← This is all you need
 import { OpenAI } from 'openai';
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
+const client = new OpenAI();
 const response = await client.chat.completions.create({
   model: 'gpt-4o-mini',
-  messages: [{ role: 'user', content: 'What is the capital of France?' }],
+  messages: [{ role: 'user', content: 'Hello!' }],
 });
-
 console.log(response.choices[0].message.content);
 ```
 
-</Tab>
-<Tab title="Python">
+```python Python
+import lmnr.auto  # ← This is all you need
+from openai import OpenAI
+client = OpenAI()
 
-```bash
-# 1) Install
-pip install lmnr openai
+response = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+print(response.choices[0].message.content)
+```
+</CodeGroup>
 
-# 2) One-line auto-instrumentation
-echo "import lmnr.auto" > bootstrap.py
+## 3) Run with your API key
 
-# 3) Run any OpenAI script with your Laminar key
+<CodeGroup>
+```bash TypeScript
+LMNR_PROJECT_API_KEY=your_key node app.js
+```
+
+```bash Python
 LMNR_PROJECT_API_KEY=your_key python app.py
 ```
+</CodeGroup>
 
-Example app:
+## 4) Open your dashboard
 
-```python
-import lmnr.auto  # traces OpenAI + your functions
-from openai import OpenAI
-import os
+Go to [lmnr.ai/projects](https://lmnr.ai/projects) and click your trace.
 
-client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+<Frame>
+  <img src="/images/traces/trace-openai.png" alt="OpenAI span with inputs, outputs, tokens, and cost" />
+</Frame>
 
-resp = client.chat.completions.create(
-    model="gpt-4o-mini",
-    messages=[{"role": "user", "content": "What is the capital of France?"}],
-)
+You’ll see:
+- Full input prompt and complete response
+- Token count and cost
+- Latency breakdown
 
-print(resp.choices[0].message.content)
-```
+## What just happened?
 
-</Tab>
-</Tabs>
+- `import 'lmnr/auto'` patches supported SDKs before they’re used (OpenAI, Anthropic, etc.).
+- Each call sends inputs, outputs, tokens, cost, and timing to your Laminar project.
+- The dashboard renders spans as a trace tree; every span links to Playground for quick iteration.
 
-<Note>
-You can still call `Laminar.initialize()` for advanced options (custom names, module-specific instrumentation, tags), but the auto-import above is the fastest path to value.
-</Note>
+## Add structure with custom spans
 
-## Add a custom span (optional, 1 line)
+Wrap functions to see them as parent spans:
 
-Wrap any function to see it as a parent span above your LLM calls.
-
-<Tabs>
-<Tab title="JavaScript/TypeScript">
-
-```ts
+<CodeGroup>
+```typescript TypeScript
 import { observe } from '@lmnr-ai/lmnr';
 
-const classify = () =>
+const classifyTicket = (ticket: string) =>
   observe({ name: 'classify_ticket' }, async () => {
     return await client.chat.completions.create({
       model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: 'Classify this ticket: payment bug' }],
+      messages: [{ role: 'user', content: `Classify: ${ticket}` }],
     });
   });
-
-await classify();
 ```
 
-</Tab>
-<Tab title="Python">
-
-```python
+```python Python
 from lmnr import observe
 
-@observe(name="classify_ticket")
-def classify():
+@observe()
+def classify_ticket(ticket: str):
     return client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role": "user", "content": "Classify this ticket: payment bug"}],
+        messages=[{"role": "user", "content": f"Classify: {ticket}"}]
     )
+```
+</CodeGroup>
 
-classify()
+Now your trace shows:
+
+```
+classify_ticket
+└── openai.chat.completions.create
 ```
 
-</Tab>
-</Tabs>
+<Frame>
+  <img src="/images/traces/trace-observe.png" alt="Trace with parent span" />
+</Frame>
 
-<Callout>
-Embed placeholder: screenshot/GIF of the resulting trace tree showing `classify_ticket` as the parent span and the OpenAI call as a child, with token + cost totals.
-</Callout>
+## Next steps
 
-## Why this matters
-
-- **Faster onboarding**: no project scaffolding or SDK boilerplate before seeing value.
-- **Trustworthy debugging**: inputs/outputs + tokens/costs live with the call stack, not split across logs.
-- **Shareable context**: copy a trace URL to loop in teammates or jump into Playgrounds to iterate.
-
-## Build this next
-
-- Debug a browser agent with session recordings → [Browser agent observability](/tracing/browser-agent-observability)
-- Trace a LangGraph/Stagehand workflow → [LangGraph visualization](/tracing/langgraph-visualization)
-- Run evals on a RAG pipeline → [Evaluations quickstart](/evaluations/quickstart)
-- Break down costs by feature/team → [Tags and metadata](/tracing/structure/tags)
+<CardGroup cols={2}>
+  <Card title="Track users & sessions" href="/tracing/structure/session">
+    Group traces by user/session
+  </Card>
+  <Card title="Run evaluations" href="/evaluations/quickstart">
+    Score prompts and agents automatically
+  </Card>
+  <Card title="Debug browser agents" href="/tracing/browser-agent-observability">
+    See recordings synced to traces
+  </Card>
+  <Card title="Add metadata & tags" href="/tracing/structure/tags">
+    Filter by environment, feature, team
+  </Card>
+</CardGroup>

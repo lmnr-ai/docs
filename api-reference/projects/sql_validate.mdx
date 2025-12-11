@@ -1,0 +1,9 @@
+---
+title: "Validate SQL"
+method: POST
+path: /api/v1/projects/{project_id}/sql/validate
+openapi: "POST /api/v1/projects/{project_id}/sql/validate"
+description: Validate a SQL query for a project.
+---
+
+Body: `{query}`. Returns `{success, validatedQuery?, error?}`.

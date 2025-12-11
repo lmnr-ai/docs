@@ -1,60 +1,34 @@
 ---
-title: Run your first Laminar evaluation
+title: Evaluations
 sidebarTitle: Quickstart
 ---
-import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
 
-Run a complete evaluation from inputs to scores with trace links in under 5 minutes.
+Score your AI automatically. Catch regressions before production.
 
-<Callout>
-Embed placeholder: short GIF showing `lmnr eval my-first-evaluation.ts` and the resulting dashboard with clickable traces.
-</Callout>
+<Frame>
+  <img src="/images/evaluations/evals.png" alt="Evaluation dashboard with scores and traces" />
+</Frame>
 
-## What you'll build
+## Why evaluations?
 
-- A dataset with a couple of datapoints.  
-- An executor that calls your model.  
-- An evaluator that scores the output.  
-- A dashboard view with scores + trace links for each datapoint.
+- Catch regressions when you change models, prompts, or tools
+- Compare variants side by side with scores
+- Debug failures — every datapoint links to its trace
 
-## Why this matters
+## Run your first eval
 
-- Catch regressions when you change models, prompts, or tools.  
-- Compare variants side by side with scores and trace context.  
-- Keep evals close to production by linking every datapoint to its trace.
-
-## Prerequisites
-
-<GetProjectApiKey />
-
-Set `LMNR_PROJECT_API_KEY` in your environment.
-
-## Copy/paste/run
-
-<Tabs>
-<Tab title="TypeScript">
-
-```bash
-npm install @lmnr-ai/lmnr openai
-```
-
-Create `my-first-evaluation.ts`:
-
-```ts my-first-evaluation.ts
+<CodeGroup>
+```typescript TypeScript
+// my-first-eval.ts
 import { evaluate } from '@lmnr-ai/lmnr';
 import { OpenAI } from 'openai';
 
 const client = new OpenAI();
 
-const capitalOfCountry = async (data: { country: string }) => {
+const capitalOf = async (data: { country: string }) => {
   const response = await client.chat.completions.create({
     model: 'gpt-4o-mini',
-    messages: [
-      {
-        role: 'user',
-        content: `What is the capital of ${data.country}? Respond in one word.`,
-      },
-    ],
+    messages: [{ role: 'user', content: `Capital of ${data.country}? One word.` }],
   });
   return response.choices[0].message.content || '';
 };
@@ -64,9 +38,9 @@ evaluate({
     { data: { country: 'France' }, target: 'Paris' },
     { data: { country: 'Germany' }, target: 'Berlin' },
   ],
-  executor: capitalOfCountry,
+  executor: capitalOf,
   evaluators: {
-    accuracy: (output, target) => (!target ? 0 : output.includes(target) ? 1 : 0),
+    accuracy: (output, target) => (output.includes(target) ? 1 : 0),
   },
   config: {
     instrumentModules: { openAI: OpenAI },
@@ -74,37 +48,21 @@ evaluate({
 });
 ```
 
-Run it:
-
-```bash
-LMNR_PROJECT_API_KEY=your_key npx lmnr eval my-first-evaluation.ts
-```
-
-</Tab>
-<Tab title="Python">
-
-```bash
-pip install "lmnr[openai]" openai
-```
-
-Create `my-first-evaluation.py`:
-
-```python my-first-evaluation.py
+```python Python
+# my_first_eval.py
 from lmnr import evaluate
 from openai import OpenAI
 
 client = OpenAI()
 
-def capital_of_country(data: dict) -> str:
-    resp = client.chat.completions.create(
+def capital_of(data):
+    response = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role": "user", "content": f"What is the capital of {data['country']}? Answer in one word."}],
+        messages=[{"role": "user", "content": f"Capital of {data['country']}? One word."}]
     )
-    return resp.choices[0].message.content or ""
+    return response.choices[0].message.content
 
-def accuracy(output: str, target: str | None) -> int:
-    if not target:
-        return 0
+def accuracy(output, target):
     return 1 if target in output else 0
 
 evaluate(
@@ -112,37 +70,60 @@ evaluate(
         {"data": {"country": "France"}, "target": "Paris"},
         {"data": {"country": "Germany"}, "target": "Berlin"},
     ],
-    executor=capital_of_country,
+    executor=capital_of,
     evaluators={"accuracy": accuracy},
 )
 ```
+</CodeGroup>
 
 Run it:
 
-```bash
-LMNR_PROJECT_API_KEY=your_key lmnr eval my-first-evaluation.py
+<CodeGroup>
+```bash TypeScript
+LMNR_PROJECT_API_KEY=your_key npx lmnr eval my-first-eval.ts
 ```
 
-</Tab>
-</Tabs>
+```bash Python
+LMNR_PROJECT_API_KEY=your_key lmnr eval my_first_eval.py
+```
+</CodeGroup>
 
-<Note>
-No explicit initialization needed. `evaluate` wires up tracing automatically. Passing `instrumentModules` (TS) or installing extras (Python) ensures your model SDK calls are traced alongside the evaluator.
-</Note>
+## What you'll see
 
-## What you should see
+The CLI prints a link to your evaluation run:
 
-- CLI prints a link to the evaluation run.  
-- Dashboard shows scores per datapoint.  
-- Each row links to a trace; open it to inspect inputs, outputs, tokens, and cost.
+```
+✓ Evaluation complete
+  View results: https://lmnr.ai/project/xxx/evals/yyy
+```
 
-<Callout>
-Embed placeholder: screenshot of eval results table with a trace link, plus an open trace showing executor + evaluator spans.
-</Callout>
+<Frame>
+  <img src="/images/evaluations/simple-eval-example.png" alt="Eval results with trace links" />
+</Frame>
 
-## Build this next
+Click any row to see the full trace for that datapoint.
 
-- Use hosted graders → [Scoring with hosted evaluators](/evaluations/online-evaluators/scoring-with-hosted-evaluators)  
-- Reuse datasets → [Using datasets](/evaluations/using-dataset)  
-- Track improvements over time → pass `groupName` and view trend charts  
-- Turn traces into labeled data → [Labeling queues](/queues/quickstart)
+## How it works
+
+1. **Dataset** — list of inputs (`data`) and expected outputs (`target`)
+2. **Executor** — your function that produces output (LLM call, agent, etc.)
+3. **Evaluators** — functions that score the output (return 0-1)
+
+Laminar runs your executor on each datapoint, scores the output, and records a trace for every run.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Use hosted evaluators" href="/evaluations/online-evaluators/scoring-with-hosted-evaluators">
+    LLM-as-judge without writing code
+  </Card>
+  <Card title="Reuse datasets" href="/evaluations/using-dataset">
+    Load datasets from your project
+  </Card>
+  <Card title="Run in CI" href="/evaluations/configuration">
+    Block deployments on eval failures
+  </Card>
+  <Card title="Human review" href="/evaluations/human-evaluators">
+    Add human labels to the loop
+  </Card>
+</CardGroup>

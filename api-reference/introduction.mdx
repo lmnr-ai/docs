@@ -1,24 +1,66 @@
 ---
-title: "API reference"
-description: "Endpoints to trigger evals, push to queues, and query data."
+title: API reference
+description: HTTP endpoints for ingesting traces, sessions, datasets, evals, and querying data.
 ---
+
+Use the REST API to ingest traces/browser sessions, manage datasets/evals, and query your Laminar data. Authentication depends on the endpoint (ingest or default project key). See the left sidebar for all routes.
 
 ## Base URL
 
-Use the following base URL: `https://api.lmnr.ai/v1`
+```
+https://api.lmnr.ai/v1
+```
 
-Example: `POST https://api.lmnr.ai/v1/sql/query`
+## Auth notes
 
-## Endpoints
+- `/v1/traces`, `/v1/metrics`, `/v1/browser-sessions/events` allow ingest-only **or** default API keys.
+- Other `/v1/*` routes require default project API keys.
+- `/api/v1/projects/{project_id}/...` assume auth is handled upstream (frontend middleware).
 
-- `POST /v1/evals` — trigger or update evals (create/trigger an eval run)
-- `POST /v1/evals/{eval_id}/datapoints` — add eval datapoints
-- `POST /v1/evals/{eval_id}/datapoints/{datapoint_id}` — update a specific datapoint
-- `POST /v1/evaluators/score` — score via evaluator
-- `POST /v1/queues/push` — push items to a labeling queue
-- `POST /v1/sql/query` — run a SQL query
+## Ingestion (/v1, ingest or default key)
 
-For schemas and parameters, see the OpenAPI spec.
+- `POST /v1/traces` — OTLP `ExportTraceServiceRequest` bytes; enqueues spans; `403` when workspace data limit hit; keep-alive supported.
+- `POST /v1/browser-sessions/events` — JSON `{events:[{type,timestamp,data(base64|bytes)}], sessionId, traceId, source?, sdkVersion?}`; `400` if `traceId` is nil UUID, `403` on data limit; publishes to MQ.
+- `POST /v1/metrics` — placeholder; returns `200 OK` for OTLP metrics posts.
+
+## Tracing / datasets / evals (/v1, default keys)
+
+- Tags: `POST /v1/tag` with `{"names":[...],"traceId":UUID}` or `{"names":[...],"spanId":UUID}`; resolves top span if only traceId given; returns `{id, spanId}` list.
+- Datasets:
+  - `GET /v1/datasets?id?&name?` — list datasets
+  - `GET /v1/datasets/datapoints?...` — paginated datapoints
+  - `POST /v1/datasets/datapoints` — create dataset (optional) and insert datapoints
+  - `GET /v1/datasets/{datasetId}/parquets/{idx}` — stream parquet from export bucket
+- Evals:
+  - `POST /v1/evals` — create evaluation (name?, groupName?, metadata?)
+  - `POST /v1/evals/{evalId}/datapoints` — bulk save datapoints
+  - `POST /v1/evals/{evalId}/datapoints/{datapointId}` — update one datapoint
+- Evaluator scores: `POST /v1/evaluators/score` with `{"name","score","source","metadata?","traceId"|"spanId"}`; resolves span and writes score.
+- SQL & payloads:
+  - `POST /v1/sql/query` — body `{query}`; returns `{data:[...]}`
+  - `GET /v1/payloads/{payloadId}?payloadType=image|raw` — stream stored payload
+
+## Project-scoped (`/api/v1/projects/{project_id}`)
+
+- Spans: `POST .../spans` to enqueue a span; `POST .../spans/search` to query spans (Quickwit).
+- SQL helpers: `POST .../sql/query|validate|to-json|from-json` for query execution/translation.
+- Evaluation analytics: `GET .../evaluation-score-stats` and `GET .../evaluation-score-distribution` for score summaries.
+- Realtime SSE: `GET .../realtime?key=traces|trace_{traceId}` opens a project SSE stream.
+
+## Health and gRPC
+
+- `GET /health` and `GET /ready` check RabbitMQ (consumer health checks worker counts).
+- OTLP gRPC trace ingestion: `TraceService/Export` on gRPC port (default 8001) with Bearer API key (ingest or default); enforces usage limits.
+
+## Reference endpoints
+
+- [Trigger or update an evaluation run](/api-reference/evals/init_eval) — `POST /v1/evals`
+- [Add evaluation datapoints](/api-reference/evals/save_eval_datapoints) — `POST /v1/evals/{eval_id}/datapoints`
+- [Update a specific datapoint](/api-reference/evals/update_eval_datapoint) — `POST /v1/evals/{eval_id}/datapoints/{datapoint_id}`
+- [Score via evaluator](/api-reference/evaluators/score) — `POST /v1/evaluators/score`
+- [Run a SQL query against Laminar data](/api-reference/sql/sql_query) — `POST /v1/sql/query`
+
+See the OpenAPI spec for full schemas.
 
 <Card
   title="Laminar OpenAPI specification"
@@ -30,12 +72,15 @@ For schemas and parameters, see the OpenAPI spec.
 
 ## Authentication
 
-All API endpoints are authenticated using Project API key as Bearer token.
+Send your `LMNR_PROJECT_API_KEY` as a Bearer token.
 
-To get the token, go to "settings" page and move to "Project API keys" section. Then get a token from there or generate a new one.
+```bash
+curl -X POST https://api.lmnr.ai/v1/sql/query \
+  -H "Authorization: Bearer $LMNR_PROJECT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"SELECT * FROM spans LIMIT 1"}'
+```
 
-Note that each project has different Project API keys. For switching between projects, press "Laminar" icon at the top-left of the dashboard.
-
-<Frame caption="Press settings on the navbar and go to Project API Keys section">
-<img width="1000" src="/images/api-reference/project-api-key.png" alt="Project API key bearer tokens" />
+<Frame caption="Project API keys">
+  <img width="1000" src="/images/api-reference/project-api-key.png" alt="Project API key bearer tokens" />
 </Frame>

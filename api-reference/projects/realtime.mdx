@@ -1,0 +1,9 @@
+---
+title: "Realtime SSE"
+method: GET
+path: /api/v1/projects/{project_id}/realtime
+openapi: "GET /api/v1/projects/{project_id}/realtime"
+description: Open a project SSE stream.
+---
+
+Open a server-sent events stream. Query param `key=traces|trace_{traceId}` selects the stream.

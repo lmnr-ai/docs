@@ -6,9 +6,9 @@ description: See Anthropic calls with prompts, responses, tokens, and cost witho
 
 Instrument Anthropic with a single import. Every message call shows up in Laminar with inputs/outputs, latency, tokens, and cost.
 
-<Callout>
-Embed placeholder: GIF of running the commands and opening an Anthropic span with cost + tokens.
-</Callout>
+<Frame>
+  <img src="/images/traces/claude-agent-sdk.png" alt="Anthropic span with tokens and cost" />
+</Frame>
 
 ## What you'll build
 
@@ -92,6 +92,12 @@ LMNR_PROJECT_API_KEY=your_key python app.py
 - Inputs/outputs: full prompt and response.  
 - Tokens/cost: per-call totals and rollups.  
 - Playground button: open the span to tweak prompts and rerun.
+
+## What just happened?
+
+- `import 'lmnr/auto'` instruments the Anthropic SDK before client creation.
+- Each call emits a span with prompt, response, tokens, and cost to your Laminar project.
+- Traces link to Playgrounds so you can refine prompts directly from spans.
 
 ## Build this next
 

@@ -6,9 +6,9 @@ description: Instrument Next.js with Laminar and trace your routes and LLM calls
 
 See your Next.js routes, LLM calls, and AI SDK telemetry in Laminar with minimal config. This recipe uses App Router.
 
-<Callout>
-Embed placeholder: GIF of a Next.js route calling an LLM and the resulting trace tree with cost.
-</Callout>
+<Frame>
+  <img src="/images/traces/vercel-ai-sdk-example.png" alt="Next.js trace with AI SDK span" />
+</Frame>
 
 ## What you'll build
 
@@ -77,9 +77,9 @@ export const POST = observe(async (req: NextRequest) => {
 </Step>
 </Steps>
 
-<Callout>
-Embed placeholder: trace view showing `POST /api/chat` with `ai.generateText` as a child span, including inputs/outputs and cost.
-</Callout>
+<Frame>
+  <img src="/images/traces/trace-openai.png" alt="Trace tree with route and LLM span" />
+</Frame>
 
 ## What to look for
 

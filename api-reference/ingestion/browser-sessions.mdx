@@ -1,0 +1,10 @@
+---
+title: "Ingest browser session events"
+method: POST
+path: /v1/browser-sessions/events
+openapi: "POST /v1/browser-sessions/events"
+description: Send browser session events (ingest or default key).
+---
+
+Body: `{"events":[{type,timestamp,data(base64|bytes)}], "sessionId", "traceId", "source"?, "sdkVersion"?}`.  
+`400` if `traceId` is nil UUID. `403` on data limit. Publishes to MQ.

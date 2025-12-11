@@ -6,9 +6,9 @@ import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
 
 Trace `generateText`/`streamText` calls with Laminar’s OpenTelemetry tracer. You’ll see prompts, responses, tokens, and costs with no app rewrites.
 
-<Callout>
-Embed placeholder: GIF of running a generateText call and opening the span in Laminar.
-</Callout>
+<Frame>
+  <img src="/images/traces/vercel-ai-sdk-example.png" alt="Vercel AI SDK trace with prompt and cost" />
+</Frame>
 
 ## What you'll build
 
@@ -89,6 +89,12 @@ console.log(text);
 - Span name: `ai.generateText` (or `ai.streamText`) with prompt/response captured.  
 - Tokens + cost per call; rollups if you wrap parents with `observe`.  
 - Playground button on each span to tweak prompts.
+
+## What just happened?
+
+- Laminar tracer from `getTracer()` captures AI SDK calls without changing your app code.
+- Prompts, responses, tokens, and cost flow to your Laminar project automatically.
+- Traces link to Playgrounds for quick prompt iteration.
 
 ## Build this next
 

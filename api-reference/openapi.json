@@ -22,7 +22,7 @@
     "/v1/queues/push": {
       "post": {
         "tags": [
-          "api::queues"
+          "Queues"
         ],
         "operationId": "push_to_queue",
         "requestBody": {
@@ -75,7 +75,7 @@
     "/v1/evals": {
       "post": {
         "tags": [
-          "api::evaluations"
+          "Evals"
         ],
         "operationId": "init_eval",
         "requestBody": {
@@ -127,7 +127,7 @@
     "/v1/evals/{eval_id}/datapoints": {
       "post": {
         "tags": [
-          "api::evaluations"
+          "Evals"
         ],
         "operationId": "save_eval_datapoints",
         "parameters": [
@@ -204,7 +204,7 @@
     "/v1/evals/{eval_id}/datapoints/{datapoint_id}": {
       "post": {
         "tags": [
-          "api::evaluations"
+          "Evals"
         ],
         "operationId": "update_eval_datapoint",
         "parameters": [
@@ -291,7 +291,7 @@
     "/v1/evaluators/score": {
       "post": {
         "tags": [
-          "api::evaluators"
+          "Evaluators"
         ],
         "operationId": "create_evaluator_score",
         "requestBody": {
@@ -339,7 +339,7 @@
     "/v1/sql/query": {
       "post": {
         "tags": [
-          "api::sql"
+          "SQL"
         ],
         "operationId": "sql_query",
         "requestBody": {

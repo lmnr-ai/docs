@@ -1,0 +1,56 @@
+---
+title: How Laminar Works
+description: Architecture overview — what gets captured and where it goes.
+---
+
+Laminar captures telemetry from your AI app and streams it to a dashboard where you debug, evaluate, and analyze.
+
+## Data flow
+
+```
+Your App                    Laminar Cloud / Self-hosted
+┌─────────────────┐         ┌─────────────────────────┐
+│ import 'lmnr/   │         │                         │
+│ auto'           │ ──────► │  Trace storage (ClickHouse)
+│                 │  gRPC   │  Dashboard (UI)         │
+│ OpenAI calls    │         │  Evaluations (scoring)  │
+│ Agent steps     │ ◄────── │                         │
+│ Browser events  │  HTTP   │                         │
+└─────────────────┘         └─────────────────────────┘
+```
+
+## What gets captured
+
+`import 'lmnr/auto'` patches supported SDKs at runtime. For each LLM call Laminar records:
+
+- Inputs: full prompt/messages
+- Outputs: complete model response
+- Metadata: model name, temperature, tokens
+- Cost: calculated from token counts and model pricing
+- Timing: start/end/latency
+
+Use `observe()` to wrap functions and build parent/child span trees.
+
+## Spans and traces
+
+A **span** is one operation (LLM call or function). A **trace** is a tree of spans for one request.
+
+```
+trace: handle_support_ticket
+├── span: classify_intent (LLM)
+├── span: fetch_context (function)
+└── span: generate_response (LLM)
+```
+
+## Where data lives
+
+- **Laminar Cloud**: managed storage and dashboard.
+- **Self-hosted**: data stays in your ClickHouse; switch by changing the endpoint.
+
+## Security
+
+- Project-scoped API keys
+- TLS in transit; encryption at rest
+- Self-hosting keeps data in your network
+
+Next: get a trace in minutes → [Quickstart](/tracing/quickstart)

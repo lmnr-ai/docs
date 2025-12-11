@@ -1,0 +1,9 @@
+---
+title: "Tag spans or traces"
+method: POST
+path: /v1/tag
+openapi: "POST /v1/tag"
+description: Add tags to a trace or span (default key).
+---
+
+Body: `{"names":[...], "traceId": UUID}` or `{"names":[...], "spanId": UUID}`. Resolves the top span if only `traceId` is provided. Returns list of `{id, spanId}`.

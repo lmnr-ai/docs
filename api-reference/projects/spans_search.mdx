@@ -1,0 +1,10 @@
+---
+title: "Search spans"
+method: POST
+path: /api/v1/projects/{project_id}/spans/search
+openapi: "POST /api/v1/projects/{project_id}/spans/search"
+description: Search spans for a project.
+---
+
+Body: `{traceId?, searchQuery, startTime?, endTime?, searchIn?, limit, offset}`.  
+Returns hits `{trace_id, span_id}` from Quickwit.

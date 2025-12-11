@@ -1,0 +1,10 @@
+---
+title: "Create datapoints"
+method: POST
+path: /v1/datasets/datapoints
+openapi: "POST /v1/datasets/datapoints"
+description: Insert datapoints and optionally create a dataset.
+---
+
+Body: `{"dataset": {"datasetName"|"datasetId"}, "datapoints":[{id?,data,target?,metadata?}], "createDataset"?: bool}`.  
+Creates the dataset if requested; returns `201` if created.

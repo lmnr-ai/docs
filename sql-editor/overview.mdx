@@ -35,7 +35,7 @@ ORDER BY day
 SELECT
   simpleJSONExtractInt(attributes, 'gen_ai.usage.input_tokens') AS input_tokens
 FROM spans
-WHERE span_type = 1
+WHERE span_type = 'LLM'
   AND start_time > now() - INTERVAL 1 DAY
 ```
 
@@ -47,6 +47,6 @@ WHERE span_type = 1
 
 ## Next steps
 
-- Run queries → [SQL editor](/sql-editor/introduction)  
+- Run queries → [SQL editor](/sql-editor/overview)  
 - Export to datasets or dashboards → [Export & datasets](/sql-editor/reference)  
 - Track tokens/costs by model → [Custom dashboards](/custom-dashboards/overview)

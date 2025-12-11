@@ -1,0 +1,10 @@
+---
+title: "Project spans"
+method: POST
+path: /api/v1/projects/{project_id}/spans
+openapi: "POST /api/v1/projects/{project_id}/spans"
+description: Enqueue a span for a project.
+---
+
+Body: `{name, spanType?, startTime, endTime, attributes?, traceId?, parentSpanId?}`.  
+Returns `{spanId, traceId}`.

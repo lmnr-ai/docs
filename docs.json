@@ -19,74 +19,31 @@
             "icon": "rocket",
             "pages": [
               "overview",
+              "tracing/quickstart",
               "installation",
+              "how-it-works",
               {
                 "group": "Self-hosting",
                 "pages": [
                   "self-hosting/setup",
                   "self-hosting/access-control-setup"
                 ]
-              },
-              "tracing/quickstart",
-              "cursor"
+              }
             ]
           },
           {
-            "group": "Model providers",
-            "pages": [
-              "tracing/integrations/openai",
-              "tracing/integrations/anthropic",
-              "tracing/integrations/gemini",
-              "tracing/integrations/cohere",
-              "tracing/integrations/litellm"
-            ]
-          },
-          {
-            "group": "Frameworks & SDKs",
-            "pages": [
-              "tracing/integrations/vercel-ai-sdk",
-              "tracing/integrations/nextjs",
-              "tracing/integrations/langchain",
-              "tracing/integrations/kernel",
-              "tracing/integrations/claude-agent-sdk"
-            ]
-          },
-          {
-            "group": "Browser & agents",
-            "pages": [
-              "tracing/integrations/browser-use",
-              "tracing/integrations/stagehand",
-              "tracing/integrations/skyvern",
-              "tracing/integrations/playwright",
-              "tracing/integrations/puppeteer"
-            ]
-          },
-          {
-            "group": "Debug & Optimize",
-            "icon": "bug",
+            "group": "Tracing",
             "pages": [
               "tracing/automatic-instrumentation",
-              {
-                "group": "Tracing Structure",
-                "icon": "hierarchy",
-                "pages": [
-                  "tracing/structure/observe",
-                  "tracing/structure/manual-span-creation",
-                  "tracing/structure/session",
-                  "tracing/structure/user-id",
-                  "tracing/structure/metadata",
-                  "tracing/structure/tags",
-                  "tracing/structure/image",
-                  "tracing/structure/continuing-traces",
-                  "tracing/structure/providers",
-                  "tracing/structure/flushing"
-                ]
-              },
+              "tracing/structure/observe",
+              "tracing/structure/manual-span-creation",
+              "tracing/structure/session",
+              "tracing/structure/user-id",
+              "tracing/structure/metadata",
+              "tracing/structure/tags",
+              "tracing/structure/image",
               "tracing/realtime",
-              "tracing/browser-agent-observability",
-              "tracing/langgraph-visualization",
               "tracing/events",
-              "tracing/share-spans",
               "tracing/otel",
               {
                 "group": "Troubleshooting",
@@ -98,10 +55,35 @@
             ]
           },
           {
-            "group": "Evaluate",
-            "icon": "chart-line",
+            "group": "Integrations",
             "pages": [
-              "evaluations/introduction",
+              "tracing/integrations/openai",
+              "tracing/integrations/anthropic",
+              "tracing/integrations/gemini",
+              "tracing/integrations/cohere",
+              "tracing/integrations/litellm",
+              "tracing/integrations/vercel-ai-sdk",
+              "tracing/integrations/nextjs",
+              "tracing/integrations/langchain",
+              "tracing/integrations/kernel",
+              "tracing/integrations/claude-agent-sdk",
+              "tracing/integrations/browser-use",
+              "tracing/integrations/stagehand",
+              "tracing/integrations/skyvern",
+              "tracing/integrations/playwright",
+              "tracing/integrations/puppeteer"
+            ]
+          },
+          {
+            "group": "Browser Agents",
+            "pages": [
+              "tracing/browser-agent-observability",
+              "tracing/langgraph-visualization"
+            ]
+          },
+          {
+            "group": "Evaluations",
+            "pages": [
               "evaluations/quickstart",
               "evaluations/using-dataset",
               "evaluations/human-evaluators",
@@ -120,27 +102,23 @@
             ]
           },
           {
-            "group": "Datasets & Labeling",
-            "icon": "database",
+            "group": "Datasets",
             "pages": [
-              "datasets/introduction",
               "datasets/adding-data",
-              "datasets/cli",
-              "queues/quickstart"
+              "datasets/cli"
             ]
           },
           {
-            "group": "Analyze & Visualize",
+            "group": "Playground & Analysis",
             "icon": "chart-pie",
             "pages": [
-              "sql-editor/introduction",
-              "sql-editor/overview",
-              "sql-editor/reference",
-              "custom-dashboards/overview",
               "playground/introduction",
               "playground/playground-from-span",
               "playground/tools",
-              "playground/history"
+              "playground/history",
+              "sql-editor/overview",
+              "sql-editor/reference",
+              "custom-dashboards/overview"
             ]
           }
         ]
@@ -167,12 +145,57 @@
         "icon": "code",
         "pages": [
           "api-reference/introduction",
-          "api-reference/evals/init_eval",
-          "api-reference/evals/save_eval_datapoints",
-          "api-reference/evals/update_eval_datapoint",
-          "api-reference/evaluators/score",
-          "api-reference/queues/push",
-          "api-reference/sql/sql_query"
+          {
+            "group": "Ingestion",
+            "pages": [
+              "api-reference/ingestion/traces",
+              "api-reference/ingestion/browser-sessions",
+              "api-reference/ingestion/metrics",
+              "api-reference/ingestion/otlp-grpc"
+            ]
+          },
+          {
+            "group": "Tracing & datasets",
+            "pages": [
+              "api-reference/tag",
+              "api-reference/datasets/list",
+              "api-reference/datasets/datapoints",
+              "api-reference/datasets/upsert",
+              "api-reference/datasets/parquet",
+              "api-reference/payloads/get_payload",
+              "api-reference/sql/sql_query"
+            ]
+          },
+          {
+            "group": "Evaluations",
+            "pages": [
+              "api-reference/evals/init_eval",
+              "api-reference/evals/save_eval_datapoints",
+              "api-reference/evals/update_eval_datapoint",
+              "api-reference/evaluators/score"
+            ]
+          },
+          {
+            "group": "Project (scoped)",
+            "pages": [
+              "api-reference/projects/spans",
+              "api-reference/projects/spans_search",
+              "api-reference/projects/sql_query",
+              "api-reference/projects/sql_validate",
+              "api-reference/projects/sql_to_json",
+              "api-reference/projects/sql_from_json",
+              "api-reference/projects/eval_score_stats",
+              "api-reference/projects/eval_score_distribution",
+              "api-reference/projects/realtime"
+            ]
+          },
+          {
+            "group": "Health",
+            "pages": [
+              "api-reference/health/health",
+              "api-reference/health/ready"
+            ]
+          }
         ]
       }
     ],

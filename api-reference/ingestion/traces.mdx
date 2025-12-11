@@ -1,0 +1,9 @@
+---
+title: "Ingest traces"
+method: POST
+path: /v1/traces
+openapi: "POST /v1/traces"
+description: OTLP trace ingestion (ingest or default key).
+---
+
+Send OTLP `ExportTraceServiceRequest` bytes to enqueue spans. Returns `403` when workspace data limit is hit. Supports keep-alive.

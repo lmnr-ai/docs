@@ -1,0 +1,9 @@
+---
+title: "SQL to JSON"
+method: POST
+path: /api/v1/projects/{project_id}/sql/to-json
+openapi: "POST /api/v1/projects/{project_id}/sql/to-json"
+description: Convert SQL to JSON structure.
+---
+
+Body: `{sql}`. Returns `{success, queryStructure?, error?}`.
