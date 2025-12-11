@@ -25,11 +25,16 @@ Instrument OpenAI with a single import. You will get per-call traces with prompt
 npm install @lmnr-ai/lmnr openai
 ```
 
-Add one-line auto-instrumentation before your app code:
+Initialize Laminar before creating the client:
 
 ```ts
-import 'lmnr/auto';
+import { Laminar } from '@lmnr-ai/lmnr';
 import { OpenAI } from 'openai';
+
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+  instrumentModules: { OpenAI },
+});
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -48,7 +53,7 @@ LMNR_PROJECT_API_KEY=your_key node app.js
 ```
 
 <Note>
-Need explicit control? Replace the auto-import with `Laminar.initialize({ instrumentModules: { OpenAI } });`.
+Need explicit control? Pass only the modules you want with `instrumentModules: { OpenAI }`.
 </Note>
 
   </Tab>
@@ -58,12 +63,14 @@ Need explicit control? Replace the auto-import with `Laminar.initialize({ instru
 pip install "lmnr[openai]" openai
 ```
 
-Add one-line auto-instrumentation:
+Initialize Laminar before creating the client:
 
 ```python
-import lmnr.auto
-from openai import OpenAI
 import os
+from lmnr import Laminar
+from openai import OpenAI
+
+Laminar.initialize(project_api_key=os.environ["LMNR_PROJECT_API_KEY"])
 
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
@@ -93,7 +100,7 @@ LMNR_PROJECT_API_KEY=your_key python app.py
 
 ## What just happened?
 
-- `import 'lmnr/auto'` patches the OpenAI SDK before you create a client.
+- `Laminar.initialize(...)` patches the OpenAI SDK before you create a client.
 - Each OpenAI call emits a span with prompt, response, tokens, and cost.
 - Spans flow to your Laminar project automatically, ready for debugging or Playground iteration.
 

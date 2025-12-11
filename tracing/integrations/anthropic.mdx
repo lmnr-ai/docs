@@ -25,11 +25,16 @@ Instrument Anthropic with a single import. Every message call shows up in Lamina
 npm install @lmnr-ai/lmnr @anthropic-ai/sdk
 ```
 
-Add one-line auto-instrumentation:
+Initialize Laminar before creating the client:
 
 ```ts
-import 'lmnr/auto';
+import { Laminar } from '@lmnr-ai/lmnr';
 import Anthropic from '@anthropic-ai/sdk';
+
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+  instrumentModules: { anthropic: Anthropic },
+});
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -49,7 +54,7 @@ LMNR_PROJECT_API_KEY=your_key node app.js
 ```
 
 <Note>
-Prefer manual init? Use `Laminar.initialize({ instrumentModules: { anthropic: Anthropic } });`.
+Pass only the modules you want with `instrumentModules: { anthropic: Anthropic }`.
 </Note>
 
   </Tab>
@@ -59,12 +64,14 @@ Prefer manual init? Use `Laminar.initialize({ instrumentModules: { anthropic: An
 pip install "lmnr[anthropic]" anthropic
 ```
 
-Add one-line auto-instrumentation:
+Initialize Laminar before creating the client:
 
 ```python
-import lmnr.auto
-from anthropic import Anthropic
 import os
+from lmnr import Laminar
+from anthropic import Anthropic
+
+Laminar.initialize(project_api_key=os.environ["LMNR_PROJECT_API_KEY"])
 
 client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
@@ -95,7 +102,7 @@ LMNR_PROJECT_API_KEY=your_key python app.py
 
 ## What just happened?
 
-- `import 'lmnr/auto'` instruments the Anthropic SDK before client creation.
+- `Laminar.initialize(...)` instruments the Anthropic SDK before client creation.
 - Each call emits a span with prompt, response, tokens, and cost to your Laminar project.
 - Traces link to Playgrounds so you can refine prompts directly from spans.
 

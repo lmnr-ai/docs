@@ -79,7 +79,7 @@ lmnr datasets --project-api-key "<your-project-api-key>" list
 Create a new dataset from the input file. This command will create a new dataset with the name `my-cli-dataset` and save the datapoints to the file `my-cli-dataset.json`.
 
 The datapoints are saved to a new file in order to:
-- Store datasets in the Laminar format. In particular, datapoint id is crucial for versioning ([Learn more](/datasets/introduction#versioning)).
+- Store datasets in the Laminar format. In particular, datapoint id is crucial for downstream joins. Laminar stores datapoints append-only, so keep ids stable when you want to re-use a row.
 - Not overwrite existing files.
 
 <Tabs>
@@ -103,7 +103,7 @@ Make sure to not edit the `id` field of the datapoints.
 
 <Note>
 If you delete a datapoint, this will not affect the dataset in Laminar.
-This is because the push operation only pushes new datapoint (versions) to the dataset.
+Push is append-only; it adds new datapoints and does not delete existing ones in Laminar.
 </Note>
 
 </Step>
@@ -231,7 +231,7 @@ Make sure to not edit the `id` field of the datapoints.
 
 <Note>
 If you delete a datapoint, this will not affect the dataset in Laminar.
-This is because the push operation only pushes new datapoint (versions) to the dataset.
+Push is append-only; it adds new datapoints and does not delete existing ones in Laminar.
 </Note>
 
 </Step>

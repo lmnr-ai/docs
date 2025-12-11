@@ -24,7 +24,7 @@ Laminar uses [OpenTelemetry](https://opentelemetry.io/) for trace collection and
 - The delay depends on batch configuration (flush interval and batch size)
 
 <Note>
-Real-time traces are currently available only in the Laminar cloud platform.
+Real-time SSE is available in both Laminar Cloud and self-hosted deployments. For self-host, ensure the `/api/v1/projects/{project_id}/realtime` route is exposed.
 </Note>
 
 ## Disable Batching (Optional)

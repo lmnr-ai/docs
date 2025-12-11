@@ -43,7 +43,7 @@ evaluate({
     accuracy: (output, target) => (output.includes(target) ? 1 : 0),
   },
   config: {
-    instrumentModules: { openAI: OpenAI },
+    instrumentModules: { OpenAI },
   },
 });
 ```

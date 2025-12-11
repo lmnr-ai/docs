@@ -29,11 +29,11 @@ Datasets in Laminar hold the examples that power your evals, labeling, and train
 - `target`: optional reference passed to evaluators.  
 - `metadata`: tags for filtering and grouping.
 
-## Versioning (built-in)
+## Storage model (append-only)
 
-- Every edit creates a new version with the same id and a new timestamp.  
-- Reverting creates a new top version; history stays intact.  
-- Sort with UUIDv7 to preserve insertion order.
+- Each datapoint you add is stored as a row with the provided `id` (or a generated UUIDv7).  
+- Updates today are append-only; there is no built-in version history or delete/rollback.  
+- To change a datapoint, write a new row with the desired values; consumers should pick the record they need.
 
 ## Common workflows
 
@@ -48,5 +48,5 @@ Datasets in Laminar hold the examples that power your evals, labeling, and train
 ## Build this next
 
 - Create/load datasets programmatically → [Datasets CLI](/datasets/cli)  
-- Label quickly → [Labeling queues](/queues/quickstart)  
+- Label quickly → [Labeling queues](/queues/quickstart) (coming soon in the current server build)  
 - Run evals on your dataset → [Evaluations quickstart](/evaluations/quickstart)

@@ -17,12 +17,17 @@ pip install 'lmnr[openai]'
 ```
 </CodeGroup>
 
-## 2) Add one import
+## 2) Initialize once
 
 <CodeGroup>
 ```typescript TypeScript
-import 'lmnr/auto';  // ← This is all you need
+import { Laminar } from '@lmnr-ai/lmnr';
 import { OpenAI } from 'openai';
+
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+  instrumentModules: { OpenAI },
+});
 
 const client = new OpenAI();
 const response = await client.chat.completions.create({
@@ -33,8 +38,11 @@ console.log(response.choices[0].message.content);
 ```
 
 ```python Python
-import lmnr.auto  # ← This is all you need
+import os
+from lmnr import Laminar
 from openai import OpenAI
+
+Laminar.initialize(project_api_key=os.environ["LMNR_PROJECT_API_KEY"])
 client = OpenAI()
 
 response = client.chat.completions.create(
@@ -72,7 +80,7 @@ You’ll see:
 
 ## What just happened?
 
-- `import 'lmnr/auto'` patches supported SDKs before they’re used (OpenAI, Anthropic, etc.).
+- `Laminar.initialize(...)` patches supported SDKs before they’re used (OpenAI, Anthropic, etc.).
 - Each call sends inputs, outputs, tokens, cost, and timing to your Laminar project.
 - The dashboard renders spans as a trace tree; every span links to Playground for quick iteration.
 

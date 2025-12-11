@@ -5,7 +5,7 @@ sidebarTitle: Laminar
 
 See exactly what your AI is doing.
 
-One import gives you full visibility into every LLM call, browser action, and agent step. Open-source. Self-hostable. Production-ready.
+Initialize once to get full visibility into every LLM call, browser action, and agent step. Open-source. Self-hostable. Production-ready.
 
 <CardGroup cols={2}>
   <Card title="Get started →" href="/tracing/quickstart">
@@ -24,18 +24,28 @@ One import gives you full visibility into every LLM call, browser action, and ag
 
 <CodeGroup>
 ```typescript TypeScript
-import 'lmnr/auto';  // ← This is all you need
+import { Laminar } from '@lmnr-ai/lmnr';
+import { OpenAI } from 'openai';
+
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+  instrumentModules: { OpenAI },
+});
 
 // Your existing code works unchanged
-const response = await openai.chat.completions.create({
+const client = new OpenAI();
+const response = await client.chat.completions.create({
   model: 'gpt-4o-mini',
   messages: [{ role: 'user', content: 'Hello!' }],
 });
 ```
 
 ```python Python
-import lmnr.auto  # ← This is all you need
+import os
+from lmnr import Laminar
 from openai import OpenAI
+
+Laminar.initialize(project_api_key=os.environ["LMNR_PROJECT_API_KEY"])
 client = OpenAI()
 
 response = client.chat.completions.create(

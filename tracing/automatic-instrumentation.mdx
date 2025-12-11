@@ -8,9 +8,10 @@ import AutoInstrumentableJSModules from "/snippets/autoinstrumentable-js-modules
 ## Overview
 
 Simply by initializing Laminar at the start of your application, you can start tracing **prompts, responses, token usage, and costs** of LLM calls from:
-- **LLM providers SDKs** (OpenAI, Anthropic, Gemini, etc.)
-- **LLM Frameworks** (LangChain, LangGraph, Vercel AI SDK, Browser Use, etc.)
-- **Vector database operations** (Pinecone, Qdrant, etc.)
+- **LLM providers SDKs** (OpenAI, Anthropic, Azure OpenAI, Vertex/AI Platform, Bedrock, Cohere)
+- **LLM Frameworks** (LangChain, LlamaIndex)
+- **Vector database operations** (Pinecone, Qdrant, Chroma)
+- **Browser automation** (Playwright, Puppeteer, Stagehand — JavaScript/TypeScript)
 
 <Tip>
 To learn more about the integrations with the LLM frameworks and SDKs, see the [integrations](/tracing/integrations/) section.
@@ -28,7 +29,7 @@ import { OpenAI } from 'openai';
 Laminar.initialize({
   projectApiKey: process.env.LMNR_PROJECT_API_KEY,
   instrumentModules: {
-    openai: OpenAI
+    OpenAI,
   }
 });
 
@@ -124,7 +125,7 @@ import { Laminar } from '@lmnr-ai/lmnr';
 Laminar.initialize({
   projectApiKey: process.env.LMNR_PROJECT_API_KEY,
   instrumentModules: {
-    openai: OpenAI,
+    OpenAI,
     anthropic: Anthropic
   }
 });
@@ -229,16 +230,28 @@ Laminar supports automatic instrumentation for a wide range of libraries:
 **LLM Providers:**
 - OpenAI (`openai`)
 - Anthropic (`@anthropic-ai/sdk`)
-- Google AI (`@google/generative-ai`)
+- Azure OpenAI (`@azure/openai`)
+- Vertex AI / AI Platform (`@google-cloud/vertexai`, `@google-ai/generativelanguage`)
+- Bedrock (`@aws-sdk/client-bedrock-runtime`)
 - Cohere (`cohere-ai`)
 
 **Frameworks:**
-- Vercel AI SDK (`ai`)
 - LangChain (`langchain`, `@langchain/core`)
+- LlamaIndex (`llamaindex`)
 
 **Vector Databases:**
 - Pinecone (`@pinecone-database/pinecone`)
 - Qdrant (`@qdrant/js-client-rest`)
+- Chroma (`chromadb`)
+
+**Browser automation (JS/TS only):**
+- Playwright (`playwright`)
+- Puppeteer (`puppeteer`)
+- Stagehand (`@browserbasehq/stagehand`)
+
+**Agent/tooling:**
+- Claude Agent SDK (`@anthropic-ai/claude-agent-sdk`)
+- Microsoft Kernel (`@onkernel/sdk`)
 
 <Expandable title="View complete list of supported modules">
 <AutoInstrumentableJSModules />
@@ -250,7 +263,7 @@ Laminar supports automatic instrumentation for a wide range of libraries:
 **LLM Providers:**
 - OpenAI (`openai`)
 - Anthropic (`anthropic`)
-- Google AI (`google-genai)
+- Google AI (`google-genai`)
 - Cohere (`cohere`)
 - Ollama (`ollama`)
 - Together AI (`together`)
@@ -265,7 +278,6 @@ Laminar supports automatic instrumentation for a wide range of libraries:
 - Pinecone (`pinecone-client`)
 - Qdrant (`qdrant-client`)
 - Chroma (`chromadb`)
-- Weaviate (`weaviate-client`)
 
 For the complete list, import `Instruments` from `lmnr`.
 
@@ -277,7 +289,6 @@ For the complete list, import `Instruments` from `lmnr`.
 Some frameworks require additional configuration:
 
 - **Next.js applications**: See the [Next.js integration guide](/tracing/integrations/nextjs)
-- **Vercel AI SDK**: See the [Vercel AI SDK guide](/tracing/integrations/vercel-ai-sdk)
 - **LangChain**: See the [LangChain integration guide](/tracing/integrations/langchain)
 
 ## What Gets Traced

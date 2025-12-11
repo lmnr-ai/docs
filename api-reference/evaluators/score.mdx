@@ -3,7 +3,7 @@ title: "Score via evaluator"
 method: POST
 path: /v1/evaluators/score
 openapi: "POST /v1/evaluators/score"
-description: Score outputs using a configured evaluator.
+description: Create a manual evaluator score attached to a span.
 ---
 
-Use a configured evaluator to score outputs (e.g., LLM-as-a-judge or code evaluators).
+Create a score for a span using either a trace ID or span ID. When a trace ID is provided, the score is attached to the root span. This endpoint writes the score you supply; it does not execute or look up evaluator definitions.

@@ -5,4 +5,4 @@ openapi: 'POST /v1/evaluators/score'
 
 ### Description
 
-Create a score for a span using either a trace ID or span ID. When using a trace ID, the score will be attached to the root span of that trace. 
+Create a score for a span using either a trace ID or span ID. When using a trace ID, the score is attached to the root span of that trace. This endpoint records the provided score; it does not run evaluator logic server-side.

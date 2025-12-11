@@ -10,8 +10,8 @@ Laminar captures telemetry from your AI app and streams it to a dashboard where 
 ```
 Your App                    Laminar Cloud / Self-hosted
 ┌─────────────────┐         ┌─────────────────────────┐
-│ import 'lmnr/   │         │                         │
-│ auto'           │ ──────► │  Trace storage (ClickHouse)
+│ Laminar.        │         │                         │
+│ initialize(...) │ ──────► │  Trace storage (ClickHouse)
 │                 │  gRPC   │  Dashboard (UI)         │
 │ OpenAI calls    │         │  Evaluations (scoring)  │
 │ Agent steps     │ ◄────── │                         │
@@ -21,7 +21,7 @@ Your App                    Laminar Cloud / Self-hosted
 
 ## What gets captured
 
-`import 'lmnr/auto'` patches supported SDKs at runtime. For each LLM call Laminar records:
+`Laminar.initialize(...)` patches supported SDKs at runtime. For each LLM call Laminar records:
 
 - Inputs: full prompt/messages
 - Outputs: complete model response

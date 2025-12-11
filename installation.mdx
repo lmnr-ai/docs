@@ -8,7 +8,7 @@ Laminar is designed to get you to a live trace in minutes. Pick your language, r
 ## What you'll do
 
 - Install Laminar alongside your model SDK.
-- Add one import to auto-instrument.
+- Initialize Laminar once at startup.
 - Run your existing code and open the trace.
 
 ## JavaScript/TypeScript
@@ -17,8 +17,16 @@ Laminar is designed to get you to a live trace in minutes. Pick your language, r
 # 1) Install Laminar + OpenAI client
 npm install @lmnr-ai/lmnr openai
 
-# 2) One-line auto-instrumentation (import before app code)
-echo "import 'lmnr/auto'" > bootstrap.ts
+# 2) Initialize Laminar before creating SDK clients
+cat <<'EOF' > bootstrap.ts
+import { Laminar } from '@lmnr-ai/lmnr';
+import { OpenAI } from 'openai';
+
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+  instrumentModules: { OpenAI },
+});
+EOF
 
 # 3) Run with your Laminar key
 LMNR_PROJECT_API_KEY=your_key node app.js
@@ -35,8 +43,14 @@ pnpm: `pnpm add @lmnr-ai/lmnr openai`
 # 1) Install Laminar + OpenAI client
 pip install --upgrade "lmnr[openai]"
 
-# 2) One-line auto-instrumentation
-echo "import lmnr.auto" > bootstrap.py
+# 2) Initialize Laminar before creating SDK clients
+cat <<'EOF' > bootstrap.py
+import os
+from lmnr import Laminar
+from openai import OpenAI
+
+Laminar.initialize(project_api_key=os.environ["LMNR_PROJECT_API_KEY"])
+EOF
 
 # 3) Run with your Laminar key
 LMNR_PROJECT_API_KEY=your_key python app.py
