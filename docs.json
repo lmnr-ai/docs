@@ -15,12 +15,57 @@
         "icon": "book-open",
         "groups": [
           {
-            "group": "Getting Started",
-            "icon": "rocket",
+            "group": "Laminar",
+            "icon": "info",
             "pages": [
               "overview",
-              "tracing/quickstart",
+              "tracing/quickstart"
+            ]
+          },
+          {
+            "group": "Stage 1: Build locally",
+            "icon": "rocket",
+            "pages": [
               "installation",
+              "tracing/automatic-instrumentation",
+              {
+                "group": "Trace structure",
+                "pages": [
+                  "tracing/structure/observe",
+                  "tracing/structure/manual-span-creation",
+                  "tracing/structure/session",
+                  "tracing/structure/user-id",
+                  "tracing/structure/metadata",
+                  "tracing/structure/tags",
+                  "tracing/structure/image"
+                ]
+              },
+              {
+                "group": "Integrations",
+                "pages": [
+                  "tracing/integrations/openai",
+                  "tracing/integrations/anthropic",
+                  "tracing/integrations/gemini",
+                  "tracing/integrations/cohere",
+                  "tracing/integrations/litellm",
+                  "tracing/integrations/vercel-ai-sdk",
+                  "tracing/integrations/nextjs",
+                  "tracing/integrations/langchain",
+                  "tracing/integrations/kernel",
+                  "tracing/integrations/claude-agent-sdk",
+                  "tracing/integrations/browser-use",
+                  "tracing/integrations/stagehand",
+                  "tracing/integrations/skyvern",
+                  "tracing/integrations/playwright",
+                  "tracing/integrations/puppeteer"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "Stage 2: Ship to production",
+            "icon": "cloud-upload",
+            "pages": [
               "how-it-works",
               {
                 "group": "Self-hosting",
@@ -28,23 +73,23 @@
                   "self-hosting/setup",
                   "self-hosting/access-control-setup"
                 ]
-              }
+              },
+              "tracing/otel"
             ]
           },
           {
-            "group": "Tracing",
+            "group": "Stage 3: Monitor in production",
+            "icon": "bar-chart",
             "pages": [
-              "tracing/automatic-instrumentation",
-              "tracing/structure/observe",
-              "tracing/structure/manual-span-creation",
-              "tracing/structure/session",
-              "tracing/structure/user-id",
-              "tracing/structure/metadata",
-              "tracing/structure/tags",
-              "tracing/structure/image",
               "tracing/realtime",
               "tracing/events",
-              "tracing/otel",
+              {
+                "group": "Browser agents",
+                "pages": [
+                  "tracing/browser-agent-observability",
+                  "tracing/langgraph-visualization"
+                ]
+              },
               {
                 "group": "Troubleshooting",
                 "pages": [
@@ -55,39 +100,27 @@
             ]
           },
           {
-            "group": "Integrations",
+            "group": "Stage 4: Analyze & discover errors",
+            "icon": "search",
             "pages": [
-              "tracing/integrations/openai",
-              "tracing/integrations/anthropic",
-              "tracing/integrations/gemini",
-              "tracing/integrations/cohere",
-              "tracing/integrations/litellm",
-              "tracing/integrations/vercel-ai-sdk",
-              "tracing/integrations/nextjs",
-              "tracing/integrations/langchain",
-              "tracing/integrations/kernel",
-              "tracing/integrations/claude-agent-sdk",
-              "tracing/integrations/browser-use",
-              "tracing/integrations/stagehand",
-              "tracing/integrations/skyvern",
-              "tracing/integrations/playwright",
-              "tracing/integrations/puppeteer"
+              "playground/introduction",
+              "playground/playground-from-span",
+              "playground/tools",
+              "playground/history",
+              "sql-editor/overview",
+              "sql-editor/reference",
+              "custom-dashboards/overview"
             ]
           },
           {
-            "group": "Browser Agents",
-            "pages": [
-              "tracing/browser-agent-observability",
-              "tracing/langgraph-visualization"
-            ]
-          },
-          {
-            "group": "Evaluations",
+            "group": "Stage 5: Create evaluation datasets",
+            "icon": "database",
             "pages": [
               "evaluations/quickstart",
               "evaluations/using-dataset",
-              "evaluations/human-evaluators",
               "evaluations/configuration",
+              "evaluations/reference",
+              "evaluations/human-evaluators",
               "evaluations/reference",
               "evaluations/manual-evaluation",
               "evaluations/cookbook",
@@ -98,27 +131,15 @@
                   "evaluations/online-evaluators/scoring-with-hosted-evaluators",
                   "evaluations/online-evaluators/scoring-with-sdk"
                 ]
-              }
-            ]
-          },
-          {
-            "group": "Datasets",
-            "pages": [
-              "datasets/adding-data",
-              "datasets/cli"
-            ]
-          },
-          {
-            "group": "Playground & Analysis",
-            "icon": "chart-pie",
-            "pages": [
-              "playground/introduction",
-              "playground/playground-from-span",
-              "playground/tools",
-              "playground/history",
-              "sql-editor/overview",
-              "sql-editor/reference",
-              "custom-dashboards/overview"
+              },
+              {
+                "group": "Datasets",
+                "pages": [
+                  "datasets/adding-data",
+                  "datasets/cli"
+                ]
+              },
+              "queues/quickstart"
             ]
           }
         ]
