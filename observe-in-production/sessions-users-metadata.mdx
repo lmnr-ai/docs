@@ -1,0 +1,91 @@
+---
+title: Sessions, Users & Metadata
+sidebarTitle: Sessions, Users & Metadata
+description: Add structure for filtering, grouping, and analysis in production
+---
+
+Sessions, user IDs, and metadata add context to traces so you can filter, group, and debug production behavior quickly.
+
+## Sessions
+
+Group related traces (multi-turn conversations, multi-step workflows) under one session ID.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+await observe({ name: "checkout", sessionId: `checkout-${userId}` }, async () => {
+  Laminar.setTraceSessionId("session123"); // set dynamically inside the span
+  // child spans inherit the session
+});
+```
+</Tab>
+<Tab title="Python">
+
+```python
+@observe()
+def handle_turn(user_message, conversation_id):
+    Laminar.set_trace_session_id(session_id=conversation_id)
+```
+</Tab>
+</Tabs>
+
+View sessions in the dashboard to expand all traces under a conversation or workflow.
+
+## User IDs
+
+Associate traces with users for debugging and analytics. Set IDs inside an active span context.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+await observe({ name: "processUserRequest" }, async () => {
+  Laminar.setTraceUserId("user_123");
+});
+```
+</Tab>
+<Tab title="Python">
+
+```python
+@observe()
+def process_user_request():
+    Laminar.set_trace_user_id("user_123")
+```
+</Tab>
+</Tabs>
+
+Use pseudonymous IDs if needed for privacy.
+
+## Metadata
+
+Attach key-value context at the trace level (environment, feature flag, region). Set it within a span context or pass it to `observe`.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+await observe(
+  { name: "processRequest", metadata: { environment: "production", featureFlag: "new-algorithm-v2" } },
+  async () => {
+    Laminar.setTraceMetadata({ region: "us-west" });
+  },
+);
+```
+</Tab>
+<Tab title="Python">
+
+```python
+@observe(metadata={"environment": "production"})
+def process_request():
+    Laminar.set_trace_metadata({
+        "feature_flag": "new-algorithm-v2",
+        "region": "us-west",
+    })
+```
+</Tab>
+</Tabs>
+
+<Note>`setTraceMetadata`/`set_trace_metadata` must run inside an active span; calls outside a span have no effect.</Note>
+
+Sessions, user IDs, and metadata drive filtering in the UI and power downstream analysis in SQL and dashboards.

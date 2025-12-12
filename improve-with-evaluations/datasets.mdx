@@ -1,0 +1,575 @@
+---
+title: Datasets
+sidebarTitle: Datasets
+description: Create, version, and edit evaluation datasets
+---
+
+## Overview
+
+## Concept
+
+Dataset is a collection of datapoints. It can be used for the following purposes:
+1. Data storage for use in future fine-tuning or prompt-tuning.
+1. Provide inputs and expected outputs for [Evaluations](/evaluations/introduction).
+
+## Format
+
+Every datapoint has two fixed JSON objects: `data` and `target`, each with arbitrary keys.
+`target` is only used in evaluations.
+
+- `data` – the actual datapoint data,
+- `target` – data additionally sent to the evaluator function.
+- `metadata` – arbitrary key-value metadata about the datapoint.
+
+For every key inside `data` and `target`, the value can be any JSON value.
+
+### Example
+
+This is an example of a valid datapoint.
+
+```json
+{
+    "data": {
+        "color": "red",
+        "size": "large",
+        "messages": [
+            {
+                "role": "user",
+                "content": "Hello, can you help me choose a T-shirt?"
+            },
+            {
+                "role": "assistant",
+                "content": "I'm afraid, we don't sell T-shirts"
+            }
+        ]
+    },
+    "target": {
+        "expected_output": "Of course! What size and color are you looking for?"
+    }
+}
+```
+
+## Use case: Evaluations
+
+Datasets can be used for evaluations to specify inputs and expected outputs.
+
+You will need to make sure the dataset keys match the input and output node names of the pipelines.
+See more in the [Evaluations](/evaluations/introduction) page.
+
+## Editing
+
+Datasets are editable. You can edit the datapoints by clicking on the datapoint and
+editing the data in JSON. Changes are saved as a new datapoint version.
+
+### Versioning
+
+Each datapoint has a unique id and a `created_at` timestamp. Every time you
+edit a datapoint, under the hood,
+a new datapoint version is created with the same id,
+but the `created_at` timestamp is updated.
+
+The version stack is push-only. That is, when you revert to a previous version,
+a copy of that version is created and added as a current version.
+
+Example:
+
+- Initial version (v1):
+```json
+{
+  "id": "019a3122-ca78-7d75-91a7-a860526895b2",
+  "created_at": "2025-01-01T00:00:00.000Z",
+  "data": { "key": "initial value" }
+}
+```
+- Version 2 (v2):
+```json
+{
+  "id": "019a3122-ca78-7d75-91a7-a860526895b2",
+  "created_at": "2025-01-05T00:00:05.000Z",
+  "data": { "key": "value at v2" }
+}
+```
+- Version 3 (v3):
+```json
+{
+  "id": "019a3122-ca78-7d75-91a7-a860526895b2",
+  "created_at": "2025-01-10T00:00:10.000Z",
+  "data": { "key": "value at v3" }
+}
+```
+
+After this, you want to update to version 1 (initial version). This will create a new version (v4) with the same id, but the `created_at` timestamp is updated.
+
+- Version 4 (v4):
+```json
+{
+  "id": "019a3122-ca78-7d75-91a7-a860526895b2",
+  "created_at": "2025-01-15T00:00:15.000Z",
+  "data": { "key": "initial value" }
+}
+```
+
+### Datapoint id
+
+When you push a new datapoint to a dataset, a UUIDv7 is generated for it.
+This allows to sort datapoints by their creation order and preserve the order of insertion.
+
+## Adding data
+
+You can add datapoints either from file or by manually adding datapoints one-by-one.
+
+## Exporting datasets to Parquet
+
+For large data pulls, you can export a dataset to Parquet files directly from the UI.
+
+1. Use the SQL Query Editor to build the dataset you need (for example, by exporting query results to a dataset).
+1. Open the dataset and click **Parquets**.
+1. Start the export job, wait for it to finish, then download the generated `.parquet` files.
+
+<img src="/images/datasets/parquet-export.png" alt="Download dataset as Parquet files from the Parquets dialog" />
+
+> Tip: include an explicit `ORDER BY` in the SQL that produces the dataset (for example, `ORDER BY created_at` or `ORDER BY id`). The export job runs in the background and doesn’t impose its own ordering, so specifying order avoids duplicates or unstable splits when exporting very large datasets.
+
+## 1. Export from a span
+
+You can export a span as a datapoint from both Traces and Evaluation traces. To do so,
+select a span and click "Add to dataset" in the top right corner.
+
+Select the dataset you want to export to and click "Add to dataset".
+
+This will fill the `data` field of the datapoint with the input of the span and
+the `target` field with the output of the span.
+
+<img src="/images/datasets/export-span.png" alt="Export span to dataset" />
+
+## 2. File upload
+
+You can upload datapoints from a structured file with datapoints.
+
+To do that, click "Add from source" at the top of the Datasets page. Then, select in the tab whether you want to upload in a structured or unstructured way.
+
+### File format
+
+Supported file formats are: `.csv`, `.json`, `.jsonl`. We infer the format based on the file extension.
+
+- csv - **header is required**, default separator and minimal quoting are assumed.
+If a row has an empty value or less values than headers, missing values will be filled with empty strings.
+- json - the file must contain **one array** of datapoints.
+- jsonlines - every line must contain one datapoint.
+
+For each datapoint, we first construct the key-value object, and then parse it according to the following rules:
+1. If keys are `"data"`, `"target"`, `"metadata"`, and `"id"`, we place them in the corresponding fields.
+     - If we cannot parse `"id"` as UUID, we assign it a new random UUID.
+2. Otherwise, all keys and values will go inside `"data"`.
+
+If there is an error parsing the file, no datapoints will be added.
+If a single value in the file does not conform to format, it will be silently ignored.
+
+## 3. Add manually
+
+Click "Add row" at the top of the Datasets page and new empty row will be added.
+You can any value as long as it is a valid JSON that contains a `data` field.
+
+<img src="/images/datasets/manual-add-dp.png" alt="Add datapoint" />
+
+## 4. Enrich using a queue
+
+You can create new datapoints by editing existing ones or copying span data using the queues.
+
+Humans can then edit the datapoints in the queue and save them to new datapoints either
+in the same dataset or in a new one. [Learn more about queues](/queues/quickstart).
+
+## CLI
+
+The `lmnr datasets` command is used to manage datasets in Laminar.
+
+## Usage
+
+### Creating a new dataset and iterating on it
+
+<Steps>
+<Step title="Prepare input files">
+
+Prepare input files for the dataset. Supported formats are: `.json`, `.jsonl`, `.csv`.
+Every datapoint must at least have a `data` field. Save this file as `data.json` (or `data.jsonl` or `data.csv`).
+
+For JSON, the file must contain **one array** of datapoints.
+
+For JSONL, the file must contain **one datapoint per line**.
+
+For CSV, the file must contain **a header row and one datapoint per row**.
+
+Examples:
+<Expandable title="JSON">
+```json
+[
+    { "data": { "color": "red", "size": "large" } },
+    { "data": { "color": "blue", "size": "small" } },
+]
+```
+</Expandable>
+<Expandable title="JSONL">
+```jsonl
+{"data": {"color": "red", "size": "large"}}
+{"data": {"color": "blue", "size": "small"}}
+```
+</Expandable>
+<Expandable title="CSV">
+```csv
+data,target
+"{""color"": ""red"", ""size"": ""large""}","{""expected_output"": ""red""}"
+"{""color"": ""blue"", ""size"": ""small""}","{""expected_output"": ""blue""}"
+```
+
+</Expandable>
+</Step>
+
+<Step title="Set the project API key">
+
+```bash
+export LMNR_PROJECT_API_KEY=<your-project-api-key>
+```
+
+Alternatively, you can set it in the `.env` file in the same directory where you run the CLI.
+
+```bash
+echo "\nLMNR_PROJECT_API_KEY=<your-project-api-key>" >> .env
+```
+
+Or, you can also pass the `--project-api-key` flag to the global datasets command, e.g.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets --project-api-key "<your-project-api-key>" list
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets --project-api-key "<your-project-api-key>" list
+```
+</Tab>
+</Tabs>
+</Step>
+
+<Step title="Create a new dataset">
+
+Create a new dataset from the input file. This command will create a new dataset with the name `my-cli-dataset` and save the datapoints to the file `my-cli-dataset.json`.
+
+The datapoints are saved to a new file in order to:
+- Store datasets in the Laminar format. In particular, datapoint id is crucial for versioning ([Learn more](/improve-with-evaluations/datasets#versioning)).
+- Not overwrite existing files.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets create my-cli-dataset data.json -o my-cli-dataset.json
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets create my-cli-dataset data.json -o my-cli-dataset.json
+```
+</Tab>
+</Tabs>
+</Step>
+
+<Step title="Work on the dataset locally">
+Make any changes required to the dataset by editing the file `my-cli-dataset.json`.
+
+Make sure to not edit the `id` field of the datapoints.
+
+<Note>
+If you delete a datapoint, this will not affect the dataset in Laminar.
+This is because the push operation only pushes new datapoint (versions) to the dataset.
+</Note>
+
+</Step>
+
+<Step title="Push the changes to Laminar">
+Push the changes to Laminar.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets push -n my-cli-dataset my-cli-dataset.json
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets push -n my-cli-dataset my-cli-dataset.json
+```
+</Tab>
+</Tabs>
+
+This will push the changes to the dataset in Laminar.
+</Step>
+
+<Step title="Pull the changes from Laminar">
+If you need to update the local dataset with the latest changes from Laminar, you can pull the changes.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets pull -n my-cli-dataset my-cli-dataset.json
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets pull -n my-cli-dataset my-cli-dataset.json
+```
+</Tab>
+</Tabs>
+
+This will pull the changes from the dataset in Laminar to the local file `my-cli-dataset.json`.
+
+<Warning>
+This will overwrite the contents of the current file `my-cli-dataset.json`.
+</Warning>
+
+</Step>
+</Steps>
+
+### Working on an existing dataset
+
+<Steps>
+<Step title="Set the project API key">
+
+```bash
+export LMNR_PROJECT_API_KEY=<your-project-api-key>
+```
+
+Alternatively, you can set it in the `.env` file in the same directory where you run the CLI.
+
+```bash
+echo "\nLMNR_PROJECT_API_KEY=<your-project-api-key>" >> .env
+```
+
+Or, you can also pass the `--project-api-key` flag to the global datasets command, e.g.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets --project-api-key "<your-project-api-key>" list
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets --project-api-key "<your-project-api-key>" list
+```
+</Tab>
+</Tabs>
+
+</Step>
+<Step title="Select the dataset to work on">
+
+List all datasets and select the one you want to work on.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets list
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets list
+```
+</Tab>
+</Tabs>
+</Step>
+
+<Step title="Pull the data from Laminar">
+Pull the data from Laminar to a local file.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets pull -n my-dataset my-dataset.json
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets pull -n my-dataset my-dataset.json
+```
+</Tab>
+</Tabs>
+
+This will pull the changes from the dataset in Laminar to the local file `my-dataset.json`.
+
+<Warning>
+If `my-dataset.json` already exists, this will overwrite the contents of the file.
+</Warning>
+
+</Step>
+<Step title="Work on the dataset locally">
+Make any changes required to the dataset by editing the file `my-dataset.json`.
+
+Make sure to not edit the `id` field of the datapoints.
+
+<Note>
+If you delete a datapoint, this will not affect the dataset in Laminar.
+This is because the push operation only pushes new datapoint (versions) to the dataset.
+</Note>
+
+</Step>
+
+<Step title="Push the changes to Laminar">
+Push the changes to Laminar.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets push -n my-dataset my-dataset.json
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets push -n my-dataset my-dataset.json
+```
+</Tab>
+</Tabs>
+
+This will push the changes to the dataset in Laminar.
+</Step>
+</Steps>
+
+### Setting the CLI to call a local Laminar instance
+
+Global `datasets` command has optional arguments:
+
+- `--base-url`: The base URL of the Laminar instance. Do NOT include port here. Default is `https://api.lmnr.ai`.
+- `--port`: The HTTP port of the Laminar instance. Default is 443. For local self-hosted Laminar, use 8000.
+- `--project-api-key`: The API key of the project. If not provided, reads from `LMNR_PROJECT_API_KEY` environment variable.
+
+## Reference
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets [command]
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets [command]
+```
+</Tab>
+</Tabs>
+
+## General options
+
+These are useful if you want to call a local Laminar instance.
+
+```
+  --project-api-key <key>  Project API key. If not provided, reads from LMNR_PROJECT_API_KEY env variable
+  --base-url <url>         Base URL for the Laminar API. Defaults to https://api.lmnr.ai or LMNR_BASE_URL env variable
+  --port <port>            Port for the Laminar API. Defaults to 443
+```
+
+## Commands
+
+### List all datasets
+
+List all datasets.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets list
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets list
+```
+</Tab>
+</Tabs>
+
+### Create a new dataset
+
+Create a dataset from input files.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets create [options] <name> <paths...>
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets create [options] <name> <paths...>
+```
+</Tab>
+</Tabs>
+
+```
+Arguments:
+  name                      Name of the dataset to create
+  paths                     Paths to files or directories containing data to push
+
+Options:
+  -o, --output-file <file>  Path to save the pulled data
+  --output-format <format>  Output format (json, csv, jsonl). Inferred from file extension if not provided
+  -r, --recursive           Recursively read files in directories (default: false)
+  --batch-size <size>       Batch size for pushing/pulling data (default: 100)
+```
+
+### Push datapoints to a dataset
+
+Push datapoints to an existing dataset from a file or files.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets push -n [options] <paths...>
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets push -n [options] <paths...>
+```
+</Tab>
+</Tabs>
+
+```
+Arguments:
+  paths                Paths to files or directories containing data to push
+
+Options:
+  -n, --name <name>    Name of the dataset (either name or id must be provided)
+  --id <id>            ID of the dataset (either name or id must be provided)
+  -r, --recursive      Recursively read files in directories (default: false)
+  --batch-size <size>  Batch size for pushing data (default: 100)
+```
+
+### Pull datapoints from a dataset
+
+Pull datapoints from a dataset to a file or print them to the console.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+```bash
+npx lmnr datasets pull [options] [output-path]
+```
+</Tab>
+<Tab title="Python">
+```bash
+lmnr datasets pull [options] [output-path]
+```
+</Tab>
+</Tabs>
+
+```
+Arguments:
+  output-path               Path to save the data. If not provided, prints to console
+
+Options:
+  -n, --name <name>         Name of the dataset (either name or id must be provided)
+  --id <id>                 ID of the dataset (either name or id must be provided)
+  --output-format <format>  Output format (json, csv, jsonl). Inferred from file extension if not provided
+  --batch-size <size>       Batch size for pulling data (default: 100)
+  --limit <limit>           Limit number of datapoints to pull
+  --offset <offset>         Offset for pagination (default: 0)
+  -h, --help                display help for command
+```

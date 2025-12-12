@@ -1,0 +1,49 @@
+---
+title: Real-time Traces
+sidebarTitle: Real-time Traces
+description: Stream spans live while you build and debug
+---
+
+Real-time traces stream spans as they execute—no waiting for the root span to finish. They are ideal for long-running agents, chained LLM calls, and interactive debugging while you iterate locally.
+
+![Realtime traces](/images/realtime/realtime.gif)
+
+## How it works
+
+Laminar uses OpenTelemetry span processors. By default, batching optimizes throughput, which introduces a short delay before spans appear in the dashboard. Real-time mode switches to immediate delivery so you can watch execution step by step.
+
+<Note>Real-time traces are available in Laminar Cloud.</Note>
+
+## Enable real-time mode
+
+Disable batching during development for instant visibility. Keep batching enabled in production for performance.
+
+<Tabs>
+<Tab title="JavaScript/Typescript">
+
+```javascript
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+  disableBatch: true,
+});
+```
+</Tab>
+
+<Tab title="Python">
+
+```python
+Laminar.initialize(
+    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
+    disable_batch=True,
+)
+```
+</Tab>
+</Tabs>
+
+## When to use it
+
+- Monitor long-running tools or browser steps in real time
+- Debug complex agent flows without waiting for batch flushes
+- Track progress for chained LLM calls during development
+
+Switch back to batching when you deploy to minimize client overhead.

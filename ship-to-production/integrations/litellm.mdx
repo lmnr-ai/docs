@@ -1,0 +1,58 @@
+---
+title: LLM Observability for LiteLLM
+sidebarTitle: LiteLLM
+description: Configure LiteLLM to send traces to Laminar
+---
+
+## Overview
+
+[LiteLLM](https://www.litellm.ai/) is a framework/library for building LLM applications that simplifies accessing many models across different providers.
+
+## Default configuration
+
+<Steps>
+<Step title="Ensure you have the latest version of Laminar">
+```sh
+pip install -U lmnr[all]
+```
+</Step>
+<Step title="Initialize Laminar and integrate the callback">
+
+You need to initialize Laminar **before** adding the callback to LiteLLM.
+
+```python
+import litellm
+from lmnr import Laminar, LaminarLiteLLMCallback
+
+# 1. Initialize Laminar
+Laminar.initialize(project_api_key="LMNR_PROJECT_API_KEY")
+
+# 2. Integrate the callback
+litellm.callbacks = [LaminarLiteLLMCallback()]
+```
+</Step>
+<Step title="Run your code and see traces in Laminar">
+
+Example code:
+
+```python
+import litellm
+from lmnr import Laminar, LaminarLiteLLMCallback
+
+Laminar.initialize(project_api_key="LMNR_PROJECT_API_KEY")
+litellm.callbacks = [LaminarLiteLLMCallback()]
+
+response = litellm.completion(
+    model="gpt-4.1-nano",
+    messages=[
+      {"role": "user", "content": "What is the capital of France?"}
+    ],
+)
+```
+
+
+<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
+  <img src="/images/traces/litellm.png" alt="LiteLLM trace" style={{ margin: '0px' }}/>
+</div>
+</Step>
+</Steps>

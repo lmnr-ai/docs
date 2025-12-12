@@ -1,0 +1,134 @@
+---
+title: Events & Tags
+sidebarTitle: Events & Tags
+description: Track custom events and classify spans for analysis
+---
+
+Events record timestamped data points; tags classify spans. Both flow into the SQL engine and dashboards.
+
+## Events
+
+- Single timestamp with attributes; no duration.
+- Use `Laminar.event()` in any context. If called inside a span, the event is attached to that span; otherwise a new span is created.
+
+<Tabs>
+<Tab title="TypeScript">
+
+```javascript
+Laminar.event({
+  name: "my-event",
+  attributes: { "user-feedback": "positive" },
+  sessionId: "123",
+  userId: "456",
+  timestamp: new Date("2025-01-01T00:00:00.000Z"),
+});
+```
+</Tab>
+<Tab title="Python">
+
+```python
+Laminar.event(
+    name="my-event",
+    attributes={"user-feedback": "positive"},
+    session_id="123",
+    user_id="456",
+)
+```
+</Tab>
+</Tabs>
+
+Query events in the `events` table (`SELECT * FROM events WHERE session_id = '123'`).
+
+## Tags
+
+Tags are string labels on spans for filtering and analysis. Add them when creating spans or after the fact.
+
+### Add tags at creation
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+const span = Laminar.startSpan({ name: "foo", tags: ["my_tag", "another_tag"] });
+
+await observe({ name: "foo", tags: ["my_tag", "another_tag"] }, async () => {
+  // work here
+});
+```
+</Tab>
+<Tab title="Python">
+
+```python
+with Laminar.start_as_current_span(name="foo", tags=["my_tag", "another_tag"]):
+    pass
+
+@observe(tags=["my_tag", "another_tag"])
+def foo():
+    pass
+```
+</Tab>
+</Tabs>
+
+### Add tags inside a span
+
+Must be called inside an active span context.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+await observe({ name: "foo" }, async (message) => {
+  if (message.length > 100) {
+    Laminar.addSpanTags(["long_input"]);
+  }
+});
+```
+</Tab>
+<Tab title="Python">
+
+```python
+@observe()
+def foo(user_input: str):
+    if len(user_input) > 100:
+        Laminar.add_span_tags(["long_input"])
+```
+</Tab>
+</Tabs>
+
+### Tag spans after creation
+
+Capture the `traceId`/`trace_id` inside a span, then tag via the client later (e.g., after collecting user feedback).
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+const laminarClient = new LaminarClient();
+
+const { traceId } = await observe({ name: "chat_completion" }, async () => {
+  // ...
+  return { traceId: Laminar.getTraceId() };
+});
+
+const userFeedbackHandler = (traceId, userFeedback) =>
+  laminarClient.tags.tag(traceId, userFeedback);
+```
+</Tab>
+<Tab title="Python">
+
+```python
+laminar_client = LaminarClient()
+
+@observe()
+def chat_completion(user_input: str):
+    response = ...
+    trace_id = Laminar.get_trace_id()
+    return {"trace_id": trace_id, "response": response}
+
+def user_feedback_handler(trace_id, user_feedback):
+    laminar_client.tags.tag(trace_id, user_feedback)
+```
+</Tab>
+</Tabs>
+
+Tags appear as shields in the UI and can be used as filters in traces and spans views.

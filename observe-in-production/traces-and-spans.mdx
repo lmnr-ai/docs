@@ -1,0 +1,33 @@
+---
+title: Traces & Spans
+sidebarTitle: Traces & Spans
+description: Read Laminar traces, spans, and the trace view
+---
+
+Laminar traces capture the full execution flow of your agent in production. Spans represent each operation—LLM calls, tool invocations, function calls—with inputs, outputs, timing, and errors.
+
+<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
+<img src="/images/traces/trace-view.png" alt="Trace view" style={{ margin: '0px' }}/>
+</div>
+
+## Span model
+
+- **Name:** e.g., `gemini.generate_content`
+- **Input/Output:** serialized parameters and return values (prompts and completions for LLM spans)
+- **Duration:** execution time
+- **Path:** hierarchical location (e.g., `get_user.validate.api_call`)
+- **Attributes:** metadata such as model, provider, token counts, and cost
+- **Lifecycle:** start → optional activation → end. Spans that never end do not appear in the UI.
+
+## Trace model
+
+A trace is the tree of spans for a single execution. Parent-child relationships show how the request flowed through your code and third-party libraries. Trace types include default application traces and evaluation traces.
+
+## Trace view
+
+- Tree of spans with timing bars
+- Inputs/outputs and attributes per span
+- Error events and stack traces where applicable
+- Cost and token usage on LLM spans
+
+Use manual instrumentation to shape the hierarchy, then explore spans here to debug and audit production behavior.

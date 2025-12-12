@@ -1,0 +1,322 @@
+---
+title: Manual Instrumentation
+sidebarTitle: Manual Instrumentation
+description: Create custom spans and control trace structure across your stack
+---
+
+import ObserveExample from '/snippets/observe-example.mdx';
+
+Automatic instrumentation covers most cases. Use manual instrumentation when you need precise control over span names, types, inputs/outputs, or when you are crossing service boundaries.
+
+## Observe decorator / wrapper
+
+`observe` creates a span around any function and records inputs and outputs. It is the fastest way to structure traces without managing span lifecycle yourself.
+
+<ObserveExample />
+
+### JavaScript/TypeScript options
+
+```javascript
+await observe({ name: 'my_span', sessionId, userId, metadata, spanType: 'DEFAULT' }, async (param1, param2) => {
+  // your code here
+}, arg1, arg2);
+```
+
+- `name` (string): defaults to the function name.
+- `sessionId`, `userId`, `metadata`: trace-level context.
+- `spanType`: `DEFAULT` or `LLM`. When `LLM`, set LLM attributes manually.
+- `input`, `ignoreInput`, `ignoreOutput`, `tags`.
+
+Inputs are serialized function parameters; outputs are serialized return values.
+
+### Python options
+
+```python
+@observe(name="my_span", session_id=None, user_id=None, metadata=None, tags=None, ignore_input=False, ignore_output=False)
+def my_function(param1, param2):
+    return param1 + param2
+```
+
+Inputs and outputs are serialized to JSON unless you skip them with `ignore_input` or `ignore_output`.
+
+### Grouping calls
+
+Wrap multiple LLM calls inside one `observe` block to keep them in a single trace. Child spans inherit session, user, and metadata set inside the wrapper.
+
+## Create spans manually
+
+Use manual spans for advanced hierarchies or when you cannot wrap logic with `observe`.
+
+### Options at a glance
+
+|  | Start as current span | Start span | With span / use span | Start active span | 
+| - | - | - | - | - |
+| Creates a new span | ✅ | ✅ | ❌ | ✅ |
+| Activates the span | ✅ | ❌ | ✅ | ✅ |
+| Ends the span | ✅ | ❌ | `end_on_exit` option | ❌ |
+| Available in Python | ✅ | ✅ | ✅ | ✅ |
+| Available in JavaScript | ❌ (`observe` instead) | ✅ | ✅ | ✅ |
+
+### Start as current span (Python)
+
+Preferred for Python when you want children spans to nest automatically.
+
+```python
+with Laminar.start_as_current_span(
+    name="custom_operation",
+    input=input_data,
+    span_type="DEFAULT",
+) as span:
+    try:
+        result = process_data(input_data)
+        Laminar.set_span_output(result)
+        Laminar.set_span_attributes({"custom.result_count": len(result)})
+    except Exception as error:
+        span.record_exception(error)
+        raise
+```
+
+### Start span (JS/TS and Python)
+
+Creates a span without activating it so you can pass it around or use it as a leaf span.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+const span = Laminar.startSpan({ name: 'custom_operation' });
+const result = sum(1, 2);
+span.setAttributes({ 'custom.operation.result': result });
+span.end();
+```
+</Tab>
+<Tab title="Python">
+
+```python
+span = Laminar.startSpan(name="custom_operation")
+result = sum(1, 2)
+span.set_attribute("custom.operation.result", result)
+span.end()
+```
+</Tab>
+</Tabs>
+
+### Activate an existing span
+
+Use `withSpan` (JS/TS) or `use_span` (Python) to make an existing span current for a block of code.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+const parentSpan = Laminar.startSpan({ name: 'parent' });
+
+await Laminar.withSpan(parentSpan, async () => {
+  const childSpan = Laminar.startSpan({ name: 'child' });
+  childSpan.end();
+});
+
+parentSpan.end();
+```
+</Tab>
+<Tab title="Python">
+
+```python
+parent_span = Laminar.start_span(name="parent")
+
+with Laminar.use_span(parent_span):
+    child_span = Laminar.start_span(name="child")
+    child_span.end()
+
+parent_span.end()
+```
+</Tab>
+</Tabs>
+
+### Start active span
+
+Creates and activates a span immediately. Use cautiously and always end the span in the same context.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+const span = Laminar.startActiveSpan({ name: 'custom_operation' });
+// child spans here will nest under custom_operation
+span.end();
+```
+</Tab>
+<Tab title="Python">
+
+```python
+span = Laminar.start_active_span(name="custom_operation")
+# child spans here will nest under custom_operation
+span.end()
+```
+</Tab>
+</Tabs>
+
+## Span types and attributes
+
+Set `spanType` / `span_type` to mark spans as `LLM` or `TOOL` when you are instrumenting manually. Provide provider, model, and token counts so Laminar can calculate cost.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+import { Laminar, LaminarAttributes } from '@lmnr-ai/lmnr';
+
+const span = Laminar.startSpan({ name: 'custom_llm_call', spanType: 'LLM' });
+
+const data = await response.json();
+span.setAttributes({
+  [LaminarAttributes.PROVIDER]: 'custom-llm.com',
+  [LaminarAttributes.REQUEST_MODEL]: 'custom-model-1',
+  [LaminarAttributes.RESPONSE_MODEL]: data.model,
+  [LaminarAttributes.INPUT_TOKEN_COUNT]: data.usage.input_tokens,
+  [LaminarAttributes.OUTPUT_TOKEN_COUNT]: data.usage.output_tokens,
+});
+
+span.end();
+```
+</Tab>
+<Tab title="Python">
+
+```python
+from lmnr import Laminar, Attributes
+import requests
+
+with Laminar.start_as_current_span(
+    name="custom_llm_call",
+    span_type="LLM",
+) as span:
+    response = requests.post(
+        "https://api.custom-llm.com/v1/completions",
+        json={"model": "custom-model-1", "messages": messages},
+    ).json()
+
+    Laminar.set_span_output(response["choices"][0]["message"]["content"])
+    Laminar.set_span_attributes({
+        Attributes.PROVIDER: "custom-llm.com",
+        Attributes.REQUEST_MODEL: "custom-model-1",
+        Attributes.RESPONSE_MODEL: response["model"],
+        Attributes.INPUT_TOKEN_COUNT: response["usage"]["input_tokens"],
+        Attributes.OUTPUT_TOKEN_COUNT: response["usage"]["output_tokens"],
+    })
+```
+</Tab>
+</Tabs>
+
+Record errors on spans with `recordException` (JS/TS) or `record_exception` (Python) so failures appear in the trace.
+
+## Continue traces across boundaries
+
+When you cannot pass function scope directly, forward span objects or serialize context.
+
+### Passing span objects
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+const processData = (span, data) =>
+  Laminar.withSpan(span, async () => {
+    await observe({ name: 'dataValidation' }, async () => validateData(data));
+  });
+
+const handleRequest = async (userInput) => {
+  const rootSpan = Laminar.startSpan('handleUserRequest');
+  try {
+    await processData(rootSpan, userInput);
+  } finally {
+    rootSpan.end();
+  }
+};
+```
+</Tab>
+<Tab title="Python">
+
+```python
+def process_data(span, data):
+    with Laminar.use_span(span):
+        with Laminar.start_as_current_span(name="data_validation"):
+            return validate_data(data)
+
+def handle_request(user_input):
+    root_span = Laminar.start_span(name="handle_user_request")
+    try:
+        process_data(root_span, user_input)
+    finally:
+        root_span.end()
+```
+</Tab>
+</Tabs>
+
+### Serialize span context
+
+Use Laminar span context serialization when spans cross services or queues.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+// Service A
+const span = Laminar.startSpan({ name: 'firstHandler' });
+const context = Laminar.serializeLaminarSpanContext(span);
+span.end();
+
+// Service B
+const spanB = Laminar.startSpan({
+  name: 'secondHandler',
+  parentSpanContext: context,
+});
+spanB.end();
+```
+
+Send the serialized context via headers:
+
+```javascript
+// Service A
+fetch('/api/service-b', {
+  headers: { 'x-laminar-span-context': Laminar.serializeLaminarSpanContext() },
+});
+
+// Service B
+const spanContext = req.headers['x-laminar-span-context'];
+const span = Laminar.startSpan({
+  name: 'serviceBHandler',
+  parentSpanContext: spanContext,
+});
+span.end();
+```
+</Tab>
+<Tab title="Python">
+
+```python
+with Laminar.start_as_current_span(name="first_handler") as span:
+    serialized = Laminar.serialize_span_context(span)
+    save_context_to_db(serialized)
+
+parent_span_context = Laminar.deserialize_span_context(serialized)
+with Laminar.start_as_current_span(
+    name="second_handler",
+    parent_span_context=parent_span_context,
+):
+    pass
+```
+
+Headers example:
+
+```python
+with Laminar.start_as_current_span(name="service_a_call"):
+    span_context = Laminar.serialize_span_context()
+    requests.post(
+        'http://service-b/api/process',
+        headers={'X-Laminar-Span-Context': span_context},
+        json={'data': 'some data'},
+    )
+```
+</Tab>
+</Tabs>
+
+Validate deserialized context before use to avoid corrupt hierarchies, and always end spans to ensure traces close cleanly.

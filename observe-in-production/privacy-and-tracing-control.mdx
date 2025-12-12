@@ -1,0 +1,76 @@
+---
+title: Privacy & Tracing Control
+sidebarTitle: Privacy & Tracing Control
+description: Control what gets traced and handle sensitive data safely
+---
+
+Use tracing levels to control captured content and flush/shutdown tools to guarantee delivery in short-lived environments.
+
+## Tracing levels
+
+Choose how much data to record within a block of code:
+- `ALL` – trace everything (default)
+- `META_ONLY` – capture metadata without inputs/outputs
+- `OFF` – disable tracing inside the block
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+import { withTracingLevel, TracingLevel } from "@lmnr-ai/lmnr";
+
+withTracingLevel(TracingLevel.OFF, () => {
+  // code here is not traced
+});
+
+// normal tracing resumes here
+```
+</Tab>
+<Tab title="Python">
+
+```python
+from lmnr import Laminar, TracingLevel
+
+with Laminar.set_tracing_level(TracingLevel.META_ONLY):
+    # content is suppressed; metadata only
+    pass
+
+# normal tracing resumes here
+```
+</Tab>
+</Tabs>
+
+Use `META_ONLY` or `OFF` around sensitive operations, or switch to `ALL` to re-enable full capture.
+
+## Flushing and shutdown
+
+Laminar batches spans for performance. In short-lived scripts or serverless handlers, flush before exit to avoid losing data.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+// End of your script
+await Laminar.flush();    // ensure buffered spans are sent
+await Laminar.shutdown(); // flushes and closes the SDK
+```
+</Tab>
+<Tab title="Python">
+
+```python
+# End of your script
+Laminar.flush()     # send buffered spans
+Laminar.shutdown()  # flushes and closes the SDK
+```
+
+For AWS Lambda and similar, use `Laminar.force_flush()` to block until spans are delivered:
+
+```python
+def handler(event, context):
+    # your code
+    Laminar.force_flush()
+```
+</Tab>
+</Tabs>
+
+<Warning>Do not flush on every web request in high-traffic servers; batching is optimized for production workloads.</Warning>

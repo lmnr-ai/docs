@@ -1,0 +1,90 @@
+---
+title: App Server API
+sidebarTitle: App Server API
+description: HTTP endpoints exposed by the app-server
+---
+
+Use the side navigation to jump into individual endpoints. Categories below mirror the nav.
+
+## Health / ops (no auth)
+
+### GET /health
+Readiness of RabbitMQ; consumer mode also checks worker counts (src/routes/probes.rs).
+
+### GET /ready
+Lightweight ready check (src/routes/probes.rs).
+
+## Project-scoped (behind Next.js middleware)
+
+### GET /api/v1/projects/{project_id}/realtime
+SSE stream keyed by `?key=traces|trace_{id}` (src/routes/realtime.rs).
+
+### GET /api/v1/projects/{project_id}/evaluation-score-stats
+Average score for an evaluation/score name (src/routes/evaluations.rs).
+
+### GET /api/v1/projects/{project_id}/evaluation-score-distribution
+Bucketed score distribution across evaluations (src/routes/evaluations.rs).
+
+### POST /api/v1/projects/{project_id}/spans
+Create a span (src/routes/spans.rs).
+
+### POST /api/v1/projects/{project_id}/spans/search
+Search spans via Quickwit (src/routes/spans.rs).
+
+### POST /api/v1/projects/{project_id}/sql/query
+Run SQL with parameters (src/routes/sql.rs).
+
+### POST /api/v1/projects/{project_id}/sql/validate
+Validate SQL (src/routes/sql.rs).
+
+### POST /api/v1/projects/{project_id}/sql/to-json
+Convert SQL to query JSON (src/routes/sql.rs).
+
+### POST /api/v1/projects/{project_id}/sql/from-json
+Convert query JSON to SQL (src/routes/sql.rs).
+
+## Ingestion (ingest-only keys allowed)
+
+### POST /v1/browser-sessions/events
+Ingest RRWeb session events (src/api/v1/browser_sessions.rs).
+
+### POST /v1/traces
+OTLP trace ingest (src/api/v1/traces.rs).
+
+### POST /v1/metrics
+Placeholder metrics ingest (returns 200) (src/api/v1/metrics.rs).
+
+## Project-auth endpoints
+
+### POST /v1/tag
+Tag a trace/span (src/api/v1/tag.rs).
+
+### GET /v1/datasets
+List datasets (src/api/v1/datasets.rs).
+
+### GET /v1/datasets/datapoints
+List datapoints with pagination (src/api/v1/datasets.rs).
+
+### POST /v1/datasets/datapoints
+Create datapoints (optionally create dataset) (src/api/v1/datasets.rs).
+
+### GET /v1/datasets/{dataset_id}/parquets/{idx}
+Download exported parquet (src/api/v1/datasets.rs).
+
+### POST /v1/evals
+Create an evaluation (src/api/v1/evals.rs).
+
+### POST /v1/evals/{eval_id}/datapoints
+Bulk save evaluation datapoints (src/api/v1/evals.rs).
+
+### POST /v1/evals/{eval_id}/datapoints/{datapoint_id}
+Update a specific evaluation datapoint (src/api/v1/evals.rs).
+
+### POST /v1/evaluators/score
+Attach evaluator score to a span/trace (src/api/v1/evaluators.rs).
+
+### POST /v1/sql/query
+Execute SQL (no parameters in body) (src/api/v1/sql.rs).
+
+### GET /v1/payloads/{payload_id}
+Stream stored payloads (`payloadType` optional: image|raw) (src/api/v1/payloads.rs).

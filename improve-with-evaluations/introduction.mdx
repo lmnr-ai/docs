@@ -1,0 +1,48 @@
+---
+sidebarTitle: Introduction
+title: Introduction to Laminar evaluations
+---
+import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
+
+Evaluation is the process of validating and testing the outputs that your AI applications are producing. Having strong evaluations ("evals") means a more stable, reliable application that is resilient to code and model changes. An eval is a task used to measure the quality of the output of an LLM or LLM system.
+
+<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
+<img src="/images/evaluations/evals.png" alt="Screenshot of a trace visualization" style={{ margin: '0px' }}/>
+</div>
+
+### Why do we need evals?
+
+In short, evaluations bring rigor to AI development process.
+
+When you are building with foundation models, creating high-quality evals is one of the most impactful things you can do. Developing AI solutions involves an iterative design process. Without evals, it can be difficult and time-intensive to understand how different model versions and prompts affect your use case.
+
+With continuous model upgrades from providers, evals allow you to efficiently test model performance for your specific uses in a standardized way. Developing a suite of evals customized to your objectives will help you quickly understand how new models perform for your applications. You can also make evals part of your CI/CD pipeline to ensure desired accuracy before deployment.
+
+### Types of evals
+
+There are two main approaches to evaluating outputs:
+
+**1. Logic-based evaluation**: The simplest and most common type uses code to check outputs against expected answers. For example:
+- String matching to check if the completion includes an expected phrase
+- Parsing to validate proper JSON output
+- Custom logic to verify domain-specific requirements
+
+**2. Model-based evaluation**: A two-stage process where:
+- First, the model generates a response to the input
+- Then, another model (ideally more powerful) evaluates the quality of that response
+
+Model-based evaluation works best with powerful models when the desired output has significant variation, such as open-ended questions or creative tasks.
+
+## How evals differ from traditional unit tests
+
+Unlike traditional unit tests that focus on binary pass/fail outcomes, evaluations for AI systems require continuous tracking and visualization of performance metrics over time. As models evolve and prompts are refined, being able to compare performance across different versions becomes critical.
+
+What makes evals unique is their ability to:
+- Track nuanced quality metrics beyond simple correctness
+- Visualize performance trends across model versions and prompt iterations
+- Compare multiple implementations side-by-side
+- Detect subtle regressions that might not be obvious in isolated tests
+
+Laminar provides the best developer experience and visualization capabilities for AI evaluations, making it easy to understand how your models are performing and where improvements can be made. With comprehensive dashboards and detailed tracing, you can get deep insights into every aspect of your AI system's behavior.
+
+Check out our [Quickstart Guide](/evaluations/quickstart) to run your first evaluation.

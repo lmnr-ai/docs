@@ -1,0 +1,154 @@
+---
+title: LLM Observability for Anthropic SDK
+sidebarTitle: Anthropic
+description: Instrument your Anthropic API calls with Laminar
+---
+
+## Overview
+
+Laminar automatically instruments the official Anthropic package with a single line of code, allowing you to trace and monitor all your Anthropic API calls without modifying your existing code. This provides complete visibility into your AI application's performance, costs, and behavior.
+
+## Getting Started
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ### 1. Install Laminar and Anthropic
+
+    ```bash
+    npm install @lmnr-ai/lmnr @anthropic-ai/sdk
+    ```
+
+    ### 2. Set up your environment variables
+
+    Store your API keys in a `.env` file:
+
+    ```bash
+    # .env file
+    LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+    ANTHROPIC_API_KEY=your-anthropic-api-key
+    ```
+
+    Then load them in your application using a package like [dotenv](https://www.npmjs.com/package/dotenv).
+
+    <Note>
+    If you are using Anthropic with Next.js, please follow the [Next.js integration guide](/ship-to-production/integrations/nextjs) for best practices and setup instructions.
+    </Note>
+
+    ### 3. Initialize Laminar
+
+    Just add a single line at the start of your application or file to instrument Anthropic with Laminar.
+
+    ```typescript
+    import { Laminar } from '@lmnr-ai/lmnr';
+    import Anthropic from '@anthropic-ai/sdk';
+    import 'dotenv/config'; // Load environment variables
+
+    // This single line instruments all Anthropic API calls
+    Laminar.initialize({
+      instrumentModules: { anthropic: Anthropic }
+    });
+
+    // Initialize Anthropic client as usual
+    const anthropic = new Anthropic();
+    ```
+    <Note>
+    It is important to pass `Anthropic` to `instrumentModules` as a named export.
+    </Note>
+
+    ### 4. Use Anthropic as usual
+
+    ```typescript
+    // Make API calls to Anthropic as you normally would
+    const response = await anthropic.messages.create({
+      model: "claude-3-7-sonnet",
+      max_tokens: 1024,
+      messages: [
+        { role: "user", content: "Hello, how are you?" }
+      ],
+    });
+
+    console.log(response.content);
+    ```
+
+    All Anthropic API calls are now automatically traced in Laminar.
+  </Tab>
+  <Tab title="Python">
+    ### 1. Install Laminar and Anthropic
+
+    ```bash
+    pip install 'lmnr[all]' anthropic python-dotenv
+    ```
+
+    ### 2. Set up your environment variables
+
+    Store your API keys in a `.env` file:
+
+    ```bash
+    # .env file
+    LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+    ANTHROPIC_API_KEY=your-anthropic-api-key
+    ```
+
+    <Note>
+    To see an example of how to integrate Laminar within a FastAPI application, check out our [FastAPI integration guide](/guides/fastapi).
+    </Note>
+
+    ### 3. Initialize Laminar
+
+    Just add a single line at the start of your application or file to instrument Anthropic with Laminar.
+
+    ```python
+    from lmnr import Laminar
+    from anthropic import Anthropic
+    import os
+    from dotenv import load_dotenv
+
+    # Load environment variables from .env file
+    load_dotenv()
+
+    # This single line instruments all Anthropic API calls
+    Laminar.initialize()
+
+    # Initialize Anthropic client as usual
+    client = Anthropic()
+    ```
+
+    ### 4. Use Anthropic as usual
+
+    ```python
+    # Make API calls to Anthropic as you normally would
+    response = client.messages.create(
+        model="claude-3-7-sonnet",
+        max_tokens=1024,
+        messages=[
+            {"role": "user", "content": "Hello, how are you?"}
+        ]
+    )
+
+    print(response.content)
+    ```
+
+    All Anthropic API calls are now automatically traced in Laminar.
+  </Tab>
+</Tabs>
+
+These features allow you to build more structured traces, add context to your LLM calls, and gain deeper insights into your AI application's performance.
+
+## Monitoring Your Anthropic Usage
+
+After instrumenting your Anthropic calls with Laminar, you'll be able to:
+
+1. **View detailed traces** of each Anthropic API call, including request and response
+2. **Track token usage and cost** across different models
+3. **Monitor latency** and performance metrics
+4. **Open LLM span in Playground** for prompt engineering
+5. **Debug issues** with failed API calls or unexpected model outputs
+
+Visit your Laminar dashboard to view your Anthropic traces and analytics.
+
+## Advanced Features
+
+- [Sessions](/observe-in-production/sessions-users-metadata) - Learn how to add session structure to your traces
+- [Metadata](/observe-in-production/sessions-users-metadata) - Discover how to add additional context to your LLM spans
+- [Trace structure](/ship-to-production/manual-instrumentation) - Explore creating custom spans and more advanced tracing
+- [Realtime Monitoring](/build-and-experiment/real-time-traces) - See how to monitor your Anthropic calls in real-time

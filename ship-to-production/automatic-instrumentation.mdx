@@ -1,0 +1,315 @@
+---
+title: Automatic Instrumentation
+sidebarTitle: Automatic Instrumentation
+description: Trace supported libraries and frameworks with no code changes
+---
+
+import AutoInstrumentableJSModules from "/snippets/autoinstrumentable-js-modules.mdx"
+
+## Overview
+
+Simply by initializing Laminar at the start of your application, you can start tracing **prompts, responses, token usage, and costs** of LLM calls from:
+- **LLM providers SDKs** (OpenAI, Anthropic, Gemini, etc.)
+- **LLM Frameworks** (LangChain, LangGraph, Vercel AI SDK, Browser Use, etc.)
+- **Vector database operations** (Pinecone, Qdrant, etc.)
+
+<Tip>
+See [Integrations](/ship-to-production/integrations/) for provider- and framework-specific setup.
+</Tip>
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+In JavaScript/TypeScript, **recommended approach** is to specify which modules to instrument using the `instrumentModules` parameter.
+
+```javascript
+import { Laminar } from '@lmnr-ai/lmnr';
+import { OpenAI } from 'openai';
+
+// Enable automatic instrumentation for specific modules
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+  instrumentModules: {
+    openai: OpenAI
+  }
+});
+
+// All OpenAI calls are now automatically traced
+const client = new OpenAI();
+const response = await client.chat.completions.create({
+  model: "gpt-4o-mini",
+  messages: [{ role: "user", content: "Hello!" }]
+});
+```
+</Tab>
+<Tab title="Python">
+All supported libraries are automatically instrumented when you call `Laminar.initialize()`.
+
+```python
+from lmnr import Laminar
+from openai import OpenAI
+
+# Enable automatic instrumentation for all supported libraries
+Laminar.initialize(project_api_key="your-api-key")
+
+# All OpenAI calls are now automatically traced
+client = OpenAI()
+response = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+```
+</Tab>
+</Tabs>
+
+## Instrument all supported libraries
+
+This approach instruments all supported libraries automatically.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+import { Laminar } from '@lmnr-ai/lmnr';
+
+// Initialize before importing LLM libraries
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY
+});
+
+// Import after initialization
+import { OpenAI } from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
+```
+
+<Warning>
+This approach may not work with all bundlers. If you encounter issues, use [selective instrumentation](#instrument-specific-libraries) instead.
+</Warning>
+
+</Tab>
+<Tab title="Python">
+
+```python
+from lmnr import Laminar
+from openai import OpenAI
+from anthropic import Anthropic
+
+# Automatically instrument all supported libraries
+Laminar.initialize(project_api_key="your-api-key")
+
+# All LLM calls from any supported library are now traced
+openai_client = OpenAI()
+anthropic_client = Anthropic()
+```
+
+<Note>
+The recommended way is to install all instrumentation libraries with `pip install 'lmnr[all]'`. Then, initializing Laminar will automatically instrument all supported libraries.
+</Note>
+
+</Tab>
+</Tabs>
+
+## Instrument specific libraries
+
+For better control and compatibility, instrument only the libraries you need.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+**Recommended approach** for JavaScript/TypeScript applications:
+
+```javascript
+import { OpenAI } from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
+import { Laminar } from '@lmnr-ai/lmnr';
+
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+  instrumentModules: {
+    openai: OpenAI,
+    anthropic: Anthropic
+  }
+});
+
+// Both OpenAI and Anthropic calls are now traced
+const openaiClient = new OpenAI();
+const anthropicClient = new Anthropic();
+```
+</Tab>
+<Tab title="Python">
+
+Use the `instruments` parameter to specify which libraries to instrument:
+
+```python
+from lmnr import Laminar, Instruments
+from openai import OpenAI
+from anthropic import Anthropic
+
+# Instrument specific libraries only
+Laminar.initialize(
+    project_api_key="your-api-key",
+    instruments={
+        Instruments.OPENAI,
+        Instruments.ANTHROPIC
+    }
+)
+
+openai_client = OpenAI()     # Traced ✓
+anthropic_client = Anthropic() # Traced ✓
+```
+
+**Selective instrumentation** example:
+
+```python
+from lmnr import Laminar, Instruments
+
+# Only instrument Anthropic calls
+Laminar.initialize(
+    project_api_key="your-api-key",
+    instruments={Instruments.ANTHROPIC}
+)
+
+openai_client = OpenAI()     # NOT traced
+anthropic_client = Anthropic() # Traced ✓
+```
+
+</Tab>
+</Tabs>
+
+## Disable Automatic Instrumentation
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+import { Laminar } from '@lmnr-ai/lmnr';
+
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+  instrumentModules: {} // Empty object = no instrumentation
+});
+
+// No LLM calls will be automatically traced
+// Use manual instrumentation instead
+```
+
+</Tab>
+<Tab title="Python">
+
+```python
+from lmnr import Laminar
+
+Laminar.initialize(
+    project_api_key="your-api-key",
+    instruments=[] # Empty list = no instrumentation
+)
+
+# No LLM calls will be automatically traced
+# Use manual instrumentation instead
+```
+
+You can also use `disable_instruments` parameter to disable specific instruments.
+
+```python
+from lmnr import Laminar, Instruments
+
+Laminar.initialize(
+    project_api_key="your-api-key",
+    disable_instruments=[Instruments.OPENAI]
+)
+```
+</Tab>
+</Tabs>
+
+## Supported Libraries
+
+Laminar supports automatic instrumentation for a wide range of libraries:
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+**LLM Providers:**
+- OpenAI (`openai`)
+- Anthropic (`@anthropic-ai/sdk`)
+- Google AI (`@google/generative-ai`)
+- Cohere (`cohere-ai`)
+
+**Frameworks:**
+- Vercel AI SDK (`ai`)
+- LangChain (`langchain`, `@langchain/core`)
+
+**Vector Databases:**
+- Pinecone (`@pinecone-database/pinecone`)
+- Qdrant (`@qdrant/js-client-rest`)
+
+<Expandable title="View complete list of supported modules">
+<AutoInstrumentableJSModules />
+</Expandable>
+
+</Tab>
+<Tab title="Python">
+
+**LLM Providers:**
+- OpenAI (`openai`)
+- Anthropic (`anthropic`)
+- Google AI (`google-genai`)
+- Cohere (`cohere`)
+- Ollama (`ollama`)
+- Together AI (`together`)
+
+**Frameworks:**
+- LangChain (`langchain`)
+- LiteLLM (`litellm`)
+- LlamaIndex (`llama-index`)
+
+
+**Vector Databases:**
+- Pinecone (`pinecone-client`)
+- Qdrant (`qdrant-client`)
+- Chroma (`chromadb`)
+- Weaviate (`weaviate-client`)
+
+For the complete list, import `Instruments` from `lmnr`.
+
+</Tab>
+</Tabs>
+
+## Integration-Specific Guides
+
+Some frameworks require additional configuration:
+
+- **Next.js applications**: See the [Next.js integration guide](/ship-to-production/integrations/nextjs)
+- **Vercel AI SDK**: See the [Vercel AI SDK guide](/ship-to-production/integrations/vercel-ai-sdk)
+- **LangChain**: See the [LangChain integration guide](/ship-to-production/integrations/langchain)
+
+## What Gets Traced
+
+When automatic instrumentation is enabled, you'll see detailed traces including:
+
+### LLM Calls
+- Request parameters (model, messages, temperature, etc.)
+- Response content and metadata
+- Token usage (input, output, total)
+- Latency and performance metrics
+- Automatic cost calculation
+
+### Framework Operations
+- Chain executions in LangChain
+- Agent reasoning steps
+- Tool calls and results
+- Vector similarity searches
+
+### Error Handling
+- Exception details and stack traces
+- Retry attempts and failures
+- Rate limiting and quota errors
+
+## Next Steps
+
+Once automatic instrumentation is working:
+
+1. **Add structure** with [`observe` and manual spans](/ship-to-production/manual-instrumentation)
+2. **Organize traces** into [sessions, users, and metadata](/observe-in-production/sessions-users-metadata)
+3. **Review production behavior** in [Traces & Spans](/observe-in-production/traces-and-spans) and [Custom Dashboards](/observe-in-production/custom-dashboards)
+4. **Track costs** with [Cost & Token Tracking](/observe-in-production/cost-and-token-tracking)
+
+Automatic instrumentation provides comprehensive observability with minimal setup, making it easy to understand and optimize your LLM applications.

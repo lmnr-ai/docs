@@ -1,0 +1,131 @@
+---
+title: "Changelog"
+description: "Key releases and updates"
+---
+
+<div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+
+{[
+  {
+    date: 'Dec 3, 2025',
+    title: 'Claude Agent SDK instrumentation',
+    body: 'Automatic tracing for Claude Agent SDK with a lightweight Rust proxy.',
+    bullets: [
+      'Captures agent actions, inputs/outputs, tokens, and cost',
+      'Works with existing Laminar tracing',
+    ],
+  },
+  {
+    date: 'Nov 2025',
+    title: 'SDK updates (v0.7.x)',
+    body: 'Reliability fixes and better ESM support.',
+    bullets: [
+      'Python SDK v0.7.22',
+      'TypeScript SDK v0.7.6',
+    ],
+  },
+  {
+    date: 'Oct 2025',
+    title: 'Index browser agent API',
+    body: 'Serverless API for running browser agents in production with full observability.',
+    bullets: [
+      'Supports Gemini, Claude, and OpenAI models',
+      'Structured outputs with Pydantic schemas',
+      'Interactive CLI for testing',
+    ],
+  },
+  {
+    date: 'Sep 2025',
+    title: 'LangGraph visualization & Skyvern integration',
+    body: 'Visualize LangGraph execution flows and trace Skyvern automation with session recordings.',
+  },
+  {
+    date: 'Aug 2025',
+    title: 'Custom dashboards & SQL editor',
+    body: 'Query all Laminar data with SQL and build dashboards. Backed by ClickHouse for sub-second reads.',
+  },
+  {
+    date: 'Jul 2025',
+    title: 'Browser agent observability suite',
+    body: 'Session recordings synced with traces; real-time spans and live cost tracking.',
+    bullets: [
+      'Supports Playwright, Puppeteer, Stagehand, Browser Use',
+      '30+ minute sessions with instant playback',
+    ],
+  },
+  {
+    date: 'Jun 2025',
+    title: 'Vercel AI SDK integration',
+    body: 'Automatic tracing for generateText/streamText with Next.js support.',
+  },
+  {
+    date: 'Jun 2025',
+    title: 'Stagehand integration',
+    body: 'Trace Stagehand runs with session recordings and per-step cost.',
+  },
+  {
+    date: 'May 2025',
+    title: 'Integration expansion',
+    body: 'Support for Gemini, Mistral, Bedrock, Groq, Cohere, CrewAI, LiteLLM, plus improved OpenAI/Anthropic instrumentation.',
+  },
+  {
+    date: 'Apr 2025',
+    title: 'Agent manager service',
+    body: 'Self-hosted container to manage browser agent infrastructure.',
+  },
+  {
+    date: 'Dec 2024',
+    title: 'Launch Week #1',
+    body: 'Flow (dynamic task engine), Evaluations SDK, Semantic Search API, Labeling Queues, Online Evaluations.',
+  },
+  {
+    date: 'Summer 2024',
+    title: 'Core platform launch',
+    body: 'Automatic tracing (OpenAI, Anthropic, LangChain), @observe decorator, datasets, playground, self-hosting.',
+  },
+].map((item) => (
+  <div
+    key={item.title}
+    style={{
+      display: 'grid',
+      gridTemplateColumns: '180px 1fr',
+      gap: '16px',
+      alignItems: 'start',
+    }}
+  >
+    <div style={{ textAlign: 'left' }}>
+      <span
+        style={{
+          display: 'inline-block',
+          padding: '6px 12px',
+          borderRadius: '999px',
+          background: '#1f1f1f',
+          color: '#ED6E40',
+          fontWeight: 600,
+        }}
+      >
+        {item.date}
+      </span>
+    </div>
+    <div
+      style={{
+        background: '#111',
+        border: '1px solid #2b2b2b',
+        borderRadius: '12px',
+        padding: '16px 18px',
+      }}
+    >
+      <h3 style={{ marginTop: 0 }}>{item.title}</h3>
+      <p style={{ marginTop: 0 }}>{item.body}</p>
+      {item.bullets && (
+        <ul>
+          {item.bullets.map((b) => (
+            <li key={b}>{b}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  </div>
+))}
+
+</div>
