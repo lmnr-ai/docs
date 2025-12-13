@@ -74,7 +74,7 @@ Suppose you want to have a look at all the tool call spans in a single trace. Yo
 ```sql
 SELECT name, input, output, start_time, end_time
 FROM spans
-WHERE trace_id = {traceId: UUID} AND span_type = 6 -- tool call
+WHERE trace_id = {traceId: UUID} AND span_type = 'TOOL'
 ```
 
 You can speed up the query significantly by adding a `start_time` filter.
@@ -82,7 +82,7 @@ You can speed up the query significantly by adding a `start_time` filter.
 ```sql
 SELECT name, input, output, start_time, end_time
 FROM spans
-WHERE trace_id = {traceId: UUID} AND span_type = 6 -- tool call
+WHERE trace_id = {traceId: UUID} AND span_type = 'TOOL'
 AND start_time >= (
     SELECT start_time FROM traces WHERE trace_id = {traceId: UUID} LIMIT 1
 )
@@ -103,7 +103,7 @@ SELECT t.duration, s.name, s.input, s.output, s.start_time, s.end_time
 FROM spans s
 JOIN traces t ON s.trace_id = t.trace_id
 WHERE s.start_time > now() - INTERVAL '1 day'
-AND s.span_type = 1 -- LLM
+AND s.span_type = 'LLM'
 AND s.end_time - s.start_time > 90 -- 90 seconds
 ```
 
@@ -113,7 +113,7 @@ In Clickhouse, you would need to collect trace_ids in the application, and then 
 -- 1. First query
 SELECT duration, name, input, output, start_time, end_time, trace_id
 FROM spans
-WHERE span_type = 1 -- LLM
+WHERE span_type = 'LLM'
 AND start_time > now() - INTERVAL '1 day'
 AND end_time - start_time > 90 -- 90 seconds
 
@@ -197,7 +197,7 @@ SELECT
         'gen_ai.usage.cache_read_input_tokens'
     ) AS cache_hit_tokens
 FROM spans
-WHERE start_time > now() - INTERVAL '1 day' AND span_type = 1 -- LLM
+WHERE start_time > now() - INTERVAL '1 day' AND span_type = 'LLM'
 ```
 
 This will return the number of tokens that were read from the last day.
@@ -212,7 +212,7 @@ i.e. the number of LLM spans that have a structured output schema defined at req
 ```sql
 SELECT count(*)
 FROM spans
-WHERE start_time > now() - INTERVAL '1 day' AND span_type = 1 -- LLM
+WHERE start_time > now() - INTERVAL '1 day' AND span_type = 'LLM'
 AND simpleJSONHas(attributes, 'gen_ai.request.structured_output_schema')
 ```
 
@@ -231,7 +231,7 @@ SELECT simpleJSONExtractString(
     'description'
 ) AS schema_description
 FROM spans
-WHERE start_time > now() - INTERVAL '1 day' AND span_type = 1 -- LLM
+WHERE start_time > now() - INTERVAL '1 day' AND span_type = 'LLM'
 AND simpleJSONHas(attributes, 'gen_ai.request.structured_output_schema')
 ```
 

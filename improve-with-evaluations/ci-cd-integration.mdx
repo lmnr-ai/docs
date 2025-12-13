@@ -1,0 +1,36 @@
+---
+title: CI/CD Integration
+sidebarTitle: CI/CD Integration
+description: Run evaluations automatically in pipelines
+---
+
+Use the Laminar CLI to run evaluations in CI/CD. Set your project key, call `lmnr eval` (or `npx lmnr eval`), and fail the build on quality regressions.
+
+## Essentials
+
+- Set `LMNR_PROJECT_API_KEY` in pipeline secrets.
+- Evaluation files must call `evaluate` at the top level (no wrapper needed). The CLI detects those calls.
+- Use `--fail-on-error` to exit non-zero if an evaluation file is malformed (for example, `evaluate` is never called).  
+- Use `--concurrency-limit` / `--batch-size` and port options when targeting self-hosted instances (see configuration parameters in `evaluate`).
+
+## Example (GitHub Actions)
+
+```yaml
+name: run-evaluations
+on: [push]
+
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    env:
+      LMNR_PROJECT_API_KEY: ${{ secrets.LMNR_PROJECT_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - run: npm ci
+      - run: npx lmnr eval --fail-on-error
+```
+
+For Python, install the `lmnr` package and run `lmnr eval --fail-on-error` instead.

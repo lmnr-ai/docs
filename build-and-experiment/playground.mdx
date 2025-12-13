@@ -1,0 +1,69 @@
+---
+title: Playground
+sidebarTitle: Playground
+description: Experiment with prompts, tools, and models without writing code
+---
+
+Playground is an interactive space to test prompts, compare models, and configure tools before touching your application code. You can start fresh or jump in directly from any span.
+
+## Core workflows
+
+- Prompt and model experimentation with instant results
+- Open a span in Playground to reproduce its exact setup
+- Configure and test custom tools
+- Review every run in session history
+- Coming soon: roll out agents from state captured in traces
+
+## Open a span in Playground
+
+From any LLM span, choose **Open in Playground**. The playground inherits:
+
+- Model settings, tokens, and temperature (including thinking tokens)
+- System prompts and full message history
+- Images and tool configurations
+- The original prompt structure and variables
+
+<div style={{ borderRadius: '8px', overflow: 'hidden' }}>
+  <img src="/images/playground/playground-from-span.png" alt="Open span in playground" style={{ margin: '0px' }}/>
+</div>
+
+## Configure tools
+
+Define tools the model can call during a Playground run. Each tool is a JSON object keyed by function name with a description and JSON schema parameters. Tool choice controls when a tool is invoked (`none`, `auto`, `required`, or a specific function).
+
+<div style={{ borderRadius: '8px', overflow: 'hidden' }}>
+  <img src="/images/playground/tools.png" alt="Laminar Playground Tools" style={{ margin: '0px' }}/>
+</div>
+
+```json
+{
+  "searchDatabase": {
+    "description": "Search for information in the company database",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": { "type": "string", "description": "Search query or keywords" },
+        "category": {
+          "type": "string",
+          "enum": ["users", "orders", "products"],
+          "description": "Database category to search"
+        },
+        "limit": {
+          "type": "number",
+          "description": "Maximum number of results to return",
+          "default": 10
+        }
+      },
+      "required": ["query", "category"]
+    }
+  }
+}
+```
+
+## Session history
+
+Playground automatically records every run. History includes full conversations, model configuration, tool calls, performance metrics, costs, and timestamps so you can revisit any experiment.
+
+<div style={{ borderRadius: '8px', overflow: 'hidden' }}>
+  <img src="/images/playground/history.png" alt="Laminar Playground History" style={{ margin: '0px' }}/>
+</div>

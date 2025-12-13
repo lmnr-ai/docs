@@ -1,0 +1,561 @@
+---
+title: SQL Query Engine
+sidebarTitle: SQL Query Engine
+description: Query traces, spans, events, and evaluation data with SQL
+---
+
+## Overview
+
+Laminar SQL Editor allows you to query all your data stored at Laminar using SQL.
+<Tip>
+    The SQL Editor is currently in beta.
+    Some functionality may change.
+    We value your feedback and suggestions.
+    Please [contact us](mailto:founders@laminar.ai) or join our [Discord](https://discord.gg/nNFUUDAKub) to share your thoughts.
+</Tip>
+
+Laminar SQL editor queries data stored in [ClickHouse](https://clickhouse.com/).
+Queries must be written in [ClickHouse SQL](https://clickhouse.com/docs/sql-reference).
+
+For detailed reference of the syntax, see the [Reference](#reference) section below.
+
+## Features
+
+- Query all your data stored at Laminar using SQL
+- Write custom complex queries to connect different data within your project
+- Fast analytics on your data, e.g.
+    - Detailed breakdown of token count and cost by operation
+    - Detailed latency analysis by operation
+    - Dig into deeply nested trace data
+- Create custom dashboards
+- Export query results to Laminar datasets or labelling queues
+- Query data via API to connect to your own tools and workflows
+
+## Allowed queries
+- Only `SELECT` queries are allowed.
+- Allowed tables (to select from):
+    - `spans`
+    - `traces`
+    - `events`
+    - `evaluation_scores`
+    - `evaluation_datapoints`
+
+For detailed information about the tables and columns, see the [Reference](#reference) section below.
+
+## Getting started
+
+### Prerequisites
+
+- You must have some data stored at Laminar, such as traces or evaluation results.
+
+### Using the SQL Editor
+
+SQL Editor is available in the sidebar.
+
+<img src="/images/sql-editor/sidebar.png" alt="SQL Editor in sidebar on Laminar" />
+
+### Using SQL Query API
+
+You can also run queries directly from the API. It is available at the `/v1/sql/query` endpoint.
+
+Querying via API is identical to using the SQL Editor, you simply pass the `query` as a parameter.
+
+Read the [API reference](/api-reference/sql/sql_query) page for more information.
+
+### Example query
+
+```sql
+SELECT
+    input,
+    output,
+    start_time
+FROM spans
+WHERE start_time BETWEEN now() - INTERVAL '3 days' AND now()
+```
+
+This query will return the input and output of the spans in the last 3 days.
+
+### Viewing results
+
+Results are displayed in a table or raw JSON view.
+
+<img src="/images/sql-editor/json-view.png" alt="JSON View of the results" />
+
+### Exporting results
+
+Once you have selected the results you want to export, click the "Export to Dataset" button.
+
+Choose the dataset you want to export to and map the columns to the dataset `data`, `metadata`, and `target` fields.
+
+<img src="/images/sql-editor/export-to-dataset.png" alt="Export to Dataset" />
+
+[Learn more about datasets](/improve-with-evaluations/datasets)
+
+## SQL syntax and approach
+
+### Introduction
+
+Laminar stores all queryable data in Clickhouse. Clickhouse is an analytical columnar database which provides a SQL-like query language.
+
+This guide will explain the SQL syntax used in Laminar SQL Editor. For the full Clickhouse SQL reference, see the [Clickhouse documentation](https://clickhouse.com/docs/sql-reference).
+
+### Basic query structure
+
+We only allow `SELECT` queries, so we will focus on the syntax for this.
+
+Here's the basic syntax of a Clickhouse `SELECT` query. Some parts that we don't recommend or don't support are omitted.
+
+```
+[WITH expr_list(subquery)]
+SELECT [DISTINCT [ON (column1, column2, ...)]] expr_list
+[FROM [db.]table | (subquery) | table_function] [FINAL]
+[SAMPLE sample_coeff]
+[ARRAY JOIN ...]
+[PREWHERE expr]
+[WHERE expr]
+[GROUP BY expr_list] [WITH ROLLUP|WITH CUBE] [WITH TOTALS]
+[HAVING expr]
+[WINDOW window_expr_list]
+[QUALIFY expr]
+[ORDER BY expr_list]
+  [WITH FILL] [FROM expr] [TO expr] [STEP expr] [INTERPOLATE [(expr_list)]]
+[LIMIT [offset_value, ]n BY columns]
+[LIMIT [n, ]m] [WITH TIES]
+```
+
+The very basics are similar to standard SQL. That is, you can perform any
+`SELECT FROM WHERE GROUP BY HAVING ORDER BY LIMIT` query.
+
+### Data types
+
+Clickhouse has numerous data types. Here are some of the most important and relevant ones.
+
+- `DateTime64` - represents a date and time with a precision of nanoseconds. All datetimes in Laminar are in UTC.
+- `String` - represents a string.
+- `UUID` - represents a universally unique identifier. This is used for most identifier columns.
+- `Float64` - represents a floating point number.
+- `UInt64` - represents a 64-bit unsigned integer.
+- `UInt8` - unsigned 8-bit integer. Used for enum values.
+
+Should you need to cast anything in your query, you can use the postgres-like `'value'::type` syntax, for example:
+
+```sql
+SELECT name, input, output
+FROM spans
+WHERE start_time > '2025-01-01'::DateTime
+AND start_time < '2025-01-02'::DateTime
+```
+
+### JSON
+
+Laminar stores JSONs as strings in Clickhouse.
+See [Working with JSONs](#working-with-jsons) for more details.
+
+### Filtering by start_time
+
+Spans inside each project are ordered by `start_time`, so adding a `start_time` filter will speed up the query and prevent it from failing because of running out of memory.
+
+This is relevant to both the `spans` table and the `traces` aggregation view on it.
+
+### Example
+
+Suppose you want to have a look at all the tool call spans in a single trace. You know the trace ID.
+
+```sql
+SELECT name, input, output, start_time, end_time
+FROM spans
+WHERE trace_id = {traceId: UUID} AND span_type = 'TOOL'
+```
+
+You can speed up the query significantly by adding a `start_time` filter.
+
+```sql
+SELECT name, input, output, start_time, end_time
+FROM spans
+WHERE trace_id = {traceId: UUID} AND span_type = 'TOOL'
+AND start_time >= (
+    SELECT start_time FROM traces WHERE trace_id = {traceId: UUID} LIMIT 1
+)
+```
+
+### Avoiding joins
+
+Clickhouse is a columnar database, so it's not optimized for joins. If you need to join data, you can do it in the application layer.
+
+### Example
+
+Let's say you want to have a look at LLM spans that took abnormally long time to complete and see the effect of this on their corresponding traces.
+
+In regular SQL, you would join the `spans` table with the `traces` table to get the trace duration.
+
+```sql
+SELECT t.duration, s.name, s.input, s.output, s.start_time, s.end_time
+FROM spans s
+JOIN traces t ON s.trace_id = t.trace_id
+WHERE s.start_time > now() - INTERVAL '1 day'
+AND s.span_type = 'LLM'
+AND s.end_time - s.start_time > 90 -- 90 seconds
+```
+
+In Clickhouse, you would need to collect trace_ids in the application, and then query the `traces` table for each trace_id.
+
+```sql
+-- 1. First query
+SELECT duration, name, input, output, start_time, end_time, trace_id
+FROM spans
+WHERE span_type = 'LLM'
+AND start_time > now() - INTERVAL '1 day'
+AND end_time - start_time > 90 -- 90 seconds
+
+-- 2. Collect trace_ids from the first query and use them in the second query
+SELECT duration
+FROM traces
+WHERE trace_id IN ({traceIds: Array(UUID)})
+```
+
+This may seem counter-intuitive at first, but this is the fastest and the most efficient way to do it.
+
+### Working with dates
+
+See the full reference in [Clickhouse documentation](https://clickhouse.com/docs/sql-reference/functions/date-time-functions).
+
+### Truncating datetimes
+
+Clickhouse has a special syntax for truncating datetimes. The most general function for truncation is `toStartOfInterval(value, interval_specifier)`.
+
+```sql Spans per day in the last month
+SELECT
+    toStartOfInterval(start_time, INTERVAL 1 DAY) AS day,
+    count(*) AS spans_count
+FROM spans
+WHERE start_time > now() - INTERVAL 1 MONTH
+GROUP BY day
+ORDER BY day ASC
+```
+
+If you are familiar with Postgres `date_trunc` function, notice how this is similar.
+
+`toStartOfInterval` is more flexible, because you can specify any interval, not just the ones supported by `date_trunc`.
+
+For example, you can group spans within last day to 15-minute intervals.
+
+```sql
+SELECT
+    toStartOfInterval(start_time, INTERVAL 15 MINUTE) AS interval,
+    count(*) AS spans_count
+FROM spans
+WHERE start_time > now() - INTERVAL 1 DAY
+GROUP BY interval
+ORDER BY interval ASC
+```
+
+There are also convenience functions for common intervals:
+
+- `toStartOfSecond(value)` - truncates to the start of the second
+- `toStartOfMinute(value)` - truncates to the start of the minute
+- `toStartOfTenMinutes(value)` - truncates to the start of the minute
+- `toStartOfHour(value)` - truncates to the start of the hour
+- `toStartOfDay(value)` - truncates to the start of the day
+- `toStartOfWeek(value)` - truncates to the start of the week
+- `toStartOfMonth(value)` - truncates to the start of the month
+- `toStartOfQuarter(value)` - truncates to the start of the month
+- `toStartOfYear(value)` - truncates to the start of the year
+
+### Working with JSON
+
+Many columns, such as `attributes` on `spans` table, contain JSON values stored as strings.
+Clickhouse provides a wide variety of functions to work with JSONs. See the full reference in [Clickhouse documentation](https://clickhouse.com/docs/sql-reference/functions/json-functions).
+
+Generally, there are two families of functions to work with JSONs:
+- `JSON*` functions - comprehensive set of functions that work on the JSON strings
+- `simpleJSON*` functions - simpler subset that works much faster, and under a few assumptions.
+
+<Tip>
+We recommend using `simpleJSON*` functions, especially if you know the data type of the value you want to extract.
+</Tip>
+
+### Extracting values from JSON by key
+
+Most of the time, you will want to extract a value from JSON by `key`. If you know the data type of the value, you can use the `simpleJSONExtract*` functions.
+
+For example,
+
+```sql
+SELECT
+    simpleJSONExtractInt(
+        attributes, 
+        'gen_ai.usage.cache_read_input_tokens'
+    ) AS cache_hit_tokens
+FROM spans
+WHERE start_time > now() - INTERVAL '1 day' AND span_type = 'LLM'
+```
+
+This will return the number of tokens that were read from the last day.
+Note that this works only for the models and instrumentations that support caching and report this value.
+
+### Checking if a key exists
+
+If you want to check if a key exists in the JSON, you can use the `simpleJSONHas` functions.
+The query below will return the number of LLM spans that have a `gen_ai.request.structured_output_schema` key in the `attributes` column,
+i.e. the number of LLM spans that have a structured output schema defined at request time.
+
+```sql
+SELECT count(*)
+FROM spans
+WHERE start_time > now() - INTERVAL '1 day' AND span_type = 'LLM'
+AND simpleJSONHas(attributes, 'gen_ai.request.structured_output_schema')
+```
+
+### Nested extraction by key
+
+If you know that a value inside a JSON object is a stringified JSON, you can use the `simpleJSONExtract*` functions repeatedly to extract the nested value.
+
+Suppose you pass a structured output schema to the LLM, and the schema always has a `description` key.
+
+```sql
+SELECT simpleJSONExtractString(
+    simpleJSONExtractString(
+        attributes,
+        'gen_ai.request.structured_output_schema'
+    ),
+    'description'
+) AS schema_description
+FROM spans
+WHERE start_time > now() - INTERVAL '1 day' AND span_type = 'LLM'
+AND simpleJSONHas(attributes, 'gen_ai.request.structured_output_schema')
+```
+
+This will return the description of the structured output schema for the LLM spans that have schema defined in the last day.
+
+### More complex JSON functions
+
+If you need more flexibility at the cost of query performance, you can use the `JSON*` functions.
+
+Here's a quick list of things, you can do with `JSON*` functions:
+
+- Extract the last value with Python-like index syntax from an array, e.g. `JSONExtractRaw(input, -1)` to get the last input message
+- Extract a nested value from JSON by path, including array indices, e.g. `JSONExtractRaw(input, -1, 'content')` to get the last input message content
+- Extract keys from a JSON object, similar to `Object.keys` or `dict.keys`, e.g. `JSONExtractKeys(attributes)`
+- Extract keys and values from a JSON object, similar to `Object.entries` or `dict.items`, e.g. `JSONExtractKeysAndValues(attributes)`
+- Count the number of elements in an array, e.g. `JSONLength(input)` to get the number of input messages
+
+Full reference in ClickHouse [documentation](https://clickhouse.com/docs/sql-reference/functions/json-functions#jsonextract-functions).
+
+## Reference
+
+This page contains a reference of the table schemas and Laminar-specific syntax.
+
+## Table schemas and enum types
+
+This section contains subsets of the table schemas and enumerated types (enums) that are relevant to the SQL Editor.
+
+### spans
+
+| Column | Type | Example value |
+|--------|------|-------------|
+| `span_id` | `UUID` | `"00000000-0000-0000-1234-426614174000"` |
+| `status` | `String` | `"error"` |
+| `name` | `String` | `"openai.chat"` |
+| `path` | `String` | `"workflow.process.step1.openai.chat"` |
+| `trace_id` | `UUID` | `"12345678-90ab-cdef-1234-426614174000"` |
+| `parent_span_id` | `UUID` | `"00000000-0000-0000-a456-abcd5667ef09"` |
+| `span_type` | `String (enum)` | `"LLM"` |
+| `start_time` | `DateTime64` | `"2021-01-01 00:00:00+00"` |
+| `end_time` | `DateTime64` | `"2021-01-01 00:00:00+00"` |
+| `input` | `String` | `"[{\"role\": \"user\", \"content\": \"Hello, world!\"}]"` |
+| `output` | `String` | `"[{\"role\": \"assistant\", \"content\": \"Hi! How can I help you today?\"}]"` |
+| `attributes` | `String` | `"{\"gen_ai.system\": \"openai\", \"gen_ai.model\": \"gpt-4o\"}"` |
+| `request_model` | `String` | `"gpt-4.1-mini"` |
+| `response_model` | `String` | `"gpt-4.1-mini-2025-04-14"` |
+| `model` | `String` | `"gpt-4.1-mini-2025-04-14"` |
+| `provider` | `String` | `"openai"` |
+| `input_tokens` | `UInt64` | `150` |
+| `output_tokens` | `UInt64` | `100` |
+| `total_tokens` | `UInt64` | `250` |
+| `total_cost` | `Float64` | `0.6897` |
+| `input_cost` | `Float64` | `0.5667` |
+| `output_cost` | `Float64` | `0.123` |
+
+
+#### Path
+
+Laminar span path is stored as an array of span names in span attributes. However, in the SQL queries,
+it is stored as a string with items joined by a dot.
+
+For example, if the span path is `["outer", "inner"]`, the `path` column will be `"outer.inner"`.
+
+If needed, you can still access the array value by accessing the `attributes` using `simpleJSONExtractRaw(attributes, 'lmnr.span.path')`.
+
+#### Parent span ID
+
+If the current span is the top span of the trace, the `parent_span_id` will be a 0 UUID, i.e. `"00000000-0000-0000-0000-000000000000"`.
+
+#### Span type
+
+`span_type` is an enum stored as a string. Filter with the names below (e.g., `span_type = 'TOOL'`). Numeric codes were used historically; use strings going forward.
+
+```
+'DEFAULT'
+'LLM'
+'EXECUTOR'
+'EVALUATOR'
+'EVALUATION'
+'TOOL'
+'HUMAN_EVALUATOR'
+```
+
+#### Input and output
+
+The `input` and `output` columns are stored as either raw strings or stringified JSONs. The best way to parse them is to try
+to parse them as JSON, and if it fails, use the raw string. You can also use `isValidJSON` [function](https://clickhouse.com/docs/sql-reference/functions/json-functions#isvalidjson) right in the query to test for this.
+
+`input` and `output` columns are also indexed on content, so you can use them in WHERE conditions. Use `ILIKE` instead of `LIKE`, because the index is case-insensitive.
+
+#### Attributes
+
+The `attributes` column is stored as a string in JSON format. That is, you can safely `JSON.parse` / `json.loads` them. In addition,
+you can use JSON* and simpleJSON* functions on them right in the queries. Attributes are guaranteed to be a valid JSON object.
+
+#### Model
+
+The `model` column is set to the response model if present, otherwise it is set to the request model.
+
+#### Total tokens and total cost
+
+Usually, the `total_tokens = input_tokens + output_tokens` and `total_cost = input_cost + output_cost`.
+
+However, you can manually report these values using the relevant attributes. In this case, totals may
+not be equal to the sum of the input and output tokens and costs.
+
+
+### traces
+
+| Column | Type | Example value |
+|--------|------|-------------|
+| `trace_id` | `UUID` | `"01234567-1234-cdef-1234-426614174000"` |
+| `trace_type` | `UInt8` | `0` |
+| `start_time` | `DateTime64` | `"2021-01-01 00:00:00+00"` |
+| `end_time` | `DateTime64` | `"2021-01-01 00:00:00+00"` |
+| `duration` | `Float64` | `1.23` |
+| `input_tokens` | `UInt64` | `150` |
+| `output_tokens` | `UInt64` | `100` |
+| `total_tokens` | `UInt64` | `250` |
+| `total_cost` | `Float64` | `0.6897` |
+| `input_cost` | `Float64` | `0.5667` |
+| `output_cost` | `Float64` | `0.123` |
+| `status` | `String` | `"error"` |
+| `user_id` | `String` | `"user_123"` |
+| `session_id` | `String` | `"session_123"` |
+| `metadata` | `String` | `"{\"key\": \"value\"}"` |
+| `top_span_id` | `UUID` | `"00000000-0000-0000-1234-426614174000"` |
+
+
+#### Trace type
+
+Here are the values of the `trace_type` column and their meanings:
+
+```
+0: Default
+2: Evaluation
+3: Playground
+```
+
+#### Duration
+
+The duration is in seconds, and is calculated as `end_time - start_time`.
+
+#### Status
+
+Status is set to error if any of the spans in the trace have status `error`. Empty status means success.
+
+#### Metadata
+
+Metadata is stored as a string in JSON format. That is, you can safely `JSON.parse` / `json.loads` it. In addition,
+you can use JSON* and simpleJSON* functions on it right in the queries. Metadata is guaranteed to be a valid JSON object.
+
+
+### events
+
+| Column | Type | Example value |
+|--------|------|-------------|
+| `id` | `UUID` | `"01234567-89ab-4def-1234-426614174000"` |
+| `span_id` | `UUID` | `"00000000-0000-0000-1234-426614174000"` |
+| `name` | `String` | `"My custom event"` |
+| `timestamp` | `DateTime` | `"2021-01-01 00:00:00+00"` |
+| `attributes` | `String` | `"{\"key\": \"value\"}"` |
+| `user_id` | `String` | `"user_123"` |
+| `session_id` | `String` | `"session_123"` |
+
+#### Notes
+
+**Attributes**
+
+The `attributes` column is stored as a string in JSON format. That is, you can safely `JSON.parse` / `json.loads` it. In addition,
+you can use JSON* and simpleJSON* functions on it right in the queries. Attributes are guaranteed to be a valid JSON object.
+
+### evaluation_datapoints
+
+| Column | Type | Example value |
+|--------|------|-------------|
+| `id` | `UUID` | `"01234567-89ab-4def-1234-426614174000"` |
+| `trace_id` | `UUID` | `"01234567-1234-cdef-1234-426614174000"` |
+| `evaluation_id` | `UUID` | `"98765432-1098-4654-3210-987654321098"` |
+| `created_at` | `DateTime64` | `"2021-01-01 00:00:00+00"` |
+| `data` | `String` | `"{\"key\": \"value\"}"` |
+| `target` | `String` | `"{\"key\": \"value\"}"` |
+| `metadata` | `String` | `"{\"key\": \"value\"}"` |
+| `index` | `UInt64` | `0` |
+
+### evaluation_scores
+
+Evaluation scores are stored in a separate table, linked to the evaluation datapoints.
+
+The scores are flattened into a single row per score. For example, if your evaluation has 3 scores,
+`{ "score1": 0.85, "score2": 0.90, "score3": 0.95 }` will be stored as 3 rows in the `evaluation_scores` table.
+
+| Column | Type | Example value |
+|--------|------|-------------|
+| `evaluation_id` | `UUID` | `"01234567-89ab-cdef-1234-426614174000"` |
+| `evaluation_datapoint_id` | `UUID` | `"98765432-1098-7654-3210-987654321098"` |
+| `timestamp` | `DateTime64` | `"2021-01-01 00:00:00+00"` |
+| `name` | `String` | `"My custom score"` |
+| `value` | `Float64` | `0.85` |
+| `metadata` | `String` | `"{\"key\": \"value\"}"` |
+| `trace_id` | `UUID` | `"01234567-89ab-cdef-1234-426614174000"` |
+
+
+## Best practices
+
+### Avoid joins
+
+ClickHouse is a columnar database, so, while JOINs are supported, they are not efficient.
+
+If you are joining tables with more than a few hundred rows, the query will likely timeout or fail.
+
+#### Solution
+
+Query the data you need, and join the relevant data in your application.
+
+### Add start_time filter
+
+You almost certainly want to add a `start_time` filter to your query.
+
+Spans table (and thus `traces` aggregation on it) is sorted by `start_time` and `trace_id`, so if you
+apply a `start_time` WHERE condition, the query will run faster.
+
+Advantages:
+- Queries run faster
+- Queries will never fail because of running out of memory
+
+### Searching in span input or output
+
+You can search in the `input` and `output` columns of the `spans` table.
+The search is optimized to be case-insensitive, so use `ILIKE` instead of `LIKE`.
+
+#### Example
+
+```sql
+SELECT name, input, output
+FROM spans
+WHERE input ILIKE '%france%' AND output ILIKE '%paris%'
+```

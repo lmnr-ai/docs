@@ -1,0 +1,75 @@
+---
+title: Online Evaluators
+sidebarTitle: Online Evaluators
+description: Attach real-time scores to spans in production
+---
+
+Online evaluators run automatically on production spans to score outputs as they happen. Use them to monitor quality like a canary: label spans, register evaluators to span paths, and watch scores land on traces instantly.
+
+## Create an evaluator
+
+- Go to **Evaluators → New Evaluator** in the dashboard.
+- Write the evaluator function (Python or LLM-as-judge). It must return a single numeric score or a JSON object of numeric scores.
+- Test the evaluator with sample input/output and save it.
+- Register it to a span path from the trace view (Add label → Add evaluator). One evaluator per label class; a span path can have multiple labels.
+
+<Tip>LLM-as-judge evaluators require provider API keys saved in project settings.</Tip>
+
+## What gets scored
+
+- Spans matching the registered path automatically trigger the evaluator.
+- Scores attach to the span and show up in trace details alongside other attributes.
+
+## Programmatic scoring with the SDK
+
+Attach scores directly from code using trace or span IDs.
+
+<CodeGroup>
+
+```javascript TypeScript
+import { LaminarClient, Laminar, observe } from "@lmnr-ai/lmnr";
+
+const laminarClient = new LaminarClient({ apiKey: "your-project-api-key" });
+
+await observe({ name: "chat_completion" }, async () => {
+  // your LLM call here
+});
+
+await Laminar.flush();
+
+const traceId = Laminar.getTraceId();
+await laminarClient.evaluators.score({
+  name: "quality",
+  traceId,
+  score: 0.95,
+  metadata: { model: "gpt-4" },
+});
+```
+
+```python Python
+from lmnr import LaminarClient, Laminar
+
+laminar_client = LaminarClient(api_key="your-project-api-key")
+
+with Laminar.start_as_current_span(name="chat_completion"):
+    # your LLM call here
+    pass
+
+Laminar.flush()
+trace_id = Laminar.get_trace_id()
+
+laminar_client.evaluators.score(
+    name="quality",
+    trace_id=trace_id,
+    score=0.95,
+    metadata={"model": "gpt-4"},
+)
+```
+
+</CodeGroup>
+
+For span-level scoring, pass `spanId`/`span_id` instead of a trace ID after the span is recorded.
+
+## View scores
+
+Evaluator results appear on the span in the trace view and can be queried via the SQL engine (`evaluation_scores`, `evaluation_datapoints` tables) for deeper analysis.

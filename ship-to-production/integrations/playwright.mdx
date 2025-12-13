@@ -1,0 +1,53 @@
+---
+title: "Browser Observability for Playwright"
+sidebarTitle: Playwright
+---
+
+[Playwright](https://playwright.dev/) is a framework for browser automation. It has bindings for both JavaScript and Python.
+
+<Note>
+  Laminar excels at tracing browser agents by providing unified visibility into both browser session recordings and agent execution steps.
+</Note>
+
+## Playwright integration
+
+Laminar has a native integration with Playwright for both JavaScript and Python. You simply need to initialize Laminar with your project API key and Playwright will be traced automatically.
+We will hook into the API to create OpenTelemetry spans, but more importantly, we record browser session recordings.
+
+<Tabs>
+<Tab title="JavaScript/Typescript">
+```javascript {1, 4-11}
+import { Laminar } from '@lmnr-ai/lmnr';
+import { chromium } from 'playwright';
+
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_API_KEY,
+  instrumentModules: {
+    playwright: {
+      chromium
+    }
+  }
+});
+
+// The rest of your playwright code
+```
+</Tab>
+
+<Tab title="Python">
+```python
+from lmnr import Laminar
+from playwright.sync_api import sync_playwright
+
+Laminar.initialize(project_api_key=os.environ["LMNR_PROJECT_API_KEY"])
+
+with sync_playwright() as p:
+    browser = p.chromium.launch()
+    # The rest of your playwright code
+```
+
+<Tip>
+We recommend that you wrap your playwright code in a function call and `@observe` that function,
+so that the session and the trace are properly linked.
+</Tip>
+</Tab>
+</Tabs>

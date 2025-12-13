@@ -1,0 +1,42 @@
+---
+title: Local Development Setup
+sidebarTitle: Local Development Setup
+description: Configure your environment, CLI, and IDE for Laminar
+---
+
+## Environment
+
+- Set the project key once and reuse it across apps:
+
+```env
+LMNR_PROJECT_API_KEY=your_project_api_key_here
+```
+
+- Keep the key in `.env` and load it in your runtime. Both SDKs read `LMNR_PROJECT_API_KEY` automatically when you initialize Laminar.
+
+## CLI essentials
+
+- JavaScript/TypeScript: use `npx lmnr ...` after installing `@lmnr-ai/lmnr`.
+- Python: the `lmnr` command ships with the PyPI package.
+- Common local commands:
+  - `lmnr eval` / `npx lmnr eval` to run evaluation files.
+  - `lmnr datasets ...` / `npx lmnr datasets ...` to sync datasets.
+  - `lmnr add-cursor-rules` to install IDE rules for Laminar patterns.
+
+Run `lmnr --help` or `npx lmnr --help` to view all options.
+
+## Cursor rules for AI-assisted coding
+
+Use the CLI to install Laminar rules into Cursor (recommended):
+
+```bash
+lmnr add-cursor-rules
+```
+
+This downloads the latest Laminar rules into `.cursor/rules/laminar.mdc`. Reload Cursor for them to take effect.
+
+Manual option:
+
+1. Download `laminar.mdc` from `https://raw.githubusercontent.com/lmnr-ai/lmnr/dev/rules/laminar.mdc`.
+2. Place it in `.cursor/rules/`.
+3. Reload Cursor and confirm the rule appears in **Cursor Settings → Rules**.

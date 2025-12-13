@@ -1,0 +1,108 @@
+---
+title: Quickstart
+sidebarTitle: Quickstart
+description: See your first Laminar trace in under 5 minutes
+---
+
+import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
+
+## 1) Install the SDK
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```bash
+npm add @lmnr-ai/lmnr
+```
+</Tab>
+<Tab title="Python">
+
+```bash
+pip install --upgrade 'lmnr[all]'
+```
+</Tab>
+</Tabs>
+
+## 2) Get a project API key
+
+<GetProjectApiKey />
+
+Add it to your environment:
+
+```env
+LMNR_PROJECT_API_KEY=your_project_api_key_here
+```
+
+## 3) Initialize Laminar
+
+Two lines enable tracing.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+import { Laminar } from '@lmnr-ai/lmnr';
+import { OpenAI } from 'openai';
+
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+  instrumentModules: { openai: OpenAI },
+});
+```
+</Tab>
+<Tab title="Python">
+
+```python
+import os
+from lmnr import Laminar
+
+Laminar.initialize(project_api_key=os.environ["LMNR_PROJECT_API_KEY"])
+```
+</Tab>
+</Tabs>
+
+## 4) Make an LLM call
+
+Your existing code is now traced automatically.
+
+<Tabs>
+<Tab title="JavaScript/TypeScript">
+
+```javascript
+import { OpenAI } from 'openai';
+
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const response = await client.chat.completions.create({
+  model: "gpt-4o-mini",
+  messages: [{ role: "user", content: "What is the capital of France?" }],
+});
+```
+</Tab>
+<Tab title="Python">
+
+```python
+from openai import OpenAI
+
+client = OpenAI()
+response = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[{"role": "user", "content": "What is the capital of France?"}],
+)
+```
+</Tab>
+</Tabs>
+
+Laminar captures prompts, responses, tokens, cost, and latency without extra code.
+
+## 5) View the trace
+
+Open the Laminar dashboard to see the span immediately.
+
+<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
+  <img src="/images/traces/trace-openai.png" alt="OpenAI span visualization" style={{ margin: '0px' }}/>
+</div>
+
+## Next steps
+
+- Iterate locally with [Build & Experiment](/build-and-experiment/real-time-traces)
+- Instrument your app for launch in [Ship to Production](/ship-to-production/automatic-instrumentation)

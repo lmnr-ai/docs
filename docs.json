@@ -14,133 +14,93 @@
         "tab": "Documentation",
         "groups": [
           {
-            "group": "Overview",
+            "group": "Introduction",
             "pages": [
-              "overview",
-              "installation",
-              {
-                "group": "Self-hosting",
-                "pages": [
-                  "self-hosting/setup",
-                  "self-hosting/access-control-setup"
-                ]
-              },
-              "cursor"
+              "introduction",
+              "quickstart",
+              "local-development-setup"
             ]
           },
           {
-            "group": "Tracing",
+            "group": "Build & Experiment",
             "pages": [
-              "tracing/introduction",
-              "tracing/quickstart",
-              "tracing/automatic-instrumentation",
+              "build-and-experiment/overview",
+              "build-and-experiment/real-time-traces",
+              "build-and-experiment/playground"
+            ]
+          },
+          {
+            "group": "Ship to Production",
+            "pages": [
+              "ship-to-production/overview",
+              "ship-to-production/automatic-instrumentation",
               {
                 "group": "Integrations",
                 "pages": [
-                  "tracing/integrations/openai",
-                  "tracing/integrations/anthropic",
-                  "tracing/integrations/gemini",
-                  "tracing/integrations/langchain",
-                  "tracing/integrations/cohere",
-                  "tracing/integrations/vercel-ai-sdk",
-                  "tracing/integrations/nextjs",
-                  "tracing/integrations/litellm",
-                  "tracing/integrations/kernel",
-                  "tracing/integrations/claude-agent-sdk",
-                  "tracing/integrations/browser-use",
-                  "tracing/integrations/stagehand",
-                  "tracing/integrations/skyvern",
-                  "tracing/integrations/playwright",
-                  "tracing/integrations/puppeteer"
+                  "ship-to-production/integrations/openai",
+                  "ship-to-production/integrations/anthropic",
+                  "ship-to-production/integrations/gemini",
+                  "ship-to-production/integrations/cohere",
+                  "ship-to-production/integrations/langchain",
+                  "ship-to-production/integrations/vercel-ai-sdk",
+                  "ship-to-production/integrations/nextjs",
+                  "ship-to-production/integrations/litellm",
+                  "ship-to-production/integrations/kernel",
+                  "ship-to-production/integrations/claude-agent-sdk",
+                  "ship-to-production/integrations/browser-use",
+                  "ship-to-production/integrations/stagehand",
+                  "ship-to-production/integrations/skyvern",
+                  "ship-to-production/integrations/playwright",
+                  "ship-to-production/integrations/puppeteer"
                 ]
               },
-              {
-                "group": "Tracing Structure",
-                "pages": [
-                  "tracing/structure/overview",
-                  "tracing/structure/observe",
-                  "tracing/structure/manual-span-creation",
-                  "tracing/structure/session",
-                  "tracing/structure/user-id",
-                  "tracing/structure/metadata",
-                  "tracing/structure/tags",
-                  "tracing/structure/image",
-                  "tracing/structure/continuing-traces",
-                  "tracing/structure/providers",
-                  "tracing/structure/flushing"
-                ]
-              },
-              "tracing/realtime",
-              "tracing/browser-agent-observability",
-              "tracing/langgraph-visualization",
-              "tracing/events",
-              "tracing/otel",
-              {
-                "group": "Troubleshooting",
-                "pages": [
-                  "tracing/troubleshooting",
-                  "tracing/troubleshooting-opentelemetry"
-                ]
-              }
+              "ship-to-production/manual-instrumentation",
+              "ship-to-production/self-hosting"
             ]
           },
           {
-            "group": "Evaluations",
+            "group": "Observe in Production",
             "pages": [
-              "evaluations/introduction",
-              "evaluations/quickstart",
-              "evaluations/using-dataset",
-              "evaluations/human-evaluators",
-              "evaluations/configuration",
-              "evaluations/reference",
-              "evaluations/manual-evaluation",
-              "evaluations/cookbook",
-              {
-                "group": "Online Evaluators",
-                "pages": [
-                  "evaluations/online-evaluators/introduction",
-                  "evaluations/online-evaluators/scoring-with-hosted-evaluators",
-                  "evaluations/online-evaluators/scoring-with-sdk"
-                ]
-              }
+              "observe-in-production/overview",
+              "observe-in-production/traces-and-spans",
+              "observe-in-production/sessions-users-metadata",
+              "observe-in-production/browser-agent-observability",
+              "observe-in-production/cost-and-token-tracking",
+              "observe-in-production/custom-dashboards",
+              "observe-in-production/image-tracing",
+              "observe-in-production/privacy-and-tracing-control"
             ]
           },
           {
-            "group": "SQL Editor",
+            "group": "Analyze & Debug",
             "pages": [
-              "sql-editor/introduction",
-              "sql-editor/overview",
-              "sql-editor/reference"
+              "analyze-and-debug/sql-query-engine",
+              "analyze-and-debug/events-and-tags",
+              "analyze-and-debug/online-evaluators",
+              "analyze-and-debug/ai-powered-analysis"
             ]
           },
           {
-            "group": "Custom Dashboards",
+            "group": "Improve with Evaluations",
             "pages": [
-              "custom-dashboards/overview"
+              "improve-with-evaluations/introduction",
+              "improve-with-evaluations/datasets",
+              "improve-with-evaluations/labeling-queues",
+              "improve-with-evaluations/running-evaluations",
+              "improve-with-evaluations/human-evaluators",
+              "improve-with-evaluations/manual-evaluation-api",
+              "improve-with-evaluations/ci-cd-integration"
             ]
           },
           {
-            "group": "Datasets",
+            "group": "Troubleshooting",
             "pages": [
-              "datasets/introduction",
-              "datasets/adding-data",
-              "datasets/cli"
+              "troubleshooting"
             ]
           },
           {
-            "group": "Labeling Queues",
-            "pages": [
-              "queues/quickstart"
-            ]
-          },
-          {
-            "group": "Playground",
-            "pages": [
-              "playground/introduction",
-              "playground/playground-from-span",
-              "playground/tools",
-              "playground/history"
-            ]
+            "group": "API",
+            "pages": []
           }
         ]
       },
@@ -148,34 +108,71 @@
         "tab": "Guides",
         "pages": [
           "guides/fastapi",
-          "guides/nextjs-aisdk",
-          "guides/nextjs",
-          "guides/evaluating-tool-calls"
+          "guides/nextjs-integration",
+          "guides/evaluating-tool-calls",
+          "guides/langgraph-visualization"
         ]
       },
       {
-        "tab": "API Reference",
+        "tab": "API",
         "groups": [
           {
-            "group": "API Documentation",
+            "group": "Overview",
             "pages": [
-              "api-reference/introduction",
-              {
-                "group": "Evaluations",
-                "pages": [
-                  "api-reference/evals/init_eval",
-                  "api-reference/evals/save_eval_datapoints",
-                  "api-reference/evals/update_eval_datapoint"
-                ]
-              },
-              {
-                "group": "SQL",
-                "pages": [
-                  "api-reference/sql/sql_query"
-                ]
-              }
+              "api/app-server"
+            ]
+          },
+          {
+            "group": "Health & Ops",
+            "pages": [
+              "api/app-server/health-ops/health",
+              "api/app-server/health-ops/ready"
+            ]
+          },
+          {
+            "group": "Project-scoped",
+            "pages": [
+              "api/app-server/project-scoped/projects-realtime",
+              "api/app-server/project-scoped/projects-evaluation-score-stats",
+              "api/app-server/project-scoped/projects-evaluation-score-distribution",
+              "api/app-server/project-scoped/projects-spans",
+              "api/app-server/project-scoped/projects-spans-search",
+              "api/app-server/project-scoped/projects-sql-query",
+              "api/app-server/project-scoped/projects-sql-validate",
+              "api/app-server/project-scoped/projects-sql-to-json",
+              "api/app-server/project-scoped/projects-sql-from-json"
+            ]
+          },
+          {
+            "group": "Ingestion",
+            "pages": [
+              "api/app-server/ingestion/browser-sessions-events",
+              "api/app-server/ingestion/traces",
+              "api/app-server/ingestion/metrics"
+            ]
+          },
+          {
+            "group": "Project-auth",
+            "pages": [
+              "api/app-server/project-auth/tag",
+              "api/app-server/project-auth/datasets",
+              "api/app-server/project-auth/datasets-datapoints",
+              "api/app-server/project-auth/datasets-datapoints-create",
+              "api/app-server/project-auth/datasets-parquets",
+              "api/app-server/project-auth/evals",
+              "api/app-server/project-auth/evals-datapoints",
+              "api/app-server/project-auth/evals-datapoints-update",
+              "api/app-server/project-auth/evaluators-score",
+              "api/app-server/project-auth/sql-query",
+              "api/app-server/project-auth/payloads"
             ]
           }
+        ]
+      },
+      {
+        "tab": "Changelog",
+        "pages": [
+          "changelog"
         ]
       }
     ],
@@ -237,5 +234,279 @@
       "apiKey": "phc_dUMdjfNKf11jcHgtn7juSnT4P1pO0tafsPUWt4PuwG7",
       "apiHost": "https://p.lmnr.ai"
     }
-  }
+  },
+  "redirects": [
+    {
+      "source": "/overview",
+      "destination": "/introduction"
+    },
+    {
+      "source": "/installation",
+      "destination": "/quickstart"
+    },
+    {
+      "source": "/tracing/introduction",
+      "destination": "/observe-in-production/traces-and-spans"
+    },
+    {
+      "source": "/tracing/quickstart",
+      "destination": "/quickstart"
+    },
+    {
+      "source": "/tracing/realtime",
+      "destination": "/build-and-experiment/real-time-traces"
+    },
+    {
+      "source": "/playground/introduction",
+      "destination": "/build-and-experiment/playground"
+    },
+    {
+      "source": "/playground/playground-from-span",
+      "destination": "/build-and-experiment/playground"
+    },
+    {
+      "source": "/playground/tools",
+      "destination": "/build-and-experiment/playground"
+    },
+    {
+      "source": "/playground/history",
+      "destination": "/build-and-experiment/playground"
+    },
+    {
+      "source": "/cursor",
+      "destination": "/local-development-setup"
+    },
+    {
+      "source": "/tracing/automatic-instrumentation",
+      "destination": "/ship-to-production/automatic-instrumentation"
+    },
+    {
+      "source": "/tracing/integrations/openai",
+      "destination": "/ship-to-production/integrations/openai"
+    },
+    {
+      "source": "/tracing/integrations/anthropic",
+      "destination": "/ship-to-production/integrations/anthropic"
+    },
+    {
+      "source": "/tracing/integrations/gemini",
+      "destination": "/ship-to-production/integrations/gemini"
+    },
+    {
+      "source": "/tracing/integrations/langchain",
+      "destination": "/ship-to-production/integrations/langchain"
+    },
+    {
+      "source": "/tracing/integrations/cohere",
+      "destination": "/ship-to-production/integrations/cohere"
+    },
+    {
+      "source": "/tracing/integrations/vercel-ai-sdk",
+      "destination": "/ship-to-production/integrations/vercel-ai-sdk"
+    },
+    {
+      "source": "/tracing/integrations/nextjs",
+      "destination": "/ship-to-production/integrations/nextjs"
+    },
+    {
+      "source": "/tracing/integrations/litellm",
+      "destination": "/ship-to-production/integrations/litellm"
+    },
+    {
+      "source": "/tracing/integrations/kernel",
+      "destination": "/ship-to-production/integrations/kernel"
+    },
+    {
+      "source": "/tracing/integrations/claude-agent-sdk",
+      "destination": "/ship-to-production/integrations/claude-agent-sdk"
+    },
+    {
+      "source": "/tracing/integrations/browser-use",
+      "destination": "/ship-to-production/integrations/browser-use"
+    },
+    {
+      "source": "/tracing/integrations/stagehand",
+      "destination": "/ship-to-production/integrations/stagehand"
+    },
+    {
+      "source": "/tracing/integrations/skyvern",
+      "destination": "/ship-to-production/integrations/skyvern"
+    },
+    {
+      "source": "/tracing/integrations/playwright",
+      "destination": "/ship-to-production/integrations/playwright"
+    },
+    {
+      "source": "/tracing/integrations/puppeteer",
+      "destination": "/ship-to-production/integrations/puppeteer"
+    },
+    {
+      "source": "/tracing/structure/overview",
+      "destination": "/ship-to-production/manual-instrumentation"
+    },
+    {
+      "source": "/tracing/structure/observe",
+      "destination": "/ship-to-production/manual-instrumentation"
+    },
+    {
+      "source": "/tracing/structure/manual-span-creation",
+      "destination": "/ship-to-production/manual-instrumentation"
+    },
+    {
+      "source": "/tracing/structure/continuing-traces",
+      "destination": "/ship-to-production/manual-instrumentation"
+    },
+    {
+      "source": "/tracing/structure/session",
+      "destination": "/observe-in-production/sessions-users-metadata"
+    },
+    {
+      "source": "/tracing/structure/user-id",
+      "destination": "/observe-in-production/sessions-users-metadata"
+    },
+    {
+      "source": "/tracing/structure/metadata",
+      "destination": "/observe-in-production/sessions-users-metadata"
+    },
+    {
+      "source": "/tracing/structure/tags",
+      "destination": "/analyze-and-debug/events-and-tags"
+    },
+    {
+      "source": "/tracing/events",
+      "destination": "/analyze-and-debug/events-and-tags"
+    },
+    {
+      "source": "/tracing/structure/providers",
+      "destination": "/observe-in-production/cost-and-token-tracking"
+    },
+    {
+      "source": "/tracing/browser-agent-observability",
+      "destination": "/observe-in-production/browser-agent-observability"
+    },
+    {
+      "source": "/tracing/langgraph-visualization",
+      "destination": "/guides/langgraph-visualization"
+    },
+    {
+      "source": "/tracing/structure/image",
+      "destination": "/observe-in-production/image-tracing"
+    },
+    {
+      "source": "/tracing/structure/flushing",
+      "destination": "/observe-in-production/privacy-and-tracing-control"
+    },
+    {
+      "source": "/tracing/structure/tracing-level",
+      "destination": "/observe-in-production/privacy-and-tracing-control"
+    },
+    {
+      "source": "/custom-dashboards/overview",
+      "destination": "/observe-in-production/custom-dashboards"
+    },
+    {
+      "source": "/sql-editor/introduction",
+      "destination": "/analyze-and-debug/sql-query-engine"
+    },
+    {
+      "source": "/sql-editor/overview",
+      "destination": "/analyze-and-debug/sql-query-engine"
+    },
+    {
+      "source": "/sql-editor/reference",
+      "destination": "/analyze-and-debug/sql-query-engine#reference"
+    },
+    {
+      "source": "/evaluations/introduction",
+      "destination": "/improve-with-evaluations/introduction"
+    },
+    {
+      "source": "/evaluations/quickstart",
+      "destination": "/improve-with-evaluations/running-evaluations"
+    },
+    {
+      "source": "/evaluations/configuration",
+      "destination": "/improve-with-evaluations/running-evaluations"
+    },
+    {
+      "source": "/evaluations/using-dataset",
+      "destination": "/improve-with-evaluations/running-evaluations"
+    },
+    {
+      "source": "/evaluations/reference",
+      "destination": "/improve-with-evaluations/running-evaluations"
+    },
+    {
+      "source": "/evaluations/cookbook",
+      "destination": "/improve-with-evaluations/running-evaluations"
+    },
+    {
+      "source": "/evaluations/online-evaluations",
+      "destination": "/analyze-and-debug/online-evaluators"
+    },
+    {
+      "source": "/evaluations/online-evaluators/introduction",
+      "destination": "/analyze-and-debug/online-evaluators"
+    },
+    {
+      "source": "/evaluations/online-evaluators/scoring-with-hosted-evaluators",
+      "destination": "/analyze-and-debug/online-evaluators"
+    },
+    {
+      "source": "/evaluations/online-evaluators/scoring-with-sdk",
+      "destination": "/analyze-and-debug/online-evaluators"
+    },
+    {
+      "source": "/evaluations/human-evaluators",
+      "destination": "/improve-with-evaluations/human-evaluators"
+    },
+    {
+      "source": "/evaluations/manual-evaluation",
+      "destination": "/improve-with-evaluations/manual-evaluation-api"
+    },
+    {
+      "source": "/datasets/introduction",
+      "destination": "/improve-with-evaluations/datasets"
+    },
+    {
+      "source": "/datasets/adding-data",
+      "destination": "/improve-with-evaluations/datasets"
+    },
+    {
+      "source": "/datasets/cli",
+      "destination": "/improve-with-evaluations/datasets"
+    },
+    {
+      "source": "/queues/quickstart",
+      "destination": "/improve-with-evaluations/labeling-queues"
+    },
+    {
+      "source": "/guides/nextjs",
+      "destination": "/guides/nextjs-integration"
+    },
+    {
+      "source": "/guides/nextjs-aisdk",
+      "destination": "/guides/nextjs-integration"
+    },
+    {
+      "source": "/self-hosting/setup",
+      "destination": "/ship-to-production/self-hosting"
+    },
+    {
+      "source": "/self-hosting/access-control-setup",
+      "destination": "/ship-to-production/self-hosting"
+    },
+    {
+      "source": "/projects/introduction",
+      "destination": "/quickstart"
+    },
+    {
+      "source": "/tracing/otel",
+      "destination": "/troubleshooting"
+    },
+    {
+      "source": "/build-and-experiment/local-development-setup",
+      "destination": "/local-development-setup"
+    }
+  ]
 }
