@@ -74,6 +74,7 @@
           {
             "group": "Analyze & Debug",
             "pages": [
+              "analyze-and-debug/overview",
               "analyze-and-debug/sql-query-engine",
               "analyze-and-debug/events-and-tags",
               "analyze-and-debug/online-evaluators",
@@ -97,10 +98,6 @@
             "pages": [
               "troubleshooting"
             ]
-          },
-          {
-            "group": "API",
-            "pages": []
           }
         ]
       },
@@ -115,59 +112,7 @@
       },
       {
         "tab": "API",
-        "groups": [
-          {
-            "group": "Overview",
-            "pages": [
-              "api/app-server"
-            ]
-          },
-          {
-            "group": "Health & Ops",
-            "pages": [
-              "api/app-server/health-ops/health",
-              "api/app-server/health-ops/ready"
-            ]
-          },
-          {
-            "group": "Project-scoped",
-            "pages": [
-              "api/app-server/project-scoped/projects-realtime",
-              "api/app-server/project-scoped/projects-evaluation-score-stats",
-              "api/app-server/project-scoped/projects-evaluation-score-distribution",
-              "api/app-server/project-scoped/projects-spans",
-              "api/app-server/project-scoped/projects-spans-search",
-              "api/app-server/project-scoped/projects-sql-query",
-              "api/app-server/project-scoped/projects-sql-validate",
-              "api/app-server/project-scoped/projects-sql-to-json",
-              "api/app-server/project-scoped/projects-sql-from-json"
-            ]
-          },
-          {
-            "group": "Ingestion",
-            "pages": [
-              "api/app-server/ingestion/browser-sessions-events",
-              "api/app-server/ingestion/traces",
-              "api/app-server/ingestion/metrics"
-            ]
-          },
-          {
-            "group": "Project-auth",
-            "pages": [
-              "api/app-server/project-auth/tag",
-              "api/app-server/project-auth/datasets",
-              "api/app-server/project-auth/datasets-datapoints",
-              "api/app-server/project-auth/datasets-datapoints-create",
-              "api/app-server/project-auth/datasets-parquets",
-              "api/app-server/project-auth/evals",
-              "api/app-server/project-auth/evals-datapoints",
-              "api/app-server/project-auth/evals-datapoints-update",
-              "api/app-server/project-auth/evaluators-score",
-              "api/app-server/project-auth/sql-query",
-              "api/app-server/project-auth/payloads"
-            ]
-          }
-        ]
+        "openapi": "admin-openapi.json"
       },
       {
         "tab": "Changelog",
@@ -193,7 +138,8 @@
   "logo": "/logo/logo.png",
   "api": {
     "openapi": [
-      "api-reference/openapi.json"
+      "api-reference/openapi.json",
+      "admin-openapi.json"
     ]
   },
   "appearance": {

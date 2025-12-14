@@ -9,7 +9,7 @@ description: Build evaluation datasets with a FIFO queue and labeling UI
 - A labeling queue is a collection of items that need to be labeled.
 - Labeling queue is an actual queue with FIFO (first in, first out) order.
 - Items in the queue have exactly the same shape as datapoints in a dataset.
-- Labeling operation in this context means writing a data to the target field of a datapoint.
+- Labeling operation in this context means writing data to the target field of a datapoint.
 
 <div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
 <img src="/images/queues/lq-view.png" alt="Screenshot of a trace visualization" style={{ margin: '0px' }}/>
@@ -71,5 +71,4 @@ You can either push individual datapoint or select a subset of datapoints in the
 <Tip>
 When pushing items to a queue, they maintain the same JSON structure as datapoints in datasets, ensuring consistency between your labeling workflow and final datasets.
 </Tip>
-
 

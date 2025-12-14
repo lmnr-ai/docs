@@ -168,7 +168,7 @@ that the serialization fails.
 
 ### Solution
 
-Make sure inputs and outputs to your functions or spans are serializable to JSON. If you are using custom objects, make sure their fields are serializible.
+Make sure inputs and outputs to your functions or spans are serializable to JSON. If you are using custom objects, make sure their fields are serializable.
 In Python, that may mean having to implement `default()` method on some of them, or on the parent object.
 
 ## Many of my JS route requests are instrumented in the Laminar UI, even though I don't want that.

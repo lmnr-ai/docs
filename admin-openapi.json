@@ -1,0 +1,1171 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Laminar Admin API",
+    "description": "Administrative, ingestion, and project-scoped endpoints for Laminar app-server. All /v1/* endpoints expect Authorization: Bearer <project_api_key>. Ingest-only keys work on ingestion endpoints only.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://api.lmnr.ai"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/v1/traces": {
+      "post": {
+        "summary": "OTLP trace ingest",
+        "description": "Body is OTLP ExportTraceServiceRequest (protobuf). Pushes spans/events to queue; enforces workspace byte limits; returns 200 empty.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Accepted"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Ingestion"
+        ]
+      }
+    },
+    "/v1/metrics": {
+      "post": {
+        "summary": "Metrics ingest placeholder",
+        "description": "Placeholder endpoint to satisfy OTLP metrics exporters; echoes 200 empty.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Ingestion"
+        ]
+      }
+    },
+    "/v1/browser-sessions/events": {
+      "post": {
+        "summary": "Ingest RRWeb session events",
+        "description": "Publishes browser session events to the message queue if under size limits; returns 200 empty.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Accepted"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "events": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "integer"
+                        },
+                        "timestamp": {
+                          "type": "integer",
+                          "description": "Milliseconds since epoch"
+                        },
+                        "data": {
+                          "type": "string",
+                          "description": "Base64 or byte array"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "timestamp",
+                        "data"
+                      ]
+                    }
+                  },
+                  "sessionId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "traceId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "source": {
+                    "type": "string"
+                  },
+                  "sdkVersion": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "events",
+                  "sessionId",
+                  "traceId"
+                ]
+              }
+            }
+          }
+        },
+        "tags": [
+          "Ingestion"
+        ]
+      }
+    },
+    "/v1/datasets": {
+      "get": {
+        "summary": "List datasets",
+        "description": "Returns datasets for the project.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Datasets list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "projectId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Datasets"
+        ]
+      }
+    },
+    "/v1/datasets/datapoints": {
+      "get": {
+        "summary": "List datapoints",
+        "description": "Paginated datapoints for a dataset (requires limit/offset and dataset id or name).",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Paginated datapoints",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "datasetId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "data": {
+                            "type": "object"
+                          },
+                          "target": {
+                            "type": "object"
+                          },
+                          "metadata": {
+                            "type": "object"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    },
+                    "totalCount": {
+                      "type": "integer"
+                    },
+                    "anyInProject": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Datasets"
+        ]
+      },
+      "post": {
+        "summary": "Create datapoints",
+        "description": "Create datapoints and optionally create a dataset.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "datasetId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "datapointInfo": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Datasets"
+        ]
+      }
+    },
+    "/v1/datasets/{dataset_id}/parquets/{idx}": {
+      "get": {
+        "summary": "Download dataset parquet",
+        "description": "Streams parquet export; 404 if not found; 500 if bucket unset.",
+        "parameters": [
+          {
+            "name": "dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "idx",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Parquet stream",
+            "content": {
+              "application/octet-stream": {}
+            }
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Export bucket misconfigured"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Datasets"
+        ]
+      }
+    },
+    "/v1/payloads/{payload_id}": {
+      "get": {
+        "summary": "Stream payload",
+        "description": "Streams stored payload; payloadType=image|raw controls inline vs download; 404 if missing.",
+        "parameters": [
+          {
+            "name": "payload_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "payloadType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "image",
+                "raw"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payload stream",
+            "content": {
+              "application/octet-stream": {}
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Datasets"
+        ]
+      }
+    },
+    "/v1/tag": {
+      "post": {
+        "summary": "Tag span or trace",
+        "description": "Adds tags to a span or trace and returns tag IDs.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Tags appended",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "spanId": {
+                        "type": "string",
+                        "format": "uuid"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Span not found"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Tagging"
+        ]
+      }
+    },
+    "/v1/evaluators/score": {
+      "post": {
+        "summary": "Attach evaluator score",
+        "description": "Attach evaluator score to a span or trace; writes to Postgres & ClickHouse.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Score saved"
+          },
+          "404": {
+            "description": "Span not found"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Tagging"
+        ]
+      }
+    },
+    "/v1/evals": {
+      "post": {
+        "summary": "Create evaluation",
+        "description": "Creates an evaluation; name auto-generated if absent.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Evaluation created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "projectId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "groupId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "metadata": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Evaluations"
+        ]
+      }
+    },
+    "/v1/evals/{eval_id}/datapoints": {
+      "post": {
+        "summary": "Save evaluation datapoints",
+        "description": "Bulk save evaluation datapoints and scores; returns eval ID.",
+        "parameters": [
+          {
+            "name": "eval_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "eval_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Evaluations"
+        ]
+      }
+    },
+    "/v1/evals/{eval_id}/datapoints/{datapoint_id}": {
+      "post": {
+        "summary": "Update evaluation datapoint",
+        "description": "Updates scores/output for a single datapoint.",
+        "parameters": [
+          {
+            "name": "eval_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "datapoint_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "datapoint_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Evaluations"
+        ]
+      }
+    },
+    "/v1/sql/query": {
+      "post": {
+        "summary": "Execute SQL (v1)",
+        "description": "Executes SQL via query engine against project ClickHouse RO client.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Query result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Sql"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/sql/query": {
+      "post": {
+        "summary": "Execute SQL (project)",
+        "description": "Runs SQL with optional parameters for a project; returns raw rows.",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rows",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Sql"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/sql/validate": {
+      "post": {
+        "summary": "Validate SQL",
+        "description": "Validates SQL and returns success or error details.",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Validation result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "validatedQuery": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Sql"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/sql/to-json": {
+      "post": {
+        "summary": "SQL to JSON",
+        "description": "Converts SQL to query JSON structure.",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Conversion result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "queryStructure": {
+                      "type": "object"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Sql"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/sql/from-json": {
+      "post": {
+        "summary": "JSON to SQL",
+        "description": "Converts query JSON structure to SQL.",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Conversion result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "sql": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Sql"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/spans": {
+      "post": {
+        "summary": "Create span",
+        "description": "Publishes span (and events) to MQ; returns span and trace IDs.",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Span created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "spanId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Spans & Analytics"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/spans/search": {
+      "post": {
+        "summary": "Search spans",
+        "description": "Runs Quickwit search; returns hits with trace_id and span_id.",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "trace_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "span_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Spans & Analytics"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/evaluation-score-stats": {
+      "get": {
+        "summary": "Evaluation score stats",
+        "description": "Returns average score for a given evaluation/score name.",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "evaluationId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "scoreName",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Average value",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "averageValue": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Spans & Analytics"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/evaluation-score-distribution": {
+      "get": {
+        "summary": "Evaluation score distribution",
+        "description": "Bucketed score distribution across evaluations.",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "evaluationIds",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scoreName",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Buckets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "lowerBound": {
+                        "type": "number"
+                      },
+                      "upperBound": {
+                        "type": "number"
+                      },
+                      "heights": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Spans & Analytics"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/realtime": {
+      "get": {
+        "summary": "Realtime SSE",
+        "description": "SSE stream keyed by ?key=traces or trace_<uuid>; sends JSON events and heartbeats.",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "key",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SSE stream",
+            "content": {
+              "text/event-stream": {}
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Realtime & Probes"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "description": "Returns OK when RabbitMQ (if configured) is reachable; consumer server also validates worker counts.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "500": {
+            "description": "Unhealthy"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Realtime & Probes"
+        ]
+      }
+    },
+    "/ready": {
+      "get": {
+        "summary": "Ready check",
+        "description": "Lightweight ready check.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Realtime & Probes"
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Authorization header expects a Bearer token."
+      }
+    },
+    "schemas": {}
+  },
+  "tags": [
+    {
+      "name": "Ingestion"
+    },
+    {
+      "name": "Datasets"
+    },
+    {
+      "name": "Tagging"
+    },
+    {
+      "name": "Evaluations"
+    },
+    {
+      "name": "Sql"
+    },
+    {
+      "name": "Spans & Analytics"
+    },
+    {
+      "name": "Realtime & Probes"
+    }
+  ]
+}
