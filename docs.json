@@ -25,6 +25,7 @@
             "group": "Build & Experiment",
             "pages": [
               "build-and-experiment/overview",
+              "observe-in-production/traces-and-spans",
               "build-and-experiment/real-time-traces",
               "build-and-experiment/playground"
             ]
@@ -62,7 +63,6 @@
             "group": "Observe in Production",
             "pages": [
               "observe-in-production/overview",
-              "observe-in-production/traces-and-spans",
               "observe-in-production/sessions-users-metadata",
               "observe-in-production/browser-agent-observability",
               "observe-in-production/cost-and-token-tracking",
