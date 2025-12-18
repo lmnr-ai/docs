@@ -1,0 +1,170 @@
+---
+title: SQL Editor
+description: Query Laminar data with SQL to find patterns, debug issues, and build datasets.
+---
+
+# SQL Editor
+
+Query all your Laminar data directly with SQL. Find patterns, debug issues, and answer questions the dashboard doesn't anticipate.
+
+## What You Can Query
+
+| Table | Contains |
+|-------|----------|
+| `spans` | Every span from your traces—LLM calls, tool calls, custom spans |
+| `traces` | Aggregated trace-level data |
+| `events` | Custom events you've sent |
+| `evaluation_scores` | Results from evaluation runs |
+| `evaluation_datapoints` | Datapoints used in evaluations |
+
+Only `SELECT` queries are allowed.
+
+## Getting Started
+
+Open the SQL Editor from the sidebar. Write a query:
+
+```sql
+SELECT name, input, output, start_time
+FROM spans
+WHERE start_time > now() - INTERVAL 3 DAY
+```
+
+Results appear in a table or raw JSON view. Export results to a dataset or labeling queue for further use.
+
+You can also query via API at `/v1/sql/query`—authenticate with your project API key and pass `{ "query": "..." }`.
+
+## Writing Queries
+
+Laminar uses ClickHouse, a columnar analytics database. The basics work like standard SQL (`SELECT`, `FROM`, `WHERE`, `GROUP BY`, `ORDER BY`, `LIMIT`), with a few differences.
+
+### Always filter by time
+
+Spans are ordered by `start_time`. Adding a time filter dramatically speeds up queries and prevents memory issues:
+
+```sql
+-- Slow: scans everything
+SELECT * FROM spans WHERE trace_id = 'abc-123'
+
+-- Fast: scans only relevant time range
+SELECT * FROM spans 
+WHERE trace_id = 'abc-123'
+  AND start_time > now() - INTERVAL 1 DAY
+```
+
+### Avoid joins
+
+ClickHouse isn't optimized for joins. Instead, run two queries and combine results in your application:
+
+```sql
+-- First: find the spans you care about
+SELECT trace_id, name, input, output
+FROM spans
+WHERE span_type = 1 AND start_time > now() - INTERVAL 1 DAY
+
+-- Second: get trace-level data for those trace_ids
+SELECT trace_id, duration
+FROM traces
+WHERE trace_id IN ('id1', 'id2', 'id3')
+```
+
+### Working with dates
+
+Truncate timestamps for grouping with `toStartOfInterval`:
+
+```sql
+-- Spans per day over the last month
+SELECT
+    toStartOfInterval(start_time, INTERVAL 1 DAY) AS day,
+    count(*) AS span_count
+FROM spans
+WHERE start_time > now() - INTERVAL 1 MONTH
+GROUP BY day
+ORDER BY day
+```
+
+Works with any interval: `INTERVAL 15 MINUTE`, `INTERVAL 1 HOUR`, etc.
+
+Shortcuts exist for common intervals: `toStartOfDay(value)`, `toStartOfHour(value)`, `toStartOfWeek(value)`.
+
+### Working with JSON
+
+Many columns (like `attributes`) store JSON as strings. Use `simpleJSONExtract*` functions for fast extraction:
+
+```sql
+-- Extract token counts from LLM spans
+SELECT
+    name,
+    simpleJSONExtractInt(attributes, 'gen_ai.usage.input_tokens') AS input_tokens,
+    simpleJSONExtractInt(attributes, 'gen_ai.usage.output_tokens') AS output_tokens
+FROM spans
+WHERE span_type = 1 AND start_time > now() - INTERVAL 1 DAY
+```
+
+Check if a key exists with `simpleJSONHas`:
+
+```sql
+SELECT count(*)
+FROM spans
+WHERE simpleJSONHas(attributes, 'gen_ai.request.structured_output_schema')
+```
+
+For complex operations (array indexing, nested paths), use `JSONExtract*` functions—more flexible but slower.
+
+### Data types
+
+| Type | Used for |
+|------|----------|
+| `UUID` | Most ID columns (`trace_id`, `span_id`) |
+| `DateTime64` | Timestamps (always UTC) |
+| `String` | Text, including JSON stored as strings |
+| `Float64` | Floating point numbers |
+| `UInt64` | Counts, token numbers |
+| `UInt8` | Enum values (like `span_type`) |
+
+Cast with `'value'::Type` syntax: `'2025-01-01'::DateTime`
+
+## Example Queries
+
+**Cost breakdown by model:**
+```sql
+SELECT
+    simpleJSONExtractString(attributes, 'gen_ai.response.model') AS model,
+    sum(cost) AS total_cost,
+    count(*) AS call_count
+FROM spans
+WHERE span_type = 1 AND start_time > now() - INTERVAL 7 DAY
+GROUP BY model
+ORDER BY total_cost DESC
+```
+
+**Slowest operations:**
+```sql
+SELECT name, avg(end_time - start_time) AS avg_duration_ms
+FROM spans
+WHERE start_time > now() - INTERVAL 1 DAY
+GROUP BY name
+ORDER BY avg_duration_ms DESC
+LIMIT 10
+```
+
+**Error rate by span type:**
+```sql
+SELECT
+    name,
+    countIf(status = 'error') AS errors,
+    count(*) AS total,
+    round(errors / total * 100, 2) AS error_rate
+FROM spans
+WHERE start_time > now() - INTERVAL 1 DAY
+GROUP BY name
+HAVING total > 10
+ORDER BY error_rate DESC
+```
+
+## Exporting Results
+
+Select results and click "Export to Dataset." Map columns to dataset fields (`data`, `target`, `metadata`). Use this to build evaluation datasets from query results.
+
+## Full Reference
+
+For complete ClickHouse SQL syntax, see the [ClickHouse documentation](https://clickhouse.com/docs/en/sql-reference).

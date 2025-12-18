@@ -1,0 +1,87 @@
+---
+title: Semantic Events & Clusters
+description: Laminar clusters similar events so you can see what your agents are really doing at scale.
+---
+
+# Semantic Events & Clusters
+
+Laminar automatically identifies patterns in your traces by clustering similar events together. This helps you understand what your agents are actually doing at scale—without manually tagging everything.
+
+## What Are Semantic Events?
+
+A semantic event is a structured record of something that happened: an action, a state change, a decision. Laminar captures these automatically from your traces.
+
+Each event includes:
+
+- **What happened** — The event type (e.g., `extraction.completed`, `navigation.failed`)
+- **Who/what triggered it** — User, session, or agent identifier
+- **Context** — Where it happened (which workflow, which page, which model)
+- **Payload** — The relevant data (input, output, parameters)
+- **Timestamp** — When it occurred
+
+Events are immutable and append-only. Once recorded, they don't change—you build understanding by analyzing patterns across events, not by modifying them.
+
+## What Are Clusters?
+
+Clusters group related events into coherent stories. Instead of looking at thousands of individual events, you see patterns:
+
+- **Session clusters** — All events from a single user session, bounded by time
+- **Intent clusters** — Events that share a common goal or topic, even across sessions
+- **Anomaly clusters** — Outliers and unusual patterns grouped together
+- **Similar failures** — Errors with the same root cause, regardless of surface differences
+
+Each cluster has a centroid (the "center" of the group in embedding space), member events, confidence scores, and automatically generated labels.
+
+## How Clustering Works
+
+Laminar uses a hybrid approach:
+
+**Embedding-based similarity** — Events are converted to vectors. Similar events end up near each other. Fast approximate nearest-neighbor search finds candidates.
+
+**Rule-based refinement** — Deterministic rules handle precision-critical cases: same user + same query + short time gap = same session.
+
+**Temporal analysis** — Time matters. Events close in time from the same user are more likely related than events hours apart.
+
+The system continuously updates clusters as new events arrive. Clusters have freshness scores and TTLs—stale clusters age out, active patterns stay prominent.
+
+## What You Can Do With This
+
+**Understand user behavior** — See what users are actually trying to accomplish, not just what buttons they clicked. Intent clusters reveal the "why" behind actions.
+
+**Debug at scale** — When something breaks, find all similar failures instantly. One fix addresses an entire cluster of issues.
+
+**Detect anomalies** — Unusual patterns surface automatically. Spot problems before users report them.
+
+**Track trends** — See how behavior changes over time. New clusters emerging? Old patterns disappearing?
+
+**Build datasets** — Export clusters as evaluation datasets. Test your agent against real-world patterns, not synthetic examples.
+
+## Viewing Clusters
+
+In the Laminar dashboard:
+
+1. Go to **Events** to see the raw event stream
+2. Switch to **Clusters** to see grouped patterns
+3. Click any cluster to see its members, centroid, labels, and confidence score
+4. Filter by time range, event type, or cluster label
+5. Export cluster members to a dataset for evaluation
+
+## Example: Finding Extraction Failures
+
+Your browser agent extracts product data. Some extractions fail. Instead of searching through logs:
+
+1. Filter events to `extraction.failed`
+2. View clusters—Laminar groups failures by similarity
+3. One cluster shows 47 failures, all on sites with lazy-loaded content
+4. Another cluster shows 12 failures, all with the same malformed selector
+5. Fix each root cause once, verify with the cluster members
+
+## Best Practices
+
+**Let clusters emerge** — Don't over-specify upfront. Run your agent, observe what clusters form, then decide which patterns matter.
+
+**Use clusters for evaluation** — When you find a problematic cluster, export it as a dataset. Run evaluations against it. Measure improvement.
+
+**Monitor cluster health** — Watch for new clusters appearing (new failure modes?) or existing clusters growing rapidly (regression?).
+
+**Combine with SQL** — Query cluster metadata in the SQL editor. Find your largest clusters, newest clusters, or clusters with specific labels.

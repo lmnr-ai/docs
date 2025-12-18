@@ -143,25 +143,15 @@ Laminar.setSpanTags(['high-priority', 'beta-user']);
 
 All of these must be called within a span context (inside an `observe` wrapper or manual span).
 
+## Real-Time Visibility
+
+Traces stream to your dashboard as they execute—near real-time by default. This makes debugging long-running agents or chained LLM calls much faster.
+
+We still batch briefly for throughput; if you need every span immediately during development, set `disableBatch: true` in `Laminar.initialize` or toggle the setting in your project dashboard.
+
 ## Supported Integrations
 
 Laminar auto-instruments OpenAI, Anthropic, Gemini, LangChain, Vercel AI SDK, Playwright, Pinecone, and 20+ other libraries. See [Integrations](/tracing/integrations) for the full list and setup details.
-
-## Real-Time Visibility
-
-Traces stream to your dashboard as they execute—you don't wait for operations to complete. This is particularly useful when debugging long-running agents or chained LLM calls.
-
-By default, traces are batched for performance. For immediate visibility during development, disable batching with `disableBatch: true` in your initialization config.
-
-You can also toggle this in your project settings on the dashboard.
-
-## Key Concepts
-
-**Trace**: A complete execution path through your application—one user request, one agent run, one workflow execution.
-
-**Span**: A single operation within a trace. An LLM call is a span. A function you wrap with `observe` is a span. Spans nest to show parent-child relationships.
-
-**Session**: A way to group related traces together, like all the turns in a multi-message conversation.
 
 ## Next Steps
 

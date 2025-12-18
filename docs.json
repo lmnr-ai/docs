@@ -43,13 +43,14 @@
                   "tracing/integrations/stagehand",
                   "tracing/integrations/skyvern",
                   "tracing/integrations/playwright",
-                  "tracing/integrations/puppeteer",
-                  "tracing/otel"
-                ]
-              },
-          "tracing/browser-agent-observability",
-          "tracing/langgraph-visualization",
-          "tracing/events",
+              "tracing/integrations/puppeteer",
+              "tracing/otel"
+            ]
+          },
+      "tracing/browser-agent-observability",
+      "tracing/semantic-events-clusters",
+      "tracing/langgraph-visualization",
+      "tracing/events",
               {
                 "group": "Troubleshooting",
                 "pages": [
@@ -64,7 +65,8 @@
             "pages": [
               "datasets/introduction",
               "datasets/adding-data",
-              "datasets/cli"
+              "datasets/cli",
+              "queues/quickstart"
             ]
           },
           {
@@ -88,32 +90,12 @@
             ]
           },
           {
-            "group": "SQL Editor",
+            "group": "Platform",
             "pages": [
-              "sql-editor/introduction",
-              "sql-editor/overview",
-              "sql-editor/reference"
-            ]
-          },
-          {
-            "group": "Custom Dashboards",
-            "pages": [
-              "custom-dashboards/overview"
-            ]
-          },
-          {
-            "group": "Labeling Queues",
-            "pages": [
-              "queues/quickstart"
-            ]
-          },
-          {
-            "group": "Playground",
-            "pages": [
-              "playground/introduction",
-              "playground/playground-from-span",
-              "playground/tools",
-              "playground/history"
+              "platform/sql-editor",
+              "custom-dashboards/overview",
+              "queues/quickstart",
+              "platform/playground"
             ]
           }
         ]
@@ -131,7 +113,7 @@
         "tab": "SDK",
         "groups": [
           {
-            "group": "TypeScript",
+            "group": "TypeScript SDK",
             "pages": [
               "sdk/typescript/overview",
               "sdk/typescript/tracing",
@@ -142,7 +124,7 @@
             ]
           },
           {
-            "group": "Python",
+            "group": "Python SDK",
             "pages": [
               "sdk/python/overview",
               "sdk/python/tracing",
