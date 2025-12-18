@@ -1,0 +1,23 @@
+---
+title: Python Instrumentation
+description: Configure auto-instrumentations, span processors, and tracer access in Python.
+---
+
+# Python Instrumentation
+
+Configure auto-instrumentations, span processors, and tracer access.
+
+## instruments / disabled_instruments
+Initialization options to select or block auto-instrumentations.
+
+## LaminarLiteLLMCallback
+LiteLLM `CustomBatchLogger`; requires `Laminar.initialize()` first; captures prompts, tool calls, usage, tags, and user/session metadata.
+
+## LaminarSpanProcessor
+Wraps the OTLP exporter (HTTP or gRPC). Methods: `on_start`, `on_end`, `force_flush(timeout_ms=30000)`, `force_reinit()`, `shutdown()`, `clear()`, `set_parent_path_info(...)`.
+
+## get_laminar_tracer_provider() / get_tracer(...) / get_tracer_with_context(...)
+Access the Laminar tracer provider or a context-managed tracer (`flush_on_exit` optional).
+
+## init_instrumentations(...)
+Initialize chosen instruments (OpenAI, Anthropic, LangChain, LangGraph, Playwright, browser_use, Bedrock, VertexAI, HuggingFace transformers, Pinecone, Weaviate, Milvus, Qdrant, Chroma, etc.).

@@ -1,0 +1,82 @@
+---
+title: TypeScript Client
+description: Use the Laminar TypeScript client for datasets, evaluations, agents, and tagging.
+---
+
+# TypeScript Client
+
+Work with Laminar resources through the typed client.
+
+## LaminarClient
+
+### Constructor
+`new LaminarClient({ baseUrl?, projectApiKey?, port?, timeout? })` (env fallback for API key/base URL).
+
+**Parameters**
+| Name | Type | Description |
+| --- | --- | --- |
+| `baseUrl` | `string` | Laminar API base URL. |
+| `projectApiKey` | `string` | API key (env fallback). |
+| `port` | `number` | Override API port. |
+| `timeout` | `number` | Request timeout in seconds (default `3600`). |
+
+### Agent
+
+`client.agent.run(options)` — run an agent with browser support.
+
+**Key options**
+| Name | Type | Description |
+| --- | --- | --- |
+| `prompt` | `string` | Required agent prompt. |
+| `modelProvider` | `'anthropic' \| 'bedrock' \| 'openai' \| 'gemini'` | Provider to use. |
+| `model` | `string` | Model name. |
+| `agentState` / `storageState` | `Record<string, unknown>` | Persisted state passed between steps. |
+| `stream` | `boolean` | Stream intermediate steps. |
+| `enableThinking` | `boolean` | Enable provider-specific thinking/chain-of-thought. |
+| `timeout` | `number` | Timeout in seconds. |
+| `cdpUrl` / `startUrl` / `userAgent` | `string` | Browser connection and start context. |
+| `parentSpanContext` | `LaminarSpanContext` | Associate with an existing span/trace. |
+| `returnScreenshots` / `returnAgentState` / `returnStorageState` | `boolean` | Control returned artifacts. |
+
+Returns the agent result (optionally streamed) with trace context.
+
+### Browser Events
+
+`client.browserEvents.send({ sessionId, traceId, events })` — send browser interaction events tied to a trace/session.
+
+### Datasets
+
+`client.datasets.listDatasets()`, `getDatasetByName(name)`, `push(...)`, `pull(...)`
+
+- `push(paths, recursive?)`: upload JSON/CSV/JSONL files into a dataset.
+- `pull(nameOrId, destination)`: download dataset contents to disk.
+
+### Evaluations
+
+`client.evals.init(...)`, `create(...)`, `createDatapoint(...)`, `updateDatapoint(...)`, `saveDatapoints(...)` — manage evaluation runs and datapoints.
+
+### Evaluators
+
+`client.evaluators.score(traceIdOrSpanId, score, metadata?)` — attach evaluator scores to a trace/span.
+
+### Tags
+
+`client.tags.tag(traceId, tags)` — tag a trace with one or more labels.
+
+## Example
+
+```ts
+import { LaminarClient } from "lmnr";
+
+const client = new LaminarClient({ projectApiKey: process.env.LMNR_PROJECT_API_KEY });
+
+await client.agent.run({
+  prompt: "Find the price of the MacBook Air on the Apple Store",
+  modelProvider: "anthropic",
+  model: "claude-3-5-sonnet",
+  parentSpanContext: mySpanContext,
+});
+
+const ds = await client.datasets.getDatasetByName("pricing-cases");
+await client.evaluators.score(traceId, 0.9, { comment: "good extraction" });
+```

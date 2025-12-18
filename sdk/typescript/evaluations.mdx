@@ -1,0 +1,47 @@
+---
+title: TypeScript Evaluations
+description: Run evaluations and work with Laminar datasets using the TypeScript SDK.
+---
+
+# TypeScript Evaluations
+
+Run evaluations and manage datasets for Laminar.
+
+## evaluate(options)
+Run an evaluation or register one if `globalThis._set_global_evaluation` is set. Streams progress, uploads spans, and auto-initializes Laminar when needed.
+
+**Parameters**
+| Name | Type | Description |
+| --- | --- | --- |
+| `data` | `Array<Datapoint> \| LaminarDataset` | Input datapoints. |
+| `executor` | `(datapoint) => Promise<unknown>` | Work to execute per datapoint. |
+| `evaluators` | `Record<string, EvaluatorFn>` | Evaluators keyed by name. |
+| `name` / `groupName` | `string` | Optional run identifiers. |
+| `metadata` | `Record<string, unknown>` | Metadata stored on the run. |
+| `config` | `EvaluateConfig` | Includes `projectApiKey`, `baseUrl`, `concurrencyLimit` (default `5`), OTLP ports, batching, and logging options. |
+
+**Returns:** `{ averageScores, projectId, evaluationId, url }` or evaluation error metadata
+
+**Example**
+```ts
+await evaluate({
+  data,
+  executor: async (d) => runModel(d.input),
+  evaluators: { quality: (output) => score(output) },
+});
+```
+
+## Datasets
+
+### LaminarDataset
+Dataset implementation backed by Laminar.
+
+**Constructor:** `(name?: string, { id?, fetchSize? } = {})`
+
+**Key methods:** `size()`, `get(index)`, `push(paths, recursive?)`. Call `setClient(client: LaminarClient)` before use.
+
+### EvaluationDataset
+Abstract dataset base (exported as `Dataset` alias); implement `size()` and `get(i)`. Helper `slice(start, end)` is provided.
+
+### Datasets via LaminarClient
+`LaminarClient.datasets` offers dataset listing, lookup, push, and pull helpers (see Client page).

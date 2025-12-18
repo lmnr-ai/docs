@@ -17,23 +17,15 @@
             "group": "Overview",
             "pages": [
               "overview",
-              "installation",
-              {
-                "group": "Self-hosting",
-                "pages": [
-                  "self-hosting/setup",
-                  "self-hosting/access-control-setup"
-                ]
-              },
-              "cursor"
+              "agent-development",
+              "startup"
             ]
           },
           {
             "group": "Tracing",
             "pages": [
               "tracing/introduction",
-              "tracing/quickstart",
-              "tracing/automatic-instrumentation",
+              "tracing/advanced-patterns",
               {
                 "group": "Integrations",
                 "pages": [
@@ -51,30 +43,13 @@
                   "tracing/integrations/stagehand",
                   "tracing/integrations/skyvern",
                   "tracing/integrations/playwright",
-                  "tracing/integrations/puppeteer"
+                  "tracing/integrations/puppeteer",
+                  "tracing/otel"
                 ]
               },
-              {
-                "group": "Tracing Structure",
-                "pages": [
-                  "tracing/structure/overview",
-                  "tracing/structure/observe",
-                  "tracing/structure/manual-span-creation",
-                  "tracing/structure/session",
-                  "tracing/structure/user-id",
-                  "tracing/structure/metadata",
-                  "tracing/structure/tags",
-                  "tracing/structure/image",
-                  "tracing/structure/continuing-traces",
-                  "tracing/structure/providers",
-                  "tracing/structure/flushing"
-                ]
-              },
-              "tracing/realtime",
-              "tracing/browser-agent-observability",
-              "tracing/langgraph-visualization",
-              "tracing/events",
-              "tracing/otel",
+          "tracing/browser-agent-observability",
+          "tracing/langgraph-visualization",
+          "tracing/events",
               {
                 "group": "Troubleshooting",
                 "pages": [
@@ -85,6 +60,14 @@
             ]
           },
           {
+            "group": "Datasets",
+            "pages": [
+              "datasets/introduction",
+              "datasets/adding-data",
+              "datasets/cli"
+            ]
+          },
+          {
             "group": "Evaluations",
             "pages": [
               "evaluations/introduction",
@@ -92,7 +75,6 @@
               "evaluations/using-dataset",
               "evaluations/human-evaluators",
               "evaluations/configuration",
-              "evaluations/reference",
               "evaluations/manual-evaluation",
               "evaluations/cookbook",
               {
@@ -117,14 +99,6 @@
             "group": "Custom Dashboards",
             "pages": [
               "custom-dashboards/overview"
-            ]
-          },
-          {
-            "group": "Datasets",
-            "pages": [
-              "datasets/introduction",
-              "datasets/adding-data",
-              "datasets/cli"
             ]
           },
           {
@@ -154,28 +128,36 @@
         ]
       },
       {
-        "tab": "API Reference",
+        "tab": "SDK",
         "groups": [
           {
-            "group": "API Documentation",
+            "group": "TypeScript",
             "pages": [
-              "api-reference/introduction",
-              {
-                "group": "Evaluations",
-                "pages": [
-                  "api-reference/evals/init_eval",
-                  "api-reference/evals/save_eval_datapoints",
-                  "api-reference/evals/update_eval_datapoint"
-                ]
-              },
-              {
-                "group": "SQL",
-                "pages": [
-                  "api-reference/sql/sql_query"
-                ]
-              }
+              "sdk/typescript/overview",
+              "sdk/typescript/tracing",
+              "sdk/typescript/evaluations",
+              "sdk/typescript/client",
+              "sdk/typescript/instrumentation",
+              "sdk/typescript/types"
+            ]
+          },
+          {
+            "group": "Python",
+            "pages": [
+              "sdk/python/overview",
+              "sdk/python/tracing",
+              "sdk/python/evaluations",
+              "sdk/python/client",
+              "sdk/python/instrumentation",
+              "sdk/python/types"
             ]
           }
+        ]
+      },
+      {
+        "tab": "Changelog",
+        "pages": [
+          "changelog"
         ]
       }
     ],
@@ -194,11 +176,6 @@
     }
   },
   "logo": "/logo/logo.png",
-  "api": {
-    "openapi": [
-      "api-reference/openapi.json"
-    ]
-  },
   "appearance": {
     "default": "dark",
     "strict": true

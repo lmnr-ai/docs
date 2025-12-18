@@ -1,0 +1,53 @@
+---
+title: Python Evaluations
+description: Run evaluations and work with Laminar datasets using the Python SDK.
+---
+
+# Python Evaluations
+
+Run evaluations and manage datasets for Laminar.
+
+## evaluate(...)
+Run an evaluation (async if an event loop is running). Creates an evaluation run, executor span per datapoint, evaluator spans, and uploads datapoints/results in the background.
+
+**Parameters**
+| Name | Description |
+| --- | --- |
+| `data` | List of datapoints/dicts or `LaminarDataset`. |
+| `executor` | Callable executed per datapoint. |
+| `evaluators` | Dict of `EvaluatorFunction` or `HumanEvaluator` keyed by name. |
+| `name` / `group_name` | Optional identifiers for the run. |
+| `metadata` | JSON-serializable run metadata. |
+| `concurrency_limit` | Max concurrent executor spans (default `5`). |
+| `project_api_key` | API key override. |
+| `base_url` / `base_http_url` | API and OTLP base URLs. |
+| `http_port` / `grpc_port` | OTLP port overrides. |
+| `instruments` / `disabled_instruments` | Enable/disable auto-instrumentations. |
+| `max_export_batch_size` | OTLP batch size cap. |
+| `trace_export_timeout_seconds` | OTLP export timeout. |
+
+**Returns:** `EvaluationRunResult` (`average_scores`, `evaluation_id`, `project_id`, `url`, `error_message`)
+
+**Example**
+```python
+await evaluate(
+    data=dataset,
+    executor=lambda d: d["input"],
+    evaluators={"quality": lambda output, trace_id: 1.0},
+)
+```
+
+## Datasets
+
+### LaminarDataset (class)
+Laminar-backed dataset.
+
+**Constructor:** `(name=None, id=None, fetch_size=25)`
+
+**Key methods:** `__len__`, `__getitem__`, `push(paths, recursive=False)` (JSON/JSONL/CSV via `file_utils`). Call `set_client(client: LaminarClient)` before use.
+
+### EvaluationDataset (class)
+Abstract dataset base; implement `__len__` and `__getitem__`. Helper `slice(start, end)` is provided.
+
+### Datasets via LaminarClient
+`LaminarClient.datasets` offers dataset listing, lookup, push, and pull helpers (see Client page).

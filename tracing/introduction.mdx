@@ -1,116 +1,169 @@
 ---
-title: LLM Observability with Laminar Tracing
+title: Introduction
 sidebarTitle: Introduction
-description: Comprehensive observability for your LLM applications with OpenTelemetry-based tracing
+description:
 ---
 
-## What is Laminar Tracing?
+# Tracing
 
-<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
-<img src="/images/traces/traces.png" alt="Screenshot of a trace visualization" style={{ margin: '0px' }}/>
-</div>
+Tracing is the foundation of everything in Laminar. Every feature—debugging, evaluation, cost analysis, session replay—builds on trace data. Start here.
 
-Laminar offers comprehensive observability for your LLM applications, capturing the entire execution flow with minimal setup. This allows you to:
+## What You Get
 
-- **Debug complex Agents and LLM workflows** by seeing exactly how data flows through your application
-- **Monitor performance** with detailed execution time and token usage metrics
-- **Track costs** across different models and components
-- **Analyze user sessions** to understand and improve the end-user experience
+When you instrument your application, Laminar automatically captures:
+
+- **Execution flow**: See exactly how requests move through your AI agent, which functions call which, and where time is spent
+- **LLM details**: Every prompt, completion, model used, token count, and cost
+- **Performance**: Latency at each step, bottlenecks, slow operations
+- **Errors**: Where things failed and why
+
+This data powers everything else: you can't evaluate what you can't see, and you can't improve what you can't measure.
 
 ## Key Concepts
 
-Example of a trace view on the Laminar platform:
+**Trace**: A complete execution path through your application—one user request, one agent run, one workflow execution.
 
-<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
-<img src="/images/traces/trace-view.png" alt="Screenshot of a trace visualization" style={{ margin: '0px' }}/>
-</div>
+**Span**: A single operation within a trace. An LLM call is a span. A function you wrap with `observe` is a span. Spans nest to show parent-child relationships.
 
-### Span
+**Session**: A way to group related traces together, like all the turns in a multi-message conversation.
 
-A single operation in your application's execution flow, such as LLM call, function call, or API request. In the screenshot above, the spans are the nodes in the tree view.
-Selected span `gemini.generate_content` is highlighted in red and represents the LLM call to Gemini model.
+## Get Started
 
-Each span has:
+### 1. Initialize Laminar
 
-- **Name**: The name of the span (e.g., `gemini.generate_content`)
-- **Input**: The input of the function representing a span. In case of an LLM call, this is the prompt.
-- **Output**: The output of the function representing a span. In case of an LLM call, this is the response from the model.
-- **Duration**: How long the operation took to execute.
-- **Path**: Hierarchical path of the span in the trace (e.g., `get_user.validate.api_call`).
-- **Attributes**: Input parameters, return values, and other metadata.
-- **Parent span ID**: A reference to the parent span. If the span is the root span of the trace, the parent span ID is not specified.
+Grab your API key from your [project settings](https://laminar.ai) and add two lines to your application entry point:
 
-#### Span lifecycle
+```javascript
+import { Laminar } from '@lmnr-ai/lmnr';
+import OpenAI from 'openai';
 
-Spans are created, can optionally be activated, and need to be ended.
+Laminar.initialize({
+    projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+    instrumentModules: { openAI: OpenAI }
+});
+```
 
-**Span creation** also known as **starting a span** is a process of creating a new span object with a start timestamp.
-**Span activation** means setting the span as the current active span. This means that spans created afterwards will become the children of the current span.
-**Span ending** is a process of setting the end timestamp on the span and closing the span.
+```python
+from lmnr import Laminar
 
-<Note>
-**Analogy:** 
-- **Active Span:** You create a folder and immediately open it. Any file you save now goes inside that folder automatically.
-- **Manual Span:** It's like creating a folder on your desktop but not opening it. If you save a file, it still goes to the desktop, not inside your new folder.
-</Note>
+Laminar.initialize()  # reads LMNR_PROJECT_API_KEY from environment
+```
 
-<Tip>
-A span that is not ended will never be visible in the UI.
-</Tip>
+### 2. Use Your LLM as Normal
 
-Note that it is not required to activate a span. For example, if you know a small operation will not have children spans, you can create it without activating it.
-Ending such a span is still required. These spans do not have children spans, so they are sometimes called **leaf spans**. A common example of a leaf span is a simple LLM call.
+```javascript
+const client = new OpenAI();
+const response = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: "What is the capital of France?" }],
+});
+```
 
-### Trace
+```python
+from openai import OpenAI
 
-Trace is a collection of spans that form a complete execution path. In the screenshot above, spans of the trace are highlighted in blue.
-Traces spans within a trace show parent-child relationships between operations, helping you understand how your code executes.
+client = OpenAI()
+response = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[{"role": "user", "content": "What is the capital of France?"}],
+)
+```
 
-### Session
+That's it. This call appears in your dashboard with full details—latency, tokens, cost, the complete prompt and response.
 
-Laminar helps you group related traces belonging to the same user interaction or conversation under a session.
-It can be used to group traces of a multi-turn conversation, or complex workflows.
+### What Gets Captured
 
-## What Laminar Captures
+Automatic instrumentation records:
 
-For every execution of your application, Laminar automatically records:
+- **LLM calls**: Request parameters, response content, token usage, latency, cost
+- **Framework operations**: Chain executions, agent reasoning steps, tool calls
+- **Vector DB queries**: Similarity searches, retrieval results
+- **Errors**: Exceptions, retry attempts, rate limiting
 
-### Performance Metrics
-- Total execution time
-- Per-span execution times
-- Bottlenecks and slow operations
+### 3. Add Structure with `observe`
 
-### LLM-Specific Data
-- Token counts (input and output)
-- Model information
-- Cost calculations
+For deeper visibility, wrap your own functions:
 
-### Inputs & Outputs
-- Function parameters
-- Return values
-- Prompts and completions
+```javascript
+import { observe } from '@lmnr-ai/lmnr';
 
-### Execution Flow
-- Parent-child relationships
-- Complete call hierarchy
-- Cross-service transactions
+const answerQuestion = (question) => observe(
+  { name: 'answer_question' },
+  async () => {
+    const response = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: question }],
+    });
+    return response.choices[0].message.content;
+  }
+);
+
+await answerQuestion("What is the capital of France?");
+```
+
+```python
+from lmnr import observe
+
+@observe()
+def answer_question(question: str) -> str:
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": question}],
+    )
+    return response.choices[0].message.content
+
+answer_question("What is the capital of France?")
+```
+
+Now you see `answer_question` as the parent operation with the OpenAI call nested inside it. Function inputs and outputs are captured automatically.
+
+## Enrich Your Traces
+
+Add context to make traces filterable and meaningful:
+
+**Sessions** — Group related traces together (e.g., all turns in a conversation):
+```javascript
+Laminar.setTraceSessionId('conversation-123');
+```
+
+**User ID** — Associate traces with specific users:
+```javascript
+Laminar.setTraceUserId('user-456');
+```
+
+**Metadata** — Add key-value context for filtering:
+```javascript
+Laminar.setTraceMetadata({ environment: 'production', feature: 'chat' });
+```
+
+**Tags** — Categorize individual spans:
+```javascript
+Laminar.setSpanTags(['high-priority', 'beta-user']);
+```
+
+All of these must be called within a span context (inside an `observe` wrapper or manual span).
+
+## Supported Integrations
+
+Laminar auto-instruments OpenAI, Anthropic, Gemini, LangChain, Vercel AI SDK, Playwright, Pinecone, and 20+ other libraries. See [Integrations](/tracing/integrations) for the full list and setup details.
+
+## Real-Time Visibility
+
+Traces stream to your dashboard as they execute—you don't wait for operations to complete. This is particularly useful when debugging long-running agents or chained LLM calls.
+
+By default, traces are batched for performance. For immediate visibility during development, disable batching with `disableBatch: true` in your initialization config.
+
+You can also toggle this in your project settings on the dashboard.
+
+## Key Concepts
+
+**Trace**: A complete execution path through your application—one user request, one agent run, one workflow execution.
+
+**Span**: A single operation within a trace. An LLM call is a span. A function you wrap with `observe` is a span. Spans nest to show parent-child relationships.
+
+**Session**: A way to group related traces together, like all the turns in a multi-message conversation.
 
 ## Next Steps
 
-Now that you understand the basics of Laminar tracing:
-
-- Get started quickly with our [Quickstart Guide](/tracing/quickstart)
-- Explore our integrations to see how Laminar works with your favorite tools:
-    - [OpenAI](/tracing/integrations/openai)
-    - [Anthropic](/tracing/integrations/anthropic)
-    - [Gemini](/tracing/integrations/gemini)
-    - [Langchain](/tracing/integrations/langchain)
-    - [Next.js](/tracing/integrations/nextjs)
-    - [Vercel AI SDK](/tracing/integrations/vercel-ai-sdk)
-    - [LiteLLM](/tracing/integrations/litellm)
-    - [Playwright](/tracing/integrations/playwright)
-    - [Puppeteer](/tracing/integrations/puppeteer)
-    - [Browser Use](/tracing/integrations/browser-use)
-    - [Stagehand](/tracing/integrations/stagehand)
-- Continue to [Trace Structure](/tracing/structure) to learn more about how to add structure to your traces
-- Explore [Browser agent observability](/tracing/browser-agent-observability) to learn how to record browser sessions and sync them with agent execution steps
+- [SDK Reference](/sdk/reference): Full API details for all tracing methods
+- [Evaluations](/evaluations/introduction): Score and test your traces automatically

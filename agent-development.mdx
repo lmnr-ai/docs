@@ -1,0 +1,119 @@
+---
+title: Agent Development
+description: Follow the full iteration cycle to build reliable AI agents with Laminar.
+---
+
+# The Iteration Cycle
+
+Building reliable AI agents is iterative. You ship something, watch it run, find where it breaks, fix it, and ship again. Laminar gives you the tools to do this systematically instead of guessing.
+
+This page walks through the full cycle using a real scenario: building a browser agent that researches products and extracts pricing.
+
+---
+
+## Stage 1: Build & Experiment
+
+You're starting from scratch. Your agent needs to navigate to e-commerce sites, find products, and extract structured pricing data.
+
+**What you're focused on:** Getting something working. Does the agent find the right elements? Does it extract the data you need? Is the prompt right?
+
+**What you need:** Visibility into every decision the agent makes. When it clicks the wrong button, you need to see what it was "thinking"—the prompt it received, how the model interpreted the page, what it decided to do.
+
+**Tools you'll use:**
+- **Real-time traces** — Watch your agent execute step-by-step as it runs locally. See each LLM call, each browser action, each extraction attempt.
+- **Session recordings** — Browser agents are visual. See exactly what the agent saw on screen, synced to your execution timeline.
+- **Playground** — When a prompt isn't working, pull it into the playground, tweak it, test variations. No need to re-run the full workflow each time.
+
+By the end of this stage, your agent handles the happy path. It works on the sites you've tested.
+
+---
+
+## Stage 2: Ship to Production
+
+Your agent works locally. Time to deploy and let real users hit it.
+
+**What you're focused on:** Making traces useful at scale. When you have hundreds of executions, you need to find the ones that matter.
+
+**What you need:** Context on every trace. Who triggered it? What were they trying to do? Which product? Which site?
+
+**Tools you'll use:**
+- **Auto-instrumentation** — Your tracing setup works in production without changes. Every LLM call, browser action, and error is captured automatically.
+- **Sessions and user IDs** — Group related traces together. All the requests from one user, or all the steps in one multi-turn workflow.
+- **Metadata** — Tag traces with business context: product URL, customer tier, request source. Filter by these later.
+
+By the end of this stage, your agent is running in production with full observability. Every execution is traceable.
+
+---
+
+## Stage 3: Observe in Production
+
+Your agent is live. Requests are flowing. Some succeed, some fail, some take forever.
+
+**What you're focused on:** Understanding what's actually happening. Not what you think should happen—what is happening.
+
+**What you need:** A way to see patterns across hundreds of traces. Which are slow? Which are failing? Where is money going?
+
+**Tools you'll use:**
+- **Traces dashboard** — Filter by time, user, session, status, metadata. Sort by latency or cost. Click into any trace to see the full execution tree.
+- **Cost tracking** — See what each LLM call costs, aggregated by model, by workflow, by user. Find the expensive operations.
+- **Error aggregation** — Spot which errors are one-offs and which are systematic. See full stack traces without digging through logs.
+
+By the end of this stage, you've spotted problems: certain sites are slow, certain extractions fail, costs are higher than expected on specific workflows.
+
+---
+
+## Stage 4: Analyze & Debug
+
+You've spotted problems. Now figure out why.
+
+**What you're focused on:** Root cause. Why is the agent slow on these sites? Why does extraction fail on that page layout? Why is this workflow burning tokens?
+
+**What you need:** The ability to slice your data different ways, ask specific questions, and drill into individual cases.
+
+**Tools you'll use:**
+- **SQL editor** — Query your trace data directly. Find your slowest spans, group failures by URL pattern, calculate cost per customer. Ask questions the dashboard doesn't anticipate.
+- **Span inspection** — Drill into individual traces. See the exact prompt, the exact page state, the exact model response. Understand what went wrong in this specific case.
+- **Online evaluators** — Set up automatic checks that run on every trace. Flag extractions where price is empty, or latency exceeds a threshold. Patterns become visible.
+
+By the end of this stage, you understand the failure modes: lazy-loaded content confuses the agent, massive HTML pages burn tokens, certain site layouts break extraction.
+
+---
+
+## Stage 5: Improve with Evaluations
+
+You know what's broken. Now fix it systematically.
+
+**What you're focused on:** Making changes that actually work. Not fixing one case while breaking three others.
+
+**What you need:** A way to capture hard cases, test changes against them, and measure whether you're improving.
+
+**Tools you'll use:**
+- **Datasets** — Export failed traces as test cases. Build a collection of the inputs your agent struggles with.
+- **Labeling queues** — Have humans review edge cases and mark correct outputs. Build ground truth for ambiguous situations.
+- **Evaluations** — Run your improved agent against your dataset. Get pass/fail rates. Compare across runs. See if your changes actually helped.
+- **CI/CD integration** — Run evaluations on every deploy. Catch regressions before they hit production.
+
+By the end of this stage, you've improved your prompts, added handling for edge cases, and verified the improvements with data—not just spot-checking.
+
+---
+
+## Stage 6: Repeat
+
+Ship the improved agent. New traces flow in. New patterns emerge. New edge cases surface.
+
+You've built the feedback loop:
+
+**Instrument → Ship → Observe → Analyze → Evaluate → Improve → Ship**
+
+Each cycle, your agent gets more reliable. You're not guessing anymore—you have data, and you have the tools to act on it.
+
+---
+
+## Where to Go Next
+
+Start with the [Quickstart](/quickstart) to get your first traces flowing, then explore:
+
+- **[Tracing](/tracing)** — Instrument your code, understand what's captured
+- **[Evaluations](/evaluations)** — Set up structured testing against datasets
+- **[SQL Editor](/sql-editor)** — Query your trace data directly
+- **[Integrations](/integrations)** — Connect browser agents, LLM frameworks, and other tools

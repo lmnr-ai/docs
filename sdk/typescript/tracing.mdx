@@ -1,0 +1,128 @@
+---
+title: TypeScript Tracing
+description: Create spans, add metadata, and work with Laminar context in TypeScript.
+---
+
+# TypeScript Tracing
+
+Span creation helpers, span/trace utilities, and context tools.
+
+## Span Creation
+
+### observe(options, fn, ...args)
+Async wrapper that creates a span and returns the result of `fn(...args)`.
+
+**Parameters**
+| Name | Type | Description |
+| --- | --- | --- |
+| `name` | `string` | Span name (required). |
+| `sessionId` / `userId` | `string` | Trace/session association. |
+| `metadata` | `Record<string, unknown>` | Trace metadata. |
+| `tags` | `string[]` | Tags applied to the span. |
+| `traceType` | `TraceType` | `DEFAULT` (default) or `EVALUATION`. |
+| `spanType` | `SpanType` | `DEFAULT` or `LLM`. |
+| `input` | `unknown` | Recorded input value. |
+| `ignoreInput` / `ignoreOutput` | `boolean` | Skip recording input/output. |
+| `parentSpanContext` | `LaminarSpanContext` | Use a specific parent span. |
+| `context` | `Context` | OpenTelemetry context to run under. |
+
+**Returns:** Result of `fn(...args)`
+
+**Example**
+```ts
+await Laminar.observe({ name: "fetch-user" }, () => fetchUser(userId));
+```
+
+### startSpan(options)
+Create a span without activating it; caller must call `span.end()`.
+
+**Parameters:** Same as `observe`.
+
+**Returns:** `Span`
+
+### startActiveSpan(options)
+Create and activate a span; caller must call `span.end()`.
+
+**Parameters:** Same as `observe`.
+
+**Returns:** `Span`
+
+### withSpan(span, fn, endOnExit?)
+Run `fn` under the provided span context; optionally end the span when `fn` completes.
+
+**Parameters**
+| Name | Type | Description |
+| --- | --- | --- |
+| `span` | `Span` | Span to activate. |
+| `fn` | `(...args: unknown[]) => unknown` | Work to execute with the span. |
+| `endOnExit` | `boolean` | End the span after `fn` returns (default `false`). |
+
+**Returns:** Result of `fn`
+
+### event(event)
+Add an event to the current span or to a temporary span if none is active.
+
+**Parameters**
+| Name | Type | Description |
+| --- | --- | --- |
+| `event` | `Event` | Event name and attributes to record. |
+
+**Returns:** `void`
+
+## Span Methods
+
+### setSpanAttributes(attributes)
+Set multiple attributes on the current span.
+
+**Parameters**
+| Name | Type | Description |
+| --- | --- | --- |
+| `attributes` | `Record<string, unknown>` | Key/value pairs to attach. |
+
+### setSpanOutput(output)
+Set output on the current span (truncates oversized values).
+
+**Parameters**
+| Name | Type | Description |
+| --- | --- | --- |
+| `output` | `unknown` | Value to record as span output. |
+
+### addSpanTags(tags)
+Append tags to the current span; use `setSpanTags` to overwrite existing tags.
+
+**Parameters**
+| Name | Type | Description |
+| --- | --- | --- |
+| `tags` | `string[]` | Tags to add to the span. |
+
+## Trace Methods
+
+### setTraceSessionId(sessionId)
+Associate the active trace with a session ID.
+
+### setTraceUserId(userId)
+Associate the active trace with a user ID.
+
+### setTraceMetadata(metadata)
+Attach metadata to the active trace.
+
+## Context Utilities
+
+### getTraceId()
+Return the current trace ID (`StringUUID`) or `null` when none exists.
+
+### serializeLaminarSpanContext(span?)
+Serialize a Laminar span context to a string for propagation.
+
+**Parameters**
+| Name | Type | Description |
+| --- | --- | --- |
+| `span` | `Span` \| `LaminarSpanContext` \| `undefined` | Span to serialize (defaults to current). |
+
+### getLaminarSpanContext(span?)
+Return the Laminar span context from the provided span or the current span.
+
+**Parameters**
+| Name | Type | Description |
+| --- | --- | --- |
+| `span` | `Span` \| `undefined` | Span to inspect (defaults to current). |

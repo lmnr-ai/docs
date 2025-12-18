@@ -77,7 +77,7 @@ evaluate<D, T, O>(
 )
 ```
 
-See full reference [here](/evaluations/reference#typescript-evaluation-types).
+See full reference in the [SDK docs](/sdk/reference).
 
 ## Create your first evaluation
 
@@ -216,6 +216,11 @@ Then run all evaluations with a single command:
 ```sh
 npx lmnr eval
 ```
+
+CLI options:
+- First positional argument: path to the evaluation file (optional).
+- Without a path, `lmnr eval` runs all files matching `*.eval.{ts,js}` in `evals/`.
+- `--fail-on-error`: fail on non-critical errors (e.g., missing `evaluate` call). Default `false`.
 </Tab>
 <Tab title = "Python">
 ```sh
@@ -240,6 +245,11 @@ Then run all evaluations with a single command:
 ```sh
 lmnr eval
 ```
+
+CLI options:
+- First positional argument: path to the evaluation file (optional).
+- Without a path, `lmnr eval` runs all files matching `eval_*.py` or `*_eval.py` in `evals/`.
+- `--fail-on-error`: fail on non-critical errors (e.g., missing `evaluate` call). Default `false`.
 </Tab>
 </Tabs>
 

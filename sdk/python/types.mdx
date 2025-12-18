@@ -1,0 +1,18 @@
+---
+title: Python Types & Constants
+description: Reference for Laminar Python types, enums, instruments, and constants.
+---
+
+# Python Types & Constants
+
+## Types & Models
+`Datapoint`, `Dataset`, `PushDatapointsResponse`, `PartialEvaluationDatapoint`, `EvaluationResultDatapoint`, `EvaluationDatapointDatasetLink`, `InitEvaluationResponse`, `HumanEvaluator` (+ options), enums (`SpanType`, `TraceType`, `ModelProvider`), `LaminarSpanContext { trace_id, span_id, is_remote=False, span_path=[], span_ids_path=[] }`, `MaskInputOptions`, `SessionRecordingOptions`, numeric alias `Numeric = int | float`.
+
+## Attributes & Constants
+`Attributes` enum for LLM span keys (input/output/totals, provider, request/response model, costs, response id, etc.), plus constants `SPAN_INPUT`, `SPAN_OUTPUT`, `SPAN_TYPE`, `SPAN_PATH`, `ASSOCIATION_PROPERTIES`, `SESSION_ID`, `USER_ID`, `TRACE_TYPE`.
+
+## Instruments enum
+Names for auto-instrumentations (OpenAI, Anthropic, LangChain, LangGraph, Playwright, browser_use, Bedrock, VertexAI, HuggingFace, Pinecone, Weaviate, Milvus, Qdrant, Chroma, etc.).
+
+## Version helpers
+`__version__`, `PYTHON_VERSION`, `is_latest_version()`, `get_latest_pypi_version()`.

@@ -1,0 +1,20 @@
+---
+title: Python Client
+description: Use the Laminar Python client (sync and async) for datasets, evaluations, tagging, and browser events.
+---
+
+# Python Client
+
+Use the Laminar client to work with resources (sync and async).
+
+## LaminarClient / AsyncLaminarClient
+
+### Constructor
+`base_url=None` (default `https://api.lmnr.ai`), `project_api_key=None`, optional `port`, `timeout=3600`. Supports `with LaminarClient(): ...`, `async with AsyncLaminarClient(): ...`, `.close()`, and `.aclose()`.
+
+### Resources
+- **Evals / AsyncEvals:** `init`, `create_evaluation`, `create_datapoint`, `save_datapoints`, `update_datapoint`, `get_datapoints` (deprecated).
+- **Datasets / AsyncDatasets:** `list_datasets`, `get_dataset_by_name`, `push` (name or id required), `pull` (name or id required).
+- **Evaluators / AsyncEvaluators:** `score(name, trace_id or span_id, metadata=None, score: float)`.
+- **Tags / AsyncTags:** `tag(trace_id, tags)`.
+- **BrowserEvents / AsyncBrowserEvents:** `send(session_id, trace_id, events)`.

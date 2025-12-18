@@ -1,0 +1,105 @@
+---
+title: Python Tracing
+description: Create spans, add metadata, and work with Laminar context in Python.
+---
+
+# Python Tracing
+
+Span decorators, context managers, and span/trace utilities.
+
+## Span Creation
+
+### @observe(...)
+Decorator to auto-start a span around sync or async functions; records args/return unless ignored.
+
+**Parameters**
+| Name | Description |
+| --- | --- |
+| `name` | Span name (defaults to function name). |
+| `session_id` / `user_id` | Session/user association. |
+| `metadata` | JSON-serializable trace metadata. |
+| `tags` | List of tags. |
+| `ignore_input` / `ignore_output` | Skip recording input/output. |
+| `ignore_inputs` | Specific parameters to skip. |
+| `input_formatter` / `output_formatter` | Custom formatters for recorded payloads. |
+| `span_type` | `DEFAULT`, `LLM`, or `TOOL`. |
+| `preserve_global_context` | Keep global context across calls. |
+
+### start_as_current_span(...)
+Context manager: start a span in an isolated context; handles parent propagation (LaminarSpanContext/OTEL/serialized dict/str) and truncates large payloads.
+
+**Parameters**
+| Name | Description |
+| --- | --- |
+| `name` | Span name (required). |
+| `input` | Span input (JSON-serialized). |
+| `span_type` | `DEFAULT`, `LLM`, or `TOOL`. |
+| `tags` | Tags for the span. |
+| `parent_span_context` | Parent Laminar span context. |
+| `context` | OpenTelemetry context. |
+
+### start_span(...)
+Create a span without activating it; caller must call `.end()`.
+
+**Parameters:** Same as `start_as_current_span`.
+
+### start_active_span(...)
+Create and activate a span; caller must call `.end()`.
+
+**Parameters:** Same as `start_as_current_span`.
+
+### use_span(span, end_on_exit=False, record_exception=True, set_status_on_exception=True)
+Context-manage an existing span as current; optionally end it on exit and record exceptions.
+
+**Parameters**
+| Name | Description |
+| --- | --- |
+| `span` | Span to activate. |
+| `end_on_exit` | End span after the block (default `False`). |
+| `record_exception` | Record exceptions on the span (default `True`). |
+| `set_status_on_exception` | Set span status when exceptions occur (default `True`). |
+
+## Span Methods
+
+### set_span_attributes(attributes)
+Set multiple attributes on the current span (JSON-serializes non-primitives).
+
+**Parameters**
+| Name | Description |
+| --- | --- |
+| `attributes` | Dict of key/value attributes. |
+
+### set_span_output(output=None)
+Set output on the current span (truncates oversized values).
+
+**Parameters**
+| Name | Description |
+| --- | --- |
+| `output` | Value to record as span output. |
+
+### add_span_tags(tags)
+Append tags to the current span; use `set_span_tags` to overwrite existing tags.
+
+**Parameters**
+| Name | Description |
+| --- | --- |
+| `tags` | List of tags to add. |
+
+## Trace Methods
+
+### set_trace_session_id(session_id)
+Associate the active trace with a session ID.
+
+### set_trace_user_id(user_id)
+Associate the active trace with a user ID.
+
+### set_trace_metadata(metadata)
+Attach metadata to the active trace.
+
+## Context Utilities
+
+### get_laminar_span_context(span=None)
+Return `LaminarSpanContext` (or `None`); helpers include `get_laminar_span_context_dict`, `serialize_span_context`, and `deserialize_span_context`.
+
+### get_trace_id()
+Return the current trace UUID or `None`.

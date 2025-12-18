@@ -1,0 +1,32 @@
+---
+title: TypeScript Instrumentation
+description: Auto-instrument supported SDKs, wrap span processors, and access tracers in TypeScript.
+---
+
+# TypeScript Instrumentation
+
+Auto-instrument modules, wrap exporters, and access Laminar tracers.
+
+## instrumentModules(options)
+Initialization option to auto-instrument supported modules.
+
+## patch(options)
+Manually instrument specific modules after initialization.
+
+## initializeLaminarInstrumentations(options)
+Return OpenTelemetry instrumentations for OpenAI, Anthropic, Azure, Cohere, VertexAI, Bedrock, Pinecone, LangChain, LlamaIndex, Together, ChromaDB, Qdrant, Playwright, Stagehand, Puppeteer (with API key), Kernel, and Claude agent SDK. Use with `registerInstrumentations` or `Laminar.patch`.
+
+## getTracer()
+Obtain the Laminar tracer for custom telemetry.
+
+## getTracerProvider()
+Obtain the Laminar tracer provider.
+
+## LaminarSpanProcessor
+Span processor wrapper; options include `baseUrl`, `port`, `apiKey`, OTLP batch sizing, `disableBatch`, `forceHttp`, `traceExportTimeoutMillis`, `exporter`. Methods: `forceFlush()`, `shutdown()`, `clear()`, `setParentPathInfo(...)`.
+
+## instrumentClaudeAgentQuery(options)
+Wrap a `claude-agent-sdk` query to auto-span and publish context to the proxy.
+
+## wrapClaudeAgentQuery(options)
+Alias of `instrumentClaudeAgentQuery`.
