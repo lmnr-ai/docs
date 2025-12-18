@@ -1,0 +1,24 @@
+---
+title: Tracing Levels
+description: Control what data is captured for privacy and compliance.
+---
+
+# Tracing Levels
+
+Sometimes you need trace structure without content—for sensitive operations, compliance requirements, or customer-specific privacy settings.
+
+## Levels
+
+| Level | What's Captured |
+|-------|-----------------|
+| **ALL** | Everything—inputs, outputs, attributes (default) |
+| **META_ONLY** | Structure and timing, but no inputs or outputs |
+| **OFF** | Nothing within the scope |
+
+### When to Use META_ONLY
+
+- **PII handling** — Trace that a function ran without capturing personal data
+- **Compliance** — Meet data residency or retention requirements
+- **Customer preference** — Some customers may require limited data collection
+
+You can set tracing level globally, per-trace, or for a specific block of code. This lets you handle mixed requirements—full tracing for most operations, META_ONLY for sensitive ones.

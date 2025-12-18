@@ -1,0 +1,29 @@
+---
+title: Flushing Spans and Shutting Down
+description: Flush spans before exit and handle serverless lifecycle concerns.
+---
+
+# Flushing Spans and Shutting Down
+
+Serverless functions and CLI scripts terminate quickly. Laminar batches spans for performance, which means spans might not be sent before the process exits.
+
+## The Problem
+
+In long-running servers, background batching works fine—spans accumulate and flush periodically. In Lambda or a CLI script, the process may exit before the batch is sent.
+
+## The Solution
+
+**Flush before exit.** Call the flush method at the end of your handler or script. This sends all pending spans synchronously.
+
+In Python, use `force_flush()` for serverless specifically—it ensures spans are sent even when daemon threads would be terminated.
+
+## When to Flush
+
+| Scenario | Action |
+|----------|--------|
+| Web server (long-running) | Nothing needed—batching works |
+| CLI script | Flush at the end |
+| Lambda / serverless | Flush at the end of each invocation |
+| Graceful shutdown | Shutdown the SDK |
+
+Don't flush in hot paths (e.g., inside a web request handler). It adds latency. Flush only when the process is about to exit.

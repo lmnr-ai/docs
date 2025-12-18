@@ -1,12 +1,50 @@
 ---
-title: TypeScript Types & Constants
-description: Reference for Laminar TypeScript types, enums, and attribute constants.
+title: Types
+description: Reference for Laminar TypeScript span context and data models.
 ---
 
-# TypeScript Types & Constants
+# Types
 
-## LaminarAttributes
-LLM span attribute keys: `PROVIDER`, `REQUEST_MODEL`, `RESPONSE_MODEL`, `INPUT_TOKEN_COUNT`, `OUTPUT_TOKEN_COUNT`, `TOTAL_TOKEN_COUNT`, `INPUT_COST`, `OUTPUT_COST`, `TOTAL_COST`, plus helpers like `SPAN_INPUT`, `SPAN_OUTPUT`, `SPAN_TYPE`, `SESSION_ID`, `USER_ID`, `TRACE_TYPE`.
+## LaminarSpanContext
 
-## Types
-`ChatMessage`, `NodeInput`, `Event`, `InitEvaluationResponse`, `Dataset`, `PushDatapointsResponse`, `EvaluationDatapointDatasetLink`, `EvaluationDatapoint`, `GetDatapointsResponse`, `SemanticSearchResult`, `SemanticSearchResponse`, enums (`SpanType`, `TraceType`, `TracingLevel`), `LaminarSpanContext`, `MaskInputOptions`, `SessionRecordingOptions`, `Span` (re-export), `DatasetType`.
+```typescript
+interface LaminarSpanContext {
+  traceId: string;      // UUID
+  spanId: string;       // UUID
+  isRemote: boolean;
+  spanPath: string[];
+  spanIdsPath: string[];
+}
+```
+
+---
+
+## Datapoint
+
+```typescript
+interface Datapoint {
+  data: Record<string, any>;
+  target?: Record<string, any>;
+  metadata?: Record<string, any>;
+}
+```
+
+---
+
+## SessionRecordingOptions
+
+```typescript
+interface SessionRecordingOptions {
+  maskInputOptions?: MaskInputOptions;
+}
+```
+
+---
+
+## Other Exports
+
+- `ChatMessage` — Chat message type
+- `NodeInput` — Node input type
+- `Event` — Event type
+- `Dataset` — Alias for `EvaluationDataset`
+- `Span` — Re-export of OTel Span

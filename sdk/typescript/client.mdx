@@ -1,82 +1,129 @@
 ---
-title: TypeScript Client
-description: Use the Laminar TypeScript client for datasets, evaluations, agents, and tagging.
+title: Client
+description: HTTP client for Laminar API operations in TypeScript.
 ---
 
-# TypeScript Client
-
-Work with Laminar resources through the typed client.
+# Client
 
 ## LaminarClient
 
-### Constructor
-`new LaminarClient({ baseUrl?, projectApiKey?, port?, timeout? })` (env fallback for API key/base URL).
+HTTP client for Laminar API operations.
 
-**Parameters**
-| Name | Type | Description |
-| --- | --- | --- |
-| `baseUrl` | `string` | Laminar API base URL. |
-| `projectApiKey` | `string` | API key (env fallback). |
-| `port` | `number` | Override API port. |
-| `timeout` | `number` | Request timeout in seconds (default `3600`). |
+```typescript
+import { LaminarClient } from '@lmnr-ai/lmnr';
 
-### Agent
-
-`client.agent.run(options)` — run an agent with browser support.
-
-**Key options**
-| Name | Type | Description |
-| --- | --- | --- |
-| `prompt` | `string` | Required agent prompt. |
-| `modelProvider` | `'anthropic' \| 'bedrock' \| 'openai' \| 'gemini'` | Provider to use. |
-| `model` | `string` | Model name. |
-| `agentState` / `storageState` | `Record<string, unknown>` | Persisted state passed between steps. |
-| `stream` | `boolean` | Stream intermediate steps. |
-| `enableThinking` | `boolean` | Enable provider-specific thinking/chain-of-thought. |
-| `timeout` | `number` | Timeout in seconds. |
-| `cdpUrl` / `startUrl` / `userAgent` | `string` | Browser connection and start context. |
-| `parentSpanContext` | `LaminarSpanContext` | Associate with an existing span/trace. |
-| `returnScreenshots` / `returnAgentState` / `returnStorageState` | `boolean` | Control returned artifacts. |
-
-Returns the agent result (optionally streamed) with trace context.
-
-### Browser Events
-
-`client.browserEvents.send({ sessionId, traceId, events })` — send browser interaction events tied to a trace/session.
-
-### Datasets
-
-`client.datasets.listDatasets()`, `getDatasetByName(name)`, `push(...)`, `pull(...)`
-
-- `push(paths, recursive?)`: upload JSON/CSV/JSONL files into a dataset.
-- `pull(nameOrId, destination)`: download dataset contents to disk.
-
-### Evaluations
-
-`client.evals.init(...)`, `create(...)`, `createDatapoint(...)`, `updateDatapoint(...)`, `saveDatapoints(...)` — manage evaluation runs and datapoints.
-
-### Evaluators
-
-`client.evaluators.score(traceIdOrSpanId, score, metadata?)` — attach evaluator scores to a trace/span.
-
-### Tags
-
-`client.tags.tag(traceId, tags)` — tag a trace with one or more labels.
-
-## Example
-
-```ts
-import { LaminarClient } from "lmnr";
-
-const client = new LaminarClient({ projectApiKey: process.env.LMNR_PROJECT_API_KEY });
-
-await client.agent.run({
-  prompt: "Find the price of the MacBook Air on the Apple Store",
-  modelProvider: "anthropic",
-  model: "claude-3-5-sonnet",
-  parentSpanContext: mySpanContext,
+const client = new LaminarClient({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
 });
 
-const ds = await client.datasets.getDatasetByName("pricing-cases");
-await client.evaluators.score(traceId, 0.9, { comment: "good extraction" });
+// Tag a completed trace
+await client.tags.tag(traceId, ['user-feedback-positive']);
 ```
+
+**Constructor parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `projectApiKey` | `string` | `LMNR_PROJECT_API_KEY` env | API key |
+| `baseUrl` | `string` | `https://api.lmnr.ai` | API base URL |
+| `port` | `number` | `443` | API port |
+
+**Resources:**
+
+### client.tags.tag(traceId, tags)
+
+Add tags to a completed trace.
+
+```typescript
+await client.tags.tag('trace-uuid', ['positive-feedback', 'resolved']);
+```
+
+**Note:** Call after `Laminar.flush()` to ensure trace exists.
+
+---
+
+### client.datasets
+
+Dataset operations.
+
+```typescript
+// List datasets
+const datasets = await client.datasets.listDatasets();
+
+// Get by name
+const dataset = await client.datasets.getDatasetByName('my-dataset');
+
+// Push datapoints
+await client.datasets.push({
+  name: 'my-dataset',
+  points: [{ data: { query: 'test' }, target: { answer: '42' } }],
+  createDataset: true,
+});
+
+// Pull datapoints
+const points = await client.datasets.pull({
+  name: 'my-dataset',
+  limit: 100,
+});
+```
+
+---
+
+### client.evals
+
+Evaluation operations.
+
+```typescript
+// Initialize evaluation
+const eval = await client.evals.init('my-eval', 'default-group');
+
+// Create datapoint
+await client.evals.createDatapoint({
+  evalId: eval.id,
+  data: { query: 'test' },
+  target: { answer: '42' },
+});
+```
+
+---
+
+### client.evaluators.score(options)
+
+Attach evaluator score to a trace or span.
+
+```typescript
+await client.evaluators.score({
+  name: 'quality',
+  score: 0.95,
+  traceId: 'trace-uuid',
+});
+```
+
+---
+
+### client.agent.run(options)
+
+Run a browser agent.
+
+```typescript
+const result = await client.agent.run({
+  prompt: 'Find the pricing on example.com',
+  maxSteps: 50,
+  returnScreenshots: true,
+});
+```
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `prompt` | `string` | — | Agent instruction (required) |
+| `parentSpanContext` | `string` | Current span | Parent trace context |
+| `model` | `string` | — | Model to use |
+| `stream` | `boolean` | `false` | Stream responses |
+| `maxSteps` | `number` | `100` | Maximum steps |
+| `startUrl` | `string` | — | Starting URL |
+| `timeout` | `number` | — | Timeout in ms |
+| `returnScreenshots` | `boolean` | `false` | Include screenshots |
+| `returnAgentState` | `boolean` | `false` | Return agent state |
+| `enableThinking` | `boolean` | `true` | Enable thinking |

@@ -1,0 +1,71 @@
+---
+title: Trace Methods
+description: Manage trace-level metadata and IDs within Laminar spans.
+---
+
+# Trace Methods
+
+## Laminar.set_trace_session_id(session_id)
+
+Group this trace with others in a session.
+
+```python
+@observe()
+def handle_message():
+    Laminar.set_trace_session_id("conversation-abc-123")
+```
+
+**Note:** Warns if called outside span context.
+
+---
+
+## Laminar.set_trace_user_id(user_id)
+
+Associate trace with a user.
+
+```python
+@observe()
+def handle_request():
+    Laminar.set_trace_user_id("user-456")
+```
+
+**Note:** Warns if called outside span context.
+
+---
+
+## Laminar.set_trace_metadata(metadata)
+
+Add key-value metadata to the trace.
+
+```python
+@observe()
+def handle_request():
+    Laminar.set_trace_metadata({
+        "environment": "production",
+        "region": "us-west",
+        "feature_flag": "new-model-v2",
+    })
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `metadata` | `dict[str, Any]` | Key-value pairs. Non-primitive values JSON-serialized. |
+
+**Note:** Calling again overwrites previous metadata. Set all keys in one call. Warns if called outside span context.
+
+---
+
+## Laminar.get_trace_id()
+
+Get the current trace ID.
+
+```python
+@observe()
+def operation():
+    trace_id = Laminar.get_trace_id()
+    return {"trace_id": trace_id, "result": result}
+```
+
+**Returns:** `uuid.UUID | None` — Returns `None` if called outside span context or invalid trace.

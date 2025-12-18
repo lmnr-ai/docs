@@ -1,0 +1,13 @@
+---
+title: User ID
+description: Associate traces with users for filtering and debugging.
+---
+
+# User ID
+
+Link traces to your users to make debugging and analytics easier.
+
+- Set a user ID at the trace level so every span in the trace carries it.
+- Use it to filter traces by user in the Laminar UI and analyze patterns across user segments.
+
+Assign the user ID at the entry point of your application (API handler, consumer, job) so all child spans inherit it.

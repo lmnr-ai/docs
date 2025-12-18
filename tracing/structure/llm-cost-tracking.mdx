@@ -1,0 +1,29 @@
+---
+title: LLM Cost Tracking
+description: Create custom LLM spans and set required attributes for cost calculations.
+---
+
+# LLM Cost Tracking
+
+Auto-instrumentation covers OpenAI, Anthropic, and other major providers. For unsupported providers or custom implementations, create LLM spans manually.
+
+## When You Need This
+
+- Self-hosted or fine-tuned models
+- Providers Laminar doesn't instrument yet
+- Direct HTTP calls to LLM APIs
+- Custom inference servers
+
+## Required Attributes
+
+For Laminar to calculate costs and display LLM-specific UI, set these attributes:
+
+| Attribute | Description |
+|-----------|-------------|
+| Provider | Provider name (e.g., `openai`, `anthropic`, `custom`) |
+| Request model | Model name you requested |
+| Response model | Model name returned by the API |
+| Input token count | Number of input tokens |
+| Output token count | Number of output tokens |
+
+Set `spanType: 'LLM'` when creating the span. Without this, the span appears as a generic operation.

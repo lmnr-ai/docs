@@ -1,0 +1,48 @@
+---
+title: SDK Initialization
+description: Initialize Laminar tracing in TypeScript and configure options.
+---
+
+# Initialization
+
+## Laminar.initialize(options?)
+
+Initialize Laminar tracing. Call once at application startup.
+
+```typescript
+import { Laminar } from '@lmnr-ai/lmnr';
+import OpenAI from 'openai';
+
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+  instrumentModules: { openAI: OpenAI },
+});
+```
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `projectApiKey` | `string` | `LMNR_PROJECT_API_KEY` env | Project API key |
+| `baseUrl` | `string` | `https://api.lmnr.ai` | API base URL |
+| `baseHttpUrl` | `string` | `baseUrl` | HTTP endpoint override |
+| `httpPort` | `number` | Port from URL or `443` | HTTP port |
+| `grpcPort` | `number` | `8443` | gRPC port |
+| `instrumentModules` | `Record<string, any>` | All supported | Modules to auto-instrument |
+| `disableBatch` | `boolean` | `false` | Send spans immediately |
+| `traceExportTimeoutMillis` | `number` | `30000` | Export timeout in ms |
+| `maxExportBatchSize` | `number` | OTel default | Max spans per batch |
+| `logLevel` | `'debug' \| 'info' \| 'warn' \| 'error'` | `'error'` | OpenTelemetry log level |
+| `forceHttp` | `boolean` | `false` | Use OTLP/HTTP instead of gRPC |
+| `sessionRecordingOptions` | `SessionRecordingOptions` | — | Browser session recording config |
+
+**Environment variables:**
+- `LMNR_PROJECT_API_KEY` — Fallback for `projectApiKey`
+- `LMNR_BASE_URL` — Fallback for `baseUrl`
+- `LMNR_SPAN_CONTEXT` — Restore parent context from upstream
+- `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` — OTEL endpoint override
+
+**Notes:**
+- Loads `.env` via dotenv automatically
+- Warns on double initialization
+- Requires API key or OTEL exporter env vars

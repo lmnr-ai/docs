@@ -1,0 +1,65 @@
+---
+title: Observe
+description: Use observe helpers and decorators to trace functions in the TypeScript SDK.
+---
+
+# Observe
+
+## observe(options, fn, ...args)
+
+Wrap a function to create a span. Automatically captures inputs, outputs, and errors.
+
+```typescript
+import { observe } from '@lmnr-ai/lmnr';
+
+const result = await observe(
+  { name: 'my_operation' },
+  async (param1, param2) => {
+    return param1 + param2;
+  },
+  1, 2
+);
+// Span input: [1, 2], output: 3
+```
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `name` | `string` | `fn.name` | Span name |
+| `sessionId` | `string` | — | Associate trace with session |
+| `userId` | `string` | — | Associate trace with user |
+| `metadata` | `Record<string, any>` | — | Trace metadata (JSON-serializable) |
+| `tags` | `string[]` | — | Span tags (deduplicated) |
+| `traceType` | `'DEFAULT' \| 'EVALUATION'` | `'DEFAULT'` | Trace type |
+| `spanType` | `'DEFAULT' \| 'LLM' \| 'TOOL' \| 'EXECUTOR' \| 'EVALUATOR'` | `'DEFAULT'` | Span type |
+| `input` | `any` | — | Explicit input (overrides function args) |
+| `ignoreInput` | `boolean` | `false` | Don't record input |
+| `ignoreOutput` | `boolean` | `false` | Don't record output |
+| `parentSpanContext` | `string \| LaminarSpanContext` | — | Parent context for distributed tracing |
+
+**Behavior:**
+- If one non-Map object argument, records that object as input; otherwise records array
+- Maps converted to entries, circular references become `"[Circular reference]"`
+- Exceptions recorded via `recordException` and re-thrown
+- Anonymous function name becomes `""` if `name` not provided
+- Works with both sync and async functions
+
+---
+
+## observeDecorator(config)
+
+Class method decorator version of `observe`.
+
+```typescript
+import { observeDecorator } from '@lmnr-ai/lmnr';
+
+class MyService {
+  @observeDecorator({ name: 'process_request' })
+  async processRequest(input: string) {
+    return await this.doWork(input);
+  }
+}
+```
+
+**Parameters:** Same as `observe` options. Config can be an object or a function `(thisArg, ...args) => config` for per-call configuration.

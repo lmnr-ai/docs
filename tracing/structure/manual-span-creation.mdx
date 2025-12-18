@@ -1,0 +1,36 @@
+---
+title: Manual Span Creation
+description: Create, enrich, and end spans explicitly for advanced tracing control.
+---
+
+# Manual Span Creation
+
+A span represents a unit of work. It has a name, a start time, an end time, and optional attributes. Every trace is a tree of spans.
+
+Most of the time, the `@observe` decorator handles span creation automatically. But sometimes you need direct control:
+
+- **Conditional tracing** — Start a span only if certain conditions are met
+- **Dynamic naming** — Determine the span name based on runtime data
+- **Long-running operations** — Hold a span open across multiple function calls
+- **Non-function boundaries** — Trace a block of code that isn't a function
+
+## Span Lifecycle
+
+A manual span follows three steps:
+
+1. **Start** — Create the span with a name. It becomes the "current" span, and any child spans nest under it.
+2. **Enrich** — Add attributes, set input/output, record events or errors.
+3. **End** — Close the span. This records the end time and sends the span to Laminar.
+
+If you don't end a span, it won't appear in your traces. Use context managers (`with` in Python) or `try/finally` blocks to ensure spans always close, even when errors occur.
+
+## Span Types
+
+Spans can have a type that affects how they appear in the Laminar UI:
+
+- **DEFAULT** — General-purpose span
+- **LLM** — Language model call (enables token counts, cost tracking)
+- **TOOL** — Tool or function call within an agent
+- **EXECUTOR** — Orchestration or routing logic
+
+Set the type when creating the span. LLM spans expect specific attributes for cost calculation—see [LLM Cost Tracking](./llm-cost-tracking).

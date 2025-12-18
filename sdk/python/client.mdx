@@ -1,20 +1,48 @@
 ---
-title: Python Client
+title: Client
 description: Use the Laminar Python client (sync and async) for datasets, evaluations, tagging, and browser events.
 ---
 
-# Python Client
+# Client
 
-Use the Laminar client to work with resources (sync and async).
+## LaminarClient
 
-## LaminarClient / AsyncLaminarClient
+Synchronous HTTP client for Laminar API operations.
 
-### Constructor
-`base_url=None` (default `https://api.lmnr.ai`), `project_api_key=None`, optional `port`, `timeout=3600`. Supports `with LaminarClient(): ...`, `async with AsyncLaminarClient(): ...`, `.close()`, and `.aclose()`.
+```python
+from lmnr import LaminarClient
 
-### Resources
-- **Evals / AsyncEvals:** `init`, `create_evaluation`, `create_datapoint`, `save_datapoints`, `update_datapoint`, `get_datapoints` (deprecated).
-- **Datasets / AsyncDatasets:** `list_datasets`, `get_dataset_by_name`, `push` (name or id required), `pull` (name or id required).
-- **Evaluators / AsyncEvaluators:** `score(name, trace_id or span_id, metadata=None, score: float)`.
-- **Tags / AsyncTags:** `tag(trace_id, tags)`.
-- **BrowserEvents / AsyncBrowserEvents:** `send(session_id, trace_id, events)`.
+client = LaminarClient()
+
+# Tag a completed trace
+client.tags.tag(trace_id, ["user-feedback-positive"])
+```
+
+**Constructor parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `project_api_key` | `str` | `LMNR_PROJECT_API_KEY` env | API key |
+| `base_url` | `str` | `https://api.lmnr.ai` | API base URL |
+| `port` | `int` | From URL | API port |
+| `timeout` | `int` | `3600` | Request timeout (seconds) |
+
+**Resources:**
+- `client.tags.tag(trace_id, tags)` — Add tags to completed trace
+- `client.datasets` — Dataset operations (pull, push)
+- `client.evals` — Evaluation operations
+- `client.evaluators` — Evaluator CRUD
+
+---
+
+## AsyncLaminarClient
+
+Async variant of `LaminarClient`.
+
+```python
+from lmnr import AsyncLaminarClient
+
+client = AsyncLaminarClient()
+await client.tags.tag(trace_id, ["feedback"])
+await client.close()
+```

@@ -1,0 +1,15 @@
+---
+title: Metadata
+description: Add trace-level metadata for environment, deployment, and request context.
+---
+
+# Metadata
+
+Trace metadata applies to the entire trace. Use it for information that's constant across spans:
+
+- **Environment** — production, staging, development
+- **Region** — us-west, eu-central
+- **Deployment** — version numbers, feature flags, A/B test variants
+- **Request context** — correlation IDs, upstream service info
+
+Set metadata early—ideally where the trace begins—so all spans share the same context.

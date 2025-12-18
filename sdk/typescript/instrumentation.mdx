@@ -1,32 +1,84 @@
 ---
-title: TypeScript Instrumentation
-description: Auto-instrument supported SDKs, wrap span processors, and access tracers in TypeScript.
+title: Instrumentation
+description: Configure auto-instrumentation and manual patching in the TypeScript SDK.
 ---
 
-# TypeScript Instrumentation
+# Instrumentation
 
-Auto-instrument modules, wrap exporters, and access Laminar tracers.
+## instrumentModules
 
-## instrumentModules(options)
-Initialization option to auto-instrument supported modules.
+Pass modules to auto-instrument in `initialize()`.
 
-## patch(options)
-Manually instrument specific modules after initialization.
+```typescript
+import { Laminar } from '@lmnr-ai/lmnr';
+import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 
-## initializeLaminarInstrumentations(options)
-Return OpenTelemetry instrumentations for OpenAI, Anthropic, Azure, Cohere, VertexAI, Bedrock, Pinecone, LangChain, LlamaIndex, Together, ChromaDB, Qdrant, Playwright, Stagehand, Puppeteer (with API key), Kernel, and Claude agent SDK. Use with `registerInstrumentations` or `Laminar.patch`.
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+  instrumentModules: {
+    openAI: OpenAI,
+    anthropic: Anthropic,
+  },
+});
+```
 
-## getTracer()
-Obtain the Laminar tracer for custom telemetry.
+**Supported module keys:**
 
-## getTracerProvider()
-Obtain the Laminar tracer provider.
+| Key | Package |
+|-----|---------|
+| `openAI` / `OpenAI` | `openai` |
+| `anthropic` | `@anthropic-ai/sdk` |
+| `azureOpenAI` | Azure OpenAI |
+| `cohere` | `cohere-ai` |
+| `bedrock` | AWS Bedrock |
+| `google_vertexai` | Vertex AI |
+| `google_aiplatform` | AI Platform |
+| `pinecone` | `@pinecone-database/pinecone` |
+| `langchain` | `langchain` (with submodules) |
+| `llamaIndex` | `llamaindex` |
+| `chromadb` | `chromadb` |
+| `qdrant` | `@qdrant/js-client-rest` |
+| `together` | `together-ai` |
+| `playwright` | `playwright` |
+| `puppeteer` | `puppeteer` |
+| `stagehand` | `@browserbasehq/stagehand` |
+| `kernel` | Microsoft Kernel |
+| `claudeAgentSDK` | `@anthropic-ai/claude-agent-sdk` |
 
-## LaminarSpanProcessor
-Span processor wrapper; options include `baseUrl`, `port`, `apiKey`, OTLP batch sizing, `disableBatch`, `forceHttp`, `traceExportTimeoutMillis`, `exporter`. Methods: `forceFlush()`, `shutdown()`, `clear()`, `setParentPathInfo(...)`.
+**Special cases:**
+- Pass `undefined` → auto-instrument all supported
+- Pass `{}` → disable all auto-instrumentation
 
-## instrumentClaudeAgentQuery(options)
-Wrap a `claude-agent-sdk` query to auto-span and publish context to the proxy.
+---
 
-## wrapClaudeAgentQuery(options)
-Alias of `instrumentClaudeAgentQuery`.
+## Laminar.patch(modules)
+
+Manually instrument modules after initialization.
+
+```typescript
+import { Laminar } from '@lmnr-ai/lmnr';
+import OpenAI from 'openai';
+
+Laminar.initialize({ projectApiKey: '...' });
+
+// Later (e.g., in Next.js server components)
+Laminar.patch({ openAI: OpenAI });
+```
+
+**Note:** Throws if `modules` empty. Warns if Laminar not initialized.
+
+---
+
+## wrapClaudeAgentQuery(originalQuery)
+
+Instrument Claude Agent SDK query function.
+
+```typescript
+import { wrapClaudeAgentQuery } from '@lmnr-ai/lmnr';
+import { query } from '@anthropic-ai/claude-agent-sdk';
+
+const instrumentedQuery = wrapClaudeAgentQuery(query);
+```
+
+**Use when:** Claude Agent SDK imported before `Laminar.initialize()` or in ESM environments.

@@ -1,53 +1,115 @@
 ---
-title: Python Evaluations
+title: Evaluations
 description: Run evaluations and work with Laminar datasets using the Python SDK.
 ---
 
-# Python Evaluations
+# Evaluations
 
-Run evaluations and manage datasets for Laminar.
+## evaluate()
 
-## evaluate(...)
-Run an evaluation (async if an event loop is running). Creates an evaluation run, executor span per datapoint, evaluator spans, and uploads datapoints/results in the background.
+Run an evaluation against a dataset.
 
-**Parameters**
-| Name | Description |
-| --- | --- |
-| `data` | List of datapoints/dicts or `LaminarDataset`. |
-| `executor` | Callable executed per datapoint. |
-| `evaluators` | Dict of `EvaluatorFunction` or `HumanEvaluator` keyed by name. |
-| `name` / `group_name` | Optional identifiers for the run. |
-| `metadata` | JSON-serializable run metadata. |
-| `concurrency_limit` | Max concurrent executor spans (default `5`). |
-| `project_api_key` | API key override. |
-| `base_url` / `base_http_url` | API and OTLP base URLs. |
-| `http_port` / `grpc_port` | OTLP port overrides. |
-| `instruments` / `disabled_instruments` | Enable/disable auto-instrumentations. |
-| `max_export_batch_size` | OTLP batch size cap. |
-| `trace_export_timeout_seconds` | OTLP export timeout. |
-
-**Returns:** `EvaluationRunResult` (`average_scores`, `evaluation_id`, `project_id`, `url`, `error_message`)
-
-**Example**
 ```python
-await evaluate(
-    data=dataset,
-    executor=lambda d: d["input"],
-    evaluators={"quality": lambda output, trace_id: 1.0},
+from lmnr import evaluate, LaminarDataset
+
+data = LaminarDataset("my-dataset")
+
+result = evaluate(
+    data=data,
+    executor=lambda input: my_function(input["query"]),
+    evaluators={
+        "contains_answer": lambda output, target: target["answer"] in output,
+        "is_valid": lambda output: len(output) > 0,
+    },
+)
+
+print(result["average_scores"])
+```
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `data` | `EvaluationDataset \| list[Datapoint]` | — | Dataset or list of datapoints |
+| `executor` | `Callable` | — | Function to evaluate |
+| `evaluators` | `dict[str, Callable \| HumanEvaluator]` | — | Scoring functions |
+| `name` | `str` | — | Evaluation name |
+| `group_name` | `str` | `'default'` | Group name |
+| `metadata` | `dict` | — | Evaluation metadata |
+| `concurrency_limit` | `int` | `5` | Parallel executions |
+| `project_api_key` | `str` | — | Override API key |
+| `max_export_batch_size` | `int` | `64` | Batch size |
+
+**Returns:**
+```python
+{
+    "average_scores": {"evaluator_name": 0.85, ...},
+    "evaluation_id": UUID,
+    "project_id": UUID,
+    "url": "https://...",
+}
+```
+
+**Note:** If event loop running, returns coroutine. Otherwise runs synchronously.
+
+---
+
+## LaminarDataset
+
+Load a dataset from Laminar.
+
+```python
+from lmnr import LaminarDataset
+
+dataset = LaminarDataset("my-dataset", fetch_size=50)
+```
+
+**Constructor parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `name` | `str` | — | Dataset name or ID |
+| `fetch_size` | `int` | `25` | Datapoints per fetch |
+
+**Methods:**
+- `push(paths, recursive=False)` — Upload local files to dataset
+
+---
+
+## EvaluationDataset
+
+Abstract base class for custom datasets.
+
+```python
+from lmnr import EvaluationDataset, Datapoint
+
+class MyDataset(EvaluationDataset):
+    def __len__(self) -> int:
+        return len(self.items)
+    
+    def __getitem__(self, index: int) -> Datapoint:
+        return self.items[index]
+```
+
+---
+
+## Datapoint
+
+Structure for evaluation data.
+
+```python
+from lmnr import Datapoint
+
+point = Datapoint(
+    data={"query": "What is 2+2?"},
+    target={"answer": "4"},
+    metadata={"source": "math"},
 )
 ```
 
-## Datasets
-
-### LaminarDataset (class)
-Laminar-backed dataset.
-
-**Constructor:** `(name=None, id=None, fetch_size=25)`
-
-**Key methods:** `__len__`, `__getitem__`, `push(paths, recursive=False)` (JSON/JSONL/CSV via `file_utils`). Call `set_client(client: LaminarClient)` before use.
-
-### EvaluationDataset (class)
-Abstract dataset base; implement `__len__` and `__getitem__`. Helper `slice(start, end)` is provided.
-
-### Datasets via LaminarClient
-`LaminarClient.datasets` offers dataset listing, lookup, push, and pull helpers (see Client page).
+**Fields:**
+- `data` — Input data (required)
+- `target` — Expected output (optional)
+- `metadata` — Additional metadata (optional)
+- `id` — UUID (auto-generated)
+- `created_at` — Timestamp (auto-generated)

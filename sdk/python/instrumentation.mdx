@@ -1,23 +1,43 @@
 ---
-title: Python Instrumentation
-description: Configure auto-instrumentations, span processors, and tracer access in Python.
+title: Instrumentation
+description: Configure auto-instrumentations and session recording with Laminar Python SDK.
 ---
 
-# Python Instrumentation
+# Instrumentation
 
-Configure auto-instrumentations, span processors, and tracer access.
+## Instruments
 
-## instruments / disabled_instruments
-Initialization options to select or block auto-instrumentations.
+Enum of available auto-instrumentations.
 
-## LaminarLiteLLMCallback
-LiteLLM `CustomBatchLogger`; requires `Laminar.initialize()` first; captures prompts, tool calls, usage, tags, and user/session metadata.
+```python
+from lmnr import Laminar, Instruments
 
-## LaminarSpanProcessor
-Wraps the OTLP exporter (HTTP or gRPC). Methods: `on_start`, `on_end`, `force_flush(timeout_ms=30000)`, `force_reinit()`, `shutdown()`, `clear()`, `set_parent_path_info(...)`.
+# Enable only specific instruments
+Laminar.initialize(
+    instruments={Instruments.OPENAI, Instruments.ANTHROPIC}
+)
 
-## get_laminar_tracer_provider() / get_tracer(...) / get_tracer_with_context(...)
-Access the Laminar tracer provider or a context-managed tracer (`flush_on_exit` optional).
+# Disable specific instruments
+Laminar.initialize(
+    disabled_instruments={Instruments.LANGCHAIN}
+)
+```
 
-## init_instrumentations(...)
-Initialize chosen instruments (OpenAI, Anthropic, LangChain, LangGraph, Playwright, browser_use, Bedrock, VertexAI, HuggingFace transformers, Pinecone, Weaviate, Milvus, Qdrant, Chroma, etc.).
+**Available instruments:**
+`OPENAI`, `ANTHROPIC`, `BEDROCK`, `COHERE`, `GOOGLE_GENAI`, `GROQ`, `MISTRAL`, `OLLAMA`, `TOGETHER`, `VERTEXAI`, `LANGCHAIN`, `LANGGRAPH`, `LLAMA_INDEX`, `HAYSTACK`, `CREWAI`, `PINECONE`, `QDRANT`, `CHROMA`, `MILVUS`, `WEAVIATE`, `LANCEDB`, `MARQO`, `PLAYWRIGHT`, `PATCHRIGHT`, `BROWSER_USE`, `BROWSER_USE_SESSION`, `SKYVERN`, `CLAUDE_AGENT`, `KERNEL`, `MCP`, and more.
+
+---
+
+## SessionRecordingOptions
+
+Browser session recording configuration.
+
+```python
+from lmnr import SessionRecordingOptions, MaskInputOptions
+
+options = SessionRecordingOptions(
+    mask_input_options=MaskInputOptions(...)
+)
+
+Laminar.initialize(session_recording_options=options)
+```

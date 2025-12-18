@@ -25,7 +25,6 @@
             "group": "Tracing",
             "pages": [
               "tracing/introduction",
-              "tracing/advanced-patterns",
               {
                 "group": "Integrations",
                 "pages": [
@@ -43,14 +42,30 @@
                   "tracing/integrations/stagehand",
                   "tracing/integrations/skyvern",
                   "tracing/integrations/playwright",
-              "tracing/integrations/puppeteer",
-              "tracing/otel"
-            ]
-          },
-      "tracing/browser-agent-observability",
-      "tracing/semantic-events-clusters",
-      "tracing/langgraph-visualization",
-      "tracing/events",
+                  "tracing/integrations/puppeteer",
+                  "tracing/otel"
+                ]
+              },
+              {
+                "group": "Tracing Structure",
+                "pages": [
+                  "tracing/structure/overview",
+                  "tracing/structure/observe-decorator",
+                  "tracing/structure/manual-span-creation",
+                  "tracing/structure/sessions",
+                  "tracing/structure/user-id",
+                  "tracing/structure/metadata",
+                  "tracing/structure/tags",
+                  "tracing/structure/tracing-levels",
+                  "tracing/structure/continuing-traces",
+                  "tracing/structure/llm-cost-tracking",
+                  "tracing/structure/flushing-and-shutdown"
+                ]
+              },
+              "tracing/browser-agent-observability",
+              "tracing/semantic-events-clusters",
+              "tracing/langgraph-visualization",
+              "tracing/events",
               {
                 "group": "Troubleshooting",
                 "pages": [
@@ -116,9 +131,17 @@
             "group": "TypeScript SDK",
             "pages": [
               "sdk/typescript/overview",
-              "sdk/typescript/tracing",
-              "sdk/typescript/evaluations",
+              "sdk/typescript/initialization",
+              "sdk/typescript/observe",
+              "sdk/typescript/manual-spans",
+              "sdk/typescript/span-methods",
+              "sdk/typescript/trace-methods",
+              "sdk/typescript/context-utilities",
+              "sdk/typescript/lifecycle",
+              "sdk/typescript/tracing-level",
+              "sdk/typescript/constants",
               "sdk/typescript/client",
+              "sdk/typescript/evaluations",
               "sdk/typescript/instrumentation",
               "sdk/typescript/types"
             ]
@@ -127,11 +150,18 @@
             "group": "Python SDK",
             "pages": [
               "sdk/python/overview",
-              "sdk/python/tracing",
-              "sdk/python/evaluations",
+              "sdk/python/initialization",
+              "sdk/python/observe",
+              "sdk/python/manual-spans",
+              "sdk/python/span-methods",
+              "sdk/python/trace-methods",
+              "sdk/python/context-utilities",
+              "sdk/python/lifecycle",
+              "sdk/python/tracing-level",
+              "sdk/python/constants",
               "sdk/python/client",
-              "sdk/python/instrumentation",
-              "sdk/python/types"
+              "sdk/python/evaluations",
+              "sdk/python/instrumentation"
             ]
           }
         ]

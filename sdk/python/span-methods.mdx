@@ -1,0 +1,109 @@
+---
+title: Span Methods
+description: Set attributes, outputs, tags, and exceptions on Laminar spans in Python.
+---
+
+# Span Methods
+
+## Laminar.set_span_attributes(attributes)
+
+Set attributes on the current span.
+
+```python
+@observe()
+def process_document(doc):
+    Laminar.set_span_attributes({
+        "document.pages": len(doc.pages),
+        "document.language": doc.detected_language,
+    })
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `attributes` | `dict[Attributes \| str, Any]` | Key-value pairs. Keys can be `Attributes` enum or strings. Non-primitive values JSON-serialized. |
+
+**Note:** No-op if no active span.
+
+---
+
+## Laminar.set_span_output(output)
+
+Explicitly set span output.
+
+```python
+@observe()
+def complex_operation():
+    result = do_many_things()
+    Laminar.set_span_output(result.summary)  # Record only summary
+    return result
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `output` | `Any` | Output value (JSON-serialized, truncated if >10MB) |
+
+**Note:** No-op if no active span.
+
+---
+
+## Laminar.set_span_tags() / Laminar.add_span_tags()
+
+Add tags to the current span.
+
+```python
+@observe()
+def process_input(text: str):
+    if len(text) > 10000:
+        Laminar.add_span_tags(["long-input"])
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `tags` | `list[str]` | Tags to add (deduplicated) |
+
+**Note:** Warns if not `list[str]`.
+
+---
+
+## span.end()
+
+End a manually created span.
+
+```python
+span = Laminar.start_span(name="operation")
+try:
+    do_work()
+finally:
+    span.end()  # Always end in finally block
+```
+
+---
+
+## span.record_exception(exception)
+
+Record an exception on the span.
+
+```python
+with Laminar.start_as_current_span(name="risky_operation") as span:
+    try:
+        risky_work()
+    except Exception as e:
+        span.record_exception(e)
+        raise
+```
+
+---
+
+## span.set_attribute(key, value)
+
+Set a single attribute on a span object.
+
+```python
+span.set_attribute("operation.status", "success")
+```

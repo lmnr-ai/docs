@@ -1,0 +1,24 @@
+---
+title: Continuing Traces
+description: Propagate span context across services to keep traces connected.
+---
+
+# Continuing Traces
+
+When a request spans multiple services, you want one connected trace—not isolated fragments. This requires passing span context between services.
+
+## Context Propagation
+
+Span context is a serialized representation of the current span. Pass it to downstream services, and they can continue the same trace.
+
+Common patterns:
+
+- **HTTP headers** — Include serialized context in a custom header (e.g., `X-Laminar-Span-Context`)
+- **Message queues** — Embed context in the message payload alongside your data
+- **Database storage** — Store context with workflow state for long-running processes that span multiple requests
+
+The downstream service deserializes the context and uses it as the parent for its spans. The result: a single trace showing the full request flow across services.
+
+### When Context Is Unavailable
+
+If deserialization fails or context is missing, start a new trace rather than crashing. The downstream work won't connect to the original trace, but you'll still have visibility into that service.

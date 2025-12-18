@@ -1,0 +1,13 @@
+---
+title: Overview
+description: Tracing structure basics—how spans, context, and decorators fit together.
+---
+
+# Tracing Structure Overview
+
+Tracing captures work as spans organized into traces. This section shows how to structure spans, choose between decorators and manual spans, and add the right context for debugging and analytics.
+
+- Use `@observe` / `observe()` for the simplest function-level tracing.
+- Use manual spans when you need conditional tracing, dynamic names, or to trace non-function code.
+- Add context early: user/session IDs, metadata, and tags make traces filterable and useful.
+- Control privacy with tracing levels, and flush spans before process exit in serverless/CLI flows.

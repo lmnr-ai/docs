@@ -1,0 +1,49 @@
+---
+title: Tracing Level
+description: Control Laminar tracing verbosity in TypeScript.
+---
+
+# Tracing Level
+
+## withTracingLevel(level, fn, ...args)
+
+Control tracing level for a block of code.
+
+```typescript
+import { withTracingLevel, TracingLevel } from '@lmnr-ai/lmnr';
+
+const result = withTracingLevel(TracingLevel.META_ONLY, () => {
+  // Inputs and outputs NOT recorded
+  return handleSensitiveData();
+});
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `level` | `TracingLevel` | `ALL`, `META_ONLY`, or `OFF` |
+| `fn` | `Function` | Function to execute |
+| `...args` | `any[]` | Arguments passed to function |
+
+**Levels:**
+
+| Level | Behavior |
+|-------|----------|
+| `TracingLevel.ALL` | Trace everything (default) |
+| `TracingLevel.META_ONLY` | Record metadata only, no inputs/outputs |
+| `TracingLevel.OFF` | Disable tracing |
+
+---
+
+## TracingLevel
+
+Enum for controlling tracing verbosity.
+
+```typescript
+import { TracingLevel } from '@lmnr-ai/lmnr';
+
+TracingLevel.ALL       // "all" - trace everything
+TracingLevel.META_ONLY // "meta_only" - metadata only
+TracingLevel.OFF       // "off" - disable tracing
+```

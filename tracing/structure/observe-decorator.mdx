@@ -1,0 +1,29 @@
+---
+title: Observe Decorator/Wrapper
+description: Use @observe (Python) or observe() (JS) for automatic span creation.
+---
+
+# Observe Decorator/Wrapper
+
+The `@observe` decorator (Python) or `observe()` wrapper (JavaScript) is the simplest way to trace a function. It automatically:
+
+- Creates a span when the function is called
+- Names the span after the function (or a custom name you provide)
+- Captures input arguments and return values
+- Ends the span when the function returns
+- Records exceptions if the function throws
+
+## When to Use Observe vs Manual Spans
+
+| Use `@observe` when... | Use manual spans when... |
+|------------------------|--------------------------|
+| Tracing a function call | Tracing code that isn't a function |
+| You want automatic input/output capture | You need conditional span creation |
+| The function name works as the span name | You need runtime-determined names |
+| Simple, straightforward tracing | Fine-grained control over timing |
+
+## Nesting Behavior
+
+Observed functions automatically nest. If function A calls function B, and both are observed, B's span becomes a child of A's span. This happens through context propagation—Laminar tracks the "current" span and parents new spans to it.
+
+You can mix `@observe` with manual spans. A manual span created inside an observed function becomes a child of that function's span.

@@ -1,0 +1,934 @@
+---
+title: SDK Reference
+description: Complete API reference for the Laminar TypeScript SDK (`@lmnr-ai/lmnr`).
+---
+
+# SDK Reference
+
+Complete API reference for the Laminar TypeScript SDK (`@lmnr-ai/lmnr`).
+
+---
+
+## Laminar.initialize(options?)
+
+Initialize Laminar tracing. Call once at application startup.
+
+```typescript
+import { Laminar } from '@lmnr-ai/lmnr';
+import OpenAI from 'openai';
+
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+  instrumentModules: { openAI: OpenAI },
+});
+```
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `projectApiKey` | `string` | `LMNR_PROJECT_API_KEY` env | Project API key |
+| `baseUrl` | `string` | `https://api.lmnr.ai` | API base URL |
+| `baseHttpUrl` | `string` | `baseUrl` | HTTP endpoint override |
+| `httpPort` | `number` | Port from URL or `443` | HTTP port |
+| `grpcPort` | `number` | `8443` | gRPC port |
+| `instrumentModules` | `Record<string, any>` | All supported | Modules to auto-instrument |
+| `disableBatch` | `boolean` | `false` | Send spans immediately |
+| `traceExportTimeoutMillis` | `number` | `30000` | Export timeout in ms |
+| `maxExportBatchSize` | `number` | OTel default | Max spans per batch |
+| `logLevel` | `'debug' \| 'info' \| 'warn' \| 'error'` | `'error'` | OpenTelemetry log level |
+| `forceHttp` | `boolean` | `false` | Use OTLP/HTTP instead of gRPC |
+| `sessionRecordingOptions` | `SessionRecordingOptions` | — | Browser session recording config |
+
+**Environment variables:**
+- `LMNR_PROJECT_API_KEY` — Fallback for `projectApiKey`
+- `LMNR_BASE_URL` — Fallback for `baseUrl`
+- `LMNR_SPAN_CONTEXT` — Restore parent context from upstream
+- `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` — OTEL endpoint override
+
+**Notes:**
+- Loads `.env` via dotenv automatically
+- Warns on double initialization
+- Requires API key or OTEL exporter env vars
+
+---
+
+## observe(options, fn, ...args)
+
+Wrap a function to create a span. Automatically captures inputs, outputs, and errors.
+
+```typescript
+import { observe } from '@lmnr-ai/lmnr';
+
+const result = await observe(
+  { name: 'my_operation' },
+  async (param1, param2) => {
+    return param1 + param2;
+  },
+  1, 2
+);
+// Span input: [1, 2], output: 3
+```
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `name` | `string` | `fn.name` | Span name |
+| `sessionId` | `string` | — | Associate trace with session |
+| `userId` | `string` | — | Associate trace with user |
+| `metadata` | `Record<string, any>` | — | Trace metadata (JSON-serializable) |
+| `tags` | `string[]` | — | Span tags (deduplicated) |
+| `traceType` | `'DEFAULT' \| 'EVALUATION'` | `'DEFAULT'` | Trace type |
+| `spanType` | `'DEFAULT' \| 'LLM' \| 'TOOL' \| 'EXECUTOR' \| 'EVALUATOR'` | `'DEFAULT'` | Span type |
+| `input` | `any` | — | Explicit input (overrides function args) |
+| `ignoreInput` | `boolean` | `false` | Don't record input |
+| `ignoreOutput` | `boolean` | `false` | Don't record output |
+| `parentSpanContext` | `string \| LaminarSpanContext` | — | Parent context for distributed tracing |
+
+**Behavior:**
+- If one non-Map object argument, records that object as input; otherwise records array
+- Maps converted to entries, circular references become `"[Circular reference]"`
+- Exceptions recorded via `recordException` and re-thrown
+- Anonymous function name becomes `""` if `name` not provided
+- Works with both sync and async functions
+
+---
+
+## observeDecorator(config)
+
+Class method decorator version of `observe`.
+
+```typescript
+import { observeDecorator } from '@lmnr-ai/lmnr';
+
+class MyService {
+  @observeDecorator({ name: 'process_request' })
+  async processRequest(input: string) {
+    return await this.doWork(input);
+  }
+}
+```
+
+**Parameters:** Same as `observe` options. Config can be an object or a function `(thisArg, ...args) => config` for per-call configuration.
+
+---
+
+## withTracingLevel(level, fn, ...args)
+
+Control tracing level for a block of code.
+
+```typescript
+import { withTracingLevel, TracingLevel } from '@lmnr-ai/lmnr';
+
+const result = withTracingLevel(TracingLevel.META_ONLY, () => {
+  // Inputs and outputs NOT recorded
+  return handleSensitiveData();
+});
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `level` | `TracingLevel` | `ALL`, `META_ONLY`, or `OFF` |
+| `fn` | `Function` | Function to execute |
+| `...args` | `any[]` | Arguments passed to function |
+
+**Levels:**
+
+| Level | Behavior |
+|-------|----------|
+| `TracingLevel.ALL` | Trace everything (default) |
+| `TracingLevel.META_ONLY` | Record metadata only, no inputs/outputs |
+| `TracingLevel.OFF` | Disable tracing |
+
+---
+
+## Laminar.startSpan(options)
+
+Create a span without activating it. Use for spans you'll pass to other functions.
+
+```typescript
+const span = Laminar.startSpan({ name: 'custom_operation' });
+try {
+  const result = doWork();
+  span.setAttributes({ 'result.count': result.length });
+} finally {
+  span.end();
+}
+```
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `name` | `string` | — | Span name (required) |
+| `input` | `any` | — | Span input (JSON-serialized) |
+| `spanType` | `'DEFAULT' \| 'LLM' \| 'TOOL'` | `'DEFAULT'` | Span type |
+| `tags` | `string[]` | — | Span tags |
+| `userId` | `string` | — | User ID |
+| `sessionId` | `string` | — | Session ID |
+| `metadata` | `Record<string, any>` | — | Metadata |
+| `parentSpanContext` | `string \| LaminarSpanContext` | — | Parent context |
+| `context` | `Context` | — | OpenTelemetry context |
+
+**Returns:** `Span`
+
+**Note:** Not activated—caller must propagate context manually or use `withSpan`.
+
+---
+
+## Laminar.startActiveSpan(options)
+
+Create and activate a span. Child spans nest automatically.
+
+```typescript
+const span = Laminar.startActiveSpan({ name: 'parent_operation' });
+try {
+  // Any spans created here are children of parent_operation
+  await doWork();
+} finally {
+  span.end();
+}
+```
+
+**Parameters:** Same as `startSpan`
+
+**Returns:** `Span`
+
+**Note:** Must call `span.end()` (recommend in `finally` block). Context push/pop handled automatically.
+
+---
+
+## Laminar.withSpan(span, fn, endOnExit?)
+
+Activate an existing span for the duration of a function.
+
+```typescript
+const parentSpan = Laminar.startSpan({ name: 'parent' });
+
+await Laminar.withSpan(parentSpan, async () => {
+  // parentSpan is active here
+  const child = Laminar.startSpan({ name: 'child' });
+  await doWork();
+  child.end();
+});
+
+parentSpan.end();
+```
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `span` | `Span` | — | Span to activate |
+| `fn` | `() => T` | — | Function to execute |
+| `endOnExit` | `boolean` | `false` | End span when function completes |
+
+**Returns:** Return value of `fn` (or `Promise` if async)
+
+**Note:** Records exception on error. If `endOnExit` is true, span ends after `fn` (awaited if Promise).
+
+---
+
+## Laminar.setSpanAttributes(attributes)
+
+Set attributes on the current span.
+
+```typescript
+await observe({ name: 'process' }, async () => {
+  Laminar.setSpanAttributes({
+    'document.pages': 10,
+    'document.language': 'en',
+  });
+});
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `attributes` | `Record<string, AttributeValue>` | Key-value pairs |
+
+---
+
+## Laminar.setSpanOutput(output)
+
+Explicitly set span output.
+
+```typescript
+await observe({ name: 'complex_operation' }, async () => {
+  const result = await doWork();
+  Laminar.setSpanOutput(result.summary); // Record only the summary
+  return result;
+});
+```
+
+**Note:** No-op if `output` is `null` or `undefined`.
+
+---
+
+## Laminar.setSpanTags(tags) / Laminar.addSpanTags(tags)
+
+Add tags to the current span.
+
+```typescript
+await observe({ name: 'process' }, async () => {
+  if (input.length > 10000) {
+    Laminar.setSpanTags(['long-input']);
+  }
+});
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `tags` | `string[]` | Tags to add (deduplicated) |
+
+---
+
+## Laminar.event(options)
+
+Add an event to the current span, or create a span if none exists.
+
+```typescript
+await observe({ name: 'workflow' }, async () => {
+  Laminar.event({
+    name: 'checkpoint_reached',
+    attributes: { step: 5 },
+  });
+});
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `name` | `string` | Event name (required) |
+| `attributes` | `Record<string, any>` | Event attributes |
+| `timestamp` | `TimeInput` | Custom timestamp |
+| `sessionId` | `string` | Session ID |
+| `userId` | `string` | User ID |
+
+---
+
+## span.end()
+
+End a manually created span.
+
+```typescript
+const span = Laminar.startSpan({ name: 'operation' });
+try {
+  await doWork();
+} finally {
+  span.end(); // Always end in finally block
+}
+```
+
+**Note:** Pops active context if span was activated via `startActiveSpan`.
+
+---
+
+## span.recordException(error, time?)
+
+Record an exception on the span.
+
+```typescript
+const span = Laminar.startSpan({ name: 'risky_operation' });
+try {
+  await riskyWork();
+} catch (error) {
+  span.recordException(error);
+  throw error;
+} finally {
+  span.end();
+}
+```
+
+---
+
+## span.setAttributes(attributes)
+
+Set attributes directly on a span object.
+
+```typescript
+const span = Laminar.startSpan({ name: 'operation' });
+span.setAttributes({ 'operation.status': 'success' });
+span.end();
+```
+
+---
+
+## Laminar.setTraceSessionId(sessionId)
+
+Group this trace with others in a session.
+
+```typescript
+await observe({ name: 'handle_message' }, async () => {
+  Laminar.setTraceSessionId('conversation-abc-123');
+});
+```
+
+---
+
+## Laminar.setTraceUserId(userId)
+
+Associate trace with a user.
+
+```typescript
+await observe({ name: 'handle_request' }, async () => {
+  Laminar.setTraceUserId('user-456');
+});
+```
+
+---
+
+## Laminar.setTraceMetadata(metadata)
+
+Add key-value metadata to the trace.
+
+```typescript
+await observe({ name: 'handle_request' }, async () => {
+  Laminar.setTraceMetadata({
+    environment: 'production',
+    region: 'us-west',
+    feature_flag: 'new-model-v2',
+  });
+});
+```
+
+**Note:** Non-primitive values are JSON-stringified. Stored under `lmnr.association.properties.metadata.*`.
+
+---
+
+## Laminar.getTraceId()
+
+Get the current trace ID.
+
+```typescript
+await observe({ name: 'operation' }, async () => {
+  const traceId = Laminar.getTraceId();
+  console.log('Trace:', traceId);
+  return { traceId, result };
+});
+```
+
+**Returns:** `string | null` — UUID string or `null` if no active span.
+
+---
+
+## Laminar.serializeLaminarSpanContext(span?)
+
+Serialize span context for cross-service propagation.
+
+```typescript
+await observe({ name: 'service_a' }, async () => {
+  const context = Laminar.serializeLaminarSpanContext();
+  
+  await fetch('/api/service-b', {
+    headers: { 'X-Laminar-Context': context },
+  });
+});
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `span` | `Span` | Optional span (defaults to current) |
+
+**Returns:** `string | null` — JSON string containing `traceId`, `spanId`, `isRemote`, `spanPath`, `spanIdsPath`
+
+---
+
+## Laminar.getLaminarSpanContext(span?)
+
+Get span context as an object.
+
+```typescript
+const context = Laminar.getLaminarSpanContext();
+// { traceId, spanId, isRemote, spanPath, spanIdsPath }
+```
+
+**Returns:** `LaminarSpanContext | null`
+
+---
+
+## deserializeLaminarSpanContext(data)
+
+Deserialize span context from string or object.
+
+```typescript
+import { deserializeLaminarSpanContext } from '@lmnr-ai/lmnr';
+
+const context = deserializeLaminarSpanContext(contextString);
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `data` | `string \| Record<string, unknown>` | Serialized context (accepts camelCase or snake_case) |
+
+**Returns:** `LaminarSpanContext`
+
+---
+
+## Laminar.flush()
+
+Flush pending spans to the backend.
+
+```typescript
+// At end of script or Lambda handler
+await Laminar.flush();
+```
+
+**Returns:** `Promise<void>`
+
+**When to use:**
+- End of CLI scripts
+- End of serverless function handlers
+- Before process exit
+
+**When NOT to use:**
+- In web server request handlers (degrades performance)
+
+---
+
+## Laminar.shutdown()
+
+Flush spans and shut down tracing.
+
+```typescript
+await Laminar.shutdown();
+// Can call Laminar.initialize() again if needed
+```
+
+**Returns:** `Promise<void>`
+
+**Note:** Force flushes, clears config/context, releases resources. Can re-initialize afterward.
+
+---
+
+## LaminarAttributes
+
+Attribute constants for manual LLM span creation.
+
+```typescript
+import { LaminarAttributes } from '@lmnr-ai/lmnr';
+
+span.setAttributes({
+  [LaminarAttributes.PROVIDER]: 'anthropic',
+  [LaminarAttributes.REQUEST_MODEL]: 'claude-3-5-sonnet',
+  [LaminarAttributes.RESPONSE_MODEL]: response.model,
+  [LaminarAttributes.INPUT_TOKEN_COUNT]: response.usage.input_tokens,
+  [LaminarAttributes.OUTPUT_TOKEN_COUNT]: response.usage.output_tokens,
+});
+```
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `PROVIDER` | `llm.system` | LLM provider name |
+| `REQUEST_MODEL` | `llm.request.model` | Requested model |
+| `RESPONSE_MODEL` | `llm.response.model` | Actual model used |
+| `INPUT_TOKEN_COUNT` | `gen_ai.usage.input_tokens` | Input tokens |
+| `OUTPUT_TOKEN_COUNT` | `gen_ai.usage.output_tokens` | Output tokens |
+| `TOTAL_TOKEN_COUNT` | `llm.usage.total_tokens` | Total tokens |
+| `INPUT_COST` | `gen_ai.usage.input_cost` | Input cost |
+| `OUTPUT_COST` | `gen_ai.usage.output_cost` | Output cost |
+| `TOTAL_COST` | `gen_ai.usage.cost` | Total cost |
+
+---
+
+## TracingLevel
+
+Enum for controlling tracing verbosity.
+
+```typescript
+import { TracingLevel } from '@lmnr-ai/lmnr';
+
+TracingLevel.ALL       // "all" - trace everything
+TracingLevel.META_ONLY // "meta_only" - metadata only
+TracingLevel.OFF       // "off" - disable tracing
+```
+
+---
+
+## LaminarClient
+
+HTTP client for Laminar API operations.
+
+```typescript
+import { LaminarClient } from '@lmnr-ai/lmnr';
+
+const client = new LaminarClient({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+});
+
+// Tag a completed trace
+await client.tags.tag(traceId, ['user-feedback-positive']);
+```
+
+**Constructor parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `projectApiKey` | `string` | `LMNR_PROJECT_API_KEY` env | API key |
+| `baseUrl` | `string` | `https://api.lmnr.ai` | API base URL |
+| `port` | `number` | `443` | API port |
+
+**Resources:**
+
+### client.tags.tag(traceId, tags)
+
+Add tags to a completed trace.
+
+```typescript
+await client.tags.tag('trace-uuid', ['positive-feedback', 'resolved']);
+```
+
+**Note:** Call after `Laminar.flush()` to ensure trace exists.
+
+---
+
+### client.datasets
+
+Dataset operations.
+
+```typescript
+// List datasets
+const datasets = await client.datasets.listDatasets();
+
+// Get by name
+const dataset = await client.datasets.getDatasetByName('my-dataset');
+
+// Push datapoints
+await client.datasets.push({
+  name: 'my-dataset',
+  points: [{ data: { query: 'test' }, target: { answer: '42' } }],
+  createDataset: true,
+});
+
+// Pull datapoints
+const points = await client.datasets.pull({
+  name: 'my-dataset',
+  limit: 100,
+});
+```
+
+---
+
+### client.evals
+
+Evaluation operations.
+
+```typescript
+// Initialize evaluation
+const eval = await client.evals.init('my-eval', 'default-group');
+
+// Create datapoint
+await client.evals.createDatapoint({
+  evalId: eval.id,
+  data: { query: 'test' },
+  target: { answer: '42' },
+});
+```
+
+---
+
+### client.evaluators.score(options)
+
+Attach evaluator score to a trace or span.
+
+```typescript
+await client.evaluators.score({
+  name: 'quality',
+  score: 0.95,
+  traceId: 'trace-uuid',
+});
+```
+
+---
+
+### client.agent.run(options)
+
+Run a browser agent.
+
+```typescript
+const result = await client.agent.run({
+  prompt: 'Find the pricing on example.com',
+  maxSteps: 50,
+  returnScreenshots: true,
+});
+```
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `prompt` | `string` | — | Agent instruction (required) |
+| `parentSpanContext` | `string` | Current span | Parent trace context |
+| `model` | `string` | — | Model to use |
+| `stream` | `boolean` | `false` | Stream responses |
+| `maxSteps` | `number` | `100` | Maximum steps |
+| `startUrl` | `string` | — | Starting URL |
+| `timeout` | `number` | — | Timeout in ms |
+| `returnScreenshots` | `boolean` | `false` | Include screenshots |
+| `returnAgentState` | `boolean` | `false` | Return agent state |
+| `enableThinking` | `boolean` | `true` | Enable thinking |
+
+---
+
+## evaluate(options)
+
+Run an evaluation against a dataset.
+
+```typescript
+import { evaluate, LaminarDataset } from '@lmnr-ai/lmnr';
+
+const data = new LaminarDataset('my-dataset');
+
+const result = await evaluate({
+  data,
+  executor: async (input) => {
+    return await myFunction(input.query);
+  },
+  evaluators: {
+    containsAnswer: (output, target) => output.includes(target.answer),
+    isValid: (output) => output.length > 0,
+  },
+});
+
+console.log(result.averageScores);
+```
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `data` | `EvaluationDataset \| Datapoint[]` | — | Dataset or array |
+| `executor` | `(data, ...args) => any` | — | Function to evaluate |
+| `evaluators` | `Record<string, Function \| HumanEvaluator>` | — | Scoring functions |
+| `name` | `string` | — | Evaluation name |
+| `groupName` | `string` | — | Group name |
+| `metadata` | `Record<string, any>` | — | Evaluation metadata |
+| `config.concurrencyLimit` | `number` | `5` | Parallel executions (min 1) |
+| `config.projectApiKey` | `string` | env | API key |
+| `config.traceExportBatchSize` | `number` | `64` | Batch size |
+
+**Returns:**
+```typescript
+{
+  averageScores: Record<string, number>,
+  evaluationId: string,
+  projectId: string,
+  url: string,
+  errorMessage?: string,
+}
+```
+
+---
+
+## LaminarDataset
+
+Load a dataset from Laminar.
+
+```typescript
+import { LaminarDataset } from '@lmnr-ai/lmnr';
+
+const dataset = new LaminarDataset('my-dataset', { fetchSize: 50 });
+```
+
+**Constructor parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `name` | `string` | — | Dataset name (or use `id`) |
+| `id` | `string` | — | Dataset ID (or use `name`) |
+| `fetchSize` | `number` | `25` | Datapoints per fetch |
+
+**Methods:**
+- `size()` — Returns number of datapoints
+- `get(index)` — Get datapoint by index
+- `slice(start, end)` — Get range of datapoints
+- `push(paths, recursive?)` — Upload local files
+
+**Note:** Requires exactly one of `name` or `id`.
+
+---
+
+## EvaluationDataset
+
+Abstract base class for custom datasets.
+
+```typescript
+import { EvaluationDataset } from '@lmnr-ai/lmnr';
+
+class MyDataset extends EvaluationDataset {
+  async size(): Promise<number> {
+    return this.items.length;
+  }
+  
+  async get(index: number): Promise<Datapoint> {
+    return this.items[index];
+  }
+}
+```
+
+**Methods to implement:**
+- `size(): Promise<number> | number`
+- `get(index: number): Promise<Datapoint> | Datapoint`
+
+**Provided:**
+- `slice(start, end)` — Helper using `get()`
+
+---
+
+## HumanEvaluator
+
+Placeholder for human evaluation.
+
+```typescript
+import { HumanEvaluator } from '@lmnr-ai/lmnr';
+
+await evaluate({
+  data,
+  executor,
+  evaluators: {
+    quality: new HumanEvaluator([
+      { value: 1, label: 'Good' },
+      { value: 0, label: 'Bad' },
+    ]),
+  },
+});
+```
+
+**Note:** Creates spans with type `HUMAN_EVALUATOR` and `null` scores for later human annotation.
+
+---
+
+## instrumentModules
+
+Pass modules to auto-instrument in `initialize()`.
+
+```typescript
+import { Laminar } from '@lmnr-ai/lmnr';
+import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
+
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+  instrumentModules: {
+    openAI: OpenAI,
+    anthropic: Anthropic,
+  },
+});
+```
+
+**Supported module keys:**
+
+| Key | Package |
+|-----|---------|
+| `openAI` / `OpenAI` | `openai` |
+| `anthropic` | `@anthropic-ai/sdk` |
+| `azureOpenAI` | Azure OpenAI |
+| `cohere` | `cohere-ai` |
+| `bedrock` | AWS Bedrock |
+| `google_vertexai` | Vertex AI |
+| `google_aiplatform` | AI Platform |
+| `pinecone` | `@pinecone-database/pinecone` |
+| `langchain` | `langchain` (with submodules) |
+| `llamaIndex` | `llamaindex` |
+| `chromadb` | `chromadb` |
+| `qdrant` | `@qdrant/js-client-rest` |
+| `together` | `together-ai` |
+| `playwright` | `playwright` |
+| `puppeteer` | `puppeteer` |
+| `stagehand` | `@browserbasehq/stagehand` |
+| `kernel` | Microsoft Kernel |
+| `claudeAgentSDK` | `@anthropic-ai/claude-agent-sdk` |
+
+**Special cases:**
+- Pass `undefined` → auto-instrument all supported
+- Pass `{}` → disable all auto-instrumentation
+
+---
+
+## Laminar.patch(modules)
+
+Manually instrument modules after initialization.
+
+```typescript
+import { Laminar } from '@lmnr-ai/lmnr';
+import OpenAI from 'openai';
+
+Laminar.initialize({ projectApiKey: '...' });
+
+// Later (e.g., in Next.js server components)
+Laminar.patch({ openAI: OpenAI });
+```
+
+**Note:** Throws if `modules` empty. Warns if Laminar not initialized.
+
+---
+
+## wrapClaudeAgentQuery(originalQuery)
+
+Instrument Claude Agent SDK query function.
+
+```typescript
+import { wrapClaudeAgentQuery } from '@lmnr-ai/lmnr';
+import { query } from '@anthropic-ai/claude-agent-sdk';
+
+const instrumentedQuery = wrapClaudeAgentQuery(query);
+```
+
+**Use when:** Claude Agent SDK imported before `Laminar.initialize()` or in ESM environments.
+
+---
+
+## LaminarSpanContext
+
+```typescript
+interface LaminarSpanContext {
+  traceId: string;      // UUID
+  spanId: string;       // UUID
+  isRemote: boolean;
+  spanPath: string[];
+  spanIdsPath: string[];
+}
+```
+
+---
+
+## Datapoint
+
+```typescript
+interface Datapoint {
+  data: Record<string, any>;
+  target?: Record<string, any>;
+  metadata?: Record<string, any>;
+}
+```
+
+---
+
+## SessionRecordingOptions
+
+```typescript
+interface SessionRecordingOptions {
+  maskInputOptions?: MaskInputOptions;
+}
+```
+
+---
+
+## Other Exports
+
+- `ChatMessage` — Chat message type
+- `NodeInput` — Node input type
+- `Event` — Event type
+- `Dataset` — Alias for `EvaluationDataset`
+- `Span` — Re-export of OTel Span
