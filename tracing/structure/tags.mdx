@@ -1,9 +1,7 @@
 ---
 title: Tags
-description: Categorize traces with tags for filtering and analysis.
+description:
 ---
-
-# Tags
 
 Tags categorize traces for filtering and analysis:
 
@@ -12,3 +10,18 @@ Tags categorize traces for filtering and analysis:
 - Mark traces for review (e.g., `needs-review`, `regression`)
 
 Use simple, consistent tag strings for categories you'll filter on later.
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    Laminar.setSpanTags(['high-priority', 'beta-user']);
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    Laminar.set_span_tags(['high-priority', 'beta-user'])
+    ```
+  </Tab>
+</Tabs>
+
+See also: [TypeScript span methods](http://localhost:3000/sdk/typescript/span-methods#laminar-setspantags-tags-%2F-laminar-addspantags-tags) • [Python span methods](http://localhost:3000/sdk/python/span-methods#laminar-set_span_tags-tags-%2F-laminar-add_span_tags-tags)

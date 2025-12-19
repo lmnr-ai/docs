@@ -1,0 +1,19 @@
+---
+title: Reader Mode
+description: Flattened, readable trace view with lazy-loaded outputs, span templates, and a synced minimap.
+---
+
+# Reader Mode
+
+Reader Mode gives you a readable, flattened view of a trace designed for fast scanning and review.
+
+![Reader Mode screenshot](/images/reader-mode.png)
+
+- **Flattened spans**: Lists spans top-to-bottom, LLM-centric sections first; default spans are hidden.
+- **At-a-glance columns**: Type/model, timing, tokens/cost, and breadcrumbs per row.
+- **Expandable rows**: Open any row to see formatted outputs; selecting still opens the full span detail pane on the right.
+- **Lazy-loaded outputs**: Fetches only what’s on screen to keep the UI fast.
+- **Templates per path**: Apply saved Mustache templates per span path to reshape how outputs render.
+- **Synced minimap**: Highlights spans in view and lets you jump or scrub session time.
+
+Use Reader Mode when you want a narrative, high-signal view of a trace without drilling through nested spans.

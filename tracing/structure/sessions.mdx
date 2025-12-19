@@ -1,9 +1,7 @@
 ---
 title: Sessions
-description: Group related traces into sessions for multi-step workflows and conversations.
+description:
 ---
-
-# Sessions
 
 Sessions group related traces—useful for conversational AI, multi-step workflows, or tracking a user's journey through your product.
 
@@ -11,3 +9,18 @@ Sessions group related traces—useful for conversational AI, multi-step workflo
 - In the Laminar UI, you can filter traces by session and review activity across a conversation or workflow.
 
 Set session IDs early in the request/handler entry point so downstream spans inherit the context.
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    Laminar.setTraceSessionId('conversation-123');
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    Laminar.set_trace_session_id('conversation-123')
+    ```
+  </Tab>
+</Tabs>
+
+See also: [TypeScript trace methods](http://localhost:3000/sdk/typescript/trace-methods#laminar-settracesessionid-sessionid) • [Python trace methods](http://localhost:3000/sdk/python/trace-methods#laminar-set_trace_session_id-session_id)

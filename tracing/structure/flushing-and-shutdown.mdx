@@ -3,8 +3,6 @@ title: Flushing Spans and Shutting Down
 description: Flush spans before exit and handle serverless lifecycle concerns.
 ---
 
-# Flushing Spans and Shutting Down
-
 Serverless functions and CLI scripts terminate quickly. Laminar batches spans for performance, which means spans might not be sent before the process exits.
 
 ## The Problem
@@ -27,3 +25,5 @@ In Python, use `force_flush()` for serverless specifically—it ensures spans ar
 | Graceful shutdown | Shutdown the SDK |
 
 Don't flush in hot paths (e.g., inside a web request handler). It adds latency. Flush only when the process is about to exit.
+
+See also: [TypeScript lifecycle](http://localhost:3000/sdk/typescript/initialization#laminar-flush) • [Python lifecycle](http://localhost:3000/sdk/python/initialization#laminar-force_flush)

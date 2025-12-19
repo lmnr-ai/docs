@@ -13,32 +13,35 @@ Sign up at [laminar.ai](https://laminar.ai), create a project, and grab your API
 
 Install the SDK:
 
-```bash
-npm add @lmnr-ai/lmnr
-```
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```bash
+    npm add @lmnr-ai/lmnr
+    ```
 
-```bash
-pip install lmnr
-```
+    ```typescript
+    import { Laminar } from '@lmnr-ai/lmnr';
 
-Initialize:
+    Laminar.initialize({
+        projectApiKey: "<YOUR_PROJECT_API_KEY>",
+        instrumentModules: {
+            // your libraries to instrument
+        }
+    })
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```bash
+    pip install lmnr
+    ```
 
-```javascript
-import { Laminar } from '@lmnr-ai/lmnr';
+    ```python
+    from lmnr import Laminar
 
-Laminar.initialize({
-    projectApiKey: "<YOUR_PROJECT_API_KEY>",
-    instrumentModules: {
-        // your libraries to instrument
-    }
-})
-```
-
-```python
-from lmnr import Laminar
-
-Laminar.initialize(project_api_key="<YOUR_PROJECT_API_KEY>")
-```
+    Laminar.initialize(project_api_key="<YOUR_PROJECT_API_KEY>")
+    ```
+  </Tab>
+</Tabs>
 
 That's it. Your traces will appear in the dashboard.
 
@@ -56,30 +59,35 @@ The dashboard is now available at `http://localhost:5667/`. Create a project thr
 
 Point the SDK to your local instance:
 
-```javascript
-import { Laminar } from '@lmnr-ai/lmnr';
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { Laminar } from '@lmnr-ai/lmnr';
 
-Laminar.initialize({
-    projectApiKey: "<YOUR_PROJECT_API_KEY>",
-    baseUrl: "http://localhost",
-    httpPort: 8000,
-    grpcPort: 8001,
-    instrumentModules: {
-        // your libraries to instrument
-    }
-})
-```
+    Laminar.initialize({
+        projectApiKey: "<YOUR_PROJECT_API_KEY>",
+        baseUrl: "http://localhost",
+        httpPort: 8000,
+        grpcPort: 8001,
+        instrumentModules: {
+            // your libraries to instrument
+        }
+    })
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import Laminar
 
-```python
-from lmnr import Laminar
-
-Laminar.initialize(
-    project_api_key="<YOUR_PROJECT_API_KEY>",
-    base_url="http://localhost",
-    http_port=8000,
-    grpc_port=8001
-)
-```
+    Laminar.initialize(
+        project_api_key="<YOUR_PROJECT_API_KEY>",
+        base_url="http://localhost",
+        http_port=8000,
+        grpc_port=8001
+    )
+    ```
+  </Tab>
+</Tabs>
 
 For production self-hosting options, see the [GitHub repository](https://github.com/lmnr-ai/lmnr).
 

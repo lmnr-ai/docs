@@ -1,6 +1,6 @@
 ---
 title: Observe Decorator/Wrapper
-description: Use @observe (Python) or observe() (JS) for automatic span creation.
+description:
 ---
 
 # Observe Decorator/Wrapper
@@ -27,3 +27,49 @@ The `@observe` decorator (Python) or `observe()` wrapper (JavaScript) is the sim
 Observed functions automatically nest. If function A calls function B, and both are observed, B's span becomes a child of A's span. This happens through context propagation—Laminar tracks the "current" span and parents new spans to it.
 
 You can mix `@observe` with manual spans. A manual span created inside an observed function becomes a child of that function's span.
+
+---
+
+## Example: Wrap Your Own Functions
+
+For deeper visibility, wrap your own functions:
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { observe } from '@lmnr-ai/lmnr';
+
+    const answerQuestion = (question) => observe(
+      { name: 'answer_question' },
+      async () => {
+        const response = await client.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: question }],
+        });
+        return response.choices[0].message.content;
+      }
+    );
+
+    await answerQuestion("What is the capital of France?");
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import observe
+
+    @observe()
+    def answer_question(question: str) -> str:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": question}],
+        )
+        return response.choices[0].message.content
+
+    answer_question("What is the capital of France?")
+    ```
+  </Tab>
+</Tabs>
+
+Now you see `answer_question` as the parent operation with the OpenAI call nested inside it. Function inputs and outputs are captured automatically.
+
+See also: [TypeScript observe](http://localhost:3000/sdk/typescript/observe#observe-options-fn-args) • [Python observe](http://localhost:3000/sdk/python/observe#observe)

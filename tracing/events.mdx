@@ -1,184 +1,97 @@
 ---
-title: Sending custom events to Laminar
-sidebarTitle: Custom events
+title: Events & Clusters
+sidebarTitle: Events & Clusters
+description:
 ---
 
-Laminar allows you to send custom events to the platform. This can be useful for tracking any events that are not covered by the spans and tracing.
+# Events & Clusters
 
-## Introduction
+When you're running agents at scale, you can't look at every trace. Events and clusters let you see patterns across thousands of runs—what's working, what's failing, and why.
 
-You can think of events as a data payload attached to a single timestamp.
+---
 
-Main difference between events and spans is that events have a single timestamp and don't have a duration.
+## Example: Debugging Extraction Failures
 
-Events allow you to track **any free-form data** that happens in your application
+Your browser agent extracts product data from e-commerce sites. Some extractions fail. You could search through traces one by one, or:
 
-You can then run [queries](/sql-editor/introduction) on the events to get event-based analytics and insights. You can also build [custom dashboards](/custom-dashboards/overview) to visualize the events.
+1. Go to **Events** in the dashboard and filter to `extraction.failed`
+2. Switch to **Clusters**—Laminar groups similar failures together
+3. You see two clusters:
+   - **47 failures** on sites with lazy-loaded content (the extractor runs before content appears)
+   - **12 failures** with the same malformed CSS selector
+4. Fix each root cause once. Verify against the cluster members.
 
-## Sending events
+Two fixes. Fifty-nine failures resolved.
 
-To send an event, simply use the `event` function on `Laminar` class.
+---
 
-<Tabs>
-<Tab title="TypeScript">
+## Events
 
-```javascript
-import { Laminar } from "@lmnr-ai/lmnr"
+An event is a structured record of something that happened in your agent—an action, a decision, a state change.
 
-Laminar.initialize();
-
-Laminar.event({
-    name: "my-event",
-    attributes: {
-        "user-feedback": "positive",
-        "user_data": JSON.stringify({
-            "name": "John Doe",
-            "age": 30,
-            "email": "john.doe@example.com"
-        })
-    }
-})
-```
-</Tab>
-<Tab title="Python">
-
-```python
-import json
-from lmnr import Laminar
-
-Laminar.initialize()
-
-Laminar.event(
-    name="my-event",
-    attributes={
-        "user-feedback": "positive",
-        "user_data": json.dumps({
-            "name": "John Doe",
-            "age": 30,
-            "email": "john.doe@example.com"
-        })
-    }
-)
-```
-</Tab>
-</Tabs>
-
-### Span context
-
-If you create an event inside a span context, e.g. in an `observe`d function, the event will be associated with the current span.
-
-Otherwise, we will create a new span for the event and attach the event to it.
-
-### Timestamp
-
-By default, event will have the current timestamp.
-
-You can also specify the timestamp manually:
-
-<Tabs>
-<Tab title="TypeScript">
-
-```javascript
-import { Laminar } from "@lmnr-ai/lmnr"
-
-Laminar.initialize();
-
-Laminar.event({
-    name: "my-event",
-    timestamp: new Date("2025-01-01T00:00:00.000Z")
-})
-```
-</Tab>
-<Tab title="Python">
-
-```python
-from datetime import datetime
-from lmnr import Laminar
-
-Laminar.initialize()
-
-Laminar.event(
-    name="my-event",
-    timestamp=datetime(2025, 1, 1, 0, 0, 0)
-)
-```
-</Tab>
-</Tabs>
-
-### Attributes
-
-Attributes are passed as an object/dictionary. Allowed attribute types are `string`, `number`, `boolean`, `string[]`, `number[]`, `boolean[]`.
-
-<Tip>
-
-If you want to pass a JSON object as an attribute, you need to stringify it first.
-
-</Tip>
-
-
-## Specifying session or user id
-
-You can associate an event with a session id or user id.
-
-<Tabs>
-<Tab title="TypeScript">
-
-```javascript
-import { Laminar } from "@lmnr-ai/lmnr"
-
-Laminar.initialize();
-
-Laminar.event({
-    name: "my-event",
-    sessionId: "123",
-    userId: "456"
-})
-```
-</Tab>
-<Tab title="Python">
-
-```python
-from lmnr import Laminar
-
-Laminar.initialize()
-
-Laminar.event(
-    name="my-event",
-    session_id="123",
-    user_id="456"
-)
+```json
+{
+  "type": "extraction.completed",
+  "session_id": "sess_abc123",
+  "timestamp": "2024-01-15T10:23:45Z",
+  "payload": {
+    "url": "https://example.com/product/123",
+    "fields_extracted": 12,
+    "duration_ms": 847
+  }
+}
 ```
 
-<Note>
-Python SDK also supports inferring session and user id from the current trace.
-</Note>
+Laminar captures events automatically from your traces. You can also emit custom events for domain-specific actions.
 
-```python
-from lmnr import Laminar, observe
-Laminar.initialize()
+Events are append-only—once recorded, they don't change. You build understanding by analyzing patterns across events, not by modifying them.
 
+---
 
-def handler():
-    # This event will be associated with session id "123", because
-    # we set it in the main function
-    Laminar.event(name="my-event")
+## Clusters
 
-@observe
-def main():
-    Laminar.set_session_id("123")
-    handler()
+Clusters group similar events together. Instead of thousands of individual events, you see patterns.
 
-main()
-```
-</Tab>
-</Tabs>
+Laminar clusters events by similarity. Events that look alike—same error message, same user intent, same failure mode—end up in the same cluster. Each cluster gets an auto-generated label describing what the events have in common.
 
-## Querying events
+### What You Can Do With Clusters
 
-You can query events using the `events` table in Laminar [SQL Editor](/sql-editor/introduction).
+**Debug at scale.** When something breaks, find all similar failures instantly. One fix addresses an entire cluster.
 
-```sql
-SELECT * FROM events
-WHERE session_id = '123'
-AND timestamp >= '2025-01-01T00:00:00'
-```
+**Understand user intent.** See what users are actually trying to accomplish, not just what buttons they clicked. Events with similar goals cluster together even if the surface actions differ.
+
+**Detect anomalies.** Unusual patterns surface automatically. New cluster appearing? Something changed. Cluster growing rapidly? Possible regression.
+
+**Build evaluation datasets.** Export a cluster as a dataset. Test your agent against real-world failure patterns, not synthetic examples.
+
+---
+
+## Using Events & Clusters
+
+In the Laminar dashboard:
+
+1. **Events** shows the raw event stream. Filter by time, event type, session, or user.
+2. **Clusters** shows grouped patterns. Click any cluster to see its members and the auto-generated label.
+3. **Export** cluster members to a dataset for evaluation.
+
+You can also query event and cluster data in the [SQL editor](/analyze/sql)—find your largest clusters, newest clusters, or clusters matching specific criteria.
+
+---
+
+## How Clustering Works
+
+Laminar uses embedding-based similarity. Events are converted to vectors, and similar events end up near each other in embedding space. The system continuously updates clusters as new events arrive.
+
+Temporal proximity matters too—events close in time from the same user are more likely to be related than events hours apart.
+
+Clusters have freshness scores. Active patterns stay prominent; stale clusters age out over time.
+
+---
+
+## Best Practices
+
+**Let clusters emerge.** Don't over-specify upfront. Run your agent, observe what clusters form, then decide which patterns matter.
+
+**Use clusters for evaluation.** When you find a problematic cluster, export it as a dataset. Run evaluations against it. Measure improvement over time.
+
+**Monitor for new clusters.** New clusters appearing often means new failure modes. Existing clusters growing rapidly can signal a regression.

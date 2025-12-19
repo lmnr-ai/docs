@@ -28,6 +28,7 @@
               {
                 "group": "Integrations",
                 "pages": [
+                  "tracing/integrations/overview",
                   "tracing/integrations/openai",
                   "tracing/integrations/anthropic",
                   "tracing/integrations/gemini",
@@ -110,7 +111,8 @@
               "platform/sql-editor",
               "custom-dashboards/overview",
               "queues/quickstart",
-              "platform/playground"
+              "platform/playground",
+              "platform/reader-mode"
             ]
           }
         ]
@@ -130,7 +132,6 @@
           {
             "group": "TypeScript SDK",
             "pages": [
-              "sdk/typescript/overview",
               "sdk/typescript/initialization",
               "sdk/typescript/observe",
               "sdk/typescript/manual-spans",
@@ -149,7 +150,6 @@
           {
             "group": "Python SDK",
             "pages": [
-              "sdk/python/overview",
               "sdk/python/initialization",
               "sdk/python/observe",
               "sdk/python/manual-spans",

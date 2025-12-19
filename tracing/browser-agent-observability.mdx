@@ -18,74 +18,82 @@ In addition, Laminar instruments popular browser automation frameworks (integrat
 
 ## Example
 
-Here is an example of a simple browser agent that uses Playwright to navigate to a website and extract the title.
+Here is a Browser Use agent example (Python) and a Playwright example (JavaScript) that produce longer, interactive browser sessions (search, click, scroll).
 
 <Tip>
 If you don't have a project API key, you can get one by signing up on [Laminar](https://lmnr.ai) or spinning up a [self-hosted instance](/startup) and getting a key from the project settings.
 </Tip>
 
 <Tabs>
-<Tab title="JavaScript/TypeScript">
+<Tab title="Python (Browser Use)">
+
+```python
+# requires: pip install "lmnr" "browser-use" "langchain-openai" "playwright"
+# and playwright install
+import asyncio
+from lmnr import Laminar
+from browser_use import Agent
+from langchain_openai import ChatOpenAI
+
+Laminar.initialize(project_api_key="YOUR_LMNR_PROJECT_API_KEY")
+
+async def main():
+    agent = Agent(
+        task="Open Wikipedia, search for 'laminar flow', click the article, scroll, and summarize the first paragraph.",
+        llm=ChatOpenAI(model="gpt-4o-mini"),
+    )
+    result = await agent.run()
+    print(result)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+</Tab>
+<Tab title="JavaScript (Playwright)">
+
 ```javascript
+// requires: npm install @lmnr-ai/lmnr playwright
+//           npx playwright install
 import { Laminar } from '@lmnr-ai/lmnr';
 import { chromium } from 'playwright';
 
 Laminar.initialize({
-  projectApiKey: process.env.LMNR_API_KEY,
-  instrumentModules: {
-    playwright: {
-      chromium
-    },
-    // add other libraries as you need
-  }
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+  instrumentModules: { playwright: { chromium } },
 });
 
-async function main() {
+(async () => {
+  const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
-
-  await page.goto('https://www.duckduckgo.com/');
-
-  await page.locator('input[name="q"]').fill('Laminar observability');
-
-  await page.locator('input[name="q"]').press('Enter');
-  const textSelector = await page.locator('a', { hasText: 'www.lmnr.ai' }).first();
-  await textSelector?.waitFor();
-  await textSelector?.click();
-  const title = await page.title();
-  await page.waitForLoadState('load');
-  console.log('Title of this page is', title);
-  await browser.close();
-}
-
-main().then(() => Laminar.shutdown().then(() => {
-  console.log('Done!');
-}));
+  try {
+    await page.goto('https://en.wikipedia.org');
+    await page.getByLabel('Search Wikipedia').fill('Laminar flow');
+    await page.keyboard.press('Enter');
+    await page.waitForLoadState('domcontentloaded');
+    await page.getByRole('heading', { level: 1 }).first().waitFor({ timeout: 8000 });
+    for (let i = 0; i < 3; i += 1) {
+      await page.mouse.wheel(0, 600);
+      await page.waitForTimeout(700);
+    }
+    const tocLinks = page.locator('#toc a');
+    const count = await tocLinks.count();
+    for (let i = 0; i < Math.min(count, 2); i += 1) {
+      await tocLinks.nth(i).click();
+      await page.waitForTimeout(800);
+    }
+    await page.mouse.wheel(0, 1200);
+    await page.waitForTimeout(800);
+    await page.mouse.wheel(0, -600);
+    await page.waitForTimeout(800);
+    console.log('Page title:', await page.title());
+  } finally {
+    await browser.close();
+    await Laminar.shutdown();
+  }
+})();
 ```
-</Tab>
 
-<Tab title="Python">
-```python
-from lmnr import Laminar
-from playwright.sync_api import sync_playwright
-import os
-
-Laminar.initialize(project_api_key=os.environ['LMNR_PROJECT_API_KEY'])
-
-with sync_playwright() as p:
-    browser = p.chromium.launch()
-    page = browser.new_page()
-    page.goto('https://www.duckduckgo.com/')
-    page.locator('input[name="q"]').fill('Laminar observability')
-    page.locator('input[name="q"]').press('Enter')
-    text_selector = page.locator('a', { hasText: 'www.lmnr.ai' }).first()
-    text_selector.wait_for()
-    text_selector.click()
-    title = page.title()
-    print(title)
-    browser.close()
-
-Laminar.flush()
-```
 </Tab>
 </Tabs>
 
@@ -95,4 +103,4 @@ As a result, you will get a trace and a recording like this
 
 A more complex trace may look like this. This was recorded by running Laminar Index browser agent.
 
-<img src="/images/traces/browser-trace.png" alt="Example complex Playwright Trace with session recording" />
+<video src="/images/Safari.mp4" controls loop muted playsInline className="block w-full" />

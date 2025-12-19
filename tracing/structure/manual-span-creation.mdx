@@ -1,6 +1,6 @@
 ---
 title: Manual Span Creation
-description: Create, enrich, and end spans explicitly for advanced tracing control.
+description:
 ---
 
 # Manual Span Creation
@@ -9,10 +9,10 @@ A span represents a unit of work. It has a name, a start time, an end time, and 
 
 Most of the time, the `@observe` decorator handles span creation automatically. But sometimes you need direct control:
 
-- **Conditional tracing** — Start a span only if certain conditions are met
-- **Dynamic naming** — Determine the span name based on runtime data
-- **Long-running operations** — Hold a span open across multiple function calls
-- **Non-function boundaries** — Trace a block of code that isn't a function
+- **Conditional tracing** — Start a span only if certain conditions are met.
+- **Dynamic naming** — Determine the span name based on runtime data.
+- **Long-running operations** — Hold a span open across multiple function calls.
+- **Non-function boundaries** — Trace a block of code that isn't a function.
 
 ## Span Lifecycle
 
@@ -28,9 +28,11 @@ If you don't end a span, it won't appear in your traces. Use context managers (`
 
 Spans can have a type that affects how they appear in the Laminar UI:
 
-- **DEFAULT** — General-purpose span
-- **LLM** — Language model call (enables token counts, cost tracking)
-- **TOOL** — Tool or function call within an agent
-- **EXECUTOR** — Orchestration or routing logic
+- **DEFAULT** — General-purpose span.
+- **LLM** — Language model call (enables token counts, cost tracking).
+- **TOOL** — Tool or function call within an agent.
+- **EXECUTOR** — Orchestration or routing logic.
 
 Set the type when creating the span. LLM spans expect specific attributes for cost calculation—see [LLM Cost Tracking](./llm-cost-tracking).
+
+See also: [TypeScript manual spans](http://localhost:3000/sdk/typescript/manual-spans#laminar-startspan-options) • [Python manual spans](http://localhost:3000/sdk/python/manual-spans#laminar-start_span)

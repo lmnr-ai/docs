@@ -1,9 +1,13 @@
 ---
 title: SDK Initialization
-description: Initialize Laminar tracing in Python and configure options.
+description: Initialize Laminar tracing, manage lifecycle, and configure tracing level.
 ---
 
-# Initialization
+# SDK Initialization
+
+Initialize Laminar tracing, manage lifecycle, and configure tracing level.
+
+## Initialization
 
 ## Laminar.initialize()
 
@@ -41,3 +45,88 @@ Laminar.initialize(project_api_key="your-key")
 - `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`, `OTEL_EXPORTER_OTLP_ENDPOINT` — OTEL endpoint overrides
 
 **Note:** Re-calling `initialize()` is a no-op.
+
+### Laminar.is_initialized()
+
+Check whether Laminar has been initialized.
+
+**Returns:** `bool`
+
+---
+
+## Lifecycle
+
+### Laminar.flush()
+
+Flush buffered spans (best-effort). The actual send happens in a background thread, so spans may not be sent before process exit.
+
+**Returns:** `None`
+
+### Laminar.force_flush()
+
+Flush spans and reinitialize the pipeline. Blocks until spans are sent. Use in serverless functions where the process may terminate immediately after.
+
+**Returns:** `None`
+
+```python
+def handler(event, context):
+    # Your logic here
+    result = process_event(event)
+    
+    Laminar.force_flush()  # Blocks until spans are sent
+    return result
+```
+
+### Laminar.shutdown()
+
+Flush all pending spans and shut down the tracing pipeline. Call during graceful shutdown.
+
+**Returns:** `None`
+
+**Note:** Unlike TypeScript, you cannot re-initialize after calling `shutdown()`.
+
+### Laminar.get_base_http_url()
+
+Return the configured OTLP HTTP URL.
+
+**Returns:** `str`
+
+### Laminar.get_project_api_key()
+
+Return the configured project API key.
+
+**Returns:** `str | None`
+
+---
+
+## Tracing Level
+
+### Laminar.set_tracing_level(level)
+
+Context manager to override tracing level temporarily. Useful for sensitive operations where you need trace structure but can't capture content.
+
+```python
+from lmnr import Laminar, TracingLevel
+
+with Laminar.set_tracing_level(TracingLevel.META_ONLY):
+    # Inputs and outputs not recorded
+    handle_sensitive_data(user_data)
+
+# Normal tracing resumes here
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `level` | `TracingLevel` | `OFF`, `META_ONLY`, or `ALL` |
+
+### TracingLevel
+
+Enum controlling what data is captured:
+
+| Value | Description |
+|-------|-------------|
+| `ALL` | Everything—inputs, outputs, attributes (default) |
+| `META_ONLY` | Structure and timing, but no inputs or outputs |
+| `OFF` | Disable tracing entirely |

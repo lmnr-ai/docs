@@ -1,9 +1,13 @@
 ---
 title: SDK Initialization
-description: Initialize Laminar tracing in TypeScript and configure options.
+description: Initialize Laminar tracing, manage lifecycle, and configure tracing level.
 ---
 
-# Initialization
+# SDK Initialization
+
+Initialize Laminar tracing, manage lifecycle, and configure tracing level.
+
+## Initialization
 
 ## Laminar.initialize(options?)
 
@@ -46,3 +50,81 @@ Laminar.initialize({
 - Loads `.env` via dotenv automatically
 - Warns on double initialization
 - Requires API key or OTEL exporter env vars
+
+### Laminar.initialized()
+
+Check whether Laminar has already been initialized.
+
+**Returns:** `boolean`
+
+---
+
+## Lifecycle
+
+### Laminar.flush()
+
+Force exporters to flush buffered spans. Use in serverless functions or CLI scripts before the process exits.
+
+**Returns:** `Promise<void>`
+
+```typescript
+await Laminar.flush();
+```
+
+### Laminar.shutdown()
+
+Flush all pending spans, reset configuration and context, and stop the Claude proxy. Call during graceful shutdown.
+
+**Returns:** `Promise<void>`
+
+```typescript
+await Laminar.shutdown();
+```
+
+### Laminar.getHttpUrl()
+
+Return the configured HTTP URL.
+
+**Returns:** `string`
+
+### Laminar.getProjectApiKey()
+
+Return the configured project API key.
+
+**Returns:** `string | undefined`
+
+---
+
+## Tracing Level
+
+### Laminar.withTracingLevel(level, fn)
+
+Run a function with a tracing level override. Useful for temporarily disabling tracing or capturing metadata only.
+
+```typescript
+import { Laminar, TracingLevel } from '@lmnr-ai/lmnr';
+
+const result = Laminar.withTracingLevel(TracingLevel.META_ONLY, () => {
+  // Inputs and outputs not recorded
+  return handleSensitiveData(userData);
+});
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `level` | `TracingLevel` | `OFF`, `META_ONLY`, or `ALL` |
+| `fn` | `() => T` | Function to execute under the override |
+
+**Returns:** Result of `fn`
+
+### TracingLevel
+
+Enum controlling what data is captured:
+
+| Value | Description |
+|-------|-------------|
+| `ALL` | Everything—inputs, outputs, attributes (default) |
+| `META_ONLY` | Structure and timing, but no inputs or outputs |
+| `OFF` | Disable tracing entirely |

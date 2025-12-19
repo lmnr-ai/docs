@@ -1,9 +1,7 @@
 ---
 title: Metadata
-description: Add trace-level metadata for environment, deployment, and request context.
+description:
 ---
-
-# Metadata
 
 Trace metadata applies to the entire trace. Use it for information that's constant across spans:
 
@@ -13,3 +11,18 @@ Trace metadata applies to the entire trace. Use it for information that's consta
 - **Request context** — correlation IDs, upstream service info
 
 Set metadata early—ideally where the trace begins—so all spans share the same context.
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    Laminar.setTraceMetadata({ environment: 'production', feature: 'chat' });
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    Laminar.set_trace_metadata({ "environment": "production", "feature": "chat" })
+    ```
+  </Tab>
+</Tabs>
+
+See also: [TypeScript trace methods](/sdk/typescript/trace-methods#laminar-settracemetadata-metadata) • [Python trace methods](/sdk/python/trace-methods#laminar-set-trace-metadata-metadata)

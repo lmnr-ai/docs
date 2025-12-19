@@ -1,9 +1,7 @@
 ---
 title: User ID
-description: Associate traces with users for filtering and debugging.
+description:
 ---
-
-# User ID
 
 Link traces to your users to make debugging and analytics easier.
 
@@ -11,3 +9,18 @@ Link traces to your users to make debugging and analytics easier.
 - Use it to filter traces by user in the Laminar UI and analyze patterns across user segments.
 
 Assign the user ID at the entry point of your application (API handler, consumer, job) so all child spans inherit it.
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    Laminar.setTraceUserId('user-456');
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    Laminar.set_trace_user_id('user-456')
+    ```
+  </Tab>
+</Tabs>
+
+See also: [TypeScript trace methods](http://localhost:3000/sdk/typescript/trace-methods#laminar-settraceuserid-userid) • [Python trace methods](http://localhost:3000/sdk/python/trace-methods#laminar-set_trace_user_id-user_id)

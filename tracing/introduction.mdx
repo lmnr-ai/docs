@@ -1,63 +1,46 @@
 ---
-title: Introduction
+title: Tracing
 sidebarTitle: Introduction
 description:
 ---
 
-# Tracing
+Tracing records what your AI agent does—every LLM call, every tool use, every decision—so you can see exactly what happened and why.
 
-Tracing is the foundation of everything in Laminar. Every feature—debugging, evaluation, cost analysis, session replay—builds on trace data. Start here.
-
-## What You Get
-
-When you instrument your application, Laminar automatically captures:
-
-- **Execution flow**: See exactly how requests move through your AI agent, which functions call which, and where time is spent
-- **LLM details**: Every prompt, completion, model used, token count, and cost
-- **Performance**: Latency at each step, bottlenecks, slow operations
-- **Errors**: Where things failed and why
-
-This data powers everything else: you can't evaluate what you can't see, and you can't improve what you can't measure.
-
-## Key Concepts
-
-**Trace**: A complete execution path through your application—one user request, one agent run, one workflow execution.
-
-**Span**: A single operation within a trace. An LLM call is a span. A function you wrap with `observe` is a span. Spans nest to show parent-child relationships.
-
-**Session**: A way to group related traces together, like all the turns in a multi-message conversation.
-
-## Get Started
+## Quick Start
 
 ### 1. Initialize Laminar
 
-Grab your API key from your [project settings](https://laminar.ai) and add two lines to your application entry point:
+Grab your API key from your [project settings](https://www.lmnr.ai/projects) and add this to your application entry point:
 
-```javascript
-import { Laminar } from '@lmnr-ai/lmnr';
-import OpenAI from 'openai';
-
-Laminar.initialize({
-    projectApiKey: process.env.LMNR_PROJECT_API_KEY,
-    instrumentModules: { openAI: OpenAI }
-});
-```
+<Tabs>
+<Tab title="Python">
 
 ```python
 from lmnr import Laminar
 
-Laminar.initialize()  # reads LMNR_PROJECT_API_KEY from environment
+Laminar.initialize(project_api_key="your-key")
 ```
+
+</Tab>
+<Tab title="TypeScript">
+
+```typescript
+import { Laminar } from '@lmnr-ai/lmnr';
+import OpenAI from 'openai';
+
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+  instrumentModules: { openAI: OpenAI }
+});
+```
+
+</Tab>
+</Tabs>
 
 ### 2. Use Your LLM as Normal
 
-```javascript
-const client = new OpenAI();
-const response = await client.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{ role: "user", content: "What is the capital of France?" }],
-});
-```
+<Tabs>
+<Tab title="Python">
 
 ```python
 from openai import OpenAI
@@ -69,91 +52,86 @@ response = client.chat.completions.create(
 )
 ```
 
-That's it. This call appears in your dashboard with full details—latency, tokens, cost, the complete prompt and response.
+</Tab>
+<Tab title="TypeScript">
 
-### What Gets Captured
-
-Automatic instrumentation records:
-
-- **LLM calls**: Request parameters, response content, token usage, latency, cost
-- **Framework operations**: Chain executions, agent reasoning steps, tool calls
-- **Vector DB queries**: Similarity searches, retrieval results
-- **Errors**: Exceptions, retry attempts, rate limiting
-
-### 3. Add Structure with `observe`
-
-For deeper visibility, wrap your own functions:
-
-```javascript
-import { observe } from '@lmnr-ai/lmnr';
-
-const answerQuestion = (question) => observe(
-  { name: 'answer_question' },
-  async () => {
-    const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: question }],
-    });
-    return response.choices[0].message.content;
-  }
-);
-
-await answerQuestion("What is the capital of France?");
+```typescript
+const client = new OpenAI();
+const response = await client.chat.completions.create({
+  model: "gpt-4o-mini",
+  messages: [{ role: "user", content: "What is the capital of France?" }],
+});
 ```
+
+</Tab>
+</Tabs>
+
+That's it. This call appears in your [dashboard](https://www.lmnr.ai) with the full prompt, response, token count, latency, and cost.
+
+---
+
+## What Just Happened?
+
+- Laminar intercepted your OpenAI call and recorded it as a **span**—a single operation with a start time, end time, inputs, and outputs.
+- A request usually involves multiple spans (LLM calls, tools, routing). Together they form a **trace**—the full tree of what happened for one request.
+
+![Trace example](/images/trace.png)
+
+This view shows where time goes—here a single span ran for **1.67s** and used **21** tokens.
+
+### What Laminar Records Automatically
+
+When you call `initialize()`, Laminar watches for calls to supported libraries and records them without any code changes:
+
+- **LLM calls** — Prompts, completions, model name, tokens, cost, latency
+- **Framework operations** — LangChain chains, agent steps, tool invocations
+- **Vector databases** — Queries, retrieved documents, similarity scores
+
+This automatic recording is called *instrumentation*. You can also manually instrument your own functions—see [Tracing Patterns](/tracing/patterns).
+
+---
+
+## Grouping Traces into Sessions
+
+A trace is one request. But conversations have many requests—a user sends a message, your agent responds, they send another message.
+
+**Sessions** group related traces together. Attach a session ID to your traces, and you can view an entire conversation as a unit:
+
+<Tabs>
+<Tab title="Python">
 
 ```python
 from lmnr import observe
 
-@observe()
-def answer_question(question: str) -> str:
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": question}],
-    )
-    return response.choices[0].message.content
-
-answer_question("What is the capital of France?")
+@observe(session_id="conversation-123")
+def handle_message(user_input):
+    # Each call creates a trace, all grouped under the same session
+    ...
 ```
 
-Now you see `answer_question` as the parent operation with the OpenAI call nested inside it. Function inputs and outputs are captured automatically.
+</Tab>
+<Tab title="TypeScript">
 
-## Enrich Your Traces
+```typescript
+import { observe } from '@lmnr-ai/lmnr';
 
-Add context to make traces filterable and meaningful:
-
-**Sessions** — Group related traces together (e.g., all turns in a conversation):
-```javascript
-Laminar.setTraceSessionId('conversation-123');
+await observe(
+  { name: 'handle_message', sessionId: 'conversation-123' },
+  async () => {
+    // Each call creates a trace, all grouped under the same session
+  }
+);
 ```
 
-**User ID** — Associate traces with specific users:
-```javascript
-Laminar.setTraceUserId('user-456');
-```
+</Tab>
+</Tabs>
 
-**Metadata** — Add key-value context for filtering:
-```javascript
-Laminar.setTraceMetadata({ environment: 'production', feature: 'chat' });
-```
+Sessions also enable [session replay](/tracing/sessions)—you can watch a conversation unfold step by step.
 
-**Tags** — Categorize individual spans:
-```javascript
-Laminar.setSpanTags(['high-priority', 'beta-user']);
-```
-
-All of these must be called within a span context (inside an `observe` wrapper or manual span).
-
-## Real-Time Visibility
-
-Traces stream to your dashboard as they execute—near real-time by default. This makes debugging long-running agents or chained LLM calls much faster.
-
-We still batch briefly for throughput; if you need every span immediately during development, set `disableBatch: true` in `Laminar.initialize` or toggle the setting in your project dashboard.
-
-## Supported Integrations
-
-Laminar auto-instruments OpenAI, Anthropic, Gemini, LangChain, Vercel AI SDK, Playwright, Pinecone, and 20+ other libraries. See [Integrations](/tracing/integrations) for the full list and setup details.
+---
 
 ## Next Steps
 
-- [SDK Reference](/sdk/reference): Full API details for all tracing methods
-- [Evaluations](/evaluations/introduction): Score and test your traces automatically
+- **[Tracing Patterns](/tracing/patterns)** — Add context to traces, instrument your own functions, handle cross-service tracing
+- **[SDK Reference](/sdk)** — Full API documentation
+- **[Evaluations](/evaluations)** — Score and test your traces automatically
