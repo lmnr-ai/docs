@@ -1,0 +1,239 @@
+---
+title: Span Methods
+description: Set attributes, outputs, tags, events, and exceptions on Laminar spans in TypeScript and Python.
+---
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ## Laminar.setSpanAttributes(attributes)
+
+    Set attributes on the current span.
+
+    ```typescript
+    await observe({ name: 'process' }, async () => {
+      Laminar.setSpanAttributes({
+        'document.pages': 10,
+        'document.language': 'en',
+      });
+    });
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Description |
+    |------|------|-------------|
+    | `attributes` | `Record<string, AttributeValue>` | Key-value pairs |
+
+    ---
+
+    ## Laminar.setSpanOutput(output)
+
+    Explicitly set span output.
+
+    ```typescript
+    await observe({ name: 'complex_operation' }, async () => {
+      const result = await doWork();
+      Laminar.setSpanOutput(result.summary); // Record only the summary
+      return result;
+    });
+    ```
+
+    **Note:** No-op if `output` is `null` or `undefined`.
+
+    ---
+
+    ## Laminar.setSpanTags(tags) / Laminar.addSpanTags(tags)
+
+    Add tags to the current span.
+
+    ```typescript
+    await observe({ name: 'process' }, async () => {
+      if (input.length > 10000) {
+        Laminar.setSpanTags(['long-input']);
+      }
+    });
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Description |
+    |------|------|-------------|
+    | `tags` | `string[]` | Tags to add (deduplicated) |
+
+    ---
+
+    ## Laminar.event(options)
+
+    Add an event to the current span, or create a span if none exists.
+
+    ```typescript
+    await observe({ name: 'workflow' }, async () => {
+      Laminar.event({
+        name: 'checkpoint_reached',
+        attributes: { step: 5 },
+      });
+    });
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Description |
+    |------|------|-------------|
+    | `name` | `string` | Event name (required) |
+    | `attributes` | `Record<string, any>` | Event attributes |
+    | `timestamp` | `TimeInput` | Custom timestamp |
+    | `sessionId` | `string` | Session ID |
+    | `userId` | `string` | User ID |
+
+    ---
+
+    ## span.end()
+
+    End a manually created span.
+
+    ```typescript
+    const span = Laminar.startSpan({ name: 'operation' });
+    try {
+      await doWork();
+    } finally {
+      span.end(); // Always end in finally block
+    }
+    ```
+
+    **Note:** Pops active context if span was activated via `startActiveSpan`.
+
+    ---
+
+    ## span.recordException(error, time?)
+
+    Record an exception on the span.
+
+    ```typescript
+    const span = Laminar.startSpan({ name: 'risky_operation' });
+    try {
+      await riskyWork();
+    } catch (error) {
+      span.recordException(error);
+      throw error;
+    } finally {
+      span.end();
+    }
+    ```
+
+    ---
+
+    ## span.setAttributes(attributes)
+
+    Set attributes directly on a span object.
+
+    ```typescript
+    const span = Laminar.startSpan({ name: 'operation' });
+    span.setAttributes({ 'operation.status': 'success' });
+    span.end();
+    ```
+  </Tab>
+  <Tab title="Python">
+    ## Laminar.set_span_attributes(attributes)
+
+    Set attributes on the current span.
+
+    ```python
+    @observe()
+    def process_document(doc):
+        Laminar.set_span_attributes({
+            "document.pages": len(doc.pages),
+            "document.language": doc.detected_language,
+        })
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Description |
+    |------|------|-------------|
+    | `attributes` | `dict[Attributes or str, Any]` | Key-value pairs. Keys can be `Attributes` enum or strings. Non-primitive values JSON-serialized. |
+
+    **Note:** No-op if no active span.
+
+    ---
+
+    ## Laminar.set_span_output(output)
+
+    Explicitly set span output.
+
+    ```python
+    @observe()
+    def complex_operation():
+        result = do_many_things()
+        Laminar.set_span_output(result.summary)  # Record only summary
+        return result
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Description |
+    |------|------|-------------|
+    | `output` | `Any` | Output value (JSON-serialized, truncated if >10MB) |
+
+    **Note:** No-op if no active span.
+
+    ---
+
+    ## Laminar.set_span_tags() / Laminar.add_span_tags()
+
+    Add tags to the current span.
+
+    ```python
+    @observe()
+    def process_input(text: str):
+        if len(text) > 10000:
+            Laminar.add_span_tags(["long-input"])
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Description |
+    |------|------|-------------|
+    | `tags` | `list[str]` | Tags to add (deduplicated) |
+
+    **Note:** Warns if not `list[str]`.
+
+    ---
+
+    ## span.end()
+
+    End a manually created span.
+
+    ```python
+    span = Laminar.start_span(name="operation")
+    try:
+        do_work()
+    finally:
+        span.end()  # Always end in finally block
+    ```
+
+    ---
+
+    ## span.record_exception(exception)
+
+    Record an exception on the span.
+
+    ```python
+    with Laminar.start_as_current_span(name="risky_operation") as span:
+        try:
+            risky_work()
+        except Exception as e:
+            span.record_exception(e)
+            raise
+    ```
+
+    ---
+
+    ## span.set_attribute(key, value)
+
+    Set a single attribute on a span object.
+
+    ```python
+    span.set_attribute("operation.status", "success")
+    ```
+  </Tab>
+</Tabs>

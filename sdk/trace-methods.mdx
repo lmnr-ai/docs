@@ -1,0 +1,130 @@
+---
+title: Trace Methods
+description: Manage trace-level metadata and IDs within Laminar spans for TypeScript and Python.
+---
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ## Laminar.setTraceSessionId(sessionId)
+
+    Group this trace with others in a session.
+
+    ```typescript
+    await observe({ name: 'handle_message' }, async () => {
+      Laminar.setTraceSessionId('conversation-abc-123');
+    });
+    ```
+
+    ---
+
+    ## Laminar.setTraceUserId(userId)
+
+    Associate trace with a user.
+
+    ```typescript
+    await observe({ name: 'handle_request' }, async () => {
+      Laminar.setTraceUserId('user-456');
+    });
+    ```
+
+    ---
+
+    ## Laminar.setTraceMetadata(metadata)
+
+    Add key-value metadata to the trace.
+
+    ```typescript
+    await observe({ name: 'handle_request' }, async () => {
+      Laminar.setTraceMetadata({
+        environment: 'production',
+        region: 'us-west',
+        feature_flag: 'new-model-v2',
+      });
+    });
+    ```
+
+    **Note:** Non-primitive values are JSON-stringified. Stored under `lmnr.association.properties.metadata.*`.
+
+    ---
+
+    ## Laminar.getTraceId()
+
+    Get the current trace ID.
+
+    ```typescript
+    await observe({ name: 'operation' }, async () => {
+      const traceId = Laminar.getTraceId();
+      console.log('Trace:', traceId);
+      return { traceId, result };
+    });
+    ```
+
+    **Returns:** `string | null` — UUID string or `null` if no active span.
+  </Tab>
+  <Tab title="Python">
+    ## Laminar.set_trace_session_id(session_id)
+
+    Group this trace with others in a session.
+
+    ```python
+    @observe()
+    def handle_message():
+        Laminar.set_trace_session_id("conversation-abc-123")
+    ```
+
+    **Note:** Warns if called outside span context.
+
+    ---
+
+    ## Laminar.set_trace_user_id(user_id)
+
+    Associate trace with a user.
+
+    ```python
+    @observe()
+    def handle_request():
+        Laminar.set_trace_user_id("user-456")
+    ```
+
+    **Note:** Warns if called outside span context.
+
+    ---
+
+    ## Laminar.set_trace_metadata(metadata)
+
+    Add key-value metadata to the trace.
+
+    ```python
+    @observe()
+    def handle_request():
+        Laminar.set_trace_metadata({
+            "environment": "production",
+            "region": "us-west",
+            "feature_flag": "new-model-v2",
+        })
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Description |
+    |------|------|-------------|
+    | `metadata` | `dict[str, Any]` | Key-value pairs. Non-primitive values JSON-serialized. |
+
+    **Note:** Calling again overwrites previous metadata. Set all keys in one call. Warns if called outside span context.
+
+    ---
+
+    ## Laminar.get_trace_id()
+
+    Get the current trace ID.
+
+    ```python
+    @observe()
+    def operation():
+        trace_id = Laminar.get_trace_id()
+        return {"trace_id": trace_id, "result": result}
+    ```
+
+    **Returns:** `uuid.UUID | None` — Returns `None` if called outside span context or invalid trace.
+  </Tab>
+</Tabs>

@@ -1,0 +1,149 @@
+---
+title: Context Utilities
+description: Work with Laminar span context for propagation and inspection in TypeScript and Python.
+---
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ## Laminar.serializeLaminarSpanContext(span?)
+
+    Serialize span context for cross-service propagation.
+
+    ```typescript
+    await observe({ name: 'service_a' }, async () => {
+      const context = Laminar.serializeLaminarSpanContext();
+      
+      await fetch('/api/service-b', {
+        headers: { 'X-Laminar-Context': context },
+      });
+    });
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Description |
+    |------|------|-------------|
+    | `span` | `Span` | Optional span (defaults to current) |
+
+    **Returns:** `string | null` — JSON string containing `traceId`, `spanId`, `isRemote`, `spanPath`, `spanIdsPath`
+
+    ---
+
+    ## Laminar.getLaminarSpanContext(span?)
+
+    Get span context as an object.
+
+    ```typescript
+    const context = Laminar.getLaminarSpanContext();
+    // { traceId, spanId, isRemote, spanPath, spanIdsPath }
+    ```
+
+    **Returns:** `LaminarSpanContext | null`
+
+    ---
+
+    ## deserializeLaminarSpanContext(data)
+
+    Deserialize span context from string or object.
+
+    ```typescript
+    import { deserializeLaminarSpanContext } from '@lmnr-ai/lmnr';
+
+    const context = deserializeLaminarSpanContext(contextString);
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Description |
+    |------|------|-------------|
+    | `data` | `string` &#124; `Record<string, unknown>` | Serialized context (accepts camelCase or snake_case) |
+
+    **Returns:** `LaminarSpanContext`
+  </Tab>
+  <Tab title="Python">
+    ## Laminar.serialize_span_context(span?)
+
+    Serialize span context for cross-service propagation.
+
+    ```python
+    @observe()
+    def service_a():
+        context = Laminar.serialize_span_context()
+        
+        requests.post("http://service-b/api", 
+            headers={"X-Laminar-Context": context}
+        )
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Description |
+    |------|------|-------------|
+    | `span` | `Span` | Optional span (defaults to current) |
+
+    **Returns:** `str | None` — JSON string
+
+    ---
+
+    ## Laminar.deserialize_span_context(span_context)
+
+    Deserialize span context from string or dict.
+
+    ```python
+    # In service B
+    context_str = request.headers.get("X-Laminar-Context")
+    parent = Laminar.deserialize_span_context(context_str)
+
+    with Laminar.start_as_current_span(
+        name="service_b_handler",
+        parent_span_context=parent
+    ):
+        handle_request()
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Description |
+    |------|------|-------------|
+    | `span_context` | `dict` &#124; `str` | Serialized context |
+
+    **Returns:** `LaminarSpanContext`
+
+    ---
+
+    ## Laminar.get_laminar_span_context(span?)
+
+    Get span context as an object.
+
+    ```python
+    context = Laminar.get_laminar_span_context()
+    # LaminarSpanContext(trace_id, span_id, is_remote, span_path, span_ids_path)
+    ```
+
+    **Returns:** `LaminarSpanContext | None`
+
+    ---
+
+    ## Laminar.get_laminar_span_context_dict(span?)
+
+    Get span context as a dictionary.
+
+    **Returns:** `dict | None`
+
+    ---
+
+    ## LaminarSpanContext
+
+    Span context for distributed tracing.
+
+    ```python
+    @dataclass
+    class LaminarSpanContext:
+        trace_id: UUID
+        span_id: UUID
+        is_remote: bool = False
+        span_path: list[str]
+        span_ids_path: list[str]
+    ```
+  </Tab>
+</Tabs>

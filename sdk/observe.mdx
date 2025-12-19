@@ -1,0 +1,116 @@
+---
+title: Observe
+description: Trace functions in Laminar with tabbed TypeScript and Python examples.
+---
+
+Wrap functions with Laminar to capture inputs, outputs, and errors automatically.
+
+<Tabs>
+  <Tab title="TypeScript">
+    <span id="observe-options-fn-args"></span>
+
+    ## observe(options, fn, ...args)
+
+    Wrap a function to create a span. Automatically captures inputs, outputs, and errors.
+
+    ```typescript
+    import { observe } from '@lmnr-ai/lmnr';
+
+    const result = await observe(
+      { name: 'my_operation' },
+      async (param1, param2) => {
+        return param1 + param2;
+      },
+      1, 2
+    );
+    // Span input: [1, 2], output: 3
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `name` | `string` | `fn.name` | Span name |
+    | `sessionId` | `string` | — | Associate trace with session |
+    | `userId` | `string` | — | Associate trace with user |
+    | `metadata` | `Record<string, any>` | — | Trace metadata (JSON-serializable) |
+    | `tags` | `string[]` | — | Span tags (deduplicated) |
+    | `traceType` | `'DEFAULT'` &#124; `'EVALUATION'` | `'DEFAULT'` | Trace type |
+    | `spanType` | `'DEFAULT'` &#124; `'LLM'` &#124; `'TOOL'` &#124; `'EXECUTOR'` &#124; `'EVALUATOR'` | `'DEFAULT'` | Span type |
+    | `input` | `any` | — | Explicit input (overrides function args) |
+    | `ignoreInput` | `boolean` | `false` | Don't record input |
+    | `ignoreOutput` | `boolean` | `false` | Don't record output |
+    | `parentSpanContext` | `string` &#124; `LaminarSpanContext` | — | Parent context for distributed tracing |
+
+    **Behavior:**
+    - If one non-Map object argument, records that object as input; otherwise records array
+    - Maps converted to entries, circular references become `"[Circular reference]"`
+    - Exceptions recorded via `recordException` and re-thrown
+    - Anonymous function name becomes `""` if `name` not provided
+    - Works with both sync and async functions
+
+    ---
+
+    ## observeDecorator(config)
+
+    Class method decorator version of `observe`.
+
+    ```typescript
+    import { observeDecorator } from '@lmnr-ai/lmnr';
+
+    class MyService {
+      @observeDecorator({ name: 'process_request' })
+      async processRequest(input: string) {
+        return await this.doWork(input);
+      }
+    }
+    ```
+
+    **Parameters:** Same as `observe` options. Config can be an object or a function `(thisArg, ...args) => config` for per-call configuration.
+  </Tab>
+  <Tab title="Python">
+    <span id="@observe"></span>
+
+    ## @observe()
+
+    Decorate a function to create a span. Automatically captures inputs, outputs, and errors.
+
+    ```python
+    from lmnr import observe
+
+    @observe()
+    def my_function(param1, param2):
+        return param1 + param2
+
+    my_function(1, 2)
+    # Span input: {"param1": 1, "param2": 2}
+    # Span output: 3
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `name` | `str` | Function name | Span name |
+    | `session_id` | `str` | — | Associate trace with session |
+    | `user_id` | `str` | — | Associate trace with user |
+    | `metadata` | `dict` | — | Trace metadata (JSON-serializable) |
+    | `tags` | `list[str]` | — | Span tags |
+    | `span_type` | `'DEFAULT'` &#124; `'LLM'` &#124; `'TOOL'` | `'DEFAULT'` | Span type |
+    | `ignore_input` | `bool` | `False` | Don't record input |
+    | `ignore_output` | `bool` | `False` | Don't record output |
+    | `ignore_inputs` | `list[str]` | — | Specific parameters to skip |
+    | `input_formatter` | `Callable` | — | Custom input formatting function |
+    | `output_formatter` | `Callable` | — | Custom output formatting function |
+    | `preserve_global_context` | `bool` | `False` | Use global OTEL context instead of isolated |
+
+    **Behavior:**
+    - Function arguments serialized via `orjson` to `lmnr.span.input`
+    - Return value serialized to `lmnr.span.output`
+    - Inputs/outputs >10MB are truncated with warning message
+    - Exceptions recorded as span events with `ERROR` status
+    - Generators/async generators: yielded parts aggregated for output
+    - If Laminar not initialized, returns original function unchanged
+    - Async functions supported automatically
+  </Tab>
+</Tabs>

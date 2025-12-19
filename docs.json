@@ -17,7 +17,6 @@
             "group": "Overview",
             "pages": [
               "overview",
-              "agent-development",
               "startup"
             ]
           },
@@ -109,6 +108,7 @@
             "group": "Platform",
             "pages": [
               "platform/sql-editor",
+              "platform/search",
               "custom-dashboards/overview",
               "queues/quickstart",
               "platform/playground",
@@ -130,38 +130,32 @@
         "tab": "SDK",
         "groups": [
           {
-            "group": "TypeScript SDK",
+            "group": "Core",
             "pages": [
-              "sdk/typescript/initialization",
-              "sdk/typescript/observe",
-              "sdk/typescript/manual-spans",
-              "sdk/typescript/span-methods",
-              "sdk/typescript/trace-methods",
-              "sdk/typescript/context-utilities",
-              "sdk/typescript/lifecycle",
-              "sdk/typescript/tracing-level",
-              "sdk/typescript/constants",
-              "sdk/typescript/client",
-              "sdk/typescript/evaluations",
-              "sdk/typescript/instrumentation",
-              "sdk/typescript/types"
+              "sdk/observe",
+              "sdk/manual-spans",
+              "sdk/span-methods",
+              "sdk/trace-methods",
+              "sdk/context-utilities",
+              "sdk/lifecycle",
+              "sdk/tracing-level",
+              "sdk/constants",
+              "sdk/client",
+              "sdk/evaluations"
             ]
           },
           {
-            "group": "Python SDK",
+            "group": "Instrumentation",
             "pages": [
-              "sdk/python/initialization",
-              "sdk/python/observe",
-              "sdk/python/manual-spans",
-              "sdk/python/span-methods",
-              "sdk/python/trace-methods",
-              "sdk/python/context-utilities",
-              "sdk/python/lifecycle",
-              "sdk/python/tracing-level",
-              "sdk/python/constants",
-              "sdk/python/client",
-              "sdk/python/evaluations",
+              "sdk/typescript/instrumentation",
               "sdk/python/instrumentation"
+            ]
+          },
+          {
+            "group": "Types",
+            "pages": [
+              "sdk/typescript/types",
+              "sdk/python/types"
             ]
           }
         ]

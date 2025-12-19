@@ -1,0 +1,174 @@
+---
+title: Client
+description: Use the Laminar client for datasets, evaluations, tagging, and agent operations in TypeScript and Python.
+---
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ## LaminarClient
+
+    HTTP client for Laminar API operations.
+
+    ```typescript
+    import { LaminarClient } from '@lmnr-ai/lmnr';
+
+    const client = new LaminarClient({
+      projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+    });
+
+    // Tag a completed trace
+    await client.tags.tag(traceId, ['user-feedback-positive']);
+    ```
+
+    **Constructor parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `projectApiKey` | `string` | `LMNR_PROJECT_API_KEY` env | API key |
+    | `baseUrl` | `string` | `https://api.lmnr.ai` | API base URL |
+    | `port` | `number` | `443` | API port |
+
+    **Resources:**
+
+    ### client.tags.tag(traceId, tags)
+
+    Add tags to a completed trace.
+
+    ```typescript
+    await client.tags.tag('trace-uuid', ['positive-feedback', 'resolved']);
+    ```
+
+    **Note:** Call after `Laminar.flush()` to ensure trace exists.
+
+    ---
+
+    ### client.datasets
+
+    Dataset operations.
+
+    ```typescript
+    // List datasets
+    const datasets = await client.datasets.listDatasets();
+
+    // Get by name
+    const dataset = await client.datasets.getDatasetByName('my-dataset');
+
+    // Push datapoints
+    await client.datasets.push({
+      name: 'my-dataset',
+      points: [{ data: { query: 'test' }, target: { answer: '42' } }],
+      createDataset: true,
+    });
+
+    // Pull datapoints
+    const points = await client.datasets.pull({
+      name: 'my-dataset',
+      limit: 100,
+    });
+    ```
+
+    ---
+
+    ### client.evals
+
+    Evaluation operations.
+
+    ```typescript
+    // Initialize evaluation
+    const eval = await client.evals.init('my-eval', 'default-group');
+
+    // Create datapoint
+    await client.evals.createDatapoint({
+      evalId: eval.id,
+      data: { query: 'test' },
+      target: { answer: '42' },
+    });
+    ```
+
+    ---
+
+    ### client.evaluators.score(options)
+
+    Attach evaluator score to a trace or span.
+
+    ```typescript
+    await client.evaluators.score({
+      name: 'quality',
+      score: 0.95,
+      traceId: 'trace-uuid',
+    });
+    ```
+
+    ---
+
+    ### client.agent.run(options)
+
+    Run a browser agent.
+
+    ```typescript
+    const result = await client.agent.run({
+      prompt: 'Find the pricing on example.com',
+      maxSteps: 50,
+      returnScreenshots: true,
+    });
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `prompt` | `string` | — | Agent instruction (required) |
+    | `parentSpanContext` | `string` | Current span | Parent trace context |
+    | `model` | `string` | — | Model to use |
+    | `stream` | `boolean` | `false` | Stream responses |
+    | `maxSteps` | `number` | `100` | Maximum steps |
+    | `startUrl` | `string` | — | Starting URL |
+    | `timeout` | `number` | — | Timeout in ms |
+    | `returnScreenshots` | `boolean` | `false` | Include screenshots |
+    | `returnAgentState` | `boolean` | `false` | Return agent state |
+    | `enableThinking` | `boolean` | `true` | Enable thinking |
+  </Tab>
+  <Tab title="Python">
+    ## LaminarClient
+
+    Synchronous HTTP client for Laminar API operations.
+
+    ```python
+    from lmnr import LaminarClient
+
+    client = LaminarClient()
+
+    # Tag a completed trace
+    client.tags.tag(trace_id, ["user-feedback-positive"])
+    ```
+
+    **Constructor parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `project_api_key` | `str` | `LMNR_PROJECT_API_KEY` env | API key |
+    | `base_url` | `str` | `https://api.lmnr.ai` | API base URL |
+    | `port` | `int` | From URL | API port |
+    | `timeout` | `int` | `3600` | Request timeout (seconds) |
+
+    **Resources:**
+    - `client.tags.tag(trace_id, tags)` — Add tags to completed trace
+    - `client.datasets` — Dataset operations (pull, push)
+    - `client.evals` — Evaluation operations
+    - `client.evaluators` — Evaluator CRUD
+
+    ---
+
+    ## AsyncLaminarClient
+
+    Async variant of `LaminarClient`.
+
+    ```python
+    from lmnr import AsyncLaminarClient
+
+    client = AsyncLaminarClient()
+    await client.tags.tag(trace_id, ["feedback"])
+    await client.close()
+    ```
+  </Tab>
+</Tabs>
