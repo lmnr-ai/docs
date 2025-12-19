@@ -4,81 +4,22 @@ sidebarTitle: Introduction
 description:
 ---
 
-Tracing records what your AI agent does—every LLM call, every tool use, every decision—so you can see exactly what happened and why.
+Tracing records what your agent does—LLM calls, tool use, and control flow—so you can debug individual runs and understand behavior over time.
 
-## Quick Start
+Tracing is also the entry point into Laminar: it’s how production runs become data in the platform. Once you’re tracing, you can use [Platform](/platform) tools to explore traces, turn real failures into [Datasets](/datasets), and run comprehensive [Evaluations](/evaluations).
 
-### 1. Initialize Laminar
+## Where to Start
 
-Grab your API key from your [project settings](https://www.lmnr.ai/projects) and add this to your application entry point:
+<CardGroup cols={2}>
+  <Card title="Integrations" href="/tracing/integrations/overview">
+    You’re already using supported libraries. Learn what’s captured and how to configure instrumentation (including Browser Use and Stagehand).
+  </Card>
 
-<Tabs items={['TypeScript', 'Python']}>
-  <Tab title="TypeScript">
-    ```typescript
-    import { Laminar } from '@lmnr-ai/lmnr';
-    import OpenAI from 'openai';
+  <Card title="Tracing Structure" href="/tracing/structure/overview">
+    You want deeper visibility into your own code. Trace your functions, create manual spans, add context, and control what’s captured.
+  </Card>
 
-    Laminar.initialize({
-      projectApiKey: process.env.LMNR_PROJECT_API_KEY,
-      instrumentModules: { openAI: OpenAI }
-    });
-    ```
-  </Tab>
-  <Tab title="Python">
-    ```python
-    from lmnr import Laminar
-
-    Laminar.initialize(project_api_key="your-key")
-    ```
-  </Tab>
-</Tabs>
-
-### 2. Use Your LLM as Normal
-
-<Tabs items={['TypeScript', 'Python']}>
-  <Tab title="TypeScript">
-    ```typescript
-    const client = new OpenAI();
-    const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: "What is the capital of France?" }],
-    });
-    ```
-  </Tab>
-  <Tab title="Python">
-    ```python
-    from openai import OpenAI
-
-    client = OpenAI()
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": "What is the capital of France?"}],
-    )
-    ```
-  </Tab>
-</Tabs>
-
-That's it. This call appears in your [dashboard](https://www.lmnr.ai) with the full prompt, response, token count, latency, and cost.
-
----
-
-## What Just Happened?
-
-- Laminar intercepted your OpenAI call and recorded it as a **span**—a single operation with a start time, end time, inputs, and outputs.
-- A request usually involves multiple spans (LLM calls, tools, routing). Together they form a **trace**—the full tree of what happened for one request.
-
-![Trace example](/images/trace.png)
-
-This view shows where time goes—here a single span ran for **1.67s** and used **21** tokens.
-
-### What Laminar Records Automatically
-
-When you call `initialize()`, Laminar watches for calls to supported libraries and records them without any code changes:
-
-- **LLM calls** — Prompts, completions, model name, tokens, cost, latency
-- **Framework operations** — LangChain chains, agent steps, tool invocations
-- **Vector databases** — Queries, retrieved documents, similarity scores
-
-This automatic recording is called *instrumentation*. You can also manually instrument your own functions—see [Tracing Structure](/tracing/structure/overview).
-
----
+  <Card title="Troubleshooting" href="/tracing/troubleshooting">
+    You’re not seeing what you expect. Debug missing spans, auto-instrumentation issues, and common setup pitfalls.
+  </Card>
+</CardGroup>

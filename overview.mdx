@@ -3,21 +3,9 @@ title: Laminar
 sidebarTitle: Laminar
 ---
 
-See exactly what your AI agent is doing. One import. Full visibility.
+Laminar is an open-source observability and evaluation platform for AI agents.
 
-Laminar is open-source observability and evaluation for AI agents. Add two lines to your code and every LLM call, tool use, and decision is traced automatically.
-
-```python
-from lmnr import Laminar
-
-Laminar.initialize(project_api_key="your-key")
-
-# That's it. Your OpenAI/Anthropic/LangChain calls are now traced.
-```
-
-[Get your API key](https://www.lmnr.ai/projects) and start tracing in under a minute. Self-host from [GitHub](https://github.com/lmnr-ai/lmnr) or use the cloud at [laminar.sh](https://www.lmnr.ai).
-
-→ [Quickstart](/quickstart)
+It records LLM calls, tool use, and agent control flow so you can debug individual runs and understand behavior over time.
 
 ---
 
@@ -25,24 +13,30 @@ Laminar.initialize(project_api_key="your-key")
 
 <CardGroup cols={2}>
 
-<Card title="Tracing" icon="route" href="/tracing">
-  See every LLM call, tool use, and agent decision. Auto-instrumentation for OpenAI, Anthropic, LangChain, and more.
+<Card title="Tracing" icon="route" href="/tracing/introduction">
+  Trace LLM calls, tool use, and agent decisions. Includes browser agent observability for Browser Use and Stagehand.
 </Card>
 
 <Card title="Evaluations" icon="chart-line" href="/evaluations">
-  Score traces automatically. Run evals in CI/CD. Catch regressions before users do.
+  Measure quality with evaluators and datasets. Run evals locally or in CI.
 </Card>
 
 <Card title="Analyze" icon="magnifying-glass-chart" href="/analyze">
-  Query traces with SQL. Build custom dashboards. Find patterns at scale.
+  Track behavior changes with semantic events and clusters, and investigate patterns across traces.
 </Card>
 
 <Card title="Datasets & Labels" icon="database" href="/datasets">
-  Build datasets from real failures. Label data with streamlined queues.
+  Build datasets from real runs and label failures for iteration and regression testing.
 </Card>
 
 </CardGroup>
 
-<Card title="Playground" icon="flask" href="/playground">
-  Experiment with prompts, test models, iterate on your agent—all in one place.
-</Card>
+<CardGroup cols={2}>
+  <Card title="Playground" icon="flask" href="/playground">
+    Reproduce traced spans, compare prompt/model changes, and iterate quickly.
+  </Card>
+
+  <Card title="Platform" icon="layer-group" href="/platform">
+    Search, SQL editor, dashboards, and other tools for exploring traces.
+  </Card>
+</CardGroup>
