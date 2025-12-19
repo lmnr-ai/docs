@@ -87,7 +87,7 @@ When you call `initialize()`, Laminar watches for calls to supported libraries a
 - **Framework operations** — LangChain chains, agent steps, tool invocations
 - **Vector databases** — Queries, retrieved documents, similarity scores
 
-This automatic recording is called *instrumentation*. You can also manually instrument your own functions—see [Tracing Patterns](/tracing/patterns).
+This automatic recording is called *instrumentation*. You can also manually instrument your own functions—see [Tracing Structure](/tracing/structure/overview).
 
 ---
 
@@ -126,12 +126,4 @@ await observe(
 </Tab>
 </Tabs>
 
-Sessions also enable [session replay](/tracing/sessions)—you can watch a conversation unfold step by step.
-
----
-
-## Next Steps
-
-- **[Tracing Patterns](/tracing/patterns)** — Add context to traces, instrument your own functions, handle cross-service tracing
-- **[SDK Reference](/sdk)** — Full API documentation
-- **[Evaluations](/evaluations)** — Score and test your traces automatically
+Sessions also enable [session replay](/tracing/structure/sessions)—you can watch a conversation unfold step by step.
