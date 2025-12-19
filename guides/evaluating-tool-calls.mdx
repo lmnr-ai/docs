@@ -281,7 +281,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Initialize Laminar for automatic tracing
-Laminar.initialize(api_key=os.environ["LMNR_PROJECT_API_KEY"])
+Laminar.initialize(project_api_key=os.environ["LMNR_PROJECT_API_KEY"])
 laminar_client = LaminarClient()
 
 client = OpenAI()
@@ -303,14 +303,14 @@ def add_negative_feedback(trace_id: str):
     
     # Tag the entire trace with user feedback
     # This applies the tag to the top-level span of the trace
-    laminar_client.tags.tag(trace_id, "unhelpful")
+    laminar_client.tags.tag(trace_id, ["unhelpful"])
 ```
 
 ### Key Points About Tagging
 
 1. **Get Trace ID in span context**: Call `Laminar.get_trace_id()` inside the `@observe` function or inside manually created span to capture the trace ID
 2. **Store for Later**: Save the trace ID along with your session data so you can tag it when feedback arrives
-3. **Tag the Trace**: Use `laminar_client.tags.tag(trace_id, tag_name)` to apply tags to the entire trace. For example, you can have a user feedback feature in your app that tags the trace with `unhelpful` when the user provides feedback.
+3. **Tag the Trace**: Use `laminar_client.tags.tag(trace_id, [tag_name])` to apply tags to the entire trace. For example, you can have a user feedback feature in your app that tags the trace with `unhelpful` when the user provides feedback.
 4. **Top-Level Span**: When you tag a trace, it applies the tag to the top-level span, making it easy to filter in SQL queries
 
 This approach allows you to collect feedback asynchronously - users can provide feedback minutes or hours after the interaction, and you can still associate it with the correct trace.

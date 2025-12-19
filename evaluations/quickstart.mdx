@@ -158,8 +158,8 @@ def capital_of_country(data: dict) -> str:
         messages=[
             {
                 "role": "user",
-                "content": f"Generate a poem about {data['country']}. " +
-                    "Answer only with the poem, no other text."
+                "content": f"What is the capital of {data['country']}? " +
+                    "Answer only with the capital, no other text."
             }
         ]
     ).choices[0].message.content

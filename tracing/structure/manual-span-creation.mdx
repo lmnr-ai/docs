@@ -2,9 +2,6 @@
 title: Manual Span Creation
 description:
 ---
-
-# Manual Span Creation
-
 A span represents a unit of work. It has a name, a start time, an end time, and optional attributes. Every trace is a tree of spans.
 
 Most of the time, the `@observe` decorator handles span creation automatically. But sometimes you need direct control:
@@ -35,4 +32,4 @@ Spans can have a type that affects how they appear in the Laminar UI:
 
 Set the type when creating the span. LLM spans expect specific attributes for cost calculation—see [LLM Cost Tracking](./llm-cost-tracking).
 
-See also: [Manual spans (TypeScript)](/sdk/manual-spans#laminar-startspan-options) • [Manual spans (Python)](/sdk/manual-spans#laminar-start_span)
+See also: [Manual span creation (SDK)](/sdk/manual-spans)

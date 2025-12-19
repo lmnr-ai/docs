@@ -128,7 +128,7 @@ Be careful though if you are using the HTTP exporter, as the HTTP implementation
 
 The authorization header is required to send traces to Laminar. We use bearer authentication,
 so the header should start with `Bearer ` and the token is your
-[project API key](http://localhost:3001/tracing/introduction#getting-started).
+[project API key](/tracing/introduction#getting-started).
 
 The right way to set the headers for gRPC requests is to use the metadata object. Even though
 gRPC is sent over HTTP/2, and metadata is sent as HTTP headers, it is different from

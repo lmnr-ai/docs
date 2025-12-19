@@ -3,37 +3,46 @@ title: Laminar
 sidebarTitle: Laminar
 ---
 
-Laminar is open-source observability and evaluations for AI agents—self-host from [GitHub](https://github.com/lmnr-ai/lmnr) or use the cloud at [laminar.sh](https://laminar.sh).
+See exactly what your AI agent is doing. One import. Full visibility.
 
-## Get Started
+Laminar is open-source observability and evaluation for AI agents. Add two lines to your code and every LLM call, tool use, and decision is traced automatically.
 
-<Columns>
-    <Card title="Tracing" href="/tracing/introduction">
-    Instrument your entire AI application and automatically trace popular AI libraries and SDKs — **OpenAI, Anthropic, Gemini, Vercel AI SDK, LangChain, Browser Use**, and more.
-    </Card>
+```python
+from lmnr import Laminar
 
-    <Card title="Evaluations" href="/evaluations/introduction">
-    Measure, track, and improve your AI application performance with powerful evaluation tools.
-    </Card>
+Laminar.initialize(project_api_key="your-key")
 
-    <Card title="SQL Query Editor" href="/platform/sql-editor">
-    Query all your data stored in Laminar using SQL for advanced analytics, custom dashboards, and dataset creation.
-    </Card>
+# That's it. Your OpenAI/Anthropic/LangChain calls are now traced.
+```
 
-    <Card title="Custom Dashboards" href="/custom-dashboards/overview">
-    Create and manage custom dashboards from trace and evaluation data.
-    </Card>
+[Get your API key](https://www.lmnr.ai/projects) and start tracing in under a minute. Self-host from [GitHub](https://github.com/lmnr-ai/lmnr) or use the cloud at [laminar.sh](https://www.lmnr.ai).
 
-    <Card title="Playgrounds" href="/playground/introduction">
-    Experiment with prompts, test different models, and iterate on your AI application in an interactive environment.
-    </Card>
+→ [Quickstart](/quickstart)
 
-    <Card title="Labeling Queues" href="/queues/quickstart">
-    Use streamlined UI to quickly label and build datasets for evaluations from trace data and other datasets.
-    </Card>
+---
 
-    <Card title="Datasets" href="/datasets/introduction">
-    Create and manage datasets for evaluations and other use cases.
-    </Card>
+## Explore
 
-</Columns>
+<CardGroup cols={2}>
+
+<Card title="Tracing" icon="route" href="/tracing">
+  See every LLM call, tool use, and agent decision. Auto-instrumentation for OpenAI, Anthropic, LangChain, and more.
+</Card>
+
+<Card title="Evaluations" icon="chart-line" href="/evaluations">
+  Score traces automatically. Run evals in CI/CD. Catch regressions before users do.
+</Card>
+
+<Card title="Analyze" icon="magnifying-glass-chart" href="/analyze">
+  Query traces with SQL. Build custom dashboards. Find patterns at scale.
+</Card>
+
+<Card title="Datasets & Labels" icon="database" href="/datasets">
+  Build datasets from real failures. Label data with streamlined queues.
+</Card>
+
+</CardGroup>
+
+<Card title="Playground" icon="flask" href="/playground">
+  Experiment with prompts, test models, iterate on your agent—all in one place.
+</Card>

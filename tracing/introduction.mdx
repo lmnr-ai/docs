@@ -12,58 +12,50 @@ Tracing records what your AI agent does—every LLM call, every tool use, every 
 
 Grab your API key from your [project settings](https://www.lmnr.ai/projects) and add this to your application entry point:
 
-<Tabs>
-<Tab title="Python">
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { Laminar } from '@lmnr-ai/lmnr';
+    import OpenAI from 'openai';
 
-```python
-from lmnr import Laminar
+    Laminar.initialize({
+      projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+      instrumentModules: { openAI: OpenAI }
+    });
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import Laminar
 
-Laminar.initialize(project_api_key="your-key")
-```
-
-</Tab>
-<Tab title="TypeScript">
-
-```typescript
-import { Laminar } from '@lmnr-ai/lmnr';
-import OpenAI from 'openai';
-
-Laminar.initialize({
-  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
-  instrumentModules: { openAI: OpenAI }
-});
-```
-
-</Tab>
+    Laminar.initialize(project_api_key="your-key")
+    ```
+  </Tab>
 </Tabs>
 
 ### 2. Use Your LLM as Normal
 
-<Tabs>
-<Tab title="Python">
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    const client = new OpenAI();
+    const response = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: "What is the capital of France?" }],
+    });
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from openai import OpenAI
 
-```python
-from openai import OpenAI
-
-client = OpenAI()
-response = client.chat.completions.create(
-    model="gpt-4o-mini",
-    messages=[{"role": "user", "content": "What is the capital of France?"}],
-)
-```
-
-</Tab>
-<Tab title="TypeScript">
-
-```typescript
-const client = new OpenAI();
-const response = await client.chat.completions.create({
-  model: "gpt-4o-mini",
-  messages: [{ role: "user", content: "What is the capital of France?" }],
-});
-```
-
-</Tab>
+    client = OpenAI()
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": "What is the capital of France?"}],
+    )
+    ```
+  </Tab>
 </Tabs>
 
 That's it. This call appears in your [dashboard](https://www.lmnr.ai) with the full prompt, response, token count, latency, and cost.
@@ -90,40 +82,3 @@ When you call `initialize()`, Laminar watches for calls to supported libraries a
 This automatic recording is called *instrumentation*. You can also manually instrument your own functions—see [Tracing Structure](/tracing/structure/overview).
 
 ---
-
-## Grouping Traces into Sessions
-
-A trace is one request. But conversations have many requests—a user sends a message, your agent responds, they send another message.
-
-**Sessions** group related traces together. Attach a session ID to your traces, and you can view an entire conversation as a unit:
-
-<Tabs>
-<Tab title="Python">
-
-```python
-from lmnr import observe
-
-@observe(session_id="conversation-123")
-def handle_message(user_input):
-    # Each call creates a trace, all grouped under the same session
-    ...
-```
-
-</Tab>
-<Tab title="TypeScript">
-
-```typescript
-import { observe } from '@lmnr-ai/lmnr';
-
-await observe(
-  { name: 'handle_message', sessionId: 'conversation-123' },
-  async () => {
-    // Each call creates a trace, all grouped under the same session
-  }
-);
-```
-
-</Tab>
-</Tabs>
-
-Sessions also enable [session replay](/tracing/structure/sessions)—you can watch a conversation unfold step by step.

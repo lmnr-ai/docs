@@ -103,7 +103,7 @@ export async function register() {
     // Make sure to initialize Laminar **after** you initialize other 
     // tracing libraries, e.g. `registerOTel` from `@vercel/otel`.
     Laminar.initialize({
-      apiKey: process.env.LMNR_PROJECT_API_KEY,
+      projectApiKey: process.env.LMNR_PROJECT_API_KEY,
     })
   }
 }

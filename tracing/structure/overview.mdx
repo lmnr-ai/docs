@@ -1,11 +1,25 @@
 ---
-title: Overview
-description: Tracing structure basics—how spans, context, and decorators fit together.
+title: Tracing Structure
+sidebarTitle: Overview
 ---
 
-Tracing captures work as spans organized into traces. This section shows how to structure spans, choose between decorators and manual spans, and add the right context for debugging and analytics.
+You've initialized Laminar. Your LLM calls are traced automatically. Now what?
 
-- Use `@observe` / `observe()` for the simplest function-level tracing.
-- Use manual spans when you need conditional tracing, dynamic names, or to trace non-function code.
-- Add context early: user/session IDs, metadata, and tags make traces filterable and useful.
-- Control privacy with tracing levels, and flush spans before process exit in serverless/CLI flows.
+This section covers what to do when auto-instrumentation isn't enough:
+
+- **Trace your own functions** — Your agent has logic beyond LLM calls. Wrap functions with `@observe` to see them in traces.
+- **Add context** — Attach user IDs, session IDs, metadata, and tags so you can filter and debug effectively.
+- **Control what's captured** — Use tracing levels to redact sensitive data, or skip tracing entirely for certain operations.
+
+If you just want to trace LLM calls and framework operations, you don't need this section—[Integrations](/integrations) has you covered. Come back here when you want deeper visibility into your own code.
+
+## Quick Reference
+
+| I want to... | Use |
+|--------------|-----|
+| Trace a function I wrote | [`@observe` decorator](/tracing/observe) |
+| Trace code that isn't a function | [Manual spans](/tracing/manual-spans) |
+| Link traces to users or conversations | [Sessions & User IDs](/tracing/sessions) |
+| Add filterable context to traces | [Metadata & Tags](/tracing/metadata) |
+| Redact inputs/outputs for privacy | [Tracing Levels](/tracing/privacy) |
+| Ensure spans send in serverless/CLI | [Flushing & Lifecycle](/sdk/lifecycle) |

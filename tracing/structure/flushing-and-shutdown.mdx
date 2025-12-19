@@ -26,4 +26,4 @@ In Python, use `force_flush()` for serverless specifically—it ensures spans ar
 
 Don't flush in hot paths (e.g., inside a web request handler). It adds latency. Flush only when the process is about to exit.
 
-See also: [Lifecycle (TypeScript)](/sdk/lifecycle#laminar-flush) • [Lifecycle (Python)](/sdk/lifecycle#laminar-force_flush)
+See also: [SDK lifecycle](/sdk/lifecycle)

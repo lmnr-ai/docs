@@ -16,8 +16,11 @@ Create a score for a span using either a trace ID or span ID. When using a trace
 import { LaminarClient, Laminar, observe } from "@lmnr-ai/lmnr";
 
 const laminarClient = new LaminarClient({
-  apiKey: "your-project-api-key"
+  projectApiKey: "your-project-api-key",
 });
+
+let traceId: string | null = null;
+let spanId: string | null = null;
 
 // First, capture your LLM calls
 await observe(
@@ -25,44 +28,37 @@ await observe(
     name: "chat_completion",
     input: { messages: [...] },
   },
-  () => {
+  async () => {
     // Your LLM call here
-    return {
-      output: { content: "AI response" }
-    };
+    const output = { content: "AI response" };
+
+    // Capture IDs while we're inside span context
+    traceId = Laminar.getTraceId();
+    spanId = Laminar.getLaminarSpanContext()?.spanId ?? null;
+
+    return output;
   }
 );
 
 // IMPORTANT: Flush data to ensure it reaches the backend
 await Laminar.flush();
 
-// Score by trace ID (attaches to root span)
-const traceId = Laminar.getTraceId();
-if (!traceId) {
-  // To avoid this, we must be inside an observed function
-  throw new Error("No active trace found");
+if (!traceId || !spanId) {
+  throw new Error("No recorded trace/span found");
 }
 
+// Score by trace ID (attaches to root span)
 await laminarClient.evaluators.score({
   name: "quality",
-  traceId: traceId,
+  traceId,
   score: 0.95,
   metadata: { model: "gpt-4" }
 });
 
-// Score by span ID 
-// IMPORTANT: This code must be run after span is already recorded
-// In production, ensure this runs later
-await new Promise(resolve => setTimeout(resolve, 1000));
-
-const spanContext = Laminar.getLaminarSpanContext();
-if (!spanContext) {
-  throw new Error("No active span found");
-}
-
+// Score by span ID (attaches to that span)
 await laminarClient.evaluators.score({
   name: "relevance", 
-  spanId: spanContext.spanId,
+  spanId,
   score: 0.87
 });
 ```
@@ -71,7 +67,10 @@ await laminarClient.evaluators.score({
 from lmnr import LaminarClient, Laminar
 import time
 
-laminar_client = LaminarClient(api_key="your-project-api-key")
+laminar_client = LaminarClient(project_api_key="your-project-api-key")
+
+trace_id = None
+span_id = None
 
 # First, capture your LLM calls
 with Laminar.start_as_current_span(
@@ -84,15 +83,18 @@ with Laminar.start_as_current_span(
     # Your LLM call here
     Laminar.set_span_output({"content": "AI response"})
 
+    # Capture IDs while we're inside span context
+    trace_id = Laminar.get_trace_id()
+    span_context = Laminar.get_laminar_span_context()
+    span_id = span_context.span_id if span_context else None
+
 # IMPORTANT: Flush data to ensure it reaches the backend
 Laminar.flush()
 
-# Score by trace ID (attaches to root span)
-trace_id = Laminar.get_trace_id()
-if not trace_id:
-    # To avoid this, we must be inside an observed function
-    raise ValueError("No active trace found")
+if not trace_id or not span_id:
+    raise ValueError("No recorded trace/span found")
 
+# Score by trace ID (attaches to root span)
 laminar_client.evaluators.score(
     name="quality",
     trace_id=trace_id, 
@@ -101,17 +103,12 @@ laminar_client.evaluators.score(
 )
 
 # Score by span ID
-# IMPORTANT: This code must be run after span is already recorded
-# In production, ensure this runs later
+# In production, ensure this runs after the span is recorded/ingested.
 time.sleep(1)
-
-span_context = Laminar.get_laminar_span_context()
-if not span_context:
-    raise ValueError("No active span found")
 
 laminar_client.evaluators.score(
     name="relevance",
-    span_id=span_context.span_id,
+    span_id=span_id,
     score=0.87
 )
 ```
