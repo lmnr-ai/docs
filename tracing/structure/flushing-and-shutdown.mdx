@@ -1,6 +1,5 @@
 ---
 title: Flushing Spans and Shutting Down
-description: Flush spans before exit and handle serverless lifecycle concerns.
 ---
 
 Serverless functions and CLI scripts terminate quickly. Laminar batches spans for performance, which means spans might not be sent before the process exits.

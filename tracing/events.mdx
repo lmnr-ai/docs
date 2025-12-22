@@ -1,95 +1,71 @@
 ---
-title: Events & Clusters
-sidebarTitle: Events & Clusters
-description:
+title: Custom Events
+sidebarTitle: Custom events
 ---
 
-When you're running agents at scale, you can't look at every trace. Events and clusters let you see patterns across thousands of runs—what's working, what's failing, and why.
+Custom events are structured signals you emit from your code to mark important domain-specific actions, decisions, or outcomes (for example, `extraction.completed`, `checkout.failed`, `handoff_to_human`).
 
----
+Unlike spans (which represent units of work), custom events are lightweight annotations you can use for:
 
-## Example: Debugging Extraction Failures
+- Filtering and clustering runs by what happened
+- Tracking outcomes and key checkpoints
+- Creating high-signal analytics without parsing span inputs/outputs
 
-Your browser agent extracts product data from e-commerce sites. Some extractions fail. You could search through traces one by one, or:
+## Emitting custom events
 
-1. Go to **Events** in the dashboard and filter to `extraction.failed`
-2. Switch to **Clusters**—Laminar groups similar failures together
-3. You see two clusters:
-   - **47 failures** on sites with lazy-loaded content (the extractor runs before content appears)
-   - **12 failures** with the same malformed CSS selector
-4. Fix each root cause once. Verify against the cluster members.
+Emit events from inside a span context (for example, inside `observe()` / an `@observe`d function) so the event attaches to the correct trace.
 
-Two fixes. Fifty-nine failures resolved.
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { Laminar, observe } from '@lmnr-ai/lmnr';
 
----
+    await observe({ name: 'extractProduct' }, async () => {
+      // ... your logic ...
 
-## Events
+      Laminar.event({
+        name: 'extraction.completed',
+        attributes: {
+          url: 'https://example.com/product/123',
+          fields_extracted: 12,
+          duration_ms: 847,
+        },
+      });
+    });
+    ```
 
-An event is a structured record of something that happened in your agent—an action, a decision, a state change.
+    See also: [`Laminar.event(options)`](/sdk/span-methods#ts-laminar-event)
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import Laminar, observe
 
-```json
-{
-  "type": "extraction.completed",
-  "session_id": "sess_abc123",
-  "timestamp": "2024-01-15T10:23:45Z",
-  "payload": {
-    "url": "https://example.com/product/123",
-    "fields_extracted": 12,
-    "duration_ms": 847
-  }
-}
-```
+    @observe()
+    def extract_product():
+        # ... your logic ...
 
-Laminar captures events automatically from your traces. You can also emit custom events for domain-specific actions.
+        Laminar.event(
+            "extraction.completed",
+            attributes={
+                "url": "https://example.com/product/123",
+                "fields_extracted": 12,
+                "duration_ms": 847,
+            },
+        )
+    ```
 
-Events are append-only—once recorded, they don't change. You build understanding by analyzing patterns across events, not by modifying them.
+    See also: [`Laminar.event(...)`](/sdk/span-methods#py-laminar-event)
+  </Tab>
+</Tabs>
 
----
+## Best practices
 
-## Clusters
+- Keep event `name` values stable and low-cardinality (don’t include request IDs).
+- Put details into `attributes` (and avoid sensitive data).
+- Emit events inside a span context so they attach to the correct trace.
 
-Clusters group similar events together. Instead of thousands of individual events, you see patterns.
+## Viewing and clustering events
 
-Laminar clusters events by similarity. Events that look alike—same error message, same user intent, same failure mode—end up in the same cluster. Each cluster gets an auto-generated label describing what the events have in common.
+In the Laminar UI, open **Events** to browse and filter event streams. If you want to cluster an event definition, see [Semantic Events & Clusters](/tracing/semantic-events-clusters).
 
-### What You Can Do With Clusters
-
-**Debug at scale.** When something breaks, find all similar failures instantly. One fix addresses an entire cluster.
-
-**Understand user intent.** See what users are actually trying to accomplish, not just what buttons they clicked. Events with similar goals cluster together even if the surface actions differ.
-
-**Detect anomalies.** Unusual patterns surface automatically. New cluster appearing? Something changed. Cluster growing rapidly? Possible regression.
-
-**Build evaluation datasets.** Export a cluster as a dataset. Test your agent against real-world failure patterns, not synthetic examples.
-
----
-
-## Using Events & Clusters
-
-In the Laminar dashboard:
-
-1. **Events** shows the raw event stream. Filter by time, event type, session, or user.
-2. **Clusters** shows grouped patterns. Click any cluster to see its members and the auto-generated label.
-3. **Export** cluster members to a dataset for evaluation.
-
-You can also query event and cluster data in the [SQL Editor](/platform/sql-editor)—find your largest clusters, newest clusters, or clusters matching specific criteria.
-
----
-
-## How Clustering Works
-
-Laminar uses embedding-based similarity. Events are converted to vectors, and similar events end up near each other in embedding space. The system continuously updates clusters as new events arrive.
-
-Temporal proximity matters too—events close in time from the same user are more likely to be related than events hours apart.
-
-Clusters have freshness scores. Active patterns stay prominent; stale clusters age out over time.
-
----
-
-## Best Practices
-
-**Let clusters emerge.** Don't over-specify upfront. Run your agent, observe what clusters form, then decide which patterns matter.
-
-**Use clusters for evaluation.** When you find a problematic cluster, export it as a dataset. Run evaluations against it. Measure improvement over time.
-
-**Monitor for new clusters.** New clusters appearing often means new failure modes. Existing clusters growing rapidly can signal a regression.
+You can also query custom events in the [SQL Editor](/platform/sql-editor) using the `events` table.

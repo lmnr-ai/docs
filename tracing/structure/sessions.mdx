@@ -1,6 +1,5 @@
 ---
 title: Sessions
-description:
 ---
 
 Sessions group related traces (multiple requests / turns) under a shared identifier—useful for conversational AI and multi-step workflows.
@@ -9,6 +8,10 @@ Sessions group related traces (multiple requests / turns) under a shared identif
 - Use the Sessions view in the Laminar UI to review all traces in the same session.
 
 Set the session ID early in your request/handler entry point so downstream spans inherit it.
+
+<Note>
+  You must set the session ID inside a span context so it can attach to the current trace (for example, inside an <code>@observe</code>d function / <code>observe()</code> call, or by passing <code>sessionId</code> / <code>session_id</code> via observe options).
+</Note>
 
 ## What is a Session?
 
@@ -35,7 +38,8 @@ A **trace** usually represents one request / one conversational turn. A **sessio
     ```python
     from lmnr import Laminar, observe
 
-    # One trace per turn/request; reuse the same session_id across turns
+    # One trace per turn/request; reuse the same session_id across turns.
+    # Note: set_trace_session_id must be called inside a span context (e.g., an @observe'd function).
     @observe()
     def handle_turn(conversation_id: str, user_message: str):
         Laminar.set_trace_session_id(conversation_id)
@@ -52,11 +56,11 @@ A **trace** usually represents one request / one conversational turn. A **sessio
 2. Select the **Sessions** tab
 3. Click a session to expand and see all traces within it
 
-<img className="block" src="/images/traces/sessions.png" alt="Sessions tab showing traces grouped by session" />
+<img className="block" src="/images/sessions.png" alt="Sessions tab showing traces grouped by session" />
 
 Each trace within a session contains the same information as a standalone trace:
 
-<img className="block" src="/images/traces/trace-in-session.png" alt="Trace detail view for a trace within a session" />
+<img className="block" src="/images/trace-session.png" alt="Trace detail view for a trace within a session" />
 
 ## Common Patterns
 

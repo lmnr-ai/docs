@@ -4,103 +4,89 @@ title: "Browser agent observability"
 
 ## Overview
 
-Laminar has an extensive observability suite for browser agents. If you are 
-building browser agents, you can use Laminar to trace them and record the browser sessions.
+Laminar provides session replay for browser agents. Alongside your trace, you get a recording of the browser run synced with your spans (LLM calls, tool calls, and browser automation steps).
 
-That is, by default, you will get both the LLM calls traces and a session recording of
-the browser sessions.
+This makes it much easier to debug failed automations and understand why the agent took a specific action.
 
-## How does it work?
+## Session replay for browser agents
 
-Laminar traces the LLM calls using automatic instrumentations provided by OpenLLMetry.
+Laminar traces LLM calls via auto-instrumentation, and records browser sessions via native integrations with common browser automation frameworks:
 
-In addition, Laminar instruments popular browser automation frameworks (integrations with [Puppeteer](/tracing/integrations/puppeteer), [Playwright](/tracing/integrations/playwright), [Stagehand](/tracing/integrations/stagehand), [BrowserUse](/tracing/integrations/browser-use), and [Skyvern](/tracing/integrations/skyvern)) and records the browser sessions.
+- [Puppeteer](/tracing/integrations/puppeteer)
+- [Playwright](/tracing/integrations/playwright)
+- [Stagehand](/tracing/integrations/stagehand)
+- [Browser Use](/tracing/integrations/browser-use)
+- [Skyvern](/tracing/integrations/skyvern)
 
-## Example
+In the Laminar trace view, you can scrub the recording and correlate moments in the browser with the spans that produced them.
 
-Here is a Browser Use agent example (Python) and a Playwright example (JavaScript) that produce longer, interactive browser sessions (search, click, scroll).
+### Privacy: masking inputs
+
+If your agent interacts with sensitive forms, configure session replay input masking so typed values aren’t recorded.
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { Laminar } from '@lmnr-ai/lmnr';
+
+    Laminar.initialize({
+      projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+      sessionRecordingOptions: {
+        maskInputOptions: {
+          text: true,
+          textarea: true,
+          email: true,
+          tel: true,
+          number: true,
+        },
+      },
+    });
+    ```
+
+    See also: [`SessionRecordingOptions`](/sdk/typescript/types#sessionrecordingoptions) and [`Laminar.initialize`](/sdk/typescript/instrumentation#laminar-initializeoptions).
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import Laminar
+
+    Laminar.initialize(
+        project_api_key="...",
+        session_recording_options={
+            "mask_input_options": {
+                "text": True,
+                "textarea": True,
+                "email": True,
+                "tel": True,
+                "number": True,
+            }
+        },
+    )
+    ```
+
+    See also: [`SessionRecordingOptions`](/sdk/python/types#sessionrecordingoptions) and [`Laminar.initialize`](/sdk/python/instrumentation#laminar-initialize).
+  </Tab>
+</Tabs>
+
+## Getting started
 
 <Tip>
 If you don't have a project API key, you can get one by signing up on [Laminar](https://lmnr.ai) or spinning up a [self-hosted instance](https://github.com/lmnr-ai/lmnr) and getting a key from the project settings.
 </Tip>
 
-<Tabs>
-<Tab title="Python (Browser Use)">
+Follow the integration guide for your framework to enable tracing + session replay:
 
-```python
-# requires: pip install "lmnr" "browser-use" "langchain-openai" "playwright"
-# and playwright install
-import asyncio
-from lmnr import Laminar
-from browser_use import Agent
-from langchain_openai import ChatOpenAI
+- [Stagehand](/tracing/integrations/stagehand)
+- [Browser Use](/tracing/integrations/browser-use)
+- [Playwright](/tracing/integrations/playwright)
+- [Puppeteer](/tracing/integrations/puppeteer)
+- [Skyvern](/tracing/integrations/skyvern)
 
-Laminar.initialize(project_api_key="YOUR_LMNR_PROJECT_API_KEY")
+## What it looks like
 
-async def main():
-    agent = Agent(
-        task="Open Wikipedia, search for 'laminar flow', click the article, scroll, and summarize the first paragraph.",
-        llm=ChatOpenAI(model="gpt-4o-mini"),
-    )
-    result = await agent.run()
-    print(result)
-
-if __name__ == "__main__":
-    asyncio.run(main())
-```
-
-</Tab>
-<Tab title="JavaScript (Playwright)">
-
-```javascript
-// requires: npm install @lmnr-ai/lmnr playwright
-//           npx playwright install
-import { Laminar } from '@lmnr-ai/lmnr';
-import { chromium } from 'playwright';
-
-Laminar.initialize({
-  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
-  instrumentModules: { playwright: { chromium } },
-});
-
-(async () => {
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
-  try {
-    await page.goto('https://en.wikipedia.org');
-    await page.getByLabel('Search Wikipedia').fill('Laminar flow');
-    await page.keyboard.press('Enter');
-    await page.waitForLoadState('domcontentloaded');
-    await page.getByRole('heading', { level: 1 }).first().waitFor({ timeout: 8000 });
-    for (let i = 0; i < 3; i += 1) {
-      await page.mouse.wheel(0, 600);
-      await page.waitForTimeout(700);
-    }
-    const tocLinks = page.locator('#toc a');
-    const count = await tocLinks.count();
-    for (let i = 0; i < Math.min(count, 2); i += 1) {
-      await tocLinks.nth(i).click();
-      await page.waitForTimeout(800);
-    }
-    await page.mouse.wheel(0, 1200);
-    await page.waitForTimeout(800);
-    await page.mouse.wheel(0, -600);
-    await page.waitForTimeout(800);
-    console.log('Page title:', await page.title());
-  } finally {
-    await browser.close();
-    await Laminar.shutdown();
-  }
-})();
-```
-
-</Tab>
-</Tabs>
-
-As a result, you will get a trace and a recording like this
+As a result, you will get a trace and a recording like this:
 
 <img src="/images/traces/playwright-simple-trace.png" alt="Example Playwright Trace with session recording" />
 
-A more complex trace may look like this. This was recorded by running Laminar Index browser agent.
+A more complex trace may look like this. This example was recorded from a Stagehand run (see [Stagehand](/tracing/integrations/stagehand)).
 
 <video src="/images/Safari.mp4" controls loop muted playsInline className="block w-full" />

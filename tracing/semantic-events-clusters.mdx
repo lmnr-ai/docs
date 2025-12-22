@@ -1,15 +1,12 @@
 ---
 title: Semantic Events & Clusters
-description: Laminar clusters similar events so you can see what your agents are really doing at scale.
 ---
-
-# Semantic Events & Clusters
 
 Laminar automatically identifies patterns in your traces by clustering similar events together. This helps you understand what your agents are actually doing at scale—without manually tagging everything.
 
 ## What Are Semantic Events?
 
-A semantic event is a structured record of something that happened: an action, a state change, a decision. Laminar captures these automatically from your traces.
+A semantic event is a structured record of something that happened: an action, a state change, a decision. Laminar generates semantic events from your traces by applying **event definitions** (built-in templates and any custom ones you create).
 
 Each event includes:
 
@@ -20,6 +17,39 @@ Each event includes:
 - **Timestamp** — When it occurred
 
 Events are immutable and append-only. Once recorded, they don't change—you build understanding by analyzing patterns across events, not by modifying them.
+
+## Creating a semantic event (UI)
+
+To define a new semantic event from trace data (no code changes required):
+
+<Frame caption="Creating a new semantic event in the Laminar UI">
+  <img src="/images/create-event.png" alt="Create new semantic event form showing name, prompt, structured output schema, and trigger spans" />
+</Frame>
+
+1. Open **Events** → **Event definitions**.
+2. Select the **Semantic** tab and click **+ Event Definition**.
+3. In the “Create new semantic event” panel:
+   - (Optional) **Start from a template** to prefill the prompt, schema, and triggers.
+   - **Name**: choose a stable event name (for example, `checkout.completed` or `navigation.failed`).
+   - **Prompt**: describe what the event should detect/extract from the trace/span data.
+   - **Structured Output**: define a JSON schema for the event payload (keep it small and stable).
+   - **Trigger Spans**: click **Add Span** and enter the span name(s) that should trigger this event. Pick spans that contain the context you need (often an LLM span, a tool span, or your request/root span).
+4. Click **Create**.
+
+If you’re unsure what to put under **Trigger Spans**, open a representative trace and copy the relevant span’s **name** (avoid spans whose names contain dynamic IDs).
+
+### Create clusters for an event definition
+
+After your semantic event starts producing results, you can cluster it:
+
+<Frame caption="Starting clustering for a semantic event definition">
+  <img src="/images/start-clustering.png" alt="Start Clustering dialog with value template input" />
+</Frame>
+
+1. In **Events**, click your event definition to open it.
+2. Click **Start Clustering**.
+3. Choose a **Value Template** (Mustache-like) that represents what “similar” means for this event (for example, cluster by an error message, URL, tool name, or other payload field).
+4. Click **Start**, then switch to **Clusters** to see grouped results.
 
 ## What Are Clusters?
 
