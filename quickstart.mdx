@@ -120,53 +120,6 @@ Now, here is my project context + code:
 [PASTE HERE]
 `;
 
-export const COPY_PROMPT_BUTTON_STYLE = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: '12px',
-  width: '100%',
-  padding: '12px 14px',
-  borderRadius: '12px',
-  border: '1px solid rgba(237, 110, 64, 0.35)',
-  background: 'rgba(237, 110, 64, 0.10)',
-  color: 'rgba(255, 255, 255, 0.95)',
-  fontSize: '0.95rem',
-  fontWeight: 600,
-  cursor: 'pointer',
-  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.35)',
-  textAlign: 'left',
-  lineHeight: 1.25,
-};
-
-export const COPY_PROMPT_LIST_STYLE = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '12px',
-  maxWidth: '720px',
-  marginTop: '12px',
-};
-
-export const COPY_PROMPT_ITEM_STYLE = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '10px',
-};
-
-export const COPY_PROMPT_BADGE_STYLE = {
-  flex: '0 0 auto',
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: '6px 10px',
-  borderRadius: '999px',
-  border: '1px solid rgba(237, 110, 64, 0.35)',
-  background: 'rgba(237, 110, 64, 0.16)',
-  fontSize: '0.8rem',
-  fontWeight: 700,
-  letterSpacing: '0.01em',
-};
-
 export const LAMINAR_BASIC_INSTALL_PROMPT = `
 You are a coding agent (Claude Code / Codex). Your job is to add a minimal, correct Laminar setup to my repo so that LLM calls (and tool calls, if applicable) show up as spans in Laminar with as little manual instrumentation as possible.
 
@@ -267,51 +220,111 @@ Want an LLM (or coding agent) to help with setup? Pick the prompt that matches w
   Laminar ships quickly and docs may change; LLMs can miss the latest best practices. If something looks off, follow the docs in this repo (or ask support) over the model’s output.
 </Warning>
 
-<div style={COPY_PROMPT_LIST_STYLE}>
-  <div style={COPY_PROMPT_ITEM_STYLE}>
+<div className="mx-auto mt-3 grid max-w-4xl grid-cols-1 gap-4 md:grid-cols-2">
+  <div className="flex flex-col gap-2">
     <button
       type="button"
       onClick={() => navigator.clipboard.writeText(LAMINAR_INSTRUMENTATION_PROMPT.trim())}
-      style={COPY_PROMPT_BUTTON_STYLE}
+      className="group w-full rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-left shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[#ED6E40]/50 hover:bg-white/[0.05] hover:shadow-[0_0_0_1px_rgba(237,110,64,0.18),0_20px_50px_rgba(0,0,0,0.28)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ED6E40]/40"
     >
-      <span>Have an existing pipeline/product and want to incorporate Laminar?</span>
-      <span style={COPY_PROMPT_BADGE_STYLE}>Copy</span>
+      <div className="flex items-start justify-between gap-3">
+        <span className="text-base font-semibold leading-tight">Incorporate Laminar into an existing product</span>
+        <span className="inline-flex items-center justify-center rounded-full border border-[#ED6E40]/30 bg-[#ED6E40]/10 px-3 py-1 text-sm font-semibold text-white/80 transition-colors duration-200 group-hover:border-[#ED6E40]/50 group-hover:bg-[#ED6E40]/15">
+          <span className="sr-only">Copy</span>
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-4 w-4"
+          >
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+        </span>
+      </div>
+      <span className="text-sm font-medium text-white/70">
+        Best if you already have an LLM/agent pipeline and want high-quality traces (structure, context, tags, and privacy).
+      </span>
     </button>
 
-    <details>
-      <summary>View prompt</summary>
+    <details className="max-w-full">
+      <summary className="cursor-pointer text-sm text-white/60 hover:text-white/85">View prompt</summary>
       <pre><code>{LAMINAR_INSTRUMENTATION_PROMPT.trim()}</code></pre>
     </details>
   </div>
 
-  <div style={COPY_PROMPT_ITEM_STYLE}>
+  <div className="flex flex-col gap-2">
     <button
       type="button"
       onClick={() => navigator.clipboard.writeText(LAMINAR_BASIC_INSTALL_PROMPT.trim())}
-      style={COPY_PROMPT_BUTTON_STYLE}
+      className="group w-full rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-left shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[#ED6E40]/50 hover:bg-white/[0.05] hover:shadow-[0_0_0_1px_rgba(237,110,64,0.18),0_20px_50px_rgba(0,0,0,0.28)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ED6E40]/40"
     >
-      <span>Just want a basic install + auto-instrumentation?</span>
-      <span style={COPY_PROMPT_BADGE_STYLE}>Copy</span>
+      <div className="flex items-start justify-between gap-3">
+        <span className="text-base font-semibold leading-tight">Basic install + auto-instrumentation</span>
+        <span className="inline-flex items-center justify-center rounded-full border border-[#ED6E40]/30 bg-[#ED6E40]/10 px-3 py-1 text-sm font-semibold text-white/80 transition-colors duration-200 group-hover:border-[#ED6E40]/50 group-hover:bg-[#ED6E40]/15">
+          <span className="sr-only">Copy</span>
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-4 w-4"
+          >
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+        </span>
+      </div>
+      <span className="text-sm font-medium text-white/70">
+        Best if you just want traces to show up quickly with minimal code changes and provider spans captured automatically.
+      </span>
     </button>
 
-    <details>
-      <summary>View prompt</summary>
+    <details className="max-w-full">
+      <summary className="cursor-pointer text-sm text-white/60 hover:text-white/85">View prompt</summary>
       <pre><code>{LAMINAR_BASIC_INSTALL_PROMPT.trim()}</code></pre>
     </details>
   </div>
 
-  <div style={COPY_PROMPT_ITEM_STYLE}>
+  <div className="flex flex-col gap-2">
     <button
       type="button"
       onClick={() => navigator.clipboard.writeText(LAMINAR_MIGRATION_PROMPT.trim())}
-      style={COPY_PROMPT_BUTTON_STYLE}
+      className="group w-full rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-left shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[#ED6E40]/50 hover:bg-white/[0.05] hover:shadow-[0_0_0_1px_rgba(237,110,64,0.18),0_20px_50px_rgba(0,0,0,0.28)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ED6E40]/40"
     >
-      <span>Migrating from another observability platform?</span>
-      <span style={COPY_PROMPT_BADGE_STYLE}>Copy</span>
+      <div className="flex items-start justify-between gap-3">
+        <span className="text-base font-semibold leading-tight">Migrate from another observability platform</span>
+        <span className="inline-flex items-center justify-center rounded-full border border-[#ED6E40]/30 bg-[#ED6E40]/10 px-3 py-1 text-sm font-semibold text-white/80 transition-colors duration-200 group-hover:border-[#ED6E40]/50 group-hover:bg-[#ED6E40]/15">
+          <span className="sr-only">Copy</span>
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-4 w-4"
+          >
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+        </span>
+      </div>
+      <span className="text-sm font-medium text-white/70">
+        Best if you already use Langfuse/LangSmith/Helicone or custom OpenTelemetry and want a minimal-diff migration.
+      </span>
     </button>
 
-    <details>
-      <summary>View prompt</summary>
+    <details className="max-w-full">
+      <summary className="cursor-pointer text-sm text-white/60 hover:text-white/85">View prompt</summary>
       <pre><code>{LAMINAR_MIGRATION_PROMPT.trim()}</code></pre>
     </details>
   </div>
