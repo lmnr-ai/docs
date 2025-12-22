@@ -56,7 +56,6 @@
                   "tracing/structure/metadata",
                   "tracing/structure/tags",
                   "tracing/structure/images",
-                  "tracing/structure/tracing-levels",
                   "tracing/structure/continuing-traces",
                   "tracing/structure/llm-cost-tracking",
                   "tracing/structure/flushing-and-shutdown"
@@ -139,7 +138,6 @@
               "sdk/trace-methods",
               "sdk/context-utilities",
               "sdk/lifecycle",
-              "sdk/tracing-level",
               "sdk/constants",
               "sdk/client",
               "sdk/evaluations"

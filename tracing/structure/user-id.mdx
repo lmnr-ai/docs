@@ -48,4 +48,4 @@ You can associate a user with a trace either by:
 ## Privacy Considerations
 
 - Prefer anonymous or pseudonymous IDs over PII (avoid emails, phone numbers, names).
-- Use tracing levels for sensitive operations where you still want structure, but not content (see [Tracing Levels](/tracing/structure/tracing-levels)).
+- For sensitive operations, avoid recording inputs/outputs with `observe({ ignoreInput: true, ignoreOutput: true })` / `@observe(ignore_input=True, ignore_output=True)`.

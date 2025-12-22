@@ -40,7 +40,6 @@ Laminar.set_span_tags
 Laminar.set_trace_metadata
 Laminar.set_trace_session_id
 Laminar.set_trace_user_id
-Laminar.set_tracing_level
 Laminar.shutdown
 Laminar.startActiveSpan
 Laminar.startSpan
@@ -58,7 +57,6 @@ SessionRecordingOptions
 Span
 SpanType
 TraceType
-TracingLevel
 client.agent.run
 client.close
 client.datasets
@@ -85,5 +83,4 @@ span.setAttributes
 span.set_attribute
 span.set_attributes
 use_span
-withTracingLevel
 ```

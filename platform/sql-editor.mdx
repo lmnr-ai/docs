@@ -11,11 +11,13 @@ Query all your Laminar data directly with SQL. Find patterns, debug issues, and 
 
 | Table | Contains |
 |-------|----------|
-| `spans` | Every span from your traces—LLM calls, tool calls, custom spans |
-| `traces` | Aggregated trace-level data |
-| `events` | Custom events you've sent |
-| `evaluation_scores` | Results from evaluation runs |
-| `evaluation_datapoints` | Datapoints used in evaluations |
+| spans | Individual spans (LLM/tool/custom/eval spans) |
+| traces | Trace-level aggregates derived from spans |
+| events | Custom events you’ve sent |
+| tags | Tags attached to spans |
+| dataset_datapoints | Dataset datapoints (latest version per datapoint) |
+| dataset_datapoint_versions | Dataset datapoints (all versions/history) |
+| evaluation_datapoints | Evaluation datapoints incl. scores (JSON map) + executor output |
 
 Only `SELECT` queries are allowed.
 
