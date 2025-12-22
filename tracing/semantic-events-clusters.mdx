@@ -6,7 +6,9 @@ Laminar automatically identifies patterns in your traces by clustering similar e
 
 ## What Are Semantic Events?
 
-A semantic event is a structured record of something that happened: an action, a state change, a decision. Laminar generates semantic events from your traces by applying **event definitions** (built-in templates and any custom ones you create).
+A semantic event is structured data that Laminar extracts from your traces using an LLM. You define what to look for (for example, “did the user complete checkout?”), and Laminar interprets your trace data to produce a typed event with the fields you specify.
+
+This is different from logging events in your code—you don't instrument anything. Laminar reads your existing traces and extracts meaning from them.
 
 Each event includes:
 
@@ -17,6 +19,16 @@ Each event includes:
 - **Timestamp** — When it occurred
 
 Events are immutable and append-only. Once recorded, they don't change—you build understanding by analyzing patterns across events, not by modifying them.
+
+## When to Use Semantic Events
+
+Use semantic events when you want to track something that isn't explicitly logged but can be inferred from trace data:
+
+- **Business outcomes** — Did the user complete their goal? Did the agent succeed? You might not log `checkout.completed` explicitly, but an LLM can infer it from the sequence of tool calls and responses.
+- **Failure categorization** — Your traces show errors, but semantic events can classify why something failed (user error, rate limit, bad input, model confusion).
+- **Behavioral patterns** — Detect when users abandon flows, retry actions, or hit edge cases—without adding logging to your code.
+
+If you're already logging structured events in your application, you may not need semantic events for those. Use them for insights you can't easily instrument.
 
 ## Creating a semantic event (UI)
 
@@ -53,26 +65,23 @@ After your semantic event starts producing results, you can cluster it:
 
 ## What Are Clusters?
 
-Clusters group related events into coherent stories. Instead of looking at thousands of individual events, you see patterns:
+Clusters group similar events together based on the value template you provide. When you start clustering, you choose what “similar” means—cluster by error message, by URL, by tool name, or by any field in your event payload.
 
-- **Session clusters** — All events from a single user session, bounded by time
-- **Intent clusters** — Events that share a common goal or topic, even across sessions
-- **Anomaly clusters** — Outliers and unusual patterns grouped together
-- **Similar failures** — Errors with the same root cause, regardless of surface differences
+Common patterns that emerge:
+
+- **Similar failures** — Errors with the same root cause, regardless of surface differences (for example, 47 failures all caused by lazy-loaded content).
+- **Behavioral groups** — Events that share a common action or intent (for example, all “search for product” events).
+- **Anomalies** — Events that don't fit any cluster, surfaced as outliers worth investigating.
+
+You control the clustering by choosing the value template. Laminar handles the similarity matching and keeps clusters updated as new events arrive.
 
 Each cluster has a centroid (the "center" of the group in embedding space), member events, confidence scores, and automatically generated labels.
 
 ## How Clustering Works
 
-Laminar uses a hybrid approach:
+When you start clustering, Laminar evaluates your **Value Template** (Mustache-like) for each semantic event and uses the resulting value as the primary grouping signal.
 
-**Embedding-based similarity** — Events are converted to vectors. Similar events end up near each other. Fast approximate nearest-neighbor search finds candidates.
-
-**Rule-based refinement** — Deterministic rules handle precision-critical cases: same user + same query + short time gap = same session.
-
-**Temporal analysis** — Time matters. Events close in time from the same user are more likely related than events hours apart.
-
-The system continuously updates clusters as new events arrive. Clusters have freshness scores and TTLs—stale clusters age out, active patterns stay prominent.
+As new events arrive, clusters continuously update and stay current, so you can track emerging patterns and regressions over time.
 
 ## What You Can Do With This
 

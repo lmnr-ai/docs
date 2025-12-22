@@ -121,19 +121,50 @@ Now, here is my project context + code:
 `;
 
 export const COPY_PROMPT_BUTTON_STYLE = {
-  display: 'inline-flex',
+  display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
+  gap: '12px',
   width: '100%',
   padding: '12px 14px',
   borderRadius: '12px',
-  border: '1px solid rgba(237, 110, 64, 0.45)',
-  background: 'rgba(237, 110, 64, 0.16)',
+  border: '1px solid rgba(237, 110, 64, 0.35)',
+  background: 'rgba(237, 110, 64, 0.10)',
   color: 'rgba(255, 255, 255, 0.95)',
   fontSize: '0.95rem',
   fontWeight: 600,
   cursor: 'pointer',
   boxShadow: '0 1px 2px rgba(0, 0, 0, 0.35)',
+  textAlign: 'left',
+  lineHeight: 1.25,
+};
+
+export const COPY_PROMPT_LIST_STYLE = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '12px',
+  maxWidth: '720px',
+  marginTop: '12px',
+};
+
+export const COPY_PROMPT_ITEM_STYLE = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '10px',
+};
+
+export const COPY_PROMPT_BADGE_STYLE = {
+  flex: '0 0 auto',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '6px 10px',
+  borderRadius: '999px',
+  border: '1px solid rgba(237, 110, 64, 0.35)',
+  background: 'rgba(237, 110, 64, 0.16)',
+  fontSize: '0.8rem',
+  fontWeight: 700,
+  letterSpacing: '0.01em',
 };
 
 export const LAMINAR_BASIC_INSTALL_PROMPT = `
@@ -236,44 +267,55 @@ Want an LLM (or coding agent) to help with setup? Pick the prompt that matches w
   Laminar ships quickly and docs may change; LLMs can miss the latest best practices. If something looks off, follow the docs in this repo (or ask support) over the model’s output.
 </Warning>
 
-<button
-  type="button"
-  onClick={() => navigator.clipboard.writeText(LAMINAR_INSTRUMENTATION_PROMPT.trim())}
-  style={COPY_PROMPT_BUTTON_STYLE}
->
-  Have an existing pipeline/product and want to incorporate Laminar?
-</button>
+<div style={COPY_PROMPT_LIST_STYLE}>
+  <div style={COPY_PROMPT_ITEM_STYLE}>
+    <button
+      type="button"
+      onClick={() => navigator.clipboard.writeText(LAMINAR_INSTRUMENTATION_PROMPT.trim())}
+      style={COPY_PROMPT_BUTTON_STYLE}
+    >
+      <span>Have an existing pipeline/product and want to incorporate Laminar?</span>
+      <span style={COPY_PROMPT_BADGE_STYLE}>Copy</span>
+    </button>
 
-<details>
-  <summary>View prompt</summary>
-  <pre><code>{LAMINAR_INSTRUMENTATION_PROMPT.trim()}</code></pre>
-</details>
+    <details>
+      <summary>View prompt</summary>
+      <pre><code>{LAMINAR_INSTRUMENTATION_PROMPT.trim()}</code></pre>
+    </details>
+  </div>
 
-<button
-  type="button"
-  onClick={() => navigator.clipboard.writeText(LAMINAR_BASIC_INSTALL_PROMPT.trim())}
-  style={COPY_PROMPT_BUTTON_STYLE}
->
-  Just want a basic install + auto-instrumentation?
-</button>
+  <div style={COPY_PROMPT_ITEM_STYLE}>
+    <button
+      type="button"
+      onClick={() => navigator.clipboard.writeText(LAMINAR_BASIC_INSTALL_PROMPT.trim())}
+      style={COPY_PROMPT_BUTTON_STYLE}
+    >
+      <span>Just want a basic install + auto-instrumentation?</span>
+      <span style={COPY_PROMPT_BADGE_STYLE}>Copy</span>
+    </button>
 
-<details>
-  <summary>View prompt</summary>
-  <pre><code>{LAMINAR_BASIC_INSTALL_PROMPT.trim()}</code></pre>
-</details>
+    <details>
+      <summary>View prompt</summary>
+      <pre><code>{LAMINAR_BASIC_INSTALL_PROMPT.trim()}</code></pre>
+    </details>
+  </div>
 
-<button
-  type="button"
-  onClick={() => navigator.clipboard.writeText(LAMINAR_MIGRATION_PROMPT.trim())}
-  style={COPY_PROMPT_BUTTON_STYLE}
->
-  Migrating from another observability platform?
-</button>
+  <div style={COPY_PROMPT_ITEM_STYLE}>
+    <button
+      type="button"
+      onClick={() => navigator.clipboard.writeText(LAMINAR_MIGRATION_PROMPT.trim())}
+      style={COPY_PROMPT_BUTTON_STYLE}
+    >
+      <span>Migrating from another observability platform?</span>
+      <span style={COPY_PROMPT_BADGE_STYLE}>Copy</span>
+    </button>
 
-<details>
-  <summary>View prompt</summary>
-  <pre><code>{LAMINAR_MIGRATION_PROMPT.trim()}</code></pre>
-</details>
+    <details>
+      <summary>View prompt</summary>
+      <pre><code>{LAMINAR_MIGRATION_PROMPT.trim()}</code></pre>
+    </details>
+  </div>
+</div>
 
 ## Hosted (Recommended)
 
