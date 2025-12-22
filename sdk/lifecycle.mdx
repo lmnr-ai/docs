@@ -5,7 +5,7 @@ description: Flush and shut down Laminar tracing in TypeScript and Python, plus 
 
 <Tabs items={['TypeScript', 'Python']}>
   <Tab title="TypeScript">
-    ## Laminar.flush()
+    <Heading level={2} id="ts-laminar-flush">Laminar.flush()</Heading>
 
     Flush pending spans to the backend.
 
@@ -26,7 +26,7 @@ description: Flush and shut down Laminar tracing in TypeScript and Python, plus 
 
     ---
 
-    ## Laminar.shutdown()
+    <Heading level={2} id="ts-laminar-shutdown">Laminar.shutdown()</Heading>
 
     Flush spans and shut down tracing.
 
@@ -41,7 +41,7 @@ description: Flush and shut down Laminar tracing in TypeScript and Python, plus 
 
     ---
 
-    ## Laminar.getHttpUrl()
+    <Heading level={2} id="ts-laminar-get-http-url">Laminar.getHttpUrl()</Heading>
 
     Return the configured HTTP URL.
 
@@ -49,14 +49,14 @@ description: Flush and shut down Laminar tracing in TypeScript and Python, plus 
 
     ---
 
-    ## Laminar.getProjectApiKey()
+    <Heading level={2} id="ts-laminar-get-project-api-key">Laminar.getProjectApiKey()</Heading>
 
     Return the configured project API key.
 
-    **Returns:** `string | undefined`
+    **Returns:** `string`
   </Tab>
   <Tab title="Python">
-    ## Laminar.flush()
+    <Heading level={2} id="py-laminar-flush">Laminar.flush()</Heading>
 
     Flush pending spans to the backend.
 
@@ -65,7 +65,7 @@ description: Flush and shut down Laminar tracing in TypeScript and Python, plus 
     Laminar.flush()
     ```
 
-    **Returns:** `bool` — Success status
+    **Returns:** `bool` — Success status (`False` if Laminar is not initialized)
 
     **When to use:**
     - End of CLI scripts
@@ -76,7 +76,7 @@ description: Flush and shut down Laminar tracing in TypeScript and Python, plus 
 
     ---
 
-    ## Laminar.force_flush()
+    <Heading level={2} id="py-laminar-force-flush">Laminar.force_flush()</Heading>
 
     Force flush spans, blocking until complete. Resets context.
 
@@ -97,7 +97,7 @@ description: Flush and shut down Laminar tracing in TypeScript and Python, plus 
 
     ---
 
-    ## Laminar.shutdown()
+    <Heading level={2} id="py-laminar-shutdown">Laminar.shutdown()</Heading>
 
     Flush spans and shut down tracing.
 
@@ -112,7 +112,7 @@ description: Flush and shut down Laminar tracing in TypeScript and Python, plus 
 
     ---
 
-    ## Edge Cases
+    <Heading level={2} id="py-edge-cases">Edge Cases</Heading>
 
     - **Input/output size:** Values >10MB replaced with `"Laminar: ... too large to record"`
     - **Uninitialized:** If `Laminar.initialize()` not called:
@@ -125,15 +125,15 @@ description: Flush and shut down Laminar tracing in TypeScript and Python, plus 
 
     ---
 
-    ## Laminar.get_base_http_url()
+    <Heading level={2} id="py-laminar-get-http-url">Laminar.get_base_http_url()</Heading>
 
     Return the configured OTLP HTTP URL.
 
-    **Returns:** `str`
+    **Returns:** `str | None`
 
     ---
 
-    ## Laminar.get_project_api_key()
+    <Heading level={2} id="py-laminar-get-project-api-key">Laminar.get_project_api_key()</Heading>
 
     Return the configured project API key.
 

@@ -3,7 +3,7 @@ title: Trace Functions
 description:
 ---
 
-The `@observe` decorator (Python) or `observe()` wrapper (JavaScript) is the simplest way to trace a function. It automatically:
+The `@observe` decorator (Python) or `observe()` wrapper (TypeScript) is the simplest way to trace a function. It automatically:
 
 - Creates a span when the function is called
 - Names the span after the function (or a custom name you provide)
@@ -28,28 +28,28 @@ You can mix `@observe` with manual spans. A manual span created inside an observ
 
 ---
 
-## Example: Wrap Your Own Functions
+## Example
 
-For deeper visibility, wrap your own functions:
+Wrap a function you own so it shows up as a parent operation with downstream spans (LLM calls, tools, etc.) nested inside it.
 
 <Tabs items={['TypeScript', 'Python']}>
   <Tab title="TypeScript">
     ```typescript
     import { observe } from '@lmnr-ai/lmnr';
 
-    const answerQuestion = (question) => observe(
-      { name: 'answer_question' },
-      async () => {
-        const response = await client.chat.completions.create({
-          model: "gpt-4o-mini",
-          messages: [{ role: "user", content: question }],
+    const answerQuestion = (question: string) =>
+      observe({ name: 'answerQuestion' }, async () => {
+        const response = await openai.chat.completions.create({
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'user', content: question }],
         });
         return response.choices[0].message.content;
-      }
-    );
+      });
 
-    await answerQuestion("What is the capital of France?");
+    await answerQuestion('What is the capital of France?');
     ```
+
+    See also: [`observe(options, fn, ...args)`](/sdk/observe#ts-observe)
   </Tab>
   <Tab title="Python">
     ```python
@@ -57,7 +57,7 @@ For deeper visibility, wrap your own functions:
 
     @observe()
     def answer_question(question: str) -> str:
-        response = client.chat.completions.create(
+        response = openai.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": question}],
         )
@@ -65,9 +65,13 @@ For deeper visibility, wrap your own functions:
 
     answer_question("What is the capital of France?")
     ```
+
+    See also: [`@observe()`](/sdk/observe#py-observe)
   </Tab>
 </Tabs>
 
-Now you see `answer_question` as the parent operation with the OpenAI call nested inside it. Function inputs and outputs are captured automatically.
+## In the Laminar UI
 
-See also: [Observe](/sdk/observe)
+- The observed function appears as a span (often the root span for the trace).
+- Auto-instrumented work inside it (LLM calls, vector DB calls, etc.) appears as child spans.
+- Function arguments are recorded as span input and the return value as span output (unless you disable or override recording).

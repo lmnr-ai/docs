@@ -12,17 +12,62 @@ Trace metadata applies to the entire trace. Use it for information that's consta
 
 Set metadata early—ideally where the trace begins—so all spans share the same context.
 
+## Adding Metadata
+
+Set metadata inside an active span context (for example, inside `observe()` or an `@observe`d function). If you call it outside any span context, it won’t attach to anything.
+
 <Tabs items={['TypeScript', 'Python']}>
   <Tab title="TypeScript">
     ```typescript
-    Laminar.setTraceMetadata({ environment: 'production', feature: 'chat' });
+    import { Laminar, observe } from '@lmnr-ai/lmnr';
+
+    await observe({ name: 'processRequest' }, async () => {
+      Laminar.setTraceMetadata({
+        environment: 'production',
+        featureFlag: 'new-algorithm-v2',
+        region: 'us-west',
+      });
+    });
     ```
+
+    See also: [`Laminar.setTraceMetadata`](/sdk/trace-methods#ts-laminar-set-trace-metadata) and [`observe(..., { metadata })`](/sdk/observe#ts-observe)
   </Tab>
   <Tab title="Python">
     ```python
-    Laminar.set_trace_metadata({ "environment": "production", "feature": "chat" })
+    from lmnr import Laminar, observe
+
+    @observe()
+    def process_request():
+        Laminar.set_trace_metadata({
+            "environment": "production",
+            "feature_flag": "new-algorithm-v2",
+            "region": "us-west",
+        })
     ```
+
+    See also: [`Laminar.set_trace_metadata`](/sdk/trace-methods#py-laminar-set-trace-metadata) and [`@observe(metadata=...)`](/sdk/observe#py-observe)
   </Tab>
 </Tabs>
 
-See also: [Trace methods](/sdk/trace-methods)
+## Notes
+
+- Setting trace metadata again overwrites the previous metadata—set all keys in one call.
+- Keep metadata JSON-serializable and avoid sensitive data.
+
+## Filtering by Metadata
+
+In the Laminar UI, metadata filters currently match **exact key-value pairs** (for example, `region=us-west`).
+
+## Metadata vs Tags
+
+| | Metadata | Tags |
+|---|---|---|
+| Scope | Entire trace | Individual spans |
+| Format | Key-value pairs | String labels |
+| Best for | Environment, cohort, request context | Categorization, review labels |
+
+## Best Practices
+
+- Use consistent keys (`environment`, `region`, `feature_flag`).
+- Keep it lightweight and JSON-serializable.
+- Avoid sensitive data (no PII).

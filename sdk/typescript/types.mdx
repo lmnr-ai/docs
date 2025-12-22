@@ -20,10 +20,32 @@ interface LaminarSpanContext {
 ## Datapoint
 
 ```typescript
-interface Datapoint {
-  data: Record<string, any>;
-  target?: Record<string, any>;
+interface Datapoint<D = Record<string, any>, T = Record<string, any>> {
+  data: D;
+  target?: T;
   metadata?: Record<string, any>;
+  id?: string;        // UUID
+  createdAt?: string; // ISO timestamp
+}
+```
+
+---
+
+## HumanEvaluator
+
+```typescript
+class HumanEvaluator {
+  constructor(options?: { value: number; label: string }[]);
+}
+```
+
+---
+
+## LaminarDataset
+
+```typescript
+class LaminarDataset<D = Record<string, any>, T = Record<string, any>> {
+  constructor(name?: string, options?: { id?: string; fetchSize?: number });
 }
 ```
 
@@ -34,6 +56,21 @@ interface Datapoint {
 ```typescript
 interface SessionRecordingOptions {
   maskInputOptions?: MaskInputOptions;
+}
+```
+
+---
+
+## MaskInputOptions
+
+```typescript
+interface MaskInputOptions {
+  textarea?: boolean;
+  text?: boolean;
+  number?: boolean;
+  select?: boolean;
+  email?: boolean;
+  tel?: boolean;
 }
 ```
 

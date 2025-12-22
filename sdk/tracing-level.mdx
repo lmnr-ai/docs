@@ -5,7 +5,7 @@ description: Control Laminar tracing verbosity in TypeScript and Python.
 
 <Tabs items={['TypeScript', 'Python']}>
   <Tab title="TypeScript">
-    ## Laminar.withTracingLevel(level, fn, ...args)
+    <Heading level={2} id="ts-laminar-set-tracing-level">withTracingLevel(tracingLevel, fn, ...args)</Heading>
 
     Control tracing level for a block of code.
 
@@ -22,9 +22,11 @@ description: Control Laminar tracing verbosity in TypeScript and Python.
 
     | Name | Type | Description |
     |------|------|-------------|
-    | `level` | `TracingLevel` | `ALL`, `META_ONLY`, or `OFF` |
+    | `tracingLevel` | `TracingLevel` | `ALL`, `META_ONLY`, or `OFF` |
     | `fn` | `Function` | Function to execute |
     | `...args` | `any[]` | Arguments passed to function |
+
+    **Returns:** `ReturnType<F>`
 
     **Levels:**
 
@@ -36,7 +38,7 @@ description: Control Laminar tracing verbosity in TypeScript and Python.
 
     ---
 
-    ## TracingLevel
+    <Heading level={2} id="ts-tracing-level">TracingLevel</Heading>
 
     Enum for controlling tracing verbosity.
 
@@ -49,27 +51,8 @@ description: Control Laminar tracing verbosity in TypeScript and Python.
     ```
   </Tab>
   <Tab title="Python">
-    ## Laminar.set_tracing_level(level)
+    <Heading level={2} id="py-laminar-set-tracing-level">Laminar.set_tracing_level(level) (not available)</Heading>
 
-    Control what gets traced within a block.
-
-    ```python
-    from lmnr import Laminar, TracingLevel
-
-    with Laminar.set_tracing_level(TracingLevel.META_ONLY):
-        # Inputs and outputs NOT recorded
-        # Timing, token counts, costs still recorded
-        handle_sensitive_data()
-
-    # Normal tracing resumes here
-    ```
-
-    **Levels:**
-
-    | Level | Behavior |
-    |-------|----------|
-    | `TracingLevel.ALL` | Trace everything (default) |
-    | `TracingLevel.META_ONLY` | Trace metadata only, no inputs/outputs |
-    | `TracingLevel.OFF` | Disable tracing entirely |
+    Not available in the Python SDK.
   </Tab>
 </Tabs>

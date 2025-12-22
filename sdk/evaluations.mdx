@@ -5,7 +5,7 @@ description: Run evaluations and work with Laminar datasets using the TypeScript
 
 <Tabs items={['TypeScript', 'Python']}>
   <Tab title="TypeScript">
-    ## evaluate(options)
+    <Heading level={2} id="ts-evaluate">evaluate(options)</Heading>
 
     Run an evaluation against a dataset.
 
@@ -36,11 +36,15 @@ description: Run evaluations and work with Laminar datasets using the TypeScript
     | `executor` | `(data, ...args) => any` | — | Function to evaluate |
     | `evaluators` | `Record<string, Function or HumanEvaluator>` | — | Scoring functions |
     | `name` | `string` | — | Evaluation name |
-    | `groupName` | `string` | — | Group name |
+    | `groupName` | `string` | `'default'` | Group name |
     | `metadata` | `Record<string, any>` | — | Evaluation metadata |
     | `config.concurrencyLimit` | `number` | `5` | Parallel executions (min 1) |
     | `config.projectApiKey` | `string` | env | API key |
     | `config.traceExportBatchSize` | `number` | `64` | Batch size |
+
+    **Returns:** `Promise<EvaluationRunResult | undefined>`
+
+    If invoked in “prepare only” mode, returns `undefined`.
 
     **Returns:**
 
@@ -56,7 +60,7 @@ description: Run evaluations and work with Laminar datasets using the TypeScript
 
     ---
 
-    ## LaminarDataset
+    <Heading level={2} id="ts-laminar-dataset">LaminarDataset</Heading>
 
     Load a dataset from Laminar.
 
@@ -84,7 +88,7 @@ description: Run evaluations and work with Laminar datasets using the TypeScript
 
     ---
 
-    ## EvaluationDataset
+    <Heading level={2} id="ts-evaluation-dataset">EvaluationDataset</Heading>
 
     Abstract base class for custom datasets.
 
@@ -111,7 +115,7 @@ description: Run evaluations and work with Laminar datasets using the TypeScript
 
     ---
 
-    ## HumanEvaluator
+    <Heading level={2} id="ts-human-evaluator">HumanEvaluator</Heading>
 
     Placeholder for human evaluation.
 
@@ -133,7 +137,7 @@ description: Run evaluations and work with Laminar datasets using the TypeScript
     **Note:** Creates spans with type `HUMAN_EVALUATOR` and `null` scores for later human annotation.
   </Tab>
   <Tab title="Python">
-    ## evaluate()
+    <Heading level={2} id="py-evaluate">evaluate()</Heading>
 
     Run an evaluation against a dataset.
 
@@ -161,12 +165,21 @@ description: Run evaluations and work with Laminar datasets using the TypeScript
     | `data` | `EvaluationDataset` &#124; `list[Datapoint]` | — | Dataset or list of datapoints |
     | `executor` | `Callable` | — | Function to evaluate |
     | `evaluators` | `dict[str, Callable or HumanEvaluator]` | — | Scoring functions |
-    | `name` | `str` | — | Evaluation name |
-    | `group_name` | `str` | `'default'` | Group name |
-    | `metadata` | `dict` | — | Evaluation metadata |
+    | `name` | `str` | `None` | Evaluation name |
+    | `group_name` | `str` | `None` | Group name (defaults to `'default'` when `None`) |
+    | `metadata` | `dict` | `None` | Evaluation metadata |
     | `concurrency_limit` | `int` | `5` | Parallel executions |
-    | `project_api_key` | `str` | — | Override API key |
+    | `project_api_key` | `str` | `None` | Override API key |
+    | `base_url` | `str` | `None` | Override base URL |
+    | `base_http_url` | `str` | `None` | Override OTLP HTTP base URL |
+    | `http_port` | `int` | `None` | Override OTLP HTTP port |
+    | `grpc_port` | `int` | `None` | Override OTLP gRPC port |
+    | `instruments` | `set[Instruments]` | `None` | Enable only these instruments |
+    | `disabled_instruments` | `set[Instruments]` | `None` | Disable these instruments |
     | `max_export_batch_size` | `int` | `64` | Batch size |
+    | `trace_export_timeout_seconds` | `int` | `None` | Export timeout override |
+
+    **Returns:** `EvaluationRunResult | None` (or an awaitable when an event loop is running)
 
     **Returns:**
 
@@ -183,7 +196,7 @@ description: Run evaluations and work with Laminar datasets using the TypeScript
 
     ---
 
-    ## LaminarDataset
+    <Heading level={2} id="py-laminar-dataset">LaminarDataset</Heading>
 
     Load a dataset from Laminar.
 
@@ -197,7 +210,8 @@ description: Run evaluations and work with Laminar datasets using the TypeScript
 
     | Name | Type | Default | Description |
     |------|------|---------|-------------|
-    | `name` | `str` | — | Dataset name or ID |
+    | `name` | `str` | `None` | Dataset name |
+    | `id` | `UUID` | `None` | Dataset ID |
     | `fetch_size` | `int` | `25` | Datapoints per fetch |
 
     **Methods:**
@@ -205,7 +219,7 @@ description: Run evaluations and work with Laminar datasets using the TypeScript
 
     ---
 
-    ## EvaluationDataset
+    <Heading level={2} id="py-evaluation-dataset">EvaluationDataset</Heading>
 
     Abstract base class for custom datasets.
 
@@ -222,7 +236,7 @@ description: Run evaluations and work with Laminar datasets using the TypeScript
 
     ---
 
-    ## Datapoint
+    <Heading level={2} id="py-datapoint">Datapoint</Heading>
 
     Structure for evaluation data.
 

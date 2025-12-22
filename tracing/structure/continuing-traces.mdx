@@ -17,8 +17,173 @@ Common patterns:
 
 The downstream service deserializes the context and uses it as the parent for its spans. The result: a single trace showing the full request flow across services.
 
-### When Context Is Unavailable
+## Example
 
-If deserialization fails or context is missing, start a new trace rather than crashing. The downstream work won't connect to the original trace, but you'll still have visibility into that service.
+When you can’t pass span objects directly (HTTP, queues, cron jobs), serialize context in the upstream service and deserialize in the downstream service.
 
-See also: [Context utilities](/sdk/context-utilities)
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { Laminar, observe } from '@lmnr-ai/lmnr';
+
+    // Service A
+    await observe({ name: 'serviceAHandler' }, async () => {
+      const context = Laminar.serializeLaminarSpanContext();
+      await fetch('https://service-b/api', {
+        headers: { 'X-Laminar-Span-Context': context ?? '' },
+      });
+    });
+
+    // Service B
+    const parentSpanContext = req.headers['x-laminar-span-context'];
+    const span = Laminar.startSpan({
+      name: 'serviceBHandler',
+      parentSpanContext: parentSpanContext as string | undefined,
+    });
+    span.end();
+    ```
+
+    See also: [`Laminar.serializeLaminarSpanContext`](/sdk/context-utilities#ts-laminar-serialize-span-context) and [`Laminar.startSpan`](/sdk/manual-spans#ts-laminar-start-span)
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import Laminar, observe
+
+    # Service A
+    @observe()
+    def service_a_handler():
+        context = Laminar.serialize_span_context()
+        requests.post(
+            "https://service-b/api",
+            headers={"X-Laminar-Span-Context": context or ""},
+        )
+
+    # Service B
+    parent = Laminar.deserialize_span_context(request.headers.get("X-Laminar-Span-Context"))
+    with Laminar.start_as_current_span(
+        name="service_b_handler",
+        parent_span_context=parent,
+    ):
+        handle_request()
+    ```
+
+    See also: [`Laminar.serialize_span_context`](/sdk/context-utilities#py-laminar-serialize-span-context) and [`Laminar.deserialize_span_context`](/sdk/context-utilities#py-laminar-deserialize-span-context)
+  </Tab>
+</Tabs>
+
+## Common Patterns
+
+- **Database storage:** store serialized context alongside workflow state, then reuse it when the workflow resumes.
+- **Message queues:** include context in the message payload so the consumer can continue the trace.
+
+### Database Storage Pattern
+
+Persist span context with workflow state so you can resume a long-running trace later.
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { Laminar, observe } from '@lmnr-ai/lmnr';
+
+    // Start workflow and persist context
+    await observe({ name: 'workflow_start' }, async () => {
+      const spanContext = Laminar.serializeLaminarSpanContext();
+      await db.saveWorkflow({ userId, spanContext, data: workflowData, status: 'started' });
+    });
+
+    // Later: resume workflow and continue trace
+    const workflow = await db.getWorkflow(workflowId);
+    const span = Laminar.startSpan({
+      name: 'workflow_continue',
+      parentSpanContext: workflow.spanContext ?? undefined,
+    });
+    try {
+      // Continue processing...
+    } finally {
+      span.end();
+    }
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import Laminar
+
+    def start_workflow(user_id: str, workflow_data: dict):
+        with Laminar.start_as_current_span(name="workflow_start") as span:
+            span_context = Laminar.serialize_span_context(span)
+            db.save_workflow(
+                {
+                    "user_id": user_id,
+                    "span_context": span_context,
+                    "data": workflow_data,
+                    "status": "started",
+                }
+            )
+
+    def continue_workflow(workflow_id: str):
+        workflow = db.get_workflow(workflow_id)
+        parent = Laminar.deserialize_span_context(workflow.get("span_context"))
+        with Laminar.start_as_current_span(
+            name="workflow_continue",
+            parent_span_context=parent,
+        ):
+            # Continue processing...
+            pass
+    ```
+  </Tab>
+</Tabs>
+
+### Message Queue Pattern
+
+Include span context in your queued message payload so consumers can continue the trace.
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { Laminar, observe } from '@lmnr-ai/lmnr';
+
+    // Producer
+    await observe({ name: 'task_enqueued' }, async () => {
+      const spanContext = Laminar.serializeLaminarSpanContext();
+      await queue.send({ data: taskData, spanContext });
+    });
+
+    // Consumer
+    const message = await queue.receive();
+    const span = Laminar.startSpan({
+      name: 'task_processed',
+      parentSpanContext: message.spanContext ?? undefined,
+    });
+    try {
+      // Process the task...
+    } finally {
+      span.end();
+    }
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import Laminar
+
+    def enqueue_task(task_data: dict):
+        with Laminar.start_as_current_span(name="task_enqueued"):
+            span_context = Laminar.serialize_span_context()
+            queue.send({"data": task_data, "trace_context": span_context})
+
+    def process_task(message: dict):
+        parent = Laminar.deserialize_span_context(message.get("trace_context"))
+        with Laminar.start_as_current_span(
+            name="task_processed",
+            parent_span_context=parent,
+        ):
+            # Process the task...
+            pass
+    ```
+  </Tab>
+</Tabs>
+
+## Notes
+
+- **Within a service:** prefer passing span objects and activating them (`withSpan` / `use_span`) instead of serializing context (see `sdk/manual-spans`).
+- **When context is unavailable:** if deserialization fails or context is missing, start a new trace rather than crashing.
+- **Treat context as untrusted input:** validate and fail open (see `sdk/context-utilities`).

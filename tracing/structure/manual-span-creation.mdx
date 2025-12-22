@@ -11,6 +11,21 @@ Most of the time, the `@observe` decorator handles span creation automatically. 
 - **Long-running operations** — Hold a span open across multiple function calls.
 - **Non-function boundaries** — Trace a block of code that isn't a function.
 
+## Choosing the Right Method
+
+It's important to distinguish:
+
+- **Creating a span** (starts timing) vs **activating a span** (makes it the current parent for nesting)
+- **Active spans** (recommended) vs **detached/manual spans** (advanced)
+
+**Active spans** automatically parent anything that runs inside them (including instrumented third-party libraries), because context propagation can attach child spans under the active span.
+
+**Detached/manual spans** are useful when you need to pass a span object around explicitly (or across async boundaries where call-stack parenting isn’t enough).
+
+Analogy:
+- Active span: create a folder and open it — new files go inside automatically.
+- Detached span: create a folder but don’t open it — new files won’t go inside unless you explicitly place them there.
+
 ## Span Lifecycle
 
 A manual span follows three steps:
@@ -21,6 +36,70 @@ A manual span follows three steps:
 
 If you don't end a span, it won't appear in your traces. Use context managers (`with` in Python) or `try/finally` blocks to ensure spans always close, even when errors occur.
 
+## Common Options (and When to Use Them)
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+
+    | Method | Creates span | Activates span | Ends span | Use when |
+    |--------|--------------|----------------|----------|----------|
+    | `observe()` | ✅ | ✅ | ✅ | You’re tracing a function or request handler |
+    | `Laminar.startActiveSpan()` | ✅ | ✅ | ❌ | You need a parent span outside `observe()` |
+    | `Laminar.startSpan()` | ✅ | ❌ | ❌ | You want a detached span you’ll pass around |
+    | `Laminar.withSpan()` | ❌ | ✅ | ❌ (optional) | You have a span object and want it to be current |
+
+    ```typescript
+    import { Laminar } from '@lmnr-ai/lmnr';
+
+    const span = Laminar.startActiveSpan({ name: 'custom_operation' });
+    try {
+      // Any spans created here become children of custom_operation
+      await doWork();
+    } catch (error) {
+      span.recordException(error as Error);
+      throw error;
+    } finally {
+      span.end();
+    }
+    ```
+
+    See also: [`Laminar.startActiveSpan`](/sdk/manual-spans#ts-laminar-start-span-block)
+  </Tab>
+  <Tab title="Python">
+
+    | Method | Creates span | Activates span | Ends span | Use when |
+    |--------|--------------|----------------|----------|----------|
+    | `Laminar.start_as_current_span()` | ✅ | ✅ | ✅ | Default choice for tracing a block |
+    | `Laminar.start_active_span()` | ✅ | ✅ | ❌ | You want a span object but still need nesting |
+    | `Laminar.start_span()` | ✅ | ❌ | ❌ | You want a detached span you’ll pass around |
+    | `use_span()` | ❌ | ✅ | ❌ (optional) | You have a span and want it to be current |
+
+    ```python
+    from lmnr import Laminar
+
+    with Laminar.start_as_current_span(name="custom_operation") as span:
+        try:
+            do_work()
+        except Exception as e:
+            span.record_exception(e)
+            raise
+        # Span ends automatically on exit
+    ```
+
+    <Warning>
+      In Python, prefer `start_as_current_span()` (context manager) or `start_span()` + `use_span()`.
+      If you use `start_active_span()`, make sure you end the span in the same thread/async context it was created in—otherwise span hierarchy can become corrupted.
+    </Warning>
+
+    See also: [`Laminar.start_as_current_span`](/sdk/manual-spans#py-laminar-start-span-block)
+  </Tab>
+</Tabs>
+
+## In the Laminar UI
+
+- Manually-created spans look the same as auto-instrumented spans: a node in the trace tree with timing and attributes.
+- If a span is *active*, any work executed inside it is parented underneath it automatically.
+
 ## Span Types
 
 Spans can have a type that affects how they appear in the Laminar UI:
@@ -30,6 +109,4 @@ Spans can have a type that affects how they appear in the Laminar UI:
 - **TOOL** — Tool or function call within an agent.
 - **EXECUTOR** — Orchestration or routing logic.
 
-Set the type when creating the span. LLM spans expect specific attributes for cost calculation—see [LLM Cost Tracking](./llm-cost-tracking).
-
-See also: [Manual span creation (SDK)](/sdk/manual-spans)
+Set the type when creating the span. LLM spans expect specific attributes for cost calculation—see [LLM Cost Tracking](./llm-cost-tracking) and the SDK reference for span creation options.

@@ -150,3 +150,59 @@ Visit your Laminar dashboard to view your OpenAI traces and analytics.
 
 - Enrich traces with sessions, user IDs, metadata, and tags via the SDK reference.
 - Wrap custom functions with `observe` to capture business logic alongside model calls.
+- Images sent to vision-capable models are captured automatically — see [Tracing Images](/tracing/structure/images).
+
+## Vision inputs (images)
+
+Laminar automatically traces image inputs (data URLs and external URLs) sent to vision-capable OpenAI models.
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Describe this product and its key features.' },
+            {
+              type: 'image_url',
+              image_url: {
+                url: 'https://example.com/product-image.jpg',
+                detail: 'high',
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    console.log(response.choices[0].message.content);
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "Describe this product and its key features."},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": "https://example.com/product-image.jpg",
+                            "detail": "high",
+                        },
+                    },
+                ],
+            }
+        ],
+    )
+
+    print(response.choices[0].message.content)
+    ```
+  </Tab>
+</Tabs>

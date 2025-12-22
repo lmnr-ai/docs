@@ -16,8 +16,7 @@
           {
             "group": "Overview",
             "pages": [
-              "overview",
-              "quickstart"
+              "overview"
             ]
           },
           {
@@ -56,6 +55,7 @@
                   "tracing/structure/user-id",
                   "tracing/structure/metadata",
                   "tracing/structure/tags",
+                  "tracing/structure/images",
                   "tracing/structure/tracing-levels",
                   "tracing/structure/continuing-traces",
                   "tracing/structure/llm-cost-tracking",
@@ -107,6 +107,7 @@
           {
             "group": "Platform",
             "pages": [
+              "platform",
               "platform/sql-editor",
               "platform/search",
               "custom-dashboards/overview",

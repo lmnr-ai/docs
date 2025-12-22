@@ -3,14 +3,81 @@ title: Python Types
 description: Reference for Laminar Python types, enums, instruments, and constants.
 ---
 
-## Types & Models
-`Datapoint`, `Dataset`, `PushDatapointsResponse`, `PartialEvaluationDatapoint`, `EvaluationResultDatapoint`, `EvaluationDatapointDatasetLink`, `InitEvaluationResponse`, `HumanEvaluator` (+ options), enums (`SpanType`, `TraceType`, `ModelProvider`), `LaminarSpanContext { trace_id, span_id, is_remote=False, span_path=[], span_ids_path=[] }`, `MaskInputOptions`, `SessionRecordingOptions`, numeric alias `Numeric = int | float`.
+## Datapoint
 
-## Attributes & Constants
-`Attributes` enum for LLM span keys (input/output/totals, provider, request/response model, costs, response id, etc.), plus constants `SPAN_INPUT`, `SPAN_OUTPUT`, `SPAN_TYPE`, `SPAN_PATH`, `ASSOCIATION_PROPERTIES`, `SESSION_ID`, `USER_ID`, `TRACE_TYPE`.
+Pydantic model for evaluation and dataset datapoints.
 
-## Instruments enum
-Names for auto-instrumentations (OpenAI, Anthropic, LangChain, LangGraph, Playwright, browser_use, Bedrock, VertexAI, HuggingFace, Pinecone, Weaviate, Milvus, Qdrant, Chroma, etc.).
+```python
+Datapoint(
+    data: dict,
+    target: dict = {},
+    metadata: dict = {},
+    id: UUID | None = None,
+    created_at: datetime | None = None,
+)
+```
 
-## Version helpers
-`__version__`, `PYTHON_VERSION`, `is_latest_version()`, `get_latest_pypi_version()`.
+---
+
+## HumanEvaluator
+
+```python
+HumanEvaluator(options: list[{"label": str, "value": float}] = [])
+```
+
+---
+
+## LaminarDataset
+
+```python
+LaminarDataset(
+    name: str | None = None,
+    id: UUID | None = None,
+    fetch_size: int = 25,
+)
+```
+
+---
+
+## MaskInputOptions
+
+TypedDict used for browser session recording input masking.
+
+```python
+MaskInputOptions = TypedDict(
+    "MaskInputOptions",
+    {
+        "textarea": bool | None,
+        "text": bool | None,
+        "number": bool | None,
+        "select": bool | None,
+        "email": bool | None,
+        "tel": bool | None,
+    },
+)
+```
+
+---
+
+## SessionRecordingOptions
+
+```python
+SessionRecordingOptions = TypedDict(
+    "SessionRecordingOptions",
+    {
+        "mask_input_options": MaskInputOptions | None,
+    },
+)
+```
+
+---
+
+## Version Helpers
+
+```python
+get_latest_pypi_version() -> str
+is_latest_version() -> bool
+```
+
+- `get_latest_pypi_version()` returns `__version__` on failure.
+- `is_latest_version()` returns `True` on failure.

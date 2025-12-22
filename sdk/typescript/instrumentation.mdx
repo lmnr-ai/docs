@@ -3,6 +3,29 @@ title: TypeScript Instrumentation
 description: Configure auto-instrumentation and manual patching in the TypeScript SDK.
 ---
 
+## Laminar.initialize(options?)
+
+Initialize Laminar tracing and auto-instrumentation.
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `projectApiKey` | `string` | `LMNR_PROJECT_API_KEY` env | Project API key |
+| `baseUrl` | `string` | `https://api.lmnr.ai` | Base URL |
+| `baseHttpUrl` | `string` | `baseUrl` | OTLP HTTP base URL |
+| `httpPort` | `number` | `443` | OTLP HTTP port |
+| `grpcPort` | `number` | `8443` | OTLP gRPC port |
+| `instrumentModules` | `Record<string, unknown>` | `undefined` | Libraries to auto-instrument |
+| `disableBatch` | `boolean` | `false` | Disable batching span processor |
+| `traceExportTimeoutMillis` | `number` | `30000` | Export timeout |
+| `maxExportBatchSize` | `number` | `512` | Max spans per export batch |
+| `forceHttp` | `boolean` | `false` | Force OTLP HTTP exporter |
+| `logLevel` | `'error'` &#124; `'warn'` &#124; `'info'` &#124; `'debug'` | `'error'` | SDK log level |
+| `sessionRecordingOptions` | `SessionRecordingOptions` | — | Browser session recording options |
+
+**Returns:** `void`
+
 ## instrumentModules
 
 Pass modules to auto-instrument in `initialize()`.
@@ -64,19 +87,37 @@ Laminar.initialize({ projectApiKey: '...' });
 Laminar.patch({ openAI: OpenAI });
 ```
 
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `modules` | `InitializeOptions['instrumentModules']` | — | Modules to instrument |
+
+**Returns:** `void`
+
 **Note:** Throws if `modules` empty. Warns if Laminar not initialized.
 
 ---
 
-## wrapClaudeAgentQuery(originalQuery)
+## Laminar.wrapClaudeAgentQuery(originalQuery)
 
 Instrument Claude Agent SDK query function.
 
 ```typescript
-import { wrapClaudeAgentQuery } from '@lmnr-ai/lmnr';
+import { Laminar } from '@lmnr-ai/lmnr';
 import { query } from '@anthropic-ai/claude-agent-sdk';
 
-const instrumentedQuery = wrapClaudeAgentQuery(query);
+const instrumentedQuery = Laminar.wrapClaudeAgentQuery(query);
 ```
 
 **Use when:** Claude Agent SDK imported before `Laminar.initialize()` or in ESM environments.
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `originalQuery` | `Function` | — | The original Claude Agent SDK query function |
+
+**Returns:** `Function` (same type as `originalQuery`)
+
+**Alternative:** Use the top-level export `instrumentClaudeAgentQuery(originalQuery)`.

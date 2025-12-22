@@ -13,13 +13,71 @@ This section covers what to do when auto-instrumentation isn't enough:
 
 If you just want to trace LLM calls and framework operations, you don't need this section—[Integrations](/integrations) has you covered. Come back here when you want deeper visibility into your own code.
 
+## Why Structure Matters
+
+Without structure, each LLM call becomes an isolated trace, making it hard to:
+
+- Understand relationships between calls (routing → tool use → final answer)
+- Follow multi-step workflows end-to-end
+- Track conversations across turns
+- Find the right trace quickly (by user/session/metadata)
+
+Well-structured traces show a clear tree of spans for each request, plus stable identifiers that help you search and group related work.
+
+## Quickstart
+
+Start by creating a **parent span** for your request/turn, then set **user ID**, **session ID**, and **metadata** inside that span so everything downstream inherits it.
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { Laminar, observe } from '@lmnr-ai/lmnr';
+
+    Laminar.initialize({
+      projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+    });
+
+    export async function handleRequest(userId: string, requestId: string) {
+      return observe({ name: 'handleRequest' }, async () => {
+        Laminar.setTraceUserId(userId);
+        Laminar.setTraceSessionId(`session-${requestId}`);
+        Laminar.setTraceMetadata({ environment: process.env.NODE_ENV });
+
+        // ... your LLM calls / tools / business logic ...
+      });
+    }
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import Laminar, observe
+    import os
+
+    Laminar.initialize()
+
+    @observe()
+    def handle_request(user_id: str, request_id: str):
+        Laminar.set_trace_user_id(user_id)
+        Laminar.set_trace_session_id(f"session-{request_id}")
+        Laminar.set_trace_metadata({"environment": os.getenv("ENVIRONMENT")})
+
+        # ... your LLM calls / tools / business logic ...
+    ```
+  </Tab>
+</Tabs>
+
 ## Quick Reference
 
 | I want to... | Use |
 |--------------|-----|
-| Trace a function I wrote | [Trace Functions](/tracing/observe) |
-| Trace code that isn't a function | [Trace Parts of Your Code](/tracing/manual-spans) |
-| Link traces to users or conversations | [Sessions & User IDs](/tracing/sessions) |
-| Add filterable context to traces | [Metadata & Tags](/tracing/metadata) |
-| Redact inputs/outputs for privacy | [Tracing Levels](/tracing/privacy) |
-| Ensure spans send in serverless/CLI | [Flushing & Lifecycle](/sdk/lifecycle) |
+| Trace a function I wrote | [Trace Functions](/tracing/structure/observe-decorator) |
+| Trace code that isn't a function | [Trace Parts of Your Code](/tracing/structure/manual-span-creation) |
+| Group traces by conversation/workflow | [Sessions](/tracing/structure/sessions) |
+| Associate traces with users | [User ID](/tracing/structure/user-id) |
+| Add key-value context to traces | [Metadata](/tracing/structure/metadata) |
+| Add categorical labels to spans | [Tags](/tracing/structure/tags) |
+| Trace images sent to LLMs | [Tracing Images](/tracing/structure/images) |
+| Redact inputs/outputs for privacy | [Tracing Levels](/tracing/structure/tracing-levels) |
+| Continue traces across services | [Continuing Traces](/tracing/structure/continuing-traces) |
+| Track costs for custom LLM spans | [LLM Cost Tracking](/tracing/structure/llm-cost-tracking) |
+| Ensure spans send in serverless/CLI | [Flushing & Shutting Down](/tracing/structure/flushing-and-shutdown) |

@@ -5,31 +5,31 @@ description: Work with Laminar span context for propagation and inspection in Ty
 
 <Tabs items={['TypeScript', 'Python']}>
   <Tab title="TypeScript">
-    ## Laminar.serializeLaminarSpanContext(span?)
+    <Heading level={2} id="ts-laminar-serialize-span-context">Laminar.serializeLaminarSpanContext(span?)</Heading>
 
     Serialize span context for cross-service propagation.
 
-    ```typescript
-    await observe({ name: 'service_a' }, async () => {
-      const context = Laminar.serializeLaminarSpanContext();
-      
-      await fetch('/api/service-b', {
-        headers: { 'X-Laminar-Context': context },
-      });
-    });
-    ```
+	    ```typescript
+	    await observe({ name: 'service_a' }, async () => {
+	      const context = Laminar.serializeLaminarSpanContext();
+	      
+	      await fetch('/api/service-b', {
+	        headers: { 'X-Laminar-Span-Context': context },
+	      });
+	    });
+	    ```
 
     **Parameters:**
 
-    | Name | Type | Description |
-    |------|------|-------------|
-    | `span` | `Span` | Optional span (defaults to current) |
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `span` | `Span` | Active span | Optional span |
 
     **Returns:** `string | null` — JSON string containing `traceId`, `spanId`, `isRemote`, `spanPath`, `spanIdsPath`
 
     ---
 
-    ## Laminar.getLaminarSpanContext(span?)
+    <Heading level={2} id="ts-laminar-get-span-context">Laminar.getLaminarSpanContext(span?)</Heading>
 
     Get span context as an object.
 
@@ -38,18 +38,37 @@ description: Work with Laminar span context for propagation and inspection in Ty
     // { traceId, spanId, isRemote, spanPath, spanIdsPath }
     ```
 
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `span` | `Span` | Active span | Optional span |
+
     **Returns:** `LaminarSpanContext | null`
 
     ---
 
-    ## deserializeLaminarSpanContext(data)
+    <Heading level={2} id="ts-laminar-deserialize-span-context">deserializeLaminarSpanContext(data) (internal)</Heading>
 
-    Deserialize span context from string or object.
+    Not exported from `@lmnr-ai/lmnr`. You typically do not need to deserialize manually—pass the serialized context directly as `parentSpanContext` when starting a span.
 
     ```typescript
-    import { deserializeLaminarSpanContext } from '@lmnr-ai/lmnr';
+    import { Laminar } from '@lmnr-ai/lmnr';
 
-    const context = deserializeLaminarSpanContext(contextString);
+    const span = Laminar.startSpan({
+      name: 'service_b_handler',
+      parentSpanContext: contextString,
+    });
+    ```
+
+    **Example: Validate untrusted input**
+
+    ```typescript
+    const raw = req.headers['x-laminar-span-context'];
+    const parentSpanContext = typeof raw === 'string' && raw.length > 0 ? raw : undefined;
+
+    const span = Laminar.startSpan({ name: 'service_b_handler', parentSpanContext });
+    span.end();
     ```
 
     **Parameters:**
@@ -59,33 +78,33 @@ description: Work with Laminar span context for propagation and inspection in Ty
     | `data` | `string` &#124; `Record<string, unknown>` | Serialized context (accepts camelCase or snake_case) |
 
     **Returns:** `LaminarSpanContext`
-  </Tab>
-  <Tab title="Python">
-    ## Laminar.serialize_span_context(span?)
+	  </Tab>
+	  <Tab title="Python">
+    <Heading level={2} id="py-laminar-serialize-span-context">Laminar.serialize_span_context(span?)</Heading>
 
     Serialize span context for cross-service propagation.
 
     ```python
     @observe()
-    def service_a():
-        context = Laminar.serialize_span_context()
-        
-        requests.post("http://service-b/api", 
-            headers={"X-Laminar-Context": context}
-        )
-    ```
+	    def service_a():
+	        context = Laminar.serialize_span_context()
+	        
+	        requests.post("http://service-b/api", 
+	            headers={"X-Laminar-Span-Context": context}
+	        )
+	    ```
 
     **Parameters:**
 
-    | Name | Type | Description |
-    |------|------|-------------|
-    | `span` | `Span` | Optional span (defaults to current) |
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `span` | `Span` | Active span | Optional span |
 
     **Returns:** `str | None` — JSON string
 
     ---
 
-    ## Laminar.deserialize_span_context(span_context)
+    <Heading level={2} id="py-laminar-deserialize-span-context">Laminar.deserialize_span_context(span_context)</Heading>
 
     Deserialize span context from string or dict.
 
@@ -107,11 +126,23 @@ description: Work with Laminar span context for propagation and inspection in Ty
     |------|------|-------------|
     | `span_context` | `dict` &#124; `str` | Serialized context |
 
-    **Returns:** `LaminarSpanContext`
+	    **Returns:** `LaminarSpanContext`
 
-    ---
+	    **Example: Safe deserialization**
 
-    ## Laminar.get_laminar_span_context(span?)
+	    ```python
+	    from lmnr import Laminar
+
+	    def safe_deserialize(context_str):
+	        try:
+	            return Laminar.deserialize_span_context(context_str) if context_str else None
+	        except Exception:
+	            return None
+	    ```
+
+	    ---
+
+    <Heading level={2} id="py-laminar-get-span-context">Laminar.get_laminar_span_context(span?)</Heading>
 
     Get span context as an object.
 
@@ -120,19 +151,31 @@ description: Work with Laminar span context for propagation and inspection in Ty
     # LaminarSpanContext(trace_id, span_id, is_remote, span_path, span_ids_path)
     ```
 
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `span` | `trace.Span` &#124; `None` | Active span | Optional span |
+
     **Returns:** `LaminarSpanContext | None`
 
     ---
 
-    ## Laminar.get_laminar_span_context_dict(span?)
+    <Heading level={2} id="py-laminar-get-span-context-dict">Laminar.get_laminar_span_context_dict(span?)</Heading>
 
     Get span context as a dictionary.
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `span` | `trace.Span` &#124; `None` | Active span | Optional span |
 
     **Returns:** `dict | None`
 
     ---
 
-    ## LaminarSpanContext
+    <Heading level={2} id="py-laminar-span-context">LaminarSpanContext</Heading>
 
     Span context for distributed tracing.
 

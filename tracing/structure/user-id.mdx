@@ -10,17 +10,42 @@ Link traces to your users to make debugging and analytics easier.
 
 Assign the user ID at the entry point of your application (API handler, consumer, job) so all child spans inherit it.
 
+## Setting User ID
+
+You can associate a user with a trace either by:
+
+1. Passing `userId` / `user_id` to `observe` / `@observe`
+2. Calling `setTraceUserId` / `set_trace_user_id` inside a span context
+
 <Tabs items={['TypeScript', 'Python']}>
   <Tab title="TypeScript">
     ```typescript
-    Laminar.setTraceUserId('user-456');
+    import { observe } from '@lmnr-ai/lmnr';
+
+    export async function handleRequest(userId: string) {
+      return observe({ name: 'handleRequest', userId }, async () => {
+        // ... LLM calls / tools ...
+      });
+    }
     ```
+
+    See also: [`observe(..., { userId })`](/sdk/observe#ts-observe) and [`Laminar.setTraceUserId`](/sdk/trace-methods#ts-laminar-set-trace-user-id)
   </Tab>
   <Tab title="Python">
     ```python
-    Laminar.set_trace_user_id('user-456')
+    from lmnr import Laminar, observe
+
+    @observe()
+    def handle_request(user_id: str):
+        Laminar.set_trace_user_id(user_id)
+        # ... LLM calls / tools ...
     ```
+
+    See also: [`@observe()`](/sdk/observe#py-observe) and [`Laminar.set_trace_user_id`](/sdk/trace-methods#py-laminar-set-trace-user-id)
   </Tab>
 </Tabs>
 
-See also: [Trace methods](/sdk/trace-methods)
+## Privacy Considerations
+
+- Prefer anonymous or pseudonymous IDs over PII (avoid emails, phone numbers, names).
+- Use tracing levels for sensitive operations where you still want structure, but not content (see [Tracing Levels](/tracing/structure/tracing-levels)).
