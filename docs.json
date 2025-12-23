@@ -17,7 +17,8 @@
             "group": "Overview",
             "pages": [
               "overview",
-              "quickstart"
+              "getting-started",
+              "hosting-options"
             ]
           },
           {
@@ -108,12 +109,12 @@
             "group": "Platform",
             "pages": [
               "platform",
+              "platform/viewing-traces",
               "platform/sql-editor",
               "platform/search",
               "custom-dashboards/overview",
               "queues/quickstart",
-              "playground",
-              "platform/reader-mode"
+              "playground"
             ]
           }
         ]

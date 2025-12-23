@@ -1,0 +1,77 @@
+---
+title: Hosting Options
+---
+
+Laminar can run on our managed cloud or be self-hosted.
+
+## Managed (Laminar Cloud)
+
+1. Sign up at [laminar.sh](https://laminar.sh).
+2. Create a project.
+3. Copy your project API key from project settings.
+4. Set `LMNR_PROJECT_API_KEY` in your environment.
+
+Next: start instrumenting your app by following the tracing entry point: [Tracing](/tracing/introduction).
+
+## Self-hosted (Docker Compose)
+
+Run the full Laminar stack locally with Docker Compose:
+
+```bash
+git clone https://github.com/lmnr-ai/lmnr
+cd lmnr
+docker compose up -d
+```
+
+The dashboard is available at `http://localhost:5667/`. Create a project through the onboarding flow, then grab your API key from project settings.
+
+### Point the SDK to your local instance
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { Laminar } from '@lmnr-ai/lmnr';
+
+    Laminar.initialize({
+      projectApiKey: "<YOUR_PROJECT_API_KEY>",
+      baseUrl: "http://localhost",
+      httpPort: 8000,
+      grpcPort: 8001,
+    });
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import Laminar
+
+    Laminar.initialize(
+        project_api_key="<YOUR_PROJECT_API_KEY>",
+        base_url="http://localhost",
+        http_port=8000,
+        grpc_port=8001,
+    )
+    ```
+  </Tab>
+</Tabs>
+
+For production self-hosting options, see the [GitHub repository](https://github.com/lmnr-ai/lmnr).
+
+### Access control
+
+By default, any user can access your self-hosted instance. To restrict access to specific GitHub users, enable GitHub OAuth:
+
+```bash
+AUTH_GITHUB_ID=your_github_oauth_app_id
+AUTH_GITHUB_SECRET=your_github_oauth_app_secret
+```
+
+Then create an `allowed-emails.json` file in your project root:
+
+```json
+{
+  "emails": [
+    "user1@example.com",
+    "user2@example.com"
+  ]
+}
+```
