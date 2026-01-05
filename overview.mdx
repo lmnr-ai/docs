@@ -3,16 +3,17 @@ title: Laminar
 sidebarTitle: Laminar
 ---
 
-Laminar is an open-source observability platform purpose-built for AI agents. It traces every prompt, completion, and tool call, then helps you actually use that data.
+Laminar is an [**open-source**](https://github.com/lmnr-ai/lmnr) observability platform purpose-built for AI agents. You can trace every call to an LLM, tool execution and custom functions.
 
-**During development**, Laminar allows you to replay runs and use AI analysis to debug complex agent behavior.
+Laminar goes beyond tracing and is deeply focused on helping you properly use captured data and extract insights from it:
+- **During development**, Laminar allows you to rollout and replay agents from different parts of the captured trace significantly speeding up the development process.
 
-**In production**, with Laminar you can define semantic events to monitor behavior and catch regressions at scale. Describe what you're looking for in natural language and track it across all your traces, so you're measuring real behavior, not just latency and token counts.
+- **In production**, with Laminar you can describe patterns and errors in natural language and track it across all your traces, to measure real behavior and user interactions with your agents.
 
 <CardGroup cols={2}>
 
 <Card title="Tracing" icon="route" href="/tracing/introduction">
-  Trace LLM calls, tool use, and agent decisions. First-class support for **AI SDK, LangChain, Browser Use, Stagehand**, and more.
+  Trace LLM calls, tool use, and custom functions. First-class support for **AI SDK, LangChain, Browser Use, Stagehand**, and more.
 </Card>
 
 <Card title="Evaluations" icon="chart-line" href="/evaluations">
@@ -20,11 +21,11 @@ Laminar is an open-source observability platform purpose-built for AI agents. It
 </Card>
 
 <Card title="Analyze" icon="magnifying-glass-chart" href="/analyze">
-  Define semantic events to track behavior. Cluster similar traces and surface patterns automatically.
+  Describe patterns and errors in natural language and track it across all your traces.
 </Card>
 
 <Card title="Datasets & Labeling" icon="database" href="/datasets">
-  Build datasets from production traces. Label failures to drive iteration and regression testing.
+  Build evaluation datasets from production traces.
 </Card>
 
 <Card title="Playground" icon="flask" href="/playground">
@@ -32,6 +33,6 @@ Laminar is an open-source observability platform purpose-built for AI agents. It
 </Card>
 
 <Card title="Platform" icon="layer-group" href="/platform">
-  Full-text search, raw SQL access to all your data, and dashboards for exploring traces however you need to.
+  Realtime traces, full-text search, raw SQL access to all your data, and dashboards for exploring traces however you need to.
 </Card>
 </CardGroup>

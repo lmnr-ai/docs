@@ -84,15 +84,6 @@
             ]
           },
           {
-            "group": "Datasets",
-            "pages": [
-              "datasets/introduction",
-              "datasets/adding-data",
-              "datasets/cli",
-              "queues/quickstart"
-            ]
-          },
-          {
             "group": "Evaluations",
             "pages": [
               "evaluations/introduction",
@@ -110,6 +101,15 @@
                   "evaluations/online-evaluators/scoring-with-sdk"
                 ]
               }
+            ]
+          },
+          {
+            "group": "Datasets",
+            "pages": [
+              "datasets/introduction",
+              "datasets/adding-data",
+              "datasets/cli",
+              "queues/quickstart"
             ]
           },
           {
