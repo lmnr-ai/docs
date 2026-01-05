@@ -63,10 +63,17 @@
                   "tracing/structure/flushing-and-shutdown"
                 ]
               },
+              {
+                "group": "Events",
+                "pages": [
+                  "tracing/events/introduction",
+                  "tracing/events/events",
+                  "tracing/events/semantic-events",
+                  "tracing/events/clusters"
+                ]
+              },
               "tracing/browser-agent-observability",
-              "tracing/semantic-events-clusters",
               "tracing/langgraph-visualization",
-              "tracing/events",
               {
                 "group": "Troubleshooting",
                 "pages": [

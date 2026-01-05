@@ -1,6 +1,5 @@
 ---
-title: Custom Events
-sidebarTitle: Custom events
+title: Emit events from code
 ---
 
 Custom events are structured signals you emit from your code to mark important domain-specific actions, decisions, or outcomes (for example, `extraction.completed`, `checkout.failed`, `handoff_to_human`).
@@ -64,8 +63,11 @@ Emit events from inside a span context (for example, inside `observe()` / an `@o
 - Put details into `attributes` (and avoid sensitive data).
 - Emit events inside a span context so they attach to the correct trace.
 
-## Viewing and clustering events
+## Viewing events
 
-In the Laminar UI, open **Events** to browse and filter event streams. If you want to cluster an event definition, see [Semantic Events & Clusters](/tracing/semantic-events-clusters).
+In the Laminar UI, open **Events** to browse and filter event streams.
 
-You can also query custom events in the [SQL Editor](/platform/sql-editor) using the `events` table.
+You can also:
+- Extract events from traces automatically with [Semantic Events](/tracing/events/semantic-events)
+- Group similar events together with [Clusters](/tracing/events/clusters)
+- Query custom events in the [SQL Editor](/platform/sql-editor) using the `events` table

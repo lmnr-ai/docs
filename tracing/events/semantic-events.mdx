@@ -1,0 +1,64 @@
+---
+title: Emit events from traces using LLMs
+---
+
+Laminar automatically identifies patterns in your traces by extracting semantic events using an LLM. This helps you understand what your agents are actually doing at scale—without manually instrumenting everything.
+
+## What Are Semantic Events?
+
+A semantic event is structured data that Laminar extracts from your traces using an LLM. You define what to look for (for example, "did the user complete checkout?"), and Laminar interprets your trace data to produce a typed event with the fields you specify.
+
+This is different from logging events in your code—you don't instrument anything. Laminar reads your existing traces and extracts meaning from them.
+
+Each event includes:
+
+- **What happened** — The event type (e.g., `extraction.completed`, `navigation.failed`)
+- **Who/what triggered it** — User, session, or agent identifier
+- **Context** — Where it happened (which workflow, which page, which model)
+- **Payload** — The relevant data (input, output, parameters)
+- **Timestamp** — When it occurred
+
+Events are immutable and append-only. Once recorded, they don't change—you build understanding by analyzing patterns across events, not by modifying them.
+
+## When to Use Semantic Events
+
+Use semantic events when you want to track something that isn't explicitly logged but can be inferred from trace data:
+
+- **Business outcomes** — Did the user complete their goal? Did the agent succeed? You might not log `checkout.completed` explicitly, but an LLM can infer it from the sequence of tool calls and responses.
+- **Failure categorization** — Your traces show errors, but semantic events can classify why something failed (user error, rate limit, bad input, model confusion).
+- **Behavioral patterns** — Detect when users abandon flows, retry actions, or hit edge cases—without adding logging to your code.
+
+If you're already logging structured events in your application, you may not need semantic events for those. Use them for insights you can't easily instrument.
+
+## Creating a semantic event (UI)
+
+To define a new semantic event from trace data (no code changes required):
+
+<Frame caption="Creating a new semantic event in the Laminar UI">
+  <img src="/images/create-event.png" alt="Create new semantic event form showing name, prompt, structured output schema, and trigger spans" />
+</Frame>
+
+1. Open **Events** → **Event definitions**.
+2. Select the **Semantic** tab and click **+ Event Definition**.
+3. In the "Create new semantic event" panel:
+   - (Optional) **Start from a template** to prefill the prompt, schema, and triggers.
+   - **Name**: choose a stable event name (for example, `checkout.completed` or `navigation.failed`).
+   - **Prompt**: describe what the event should detect/extract from the trace/span data.
+   - **Structured Output**: define a JSON schema for the event payload (keep it small and stable).
+   - **Trigger Spans**: click **Add Span** and enter the span name(s) that should trigger this event. Pick spans that contain the context you need (often an LLM span, a tool span, or your request/root span).
+4. Click **Create**.
+
+If you're unsure what to put under **Trigger Spans**, open a representative trace and copy the relevant span's **name** (avoid spans whose names contain dynamic IDs).
+
+## Viewing Semantic Events
+
+In the Laminar dashboard:
+
+1. Go to **Events** to see the raw event stream
+2. Filter by event type, time range, or custom attributes
+3. Click any event to see the trace it was extracted from
+4. Export events to a dataset for evaluation
+
+Once you have semantic events running, you can [cluster them](/tracing/events/clusters) to discover patterns and group similar events together.
+
+
