@@ -64,11 +64,11 @@
                 ]
               },
               {
-                "group": "Events",
+                "group": "Traces monitoring",
                 "pages": [
                   "tracing/events/introduction",
-                  "tracing/events/events",
                   "tracing/events/semantic-events",
+                  "tracing/events/events",
                   "tracing/events/clusters"
                 ]
               },

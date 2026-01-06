@@ -6,21 +6,21 @@ Clusters group similar events together to help you discover patterns, debug at s
 
 ## What Are Clusters?
 
-Clusters group similar events together based on a value template you provide. When you start clustering, you choose what "similar" means—cluster by error message, by URL, by tool name, or by any field in your event payload.
+Every event has an `attribute` field containing JSON data. Clusters group events by extracting a string value from this JSON using a Mustache template, then grouping events with similar extracted values.
+
+For example, if your events have attributes like `{"error_message": "Connection timeout", "url": "..."}`, you can cluster by `{{error_message}}` to group similar errors together.
 
 Common patterns that emerge:
 
 - **Similar failures** — Errors with the same root cause, regardless of surface differences (for example, 47 failures all caused by lazy-loaded content).
 - **Behavioral groups** — Events that share a common action or intent (for example, all "search for product" events).
-- **Anomalies** — Events that don't fit any cluster, surfaced as outliers worth investigating.
 
-You control the clustering by choosing the value template. Laminar handles the similarity matching and keeps clusters updated as new events arrive.
+You control clustering by defining a Mustache template that extracts the value to cluster on. Laminar handles the similarity matching and keeps clusters updated as new events arrive.
 
-Each cluster has a centroid (the "center" of the group in embedding space), member events, confidence scores, and automatically generated labels.
+Each cluster has member events and automatically generated cluster name. Cluster name is can be regenerated when the member events change significantly.
 
-## Creating Clusters
+## Set up clustering
 
-To cluster a semantic event definition:
 
 <Frame caption="Starting clustering for a semantic event definition">
   <img src="/images/start-clustering.png" alt="Start Clustering dialog with value template input" />
@@ -28,12 +28,16 @@ To cluster a semantic event definition:
 
 1. In **Events**, click your event definition to open it.
 2. Click **Start Clustering**.
-3. Choose a **Value Template** (Mustache-like) that represents what "similar" means for this event (for example, cluster by an error message, URL, tool name, or other payload field).
+3. Enter a **Value Template** — a Mustache string like `{{content}}` or `{{error.message}}` that extracts the value to cluster on from the event's `attribute` JSON.
 4. Click **Start**, then switch to **Clusters** to see grouped results.
 
 ## How Clustering Works
 
-When you start clustering, Laminar evaluates your **Value Template** (Mustache-like) for each event and uses the resulting value as the primary grouping signal.
+Every event stores its data in an `attribute` field as JSON. When you start clustering:
+
+1. Laminar evaluates your Mustache template against each event's `attribute` JSON
+2. The template extracts a string value (for example, `{{content}}` pulls the `content` field)
+3. Events with similar extracted strings are grouped into clusters
 
 As new events arrive, clusters continuously update and stay current, so you can track emerging patterns and regressions over time.
 
@@ -61,22 +65,20 @@ In the Laminar dashboard:
 
 ## Example: Finding Extraction Failures
 
-Your browser agent extracts product data. Some extractions fail. Instead of searching through logs:
+Your browser agent extracts product data. Some extractions fail. Each `extraction.failed` event has an `attribute` like:
 
-1. Filter events to `extraction.failed`
-2. View clusters—Laminar groups failures by similarity
+```json
+{
+  "error_message": "Element not found: .product-price",
+  "url": "https://shop.example.com/item/123",
+  "selector": ".product-price"
+}
+```
+
+Instead of searching through logs:
+
+1. Start clustering with the template `{{error_message}}`
+2. View clusters to see failures grouped by similar error messages
 3. One cluster shows 47 failures, all on sites with lazy-loaded content
 4. Another cluster shows 12 failures, all with the same malformed selector
 5. Fix each root cause once, verify with the cluster members
-
-## Best Practices
-
-**Let clusters emerge** — Don't over-specify upfront. Run your agent, observe what clusters form, then decide which patterns matter.
-
-**Use clusters for evaluation** — When you find a problematic cluster, export it as a dataset. Run evaluations against it. Measure improvement.
-
-**Monitor cluster health** — Watch for new clusters appearing (new failure modes?) or existing clusters growing rapidly (regression?).
-
-**Combine with SQL** — Query cluster metadata in the SQL editor. Find your largest clusters, newest clusters, or clusters with specific labels.
-
-
