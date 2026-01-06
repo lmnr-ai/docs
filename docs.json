@@ -110,6 +110,7 @@
             "pages": [
               "platform",
               "platform/viewing-traces",
+              "platform/live-tracing",
               "platform/sql-editor",
               "platform/search",
               "custom-dashboards/overview",

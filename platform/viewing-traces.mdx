@@ -23,6 +23,27 @@ The trace view supports multiple ways to explore the same trace: Tree, Timeline,
 
 Use Tree View when you want to understand structure: what called what, and where time/cost sits in the hierarchy.
 
+## Reader Mode
+
+Reader Mode gives you a readable, flattened view of a trace designed for fast scanning and review.
+
+![Reader Mode screenshot](/images/reader-mode.png)
+
+### Open Reader Mode
+
+1. Open a trace (from **Traces**).
+2. In the trace view header, open the view mode dropdown.
+3. Select **Reader Mode** (you can switch back the same way).
+
+- **High-signal view**: Shows only LLM and tool-call spans by default (other spans hidden), making the trace much easier to parse.
+- **At-a-glance columns**: Type/model, timing, tokens/cost, and breadcrumbs per row.
+- **Expandable rows**: Open any row to see formatted outputs; selecting still opens the full span detail pane on the right.
+- **Lazy-loaded outputs**: Fetches only what’s on screen to keep the UI fast.
+- **Templates per path**: Apply saved Mustache templates per span path to reshape how outputs render.
+- **Synced minimap**: Highlights spans in view and lets you jump or scrub session time.
+
+Use Reader Mode when you want a narrative, high-signal view of a trace focused on LLM + tool calls, without drilling through nested spans.
+
 ## Timeline View
 
 ### Open Timeline View
@@ -70,29 +91,6 @@ Use Metadata when you need to verify context fields (inputs, run config, tags, c
 - **Resettable**: Start a new chat when you want a fresh thread.
 
 Use Ask AI when you want a quick narrative explanation or guided debugging without manually scanning the whole trace.
-
-
-
-## Reader Mode
-
-Reader Mode gives you a readable, flattened view of a trace designed for fast scanning and review.
-
-![Reader Mode screenshot](/images/reader-mode.png)
-
-### Open Reader Mode
-
-1. Open a trace (from **Traces**).
-2. In the trace view header, open the view mode dropdown.
-3. Select **Reader Mode** (you can switch back the same way).
-
-- **High-signal view**: Shows only LLM and tool-call spans by default (other spans hidden), making the trace much easier to parse.
-- **At-a-glance columns**: Type/model, timing, tokens/cost, and breadcrumbs per row.
-- **Expandable rows**: Open any row to see formatted outputs; selecting still opens the full span detail pane on the right.
-- **Lazy-loaded outputs**: Fetches only what’s on screen to keep the UI fast.
-- **Templates per path**: Apply saved Mustache templates per span path to reshape how outputs render.
-- **Synced minimap**: Highlights spans in view and lets you jump or scrub session time.
-
-Use Reader Mode when you want a narrative, high-signal view of a trace focused on LLM + tool calls, without drilling through nested spans.
 
 ## Open in SQL Editor
 

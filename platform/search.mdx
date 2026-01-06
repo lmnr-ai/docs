@@ -1,10 +1,12 @@
 ---
-title: Search
+title: Full text search
 ---
 
 <video src="/images/Search.mp4" controls loop muted playsInline className="block w-full" />
 
-Laminar search is a full‑text search over span input, output, and flattened span attributes (so keys and values are searchable), scoped to your project and the current time range. Results are relevance‑ranked (and within a single trace, ordered by time).
+Laminar includes full‑text search over span input, output, and flattened span attributes (so keys and values are searchable), scoped to your project and the current time range. Results are relevance‑ranked (and within a single trace, ordered by time).
+
+Try searching for a phrase from a prompt/completion, or an attribute key/value like `user_id` or `123`.
 
 - Search across prompts, completions, and span metadata to jump straight to the run you care about—no manual digging through traces.
 - Fast, interactive search backed by a dedicated Quickwit inverted index, so you’re not scanning analytics tables as data grows.
