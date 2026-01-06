@@ -63,10 +63,17 @@
                   "tracing/structure/flushing-and-shutdown"
                 ]
               },
+              {
+                "group": "Events",
+                "pages": [
+                  "tracing/events/introduction",
+                  "tracing/events/events",
+                  "tracing/events/semantic-events",
+                  "tracing/events/clusters"
+                ]
+              },
               "tracing/browser-agent-observability",
-              "tracing/semantic-events-clusters",
               "tracing/langgraph-visualization",
-              "tracing/events",
               {
                 "group": "Troubleshooting",
                 "pages": [
@@ -74,15 +81,6 @@
                   "tracing/troubleshooting-opentelemetry"
                 ]
               }
-            ]
-          },
-          {
-            "group": "Datasets",
-            "pages": [
-              "datasets/introduction",
-              "datasets/adding-data",
-              "datasets/cli",
-              "queues/quickstart"
             ]
           },
           {
@@ -103,6 +101,15 @@
                   "evaluations/online-evaluators/scoring-with-sdk"
                 ]
               }
+            ]
+          },
+          {
+            "group": "Datasets",
+            "pages": [
+              "datasets/introduction",
+              "datasets/adding-data",
+              "datasets/cli",
+              "queues/quickstart"
             ]
           },
           {
