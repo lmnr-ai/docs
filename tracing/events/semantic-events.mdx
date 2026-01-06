@@ -1,0 +1,48 @@
+---
+title: Emit events using LLMs
+---
+
+## Semantic Events
+
+Semantic events is a way to track something or extract structured data that can't be explicitly logged but can be inferred from trace data.
+You define a prompt that describes what to look for (for example, "Agent completes checkout process"), and our analysis LLM will produce a typed event with the fields you specify using the entire trace data as context.
+
+## When to Use Semantic Events
+
+- **Business outcomes** — You can describe criteria for a successful agent outcome, for example "User responded with 'Thank you'".
+- **Locagical errors** — Describe a case when agent fails to complete a task, for example "Agent fails to complete checkout process".
+- **Behavioral patterns** — For example, you can categorize user requests to an agent by specifiying "request category" in the structured output schema.
+
+If you're already logging structured events in your application code, you don't need semantic events for those.
+
+## Creating a semantic event (UI)
+
+To define a new semantic event from trace data:
+
+<Frame caption="Creating a new semantic event in the Laminar UI">
+  <img src="/images/create-event.png" alt="Create new semantic event form showing name, prompt, structured output schema, and trigger spans" />
+</Frame>
+
+1. Open **Events** → **Event definitions**.
+2. Select the **Semantic** tab and click **+ Event Definition**.
+3. In the "Create new semantic event" panel:
+   - (Optional) **Start from a template** to prefill the prompt, schema, and trigger spans.
+   - **Name**: choose a stable event name (for example, `checkout.completed` or `navigation.failed`).
+   - **Prompt**: describe what the event should detect/extract from the trace/span data.
+   - **Structured Output**: define a JSON schema for the event payload (keep it small and stable).
+   - **Trigger Spans**: click **Add Span** and enter the span name(s) that should trigger this event. When Laminar recieves this span, we will initiate trace analysis and extract the event.
+   Pick spans that is finished when the trace has enough context to infer the event, for example a span that is created when agent is done with the task.
+4. Click **Create**.
+
+## Viewing Semantic Events
+
+In the Laminar dashboard:
+
+1. Go to **Events** to see the raw event stream
+2. Filter by event type, time range, or custom attributes
+3. Click any event to see the trace it was extracted from
+4. Export events to a dataset for evaluation
+
+Once you have semantic events running, you can [cluster them](/tracing/events/clusters) to discover patterns and group similar events together.
+
+

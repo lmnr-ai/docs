@@ -4,8 +4,6 @@ sidebarTitle: Quickstart
 ---
 import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
 
-This guide will walk you through running your first evaluation using Laminar's evaluation system.
-
 Laminar provides a structured approach to create, run, and track your AI system's performance through these key components:
 
 - **Executors** - Functions that process inputs and produce outputs, such as prompt templates, LLM calls, or production logic
@@ -77,7 +75,7 @@ evaluate<D, T, O>(
 )
 ```
 
-See full reference [here](/evaluations/reference#typescript-evaluation-types).
+See full reference in the [SDK docs](/sdk/reference).
 
 ## Create your first evaluation
 
@@ -160,8 +158,8 @@ def capital_of_country(data: dict) -> str:
         messages=[
             {
                 "role": "user",
-                "content": f"Generate a poem about {data['country']}. " +
-                    "Answer only with the poem, no other text."
+                "content": f"What is the capital of {data['country']}? " +
+                    "Answer only with the capital, no other text."
             }
         ]
     ).choices[0].message.content
@@ -216,6 +214,11 @@ Then run all evaluations with a single command:
 ```sh
 npx lmnr eval
 ```
+
+CLI options:
+- First positional argument: path to the evaluation file (optional).
+- Without a path, `lmnr eval` runs all files matching `*.eval.{ts,js}` in `evals/`.
+- `--fail-on-error`: fail on non-critical errors (e.g., missing `evaluate` call). Default `false`.
 </Tab>
 <Tab title = "Python">
 ```sh
@@ -240,6 +243,11 @@ Then run all evaluations with a single command:
 ```sh
 lmnr eval
 ```
+
+CLI options:
+- First positional argument: path to the evaluation file (optional).
+- Without a path, `lmnr eval` runs all files matching `eval_*.py` or `*_eval.py` in `evals/`.
+- `--fail-on-error`: fail on non-critical errors (e.g., missing `evaluate` call). Default `false`.
 </Tab>
 </Tabs>
 

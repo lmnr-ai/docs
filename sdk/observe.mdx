@@ -1,0 +1,212 @@
+---
+title: Observe
+---
+
+Wrap functions with Laminar to capture inputs, outputs, and errors automatically.
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    <Heading level={2} id="ts-observe">observe(options, fn, ...args)</Heading>
+
+    Wrap a function to create a span. Automatically captures inputs, outputs, and errors.
+
+    ```typescript
+    import { observe } from '@lmnr-ai/lmnr';
+
+    const result = await observe(
+      { name: 'my_operation' },
+      async (param1, param2) => {
+        return param1 + param2;
+      },
+      1, 2
+    );
+    // Span input: [1, 2], output: 3
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `name` | `string` | `fn.name` | Span name |
+    | `sessionId` | `string` | — | Associate trace with session |
+    | `userId` | `string` | — | Associate trace with user |
+    | `metadata` | `Record<string, any>` | — | Trace metadata (JSON-serializable) |
+    | `tags` | `string[]` | — | Span tags (deduplicated) |
+    | `traceType` | `'DEFAULT'` &#124; `'EVALUATION'` | `'DEFAULT'` | Trace type |
+    | `spanType` | `'DEFAULT'` &#124; `'LLM'` &#124; `'TOOL'` &#124; `'EXECUTOR'` &#124; `'EVALUATOR'` &#124; `'EVALUATION'` | `'DEFAULT'` | Span type |
+    | `input` | `any` | — | Explicit input (overrides function args) |
+    | `ignoreInput` | `boolean` | `false` | Don't record input |
+    | `ignoreOutput` | `boolean` | `false` | Don't record output |
+    | `parentSpanContext` | `string` &#124; `LaminarSpanContext` | — | Parent context for distributed tracing |
+
+    **Returns:** `Promise<ReturnType<F>>`
+
+    **Behavior:**
+    - If one non-Map object argument, records that object as input; otherwise records array
+    - Maps converted to entries, circular references become `"[Circular reference]"`
+    - Exceptions recorded via `recordException` and re-thrown
+    - Anonymous function name becomes `""` if `name` not provided
+    - Works with both sync and async functions
+
+    **Examples: Group multiple LLM calls under one parent span**
+
+    ```typescript
+    import { observe } from '@lmnr-ai/lmnr';
+
+    export const handle = async (userMessage: string) =>
+      observe({ name: 'requestHandler' }, async () => {
+        const routerResponse = await openai.chat.completions.create({
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'user', content: `Route this: ${userMessage}` }],
+        });
+
+        const modelResponse = await openai.chat.completions.create({
+          model: 'gpt-4o',
+          messages: [{ role: 'user', content: userMessage }],
+        });
+
+        return {
+          route: routerResponse.choices[0].message.content,
+          answer: modelResponse.choices[0].message.content,
+        };
+      });
+    ```
+
+    **Examples: Nested spans for multi-step workflows**
+
+    ```typescript
+    import { observe } from '@lmnr-ai/lmnr';
+
+    await observe({ name: 'checkout', sessionId: `checkout-${userId}` }, async () => {
+      await observe({ name: 'validateCart' }, async () => {
+        // ...
+      });
+
+      await observe({ name: 'processPayment' }, async () => {
+        // ...
+      });
+
+      await observe({ name: 'createOrder' }, async () => {
+        // ...
+      });
+    });
+    ```
+
+    ---
+
+    <Heading level={2} id="ts-observe-decorator">observeDecorator(config)</Heading>
+
+    Class method decorator version of `observe`.
+
+    ```typescript
+    import { observeDecorator } from '@lmnr-ai/lmnr';
+
+    class MyService {
+      @observeDecorator({ name: 'process_request' })
+      async processRequest(input: string) {
+        return await this.doWork(input);
+      }
+    }
+    ```
+
+    **Parameters:** Same as `observe` options. Config can be an object or a function `(thisArg, ...args) => config` for per-call configuration.
+
+    **Returns:** Method decorator
+  </Tab>
+  <Tab title="Python">
+    <Heading level={2} id="py-observe">@observe()</Heading>
+
+    Decorate a function to create a span. Automatically captures inputs, outputs, and errors.
+
+    ```python
+    from lmnr import observe
+
+    @observe()
+    def my_function(param1, param2):
+        return param1 + param2
+
+    my_function(1, 2)
+    # Span input: {"param1": 1, "param2": 2}
+    # Span output: 3
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `name` | `str` | Function name | Span name |
+    | `session_id` | `str` | `None` | Associate trace with session |
+    | `user_id` | `str` | `None` | Associate trace with user |
+    | `metadata` | `dict` | `None` | Trace metadata (JSON-serializable) |
+    | `tags` | `list[str]` | `None` | Span tags |
+    | `span_type` | `'DEFAULT'` &#124; `'LLM'` &#124; `'TOOL'` | `'DEFAULT'` | Span type |
+    | `ignore_input` | `bool` | `False` | Don't record input |
+    | `ignore_output` | `bool` | `False` | Don't record output |
+    | `ignore_inputs` | `list[str]` | `None` | Specific parameters to skip |
+    | `input_formatter` | `Callable` | `None` | Custom input formatting function |
+    | `output_formatter` | `Callable` | `None` | Custom output formatting function |
+    | `preserve_global_context` | `bool` | `False` | Use global OTEL context instead of isolated |
+
+    **Returns:** Decorator
+
+    **Behavior:**
+    - Function arguments serialized via `orjson` to `lmnr.span.input`
+    - Return value serialized to `lmnr.span.output`
+    - Inputs/outputs >10MB are truncated with warning message
+    - Exceptions recorded as span events with `ERROR` status
+    - Generators/async generators: yielded parts aggregated for output
+    - If Laminar not initialized, returns original function unchanged
+    - Async functions supported automatically
+
+    **Examples: Group multiple LLM calls under one parent span**
+
+    ```python
+    from lmnr import observe
+
+    @observe()
+    def handle(user_message: str) -> dict:
+        router = openai.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": f"Route this: {user_message}"}],
+        )
+
+        model = openai.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": user_message}],
+        )
+
+        return {
+            "route": router.choices[0].message.content,
+            "answer": model.choices[0].message.content,
+        }
+    ```
+
+    **Examples: Nested spans for multi-step workflows**
+
+    ```python
+    from lmnr import Laminar, observe
+
+    @observe()
+    def checkout(user_id: str):
+        Laminar.set_trace_session_id(f"checkout-{user_id}")
+        validate_cart()
+        process_payment()
+        create_order()
+
+    @observe()
+    def validate_cart():
+        # ...
+        pass
+
+    @observe()
+    def process_payment():
+        # ...
+        pass
+
+    @observe()
+    def create_order():
+        # ...
+        pass
+    ```
+  </Tab>
+</Tabs>

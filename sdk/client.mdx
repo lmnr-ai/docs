@@ -1,0 +1,422 @@
+---
+title: Client
+---
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    <Heading level={2} id="ts-laminar-client">LaminarClient</Heading>
+
+    HTTP client for Laminar API operations.
+
+    ```typescript
+    import { LaminarClient } from '@lmnr-ai/lmnr';
+
+    const client = new LaminarClient({
+      projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+    });
+
+    // Tag a completed trace
+    await client.tags.tag(traceId, ['user-feedback-positive']);
+    ```
+
+    **Constructor parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `projectApiKey` | `string` | `LMNR_PROJECT_API_KEY` env | API key |
+    | `baseUrl` | `string` | `https://api.lmnr.ai` | API base URL |
+    | `port` | `number` | `443` | API port |
+
+    **Resources:**
+
+    <Heading level={3} id="ts-client-tags-tag">client.tags.tag(traceId, tags)</Heading>
+
+    Add tags to a completed trace.
+
+    ```typescript
+    await client.tags.tag('trace-uuid', ['positive-feedback', 'resolved']);
+    ```
+
+    **Example: Capture a trace ID and tag later**
+
+    ```typescript
+    import { Laminar, LaminarClient, observe } from '@lmnr-ai/lmnr';
+
+    Laminar.initialize();
+    const client = new LaminarClient();
+
+    const traceId = await observe({ name: 'chat_completion' }, async () => {
+      // ... your work ...
+      return Laminar.getTraceId();
+    });
+
+    await Laminar.flush();
+
+    if (traceId) {
+      await client.tags.tag(traceId, 'good');
+    }
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `traceId` | `string` | — | Trace UUID |
+    | `tags` | `string[]` &#124; `string` | — | Tag(s) to add |
+
+    **Returns:** `Promise<any>`
+
+    **Note:** Call after `Laminar.flush()` to ensure trace exists.
+
+    ---
+
+    <Heading level={3} id="ts-client-datasets">client.datasets</Heading>
+
+    Dataset operations.
+
+    ```typescript
+    // List datasets
+    const datasets = await client.datasets.listDatasets();
+
+    // Get by name
+    const dataset = await client.datasets.getDatasetByName('my-dataset');
+
+    // Push datapoints
+    await client.datasets.push({
+      name: 'my-dataset',
+      points: [{ data: { query: 'test' }, target: { answer: '42' } }],
+      createDataset: true,
+    });
+
+    // Pull datapoints
+    const points = await client.datasets.pull({
+      name: 'my-dataset',
+      limit: 100,
+    });
+    ```
+
+    <Heading level={3} id="ts-client-datasets-list-datasets">client.datasets.listDatasets()</Heading>
+
+    **Returns:** `Promise<Dataset[]>`
+
+    ---
+
+    <Heading level={3} id="ts-client-datasets-get-dataset-by-name">client.datasets.getDatasetByName(name)</Heading>
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `name` | `string` | — | Dataset name |
+
+    **Returns:** `Promise<Dataset[]>`
+
+    ---
+
+    <Heading level={3} id="ts-client-datasets-pull">client.datasets.pull(options)</Heading>
+
+    Pull datapoints from a dataset.
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `options.name` | `string` | — | Dataset name |
+    | `options.id` | `string` | — | Dataset ID |
+    | `options.limit` | `number` | `100` | Max datapoints |
+    | `options.offset` | `number` | `0` | Pagination offset |
+
+    **Returns:** `Promise<GetDatapointsResponse<D, T>>`
+
+    ---
+
+    <Heading level={3} id="ts-client-datasets-push">client.datasets.push(options)</Heading>
+
+    Push datapoints to a dataset.
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `options.points` | `Datapoint<D, T>[]` | — | Datapoints to push |
+    | `options.name` | `string` | — | Dataset name |
+    | `options.id` | `string` | — | Dataset ID |
+    | `options.batchSize` | `number` | `100` | Batch size |
+    | `options.createDataset` | `boolean` | `false` | Create dataset if missing |
+
+    **Returns:** `Promise<PushDatapointsResponse | undefined>`
+
+    ---
+
+    <Heading level={3} id="ts-client-evals">client.evals</Heading>
+
+    Evaluation operations.
+
+    ```typescript
+    // Initialize evaluation
+    const eval = await client.evals.init('my-eval', 'default-group');
+
+    // Create datapoint
+    await client.evals.createDatapoint({
+      evalId: eval.id,
+      data: { query: 'test' },
+      target: { answer: '42' },
+    });
+    ```
+
+    <Heading level={3} id="ts-client-evals-init">client.evals.init(name?, groupName?, metadata?)</Heading>
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `name` | `string` | — | Evaluation name |
+    | `groupName` | `string` | — | Group name |
+    | `metadata` | `Record<string, any>` | — | Evaluation metadata |
+
+    **Returns:** `Promise<InitEvaluationResponse>`
+
+    ---
+
+    <Heading level={3} id="ts-client-evals-create-datapoint">client.evals.createDatapoint(options)</Heading>
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `options.evalId` | `string` | — | Evaluation UUID |
+    | `options.data` | `any` | — | Input data |
+    | `options.target` | `any` | — | Target/expected output |
+    | `options.metadata` | `Record<string, any>` | — | Datapoint metadata |
+    | `options.index` | `number` | — | Dataset index |
+    | `options.traceId` | `string` | — | Trace UUID |
+
+    **Returns:** `Promise<string>`
+
+    ---
+
+    <Heading level={3} id="ts-client-evaluators-score">client.evaluators.score(options)</Heading>
+
+    Attach evaluator score to a trace or span.
+
+    ```typescript
+    await client.evaluators.score({
+      name: 'quality',
+      score: 0.95,
+      traceId: 'trace-uuid',
+    });
+    ```
+
+    **Parameters:**
+
+    Pass exactly one of `traceId` or `spanId`.
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `options.name` | `string` | — | Evaluator name |
+    | `options.score` | `number` | — | Score value |
+    | `options.metadata` | `Record<string, any>` | — | Score metadata |
+    | `options.traceId` | `string` | — | Trace UUID |
+    | `options.spanId` | `string` | — | Span UUID |
+
+    **Returns:** `Promise<void>`
+
+    ---
+
+    <Heading level={3} id="ts-client-agent-run">client.agent.run(options)</Heading>
+
+    Run a browser agent.
+
+    ```typescript
+    const result = await client.agent.run({
+      prompt: 'Find the pricing on example.com',
+      maxSteps: 50,
+      returnScreenshots: true,
+    });
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `prompt` | `string` | — | Agent instruction (required) |
+    | `parentSpanContext` | `string` | Current span | Parent trace context |
+    | `model` | `string` | — | Model to use |
+    | `stream` | `boolean` | `false` | Stream responses |
+    | `maxSteps` | `number` | `100` | Maximum steps |
+    | `startUrl` | `string` | — | Starting URL |
+    | `timeout` | `number` | — | Timeout in ms |
+    | `returnScreenshots` | `boolean` | `false` | Include screenshots |
+    | `returnAgentState` | `boolean` | `false` | Return agent state |
+    | `returnStorageState` | `boolean` | `false` | Return storage state |
+    | `disableGiveControl` | `boolean` | `false` | Disable “give control” |
+    | `enableThinking` | `boolean` | `true` | Enable thinking |
+
+    **Returns:**
+    - `Promise<AgentOutput>` when `stream` is `false`
+    - `Promise<ReadableStream<RunAgentResponseChunk>>` when `stream` is `true`
+  </Tab>
+  <Tab title="Python">
+    <Heading level={2} id="py-laminar-client">LaminarClient</Heading>
+
+    Synchronous HTTP client for Laminar API operations.
+
+    ```python
+    from lmnr import LaminarClient
+
+    client = LaminarClient()
+
+    # Tag a completed trace
+    client.tags.tag(trace_id, ["user-feedback-positive"])
+    ```
+
+    **Constructor parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `project_api_key` | `str` | `LMNR_PROJECT_API_KEY` env | API key |
+    | `base_url` | `str` | `https://api.lmnr.ai` | API base URL |
+    | `port` | `int` | From URL | API port |
+    | `timeout` | `int` | `3600` | Request timeout (seconds) |
+
+    **Resources:**
+
+    <Heading level={3} id="py-client-tags-tag">client.tags.tag(trace_id, tags)</Heading>
+
+    Add tags to a completed trace.
+
+    ```python
+    from lmnr import Laminar, LaminarClient, observe
+
+    Laminar.initialize()
+    client = LaminarClient()
+
+    @observe()
+    def my_trace():
+        return Laminar.get_trace_id()
+
+    trace_id = my_trace()
+    Laminar.flush()
+
+    if trace_id:
+        client.tags.tag(trace_id, ["user-feedback-positive"])
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `trace_id` | `str` &#124; `int` &#124; `uuid.UUID` | — | Trace identifier |
+    | `tags` | `list[str]` &#124; `str` | — | Tag(s) to add |
+
+    **Returns:** `list[dict]` (returns `[]` on 404)
+
+    **Note:** Call after the trace has ended (use `Laminar.flush()` for short-lived scripts).
+
+    ---
+
+    <Heading level={3} id="py-client-close">client.close()</Heading>
+
+    Close the underlying HTTP client.
+
+    **Returns:** `None`
+
+    ---
+
+    <Heading level={3} id="py-client-datasets-pull">client.datasets.pull(name=None, id=None, limit=100, offset=0)</Heading>
+
+    Pull datapoints from a dataset.
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `name` | `str` | `None` | Dataset name |
+    | `id` | `uuid.UUID` | `None` | Dataset ID |
+    | `limit` | `int` | `100` | Max datapoints |
+    | `offset` | `int` | `0` | Pagination offset |
+
+    **Returns:** `GetDatapointsResponse`
+
+    ---
+
+    <Heading level={3} id="py-client-datasets-push">client.datasets.push(points, name=None, id=None, batch_size=100, create_dataset=False)</Heading>
+
+    Push datapoints to a dataset.
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `points` | `list[Datapoint]` | — | Datapoints to push |
+    | `name` | `str` | `None` | Dataset name |
+    | `id` | `uuid.UUID` | `None` | Dataset ID |
+    | `batch_size` | `int` | `100` | Batch size |
+    | `create_dataset` | `bool` | `False` | Create dataset if missing |
+
+    **Returns:** `PushDatapointsResponse | None`
+
+    ---
+
+    <Heading level={3} id="py-client-evals-init">client.evals.init(name=None, group_name=None, metadata=None)</Heading>
+
+    Initialize an evaluation.
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `name` | `str` | `None` | Evaluation name |
+    | `group_name` | `str` | `None` | Group name |
+    | `metadata` | `dict` | `None` | Evaluation metadata |
+
+    **Returns:** `InitEvaluationResponse`
+
+    ---
+
+    <Heading level={3} id="py-client-evaluators-score">client.evaluators.score(...)</Heading>
+
+    Create a score for a trace or span.
+
+    **Parameters:**
+
+    Pass exactly one of `trace_id` or `span_id`.
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `name` | `str` | — | Evaluator name |
+    | `score` | `float` | — | Score value |
+    | `trace_id` | `str` &#124; `int` &#124; `uuid.UUID` | `None` | Trace identifier |
+    | `span_id` | `str` &#124; `int` &#124; `uuid.UUID` | `None` | Span identifier |
+    | `metadata` | `dict` | `None` | Score metadata |
+
+    **Returns:** `None`
+
+    ---
+
+    <Heading level={2} id="py-async-laminar-client">AsyncLaminarClient</Heading>
+
+    Async variant of `LaminarClient`.
+
+    ```python
+    from lmnr import AsyncLaminarClient
+
+    client = AsyncLaminarClient()
+    await client.tags.tag(trace_id, ["feedback"])
+    await client.close()
+    ```
+
+    **Constructor parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `project_api_key` | `str` | `None` | API key (defaults to `LMNR_PROJECT_API_KEY`) |
+    | `base_url` | `str` | `None` | API base URL (defaults to `LMNR_BASE_URL` or `https://api.lmnr.ai`) |
+    | `port` | `int` | `None` | API port (defaults to `443`) |
+    | `timeout` | `int` | `3600` | Request timeout (seconds) |
+
+    <Heading level={3} id="py-async-client-close">await client.close()</Heading>
+
+    **Returns:** `None`
+  </Tab>
+</Tabs>

@@ -1,0 +1,84 @@
+---
+title: Event Clusters
+---
+
+Clusters group similar events together to help you discover patterns, debug at scale, and detect anomalies. When you have many events (either [custom events](/tracing/events/events) or [semantic events](/tracing/events/semantic-events)), clustering reveals what's actually happening in your system.
+
+## What Are Clusters?
+
+Every event has an `attribute` field containing JSON data. Clusters group events by extracting a string value from this JSON using a Mustache template, then grouping events with similar extracted values.
+
+For example, if your events have attributes like `{"error_message": "Connection timeout", "url": "..."}`, you can cluster by `{{error_message}}` to group similar errors together.
+
+Common patterns that emerge:
+
+- **Similar failures** — Errors with the same root cause, regardless of surface differences (for example, 47 failures all caused by lazy-loaded content).
+- **Behavioral groups** — Events that share a common action or intent (for example, all "search for product" events).
+
+You control clustering by defining a Mustache template that extracts the value to cluster on. Laminar handles the similarity matching and keeps clusters updated as new events arrive.
+
+Each cluster has member events and automatically generated cluster name. Cluster name is can be regenerated when the member events change significantly.
+
+## Set up clustering
+
+
+<Frame caption="Starting clustering for a semantic event definition">
+  <img src="/images/start-clustering.png" alt="Start Clustering dialog with value template input" />
+</Frame>
+
+1. In **Events**, click your event definition to open it.
+2. Click **Start Clustering**.
+3. Enter a **Value Template** — a Mustache string like `{{content}}` or `{{error.message}}` that extracts the value to cluster on from the event's `attribute` JSON.
+4. Click **Start**, then switch to **Clusters** to see grouped results.
+
+## How Clustering Works
+
+Every event stores its data in an `attribute` field as JSON. When you start clustering:
+
+1. Laminar evaluates your Mustache template against each event's `attribute` JSON
+2. The template extracts a string value (for example, `{{content}}` pulls the `content` field)
+3. Events with similar extracted strings are grouped into clusters
+
+As new events arrive, clusters continuously update and stay current, so you can track emerging patterns and regressions over time.
+
+## What You Can Do With Clusters
+
+**Understand user behavior** — See what users are actually trying to accomplish, not just what buttons they clicked. Intent clusters reveal the "why" behind actions.
+
+**Debug at scale** — When something breaks, find all similar failures instantly. One fix addresses an entire cluster of issues.
+
+**Detect anomalies** — Unusual patterns surface automatically. Spot problems before users report them.
+
+**Track trends** — See how behavior changes over time. New clusters emerging? Old patterns disappearing?
+
+**Build datasets** — Export clusters as evaluation datasets. Test your agent against real-world patterns, not synthetic examples.
+
+## Viewing Clusters
+
+In the Laminar dashboard:
+
+1. Go to **Events** to see the raw event stream
+2. Switch to **Clusters** to see grouped patterns
+3. Click any cluster to see its members, centroid, labels, and confidence score
+4. Filter by time range, event type, or cluster label
+5. Export cluster members to a dataset for evaluation
+
+## Example: Finding Extraction Failures
+
+Your browser agent extracts product data. Some extractions fail. Each `extraction.failed` event has an `attribute` like:
+
+```json
+{
+  "error_message": "Element not found: .product-price",
+  "url": "https://shop.example.com/item/123",
+  "selector": ".product-price"
+}
+```
+
+Instead of searching through logs:
+
+1. Start clustering with the template `{{error_message}}`
+2. View clusters to see failures grouped by similar error messages
+3. One cluster shows 47 failures, all on sites with lazy-loaded content
+4. Another cluster shows 12 failures, all with the same malformed selector
+5. Fix each root cause once, verify with the cluster members

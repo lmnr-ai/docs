@@ -1,0 +1,141 @@
+---
+title: SDK Lifecycle
+---
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    <Heading level={2} id="ts-laminar-flush">Laminar.flush()</Heading>
+
+    Flush pending spans to the backend.
+
+    ```typescript
+    // At end of script or Lambda handler
+    await Laminar.flush();
+    ```
+
+    **Returns:** `Promise<void>`
+
+    **When to use:**
+    - End of CLI scripts
+    - End of serverless function handlers
+    - Before process exit
+
+    **When NOT to use:**
+    - In web server request handlers (degrades performance)
+
+    ---
+
+    <Heading level={2} id="ts-laminar-shutdown">Laminar.shutdown()</Heading>
+
+    Flush spans and shut down tracing.
+
+    ```typescript
+    await Laminar.shutdown();
+    // Can call Laminar.initialize() again if needed
+    ```
+
+    **Returns:** `Promise<void>`
+
+    **Note:** Force flushes, clears config/context, releases resources. Can re-initialize afterward.
+
+    ---
+
+    <Heading level={2} id="ts-laminar-get-http-url">Laminar.getHttpUrl()</Heading>
+
+    Return the configured HTTP URL.
+
+    **Returns:** `string`
+
+    ---
+
+    <Heading level={2} id="ts-laminar-get-project-api-key">Laminar.getProjectApiKey()</Heading>
+
+    Return the configured project API key.
+
+    **Returns:** `string`
+  </Tab>
+  <Tab title="Python">
+    <Heading level={2} id="py-laminar-flush">Laminar.flush()</Heading>
+
+    Flush pending spans to the backend.
+
+    ```python
+    # At end of script
+    Laminar.flush()
+    ```
+
+    **Returns:** `bool` — Success status (`False` if Laminar is not initialized)
+
+    **When to use:**
+    - End of CLI scripts
+    - Graceful shutdown of web servers
+
+    **When NOT to use:**
+    - In web server request handlers (degrades performance)
+
+    ---
+
+    <Heading level={2} id="py-laminar-force-flush">Laminar.force_flush()</Heading>
+
+    Force flush spans, blocking until complete. Resets context.
+
+    ```python
+    # In AWS Lambda handler
+    def handler(event, context):
+        Laminar.initialize()
+        result = process(event)
+        Laminar.force_flush()  # Blocks until spans exported
+        return result
+    ```
+
+    **Returns:** `None`
+
+    **Use for:** AWS Lambda and serverless where background threads may be killed.
+
+    **Behavior:** Shuts down and reinitializes span processor internally. Clears isolated context—subsequent spans start new traces.
+
+    ---
+
+    <Heading level={2} id="py-laminar-shutdown">Laminar.shutdown()</Heading>
+
+    Flush spans and shut down tracing.
+
+    ```python
+    Laminar.shutdown()
+    # Cannot re-initialize in same process
+    ```
+
+    **Returns:** `None`
+
+    **Note:** Unlike JavaScript SDK, Python SDK cannot re-initialize after shutdown.
+
+    ---
+
+    <Heading level={2} id="py-edge-cases">Edge Cases</Heading>
+
+    - **Input/output size:** Values >10MB replaced with `"Laminar: ... too large to record"`
+    - **Uninitialized:** If `Laminar.initialize()` not called:
+      - `@observe()` returns original function unchanged
+      - Manual span methods return `NonRecordingSpan`
+    - **Generators:** `@observe()` aggregates all yielded values for output recording
+    - **Span lifecycle:** `start_span`/`start_active_span` must end in LIFO order. Violating can corrupt context hierarchy.
+    - **Context isolation:** By default, `@observe()` uses isolated context. Set `preserve_global_context=True` to continue existing OTEL traces.
+    - **force_flush:** Clears isolated context. Subsequent spans start new traces.
+
+    ---
+
+    <Heading level={2} id="py-laminar-get-http-url">Laminar.get_base_http_url()</Heading>
+
+    Return the configured OTLP HTTP URL.
+
+    **Returns:** `str | None`
+
+    ---
+
+    <Heading level={2} id="py-laminar-get-project-api-key">Laminar.get_project_api_key()</Heading>
+
+    Return the configured project API key.
+
+    **Returns:** `str | None`
+  </Tab>
+</Tabs>

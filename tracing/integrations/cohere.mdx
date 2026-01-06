@@ -1,7 +1,6 @@
 ---
 title: LLM Observability for Cohere SDK
 sidebarTitle: Cohere
-description: Instrument your Cohere Chat, Embed, and Rerank API calls with Laminar
 ---
 
 ## Overview
@@ -185,9 +184,5 @@ Visit your Laminar dashboard to view your Cohere traces and analytics.
 
 ## Advanced Features
 
-- [Sessions](/tracing/structure/session) - Learn how to add session structure to your traces
-- [Metadata](/tracing/structure/metadata) - Discover how to add additional context to your LLM spans
-- [Trace structure](/tracing/structure) - Explore creating custom spans and more advanced tracing
-- [Realtime Monitoring](/tracing/realtime) - See how to monitor your Cohere calls in real-time
-
-
+- Enrich traces with sessions, user IDs, metadata, and tags via the [SDK reference](/sdk/reference).
+- Wrap custom functions with `observe` to capture business logic alongside model calls (see the SDK reference).

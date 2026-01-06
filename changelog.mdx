@@ -1,0 +1,51 @@
+---
+title: Changelog
+---
+
+New releases and improvements.
+
+## December 17, 2025
+
+- **Backend/Frontend refresh** — Backend deps raised (actix-web 4.12, aws-sdk-s3 1.118, prost/tonic 0.14 + tonic_prost build/codec); proto structs derive Eq/Hash. Frontend bumps (Next 15.5.9, NextAuth 4.24.13, @ai-sdk/react 2.0.116, streamdown 1.6.10) and unused app-server binary workflow removed.
+- **Quickwit ingestion unified** — Single payload type for spans/events with index IDs; publisher/consumer simplified; better error logging; suppressed dead-code warnings on generated protos.
+- **Query engine prod parity** — Python 3.14 base, nonroot container on Debian trixie, uv locked installs; validator strips SETTINGS clause to normalize queries; JSON↔SQL converters polished.
+- **Always-on trace aggregation** — Aggregate traces flag removed—trace aggregation always runs. New ClickHouse `traces_replacing` table + views and manual backfill script.
+- **Frontend cleanup** — Removed unused VNC/blog/checkout/tag/editor components/hooks; trimmed deps.
+- **Events into Quickwit** — Events ingestion added; instrumentation around ingest/search to track errors/latency.
+- **Stability and schema fixes** — Realtime stability, trace dependency removal, PostgreSQL schema tightening, RabbitMQ hardening, migration fixes and unused event clusters removed.
+- **LAM feature work** — UI/data-path changes around LAM feature set.
+- **Events + clusters unified** — Unified events and clusters data model/flows to simplify ingestion and querying.
+
+## November 2025
+
+- **Distributed realtime** — Fanout architecture for live updates across nodes.
+- **Quickwit search shipped** — Query/ingest pipeline overhaul aligning ClickHouse + Quickwit.
+- **Search UX** — Search & filter controls plus autocomplete for query inputs.
+- **Auth separation** — Clear split between authn and authz in backend middleware/roles.
+
+## October 2025
+
+- **Security + UX** — Next.js bump for critical RSC CVE; frontend redesign sweep.
+- **Schema & observability** — Trace aggregation toggles tightened; app-server observability v1 (metrics/logging); event definitions + triggers + settings UI/API.
+
+## September 2025
+
+- **Self-hosted query engine** — Packaged with runtime/config tweaks.
+- **Sessions analytics** — Sessions table and UI views added.
+
+## April–May 2025
+
+- **Rust + perf** — App-server upgraded to Rust 1.85 (2024 edition) with dep cleanup; virtualized trace view for large traces; realtime updates for sessions.
+
+## January 2025
+
+- **Next.js 15 migration** — Next15 rolled across the frontend stack.
+
+## Year in focus
+
+- **Search & ingestion**: Quickwit search/ingest, unified payloads, events ingestion, ClickHouse replacing table + migrations.
+- **Realtime & sessions**: Distributed realtime, session table, live session updates.
+- **Query engine**: Prod parity, self-hosting, SETTINGS stripping, Python 3.14 stack, validator/converter polish.
+- **Frontend UX**: Major redesign, virtualization, unused UI removal, CVE-driven upgrades, autocomplete/search filters.
+- **Infra/observability**: Rust toolchain upgrade, app-server observability, RabbitMQ hardening, schema fixes.
+- **Events/features**: Event definitions/triggers/settings, authn/authz separation.

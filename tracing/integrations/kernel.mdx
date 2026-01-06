@@ -1,7 +1,6 @@
 ---
 title: Observability for computer-using agents on Kernel
 sidebarTitle: Kernel
-description: Instrument your computer-using agents running on Kernel with Laminar
 ---
 
 ## Overview
@@ -27,7 +26,7 @@ A version of this guide is available in [Kernel's documentation](https://www.onk
 ## Prerequisites
 
 1. A [Kernel](https://dashboard.onkernel.com/sign-up) account.
-1. A [Laminar](https://laminar.sh) account or a [self-hosted instance](/self-hosting/setup).
+1. A [Laminar](https://laminar.sh) account or a [self-hosted instance](https://github.com/lmnr-ai/lmnr).
 1. API keys for both Kernel and Laminar set as `KERNEL_API_KEY` and `LMNR_PROJECT_API_KEY` environment variables.
 
 ## Getting Started
@@ -415,6 +414,6 @@ async def run_automation(ctx: KernelContext):
 
 ## Next steps
 
-- Understand [browser observability](/tracing/browser-agent-observability) in more detail.
+- Understand [session replay for browser agents](/tracing/browser-agent-observability) in more detail.
 - Learn about [Profiles](https://www.onkernel.com/docs/browsers/profiles) in Kernel to persist browser state between runs.
 - Learn about calling playwright [directly](https://www.onkernel.com/docs/browsers/playwright-execution) through Kernel's API.

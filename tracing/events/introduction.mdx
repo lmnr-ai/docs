@@ -1,0 +1,24 @@
+---
+title: Events
+sidebarTitle: Introduction
+---
+
+Events are things that happened in your system that are worth recording. Each event is associated with a span and its corresponding trace.
+
+In Laminar, events help you understand what's happening in your AI applications beyond just tracing. You can set up events to track: user actions, business outcomes, errors, state changes, or any signal that matters to your product.
+
+<CardGroup cols={2}>
+  <Card title="Emit events from code" icon="code" href="/tracing/events/events">
+    Emit structured events directly from your code to track domain-specific actions and outcomes.
+  </Card>
+  <Card
+    title="Extract events from traces using LLMs"
+    icon="sparkles"
+    href="/tracing/events/semantic-events"
+  >
+    Define prompts to extract "semantic" events from trace data. Extraction is performed asynchronously in the background on the Laminar platform.
+  </Card>
+  <Card title="Cluster events to identify patterns" icon="layer-group" href="/tracing/events/clusters">
+    Cluster similar events together to discover patterns, debug at scale, and detect anomalies.
+  </Card>
+</CardGroup>

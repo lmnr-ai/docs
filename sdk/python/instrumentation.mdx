@@ -1,0 +1,66 @@
+---
+title: Python Instrumentation
+---
+
+## Laminar.initialize(...)
+
+Initialize Laminar tracing and auto-instrumentation.
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `project_api_key` | `str` | `None` | Project API key (defaults to `LMNR_PROJECT_API_KEY`) |
+| `base_url` | `str` | `https://api.lmnr.ai` | Base URL |
+| `base_http_url` | `str` | `None` | OTLP HTTP base URL |
+| `http_port` | `int` | `443` | OTLP HTTP port |
+| `grpc_port` | `int` | `8443` | OTLP gRPC port |
+| `instruments` | `set[Instruments]` | `None` | Enable only these instruments |
+| `disabled_instruments` | `set[Instruments]` | `None` | Disable these instruments |
+| `disable_batch` | `bool` | `False` | Disable batching span processor |
+| `max_export_batch_size` | `int` &#124; `None` | `None` | Batch size (defaults to `64` when `None`) |
+| `export_timeout_seconds` | `int` &#124; `None` | `None` | Export timeout (defaults to `30` when `None`) |
+| `set_global_tracer_provider` | `bool` | `True` | Set global OTEL tracer provider |
+| `otel_logger_level` | `int` | `logging.ERROR` | OTEL logger level |
+| `session_recording_options` | `SessionRecordingOptions` | `None` | Browser session recording options |
+| `force_http` | `bool` | `False` | Force OTLP HTTP exporter |
+| `metadata` | `dict[str, AttributeValue]` | `None` | Global trace metadata |
+
+**Returns:** `None`
+
+## Instruments
+
+Enum of available auto-instrumentations.
+
+```python
+from lmnr import Laminar, Instruments
+
+# Enable only specific instruments
+Laminar.initialize(
+    instruments={Instruments.OPENAI, Instruments.ANTHROPIC}
+)
+
+# Disable specific instruments
+Laminar.initialize(
+    disabled_instruments={Instruments.LANGCHAIN}
+)
+```
+
+**Available instruments:**
+`OPENAI`, `ANTHROPIC`, `BEDROCK`, `COHERE`, `GOOGLE_GENAI`, `GROQ`, `MISTRAL`, `OLLAMA`, `TOGETHER`, `VERTEXAI`, `LANGCHAIN`, `LANGGRAPH`, `LLAMA_INDEX`, `HAYSTACK`, `CREWAI`, `PINECONE`, `QDRANT`, `CHROMA`, `MILVUS`, `WEAVIATE`, `LANCEDB`, `MARQO`, `PLAYWRIGHT`, `PATCHRIGHT`, `BROWSER_USE`, `BROWSER_USE_SESSION`, `SKYVERN`, `CLAUDE_AGENT`, `KERNEL`, `MCP`, and more.
+
+---
+
+## SessionRecordingOptions
+
+Browser session recording configuration.
+
+```python
+from lmnr import SessionRecordingOptions, MaskInputOptions
+
+options = SessionRecordingOptions(
+    mask_input_options=MaskInputOptions(...)
+)
+
+Laminar.initialize(session_recording_options=options)
+```

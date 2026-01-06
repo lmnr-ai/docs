@@ -17,26 +17,18 @@
             "group": "Overview",
             "pages": [
               "overview",
-              "installation",
-              {
-                "group": "Self-hosting",
-                "pages": [
-                  "self-hosting/setup",
-                  "self-hosting/access-control-setup"
-                ]
-              },
-              "cursor"
+              "getting-started",
+              "hosting-options"
             ]
           },
           {
             "group": "Tracing",
             "pages": [
               "tracing/introduction",
-              "tracing/quickstart",
-              "tracing/automatic-instrumentation",
               {
                 "group": "Integrations",
                 "pages": [
+                  "tracing/integrations/overview",
                   "tracing/integrations/openai",
                   "tracing/integrations/anthropic",
                   "tracing/integrations/gemini",
@@ -51,30 +43,37 @@
                   "tracing/integrations/stagehand",
                   "tracing/integrations/skyvern",
                   "tracing/integrations/playwright",
-                  "tracing/integrations/puppeteer"
+                  "tracing/integrations/puppeteer",
+                  "tracing/otel"
                 ]
               },
               {
                 "group": "Tracing Structure",
                 "pages": [
                   "tracing/structure/overview",
-                  "tracing/structure/observe",
+                  "tracing/structure/observe-decorator",
                   "tracing/structure/manual-span-creation",
-                  "tracing/structure/session",
+                  "tracing/structure/sessions",
                   "tracing/structure/user-id",
                   "tracing/structure/metadata",
                   "tracing/structure/tags",
-                  "tracing/structure/image",
+                  "tracing/structure/images",
                   "tracing/structure/continuing-traces",
-                  "tracing/structure/providers",
-                  "tracing/structure/flushing"
+                  "tracing/structure/llm-cost-tracking",
+                  "tracing/structure/flushing-and-shutdown"
                 ]
               },
-              "tracing/realtime",
+              {
+                "group": "Traces monitoring",
+                "pages": [
+                  "tracing/events/introduction",
+                  "tracing/events/semantic-events",
+                  "tracing/events/events",
+                  "tracing/events/clusters"
+                ]
+              },
               "tracing/browser-agent-observability",
               "tracing/langgraph-visualization",
-              "tracing/events",
-              "tracing/otel",
               {
                 "group": "Troubleshooting",
                 "pages": [
@@ -92,7 +91,6 @@
               "evaluations/using-dataset",
               "evaluations/human-evaluators",
               "evaluations/configuration",
-              "evaluations/reference",
               "evaluations/manual-evaluation",
               "evaluations/cookbook",
               {
@@ -106,40 +104,25 @@
             ]
           },
           {
-            "group": "SQL Editor",
-            "pages": [
-              "sql-editor/introduction",
-              "sql-editor/overview",
-              "sql-editor/reference"
-            ]
-          },
-          {
-            "group": "Custom Dashboards",
-            "pages": [
-              "custom-dashboards/overview"
-            ]
-          },
-          {
             "group": "Datasets",
             "pages": [
               "datasets/introduction",
               "datasets/adding-data",
-              "datasets/cli"
-            ]
-          },
-          {
-            "group": "Labeling Queues",
-            "pages": [
+              "datasets/cli",
               "queues/quickstart"
             ]
           },
           {
-            "group": "Playground",
+            "group": "Platform",
             "pages": [
-              "playground/introduction",
-              "playground/playground-from-span",
-              "playground/tools",
-              "playground/history"
+              "platform",
+              "platform/viewing-traces",
+              "platform/live-tracing",
+              "platform/sql-editor",
+              "platform/search",
+              "custom-dashboards/overview",
+              "queues/quickstart",
+              "playground"
             ]
           }
         ]
@@ -154,28 +137,42 @@
         ]
       },
       {
-        "tab": "API Reference",
+        "tab": "SDK",
         "groups": [
           {
-            "group": "API Documentation",
+            "group": "Core",
             "pages": [
-              "api-reference/introduction",
-              {
-                "group": "Evaluations",
-                "pages": [
-                  "api-reference/evals/init_eval",
-                  "api-reference/evals/save_eval_datapoints",
-                  "api-reference/evals/update_eval_datapoint"
-                ]
-              },
-              {
-                "group": "SQL",
-                "pages": [
-                  "api-reference/sql/sql_query"
-                ]
-              }
+              "sdk/observe",
+              "sdk/manual-spans",
+              "sdk/span-methods",
+              "sdk/trace-methods",
+              "sdk/context-utilities",
+              "sdk/lifecycle",
+              "sdk/constants",
+              "sdk/client",
+              "sdk/evaluations"
+            ]
+          },
+          {
+            "group": "Instrumentation",
+            "pages": [
+              "sdk/typescript/instrumentation",
+              "sdk/python/instrumentation"
+            ]
+          },
+          {
+            "group": "Types",
+            "pages": [
+              "sdk/typescript/types",
+              "sdk/python/types"
             ]
           }
+        ]
+      },
+      {
+        "tab": "Changelog",
+        "pages": [
+          "changelog"
         ]
       }
     ],
@@ -194,11 +191,6 @@
     }
   },
   "logo": "/logo/logo.png",
-  "api": {
-    "openapi": [
-      "api-reference/openapi.json"
-    ]
-  },
   "appearance": {
     "default": "dark",
     "strict": true

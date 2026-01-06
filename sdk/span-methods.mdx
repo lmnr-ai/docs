@@ -1,0 +1,381 @@
+---
+title: Span Methods
+---
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    <Heading level={2} id="ts-laminar-set-span-attributes">Laminar.setSpanAttributes(attributes)</Heading>
+
+    Set attributes on the current span.
+
+    ```typescript
+    await observe({ name: 'process' }, async () => {
+      Laminar.setSpanAttributes({
+        'document.pages': 10,
+        'document.language': 'en',
+      });
+    });
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Description |
+    |------|------|-------------|
+    | `attributes` | `Record<typeof LaminarAttributes[keyof typeof LaminarAttributes], AttributeValue>` | Key-value pairs |
+
+    **Returns:** `void`
+
+    ---
+
+    <Heading level={2} id="ts-laminar-set-span-output">Laminar.setSpanOutput(output)</Heading>
+
+    Explicitly set span output.
+
+    ```typescript
+    await observe({ name: 'complex_operation' }, async () => {
+      const result = await doWork();
+      Laminar.setSpanOutput(result.summary); // Record only the summary
+      return result;
+    });
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `output` | `any` | — | Output payload (JSON-serialized) |
+
+    **Returns:** `void`
+
+    **Note:** No-op if `output` is `null` or `undefined`.
+
+    ---
+
+    <Heading level={2} id="ts-laminar-set-span-tags">Laminar.setSpanTags(tags)</Heading>
+
+    Set tags on the current span (deduplicated).
+
+    ```typescript
+    await observe({ name: 'process' }, async () => {
+      if (input.length > 10000) {
+        Laminar.setSpanTags(['long-input']);
+      }
+    });
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `tags` | `string[]` | — | Tags to set (deduplicated) |
+
+    **Returns:** `void`
+
+    **Note:** `Laminar.addSpanTags(...)` is not available in the TypeScript SDK—use `setSpanTags(...)`.
+
+    ---
+
+    <Heading level={2} id="ts-laminar-event">Laminar.event(options)</Heading>
+
+    Add an event to the current span, or create a span if none exists.
+
+    ```typescript
+    await observe({ name: 'workflow' }, async () => {
+      Laminar.event({
+        name: 'checkpoint_reached',
+        attributes: { step: 5 },
+      });
+    });
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `options.name` | `string` | — | Event name (required) |
+    | `options.attributes` | `Record<string, AttributeValue>` | — | Event attributes |
+    | `options.timestamp` | `TimeInput` | OTEL now | Custom timestamp |
+    | `options.sessionId` | `string` | — | Session ID |
+    | `options.userId` | `string` | — | User ID |
+
+    **Returns:** `void`
+
+    ---
+
+    <Heading level={2} id="ts-span-end">span.end(endTime?)</Heading>
+
+    End a manually created span.
+
+    ```typescript
+    const span = Laminar.startSpan({ name: 'operation' });
+    try {
+      await doWork();
+    } finally {
+      span.end(); // Always end in finally block
+    }
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `endTime` | `TimeInput` | OTEL now | End timestamp |
+
+    **Returns:** `void`
+
+    **Note:** Pops active context if span was activated via `startActiveSpan`.
+
+    ---
+
+    <Heading level={2} id="ts-span-record-exception">span.recordException(exception, time?)</Heading>
+
+    Record an exception on the span.
+
+    ```typescript
+    const span = Laminar.startSpan({ name: 'risky_operation' });
+    try {
+      await riskyWork();
+    } catch (error) {
+      span.recordException(error);
+      throw error;
+    } finally {
+      span.end();
+    }
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `exception` | `Exception` | — | Error/exception to record |
+    | `time` | `TimeInput` | OTEL now | Timestamp |
+
+    **Returns:** `void`
+
+    ---
+
+    <Heading level={2} id="ts-span-set-attributes">span.setAttributes(attributes)</Heading>
+
+    Set attributes directly on a span object.
+
+    ```typescript
+    const span = Laminar.startSpan({ name: 'operation' });
+    span.setAttributes({ 'operation.status': 'success' });
+    span.end();
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Description |
+    |------|------|-------------|
+    | `attributes` | `SpanAttributes` | Key-value pairs |
+
+    **Returns:** `this`
+  </Tab>
+  <Tab title="Python">
+    <Heading level={2} id="py-laminar-set-span-attributes">Laminar.set_span_attributes(attributes)</Heading>
+
+    Set attributes on the current span.
+
+    ```python
+    @observe()
+    def process_document(doc):
+        Laminar.set_span_attributes({
+            "document.pages": len(doc.pages),
+            "document.language": doc.detected_language,
+        })
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Description |
+    |------|------|-------------|
+    | `attributes` | `dict[Attributes or str, Any]` | Key-value pairs. Keys can be `Attributes` enum or strings. Non-primitive values JSON-serialized. |
+
+    **Returns:** `None`
+
+    **Note:** No-op if no active span.
+
+    ---
+
+    <Heading level={2} id="py-laminar-set-span-output">Laminar.set_span_output(output)</Heading>
+
+    Explicitly set span output.
+
+    ```python
+    @observe()
+    def complex_operation():
+        result = do_many_things()
+        Laminar.set_span_output(result.summary)  # Record only summary
+        return result
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `output` | `Any` | `None` | Output value (JSON-serialized, truncated if >10MB) |
+
+    **Returns:** `None`
+
+    **Note:** No-op if no active span.
+
+    ---
+
+    <Heading level={2} id="py-laminar-set-span-tags">Laminar.set_span_tags(tags)</Heading>
+
+    Set tags on the current span (deduplicated).
+
+    ```python
+    @observe()
+    def process_input(text: str):
+        if len(text) > 10000:
+            Laminar.set_span_tags(["long-input"])
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Description |
+    |------|------|-------------|
+    | `tags` | `list[str]` | Tags to set (deduplicated) |
+
+    **Returns:** `None`
+
+    ---
+
+    <Heading level={2} id="py-laminar-add-span-tags">Laminar.add_span_tags(tags)</Heading>
+
+    Add (union) tags onto the current span.
+
+    ```python
+    @observe()
+    def process_input(text: str):
+        if len(text) > 10000:
+            Laminar.add_span_tags(["long-input"])
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Description |
+    |------|------|-------------|
+    | `tags` | `list[str]` | Tags to add |
+
+    **Returns:** `None`
+
+    **Note:** Warns if not `list[str]`.
+
+    ---
+
+    <Heading level={2} id="py-laminar-event">Laminar.event(name, attributes=None, timestamp=None, *, user_id=None, session_id=None)</Heading>
+
+    Add an event to the active span (creates and ends a span if none is active).
+
+    ```python
+    from lmnr import Laminar, observe
+
+    @observe()
+    def workflow():
+        Laminar.event("checkpoint_reached", attributes={"step": 5})
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `name` | `str` | — | Event name |
+    | `attributes` | `dict[str, AttributeValue]` &#124; `None` | `None` | Event attributes |
+    | `timestamp` | `datetime` &#124; `int` &#124; `None` | `None` | Timestamp (defaults to OTEL now) |
+    | `user_id` | `str` &#124; `None` | `None` | User ID |
+    | `session_id` | `str` &#124; `None` | `None` | Session ID |
+
+    **Returns:** `None`
+
+    ---
+
+    <Heading level={2} id="py-span-end">span.end(end_time=None)</Heading>
+
+    End a manually created span.
+
+    ```python
+    span = Laminar.start_span(name="operation")
+    try:
+        do_work()
+    finally:
+        span.end()  # Always end in finally block
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `end_time` | `int` &#124; `None` | `None` | End timestamp (defaults to OTEL now) |
+
+    **Returns:** `None`
+
+    ---
+
+    <Heading level={2} id="py-span-record-exception">span.record_exception(exception, attributes=None, timestamp=None, escaped=False)</Heading>
+
+    Record an exception on the span.
+
+    ```python
+    with Laminar.start_as_current_span(name="risky_operation") as span:
+        try:
+            risky_work()
+        except Exception as e:
+            span.record_exception(e)
+            raise
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `exception` | `BaseException` | — | Exception to record |
+    | `attributes` | `dict[str, AttributeValue]` &#124; `None` | `None` | Additional exception attributes |
+    | `timestamp` | `int` &#124; `None` | `None` | Timestamp (defaults to OTEL now) |
+    | `escaped` | `bool` | `False` | Mark as escaped exception |
+
+    **Returns:** `None`
+
+    ---
+
+    <Heading level={2} id="py-span-set-attributes">span.set_attributes(attributes)</Heading>
+
+    Set many attributes directly on a span object.
+
+    ```python
+    span.set_attributes({
+        "operation.status": "success",
+        "operation.items_count": 42,
+    })
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Description |
+    |------|------|-------------|
+    | `attributes` | `dict[str, AttributeValue]` | Key-value pairs |
+
+    **Returns:** `None`
+
+    ---
+
+    <Heading level={2} id="py-span-set-attribute">span.set_attribute(key, value)</Heading>
+
+    Set a single attribute on a span object.
+
+    ```python
+    span.set_attribute("operation.status", "success")
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Description |
+    |------|------|-------------|
+    | `key` | `str` | Attribute key |
+    | `value` | `AttributeValue` | Attribute value |
+
+    **Returns:** `None`
+  </Tab>
+</Tabs>

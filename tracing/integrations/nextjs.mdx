@@ -1,7 +1,6 @@
 ---
 title: Observability for Next.js
 sidebarTitle: Next.js
-description: Instrument your Next.js app based on App Router with Laminar
 ---
 
 ## Overview
@@ -44,7 +43,7 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     const { Laminar } = await import('@lmnr-ai/lmnr');
     Laminar.initialize({
-      projectApiKey: process.env.LMNR_API_KEY,
+      projectApiKey: process.env.LMNR_PROJECT_API_KEY,
     });
   }
 }
@@ -158,4 +157,4 @@ export const GET = observe(async (req: NextRequest) => {
 });
 ```
 
-Learn more about `observe` function wrapper [here](/tracing/structure/observe).
+Learn more about `observe` in the SDK reference.

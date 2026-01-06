@@ -1,0 +1,82 @@
+---
+title: Trace Functions
+---
+
+The `@observe` decorator (Python) or `observe()` wrapper (TypeScript) is the simplest way to trace a function. It automatically:
+
+- Creates a span when the function is called
+- Names the span after the function (or a custom name you provide)
+- Captures input arguments and return values
+- Ends the span when the function returns
+- Records exceptions if the function throws
+
+## When to Use Observe
+
+Use `@observe` / `observe()` when you:
+
+- Want to trace a function call
+- Want automatic input/output capture
+- Want a stable span name based on the function (or an explicit name)
+- Want a parent span that groups downstream work (LLM calls, tool calls, DB calls)
+
+## Nesting Behavior
+
+Observed functions automatically nest. If function A calls function B, and both are observed, B's span becomes a child of A's span. This happens through context propagation—Laminar tracks the "current" span and parents new spans to it.
+
+You can also create additional spans inside an observed function. Those spans become children of the observed function’s span.
+
+<Frame caption="Nested spans in the trace view">
+  <img src="/images/nested-trace.png" alt="Trace view showing nested spans for observed function calls" />
+</Frame>
+
+---
+
+## Example
+
+Wrap a function you own so it shows up as a parent operation with downstream spans (LLM calls, tools, etc.) nested inside it.
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { observe } from '@lmnr-ai/lmnr';
+
+    const answerQuestion = (question: string) =>
+      observe({ name: 'answerQuestion' }, async () => {
+        const response = await openai.chat.completions.create({
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'user', content: question }],
+        });
+        return response.choices[0].message.content;
+      });
+
+    await answerQuestion('What is the capital of France?');
+    ```
+
+    See also: [`observe(options, fn, ...args)`](/sdk/observe#ts-observe)
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import observe
+
+    @observe()
+    def answer_question(question: str) -> str:
+        response = openai.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": question}],
+        )
+        return response.choices[0].message.content
+
+    answer_question("What is the capital of France?")
+    ```
+
+    See also: [`@observe()`](/sdk/observe#py-observe)
+  </Tab>
+</Tabs>
+
+## In the Laminar UI
+
+- The observed function appears as a span (often the root span for the trace).
+- Auto-instrumented work inside it (LLM calls, vector DB calls, etc.) appears as child spans.
+- Function arguments are recorded as span input and the return value as span output (unless you disable or override recording).
+
+If you want to trace only part of a function (or trace blocks conditionally), see [Trace Parts of Your Code](/tracing/structure/manual-span-creation).

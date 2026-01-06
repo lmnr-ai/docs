@@ -1,95 +1,82 @@
 ---
-title: "Tracing structure"
-sidebarTitle: "Overview"
+title: Tracing Structure
+sidebarTitle: Overview
 ---
 
-## Overview
+You've initialized Laminar. Your LLM calls are traced automatically. Now what?
 
-Effective trace structuring enhances the value of your tracing data, making it easier to debug, analyze, and optimize your LLM applications. This section covers the essential components of trace structuring in Laminar:
+This section covers what to do when auto-instrumentation isn't enough:
 
-| Component | Description |
-| --- | --- |
-| [Observe](/tracing/structure/observe) | Create a span with `observe` function decorator or wrapper |
-| [Manual span creation](/tracing/structure/manual-span-creation) | Create a span manually within a function |
-| [Sessions](/tracing/structure/session) | Group related traces together for better organization |
-| [User ID](/tracing/structure/user-id) | Associate traces with specific users for targeted analysis |
-| [Metadata](/tracing/structure/metadata) | Add contextual information to your traces for filtering and grouping |
+- **Trace your own functions** — Your agent has logic beyond LLM calls. Wrap functions with `@observe` to see them in traces.
+- **Add context** — Attach user IDs, session IDs, metadata, and tags so you can filter and debug effectively.
+- **Control what's captured** — Skip recording inputs/outputs for sensitive operations.
+
+If you just want to trace LLM calls and framework operations, you don't need this section—[Integrations](/integrations) has you covered. Come back here when you want deeper visibility into your own code.
 
 ## Why Structure Matters
 
-Without structure, each LLM call creates an isolated trace, making it difficult to:
-- Understand the relationships between different LLM calls
-- Track user journeys through your application
-- Debug complex multi-step workflows
-- Find relevant traces quickly
+Without structure, each LLM call becomes an isolated trace, making it hard to:
 
-Properly structured traces provide a clear picture of your application's flow, making it easier to identify bottlenecks, debug issues, and optimize performance.
+- Understand relationships between calls (routing → tool use → final answer)
+- Follow multi-step workflows end-to-end
+- Track conversations across turns
+- Find the right trace quickly (by user/session/metadata)
+
+Well-structured traces show a clear tree of spans for each request, plus stable identifiers that help you search and group related work.
 
 ## Quickstart
 
-Start by implementing the `observe` wrapper or decorator to create parent spans that group your LLM calls into meaningful traces. Then, enhance these traces with session id, user id, and metadata to create a comprehensive tracing structure.
+Start by creating a **parent span** for your request/turn, then set **user ID**, **session ID**, and **metadata** inside that span so everything downstream inherits it.
 
-<Tabs>
-<Tab title="JavaScript/TypeScript">
-```javascript
-// Example: A well-structured trace implementation
-import { Laminar, observe } from '@lmnr-ai/lmnr';
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { Laminar, observe } from '@lmnr-ai/lmnr';
 
-// Initialize with your project key
-Laminar.initialize({
-  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
-});
+    Laminar.initialize({
+      projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+    });
 
-// Create a parent span for the entire request
-await observe({ name: 'processUserRequest' }, async (userId, requestId) => {
-  // Your LLM calls and other operations will be children 
-  // of this 'processUserRequest' span
-  // and inherit the session id, user id, and metadata
+    export async function handleRequest(userId: string, requestId: string) {
+      return observe({ name: 'handleRequest' }, async () => {
+        Laminar.setTraceUserId(userId);
+        Laminar.setTraceSessionId(`session-${requestId}`);
+        Laminar.setTraceMetadata({ environment: process.env.NODE_ENV });
 
-  Laminar.setTraceUserId(userId);
+        // ... your LLM calls / tools / business logic ...
+      });
+    }
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import Laminar, observe
+    import os
 
-  Laminar.setTraceSessionId(`session-${requestId}`);
+    Laminar.initialize()
 
-  Laminar.setTraceMetadata({
-    environment: process.env.NODE_ENV
-  });
+    @observe()
+    def handle_request(user_id: str, request_id: str):
+        Laminar.set_trace_user_id(user_id)
+        Laminar.set_trace_session_id(f"session-{request_id}")
+        Laminar.set_trace_metadata({"environment": os.getenv("ENVIRONMENT")})
 
-  // ... you LLM calls here ...
-});
-```
-</Tab>
-
-<Tab title="Python">
-```python
-import os
-from lmnr import Laminar, observe
-
-# Initialize with your project key
-Laminar.initialize(
-    project_api_key=os.environ["LMNR_PROJECT_API_KEY"]
-)
-
-@observe()
-def process_user_request(user_id, request_id):  
-    # Your LLM calls and other operations will be children 
-    # of this 'processUserRequest' span
-    # and inherit the session id, user id, and metadata.
-
-    Laminar.set_trace_session_id(f"session-{request_id}")
-
-    Laminar.set_trace_user_id(user_id)
-
-    Laminar.set_trace_metadata(
-        environment=os.environ.get("ENVIRONMENT", "development")
-    )
-  
-    # ... you LLM calls here ...
-
-
-# Example usage
-process_user_request(user_id="user_123", request_id="req_456")
-```
-</Tab>
+        # ... your LLM calls / tools / business logic ...
+    ```
+  </Tab>
 </Tabs>
 
-Explore each component in detail through the links above to implement a comprehensive tracing structure for your LLM applications. 
+## Quick Reference
+
+| I want to... | Use |
+|--------------|-----|
+| Trace a function I wrote | [Trace Functions](/tracing/structure/observe-decorator) |
+| Trace code that isn't a function | [Trace Parts of Your Code](/tracing/structure/manual-span-creation) |
+| Group traces by conversation/workflow | [Sessions](/tracing/structure/sessions) |
+| Associate traces with users | [User ID](/tracing/structure/user-id) |
+| Add key-value context to traces | [Metadata](/tracing/structure/metadata) |
+| Add categorical labels to spans | [Tags](/tracing/structure/tags) |
+| Trace images sent to LLMs | [Tracing Images](/tracing/structure/images) |
+| Continue traces across services | [Continuing Traces](/tracing/structure/continuing-traces) |
+| Track costs for custom LLM spans | [LLM Cost Tracking](/tracing/structure/llm-cost-tracking) |
+| Ensure spans send in serverless/CLI | [Flushing & Shutting Down](/tracing/structure/flushing-and-shutdown) |

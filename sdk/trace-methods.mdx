@@ -1,0 +1,333 @@
+---
+title: Trace Methods
+---
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    <Heading level={2} id="ts-laminar-set-trace-session-id">Laminar.setTraceSessionId(sessionId)</Heading>
+
+    Group this trace with others in a session.
+
+    **Parameters:**
+
+    | Name | Type | Description |
+    |------|------|-------------|
+    | `sessionId` | `string` | Session identifier to attach to the trace |
+
+    **Returns:** `void`
+
+    **Option A: Call inside an active span context**
+
+    ```typescript
+    import { Laminar, observe } from '@lmnr-ai/lmnr';
+
+    await observe({ name: 'handle_message' }, async () => {
+      Laminar.setTraceSessionId('conversation-abc-123');
+    });
+    ```
+
+    **Option B: Pass via `observe` options**
+
+    ```typescript
+    import { observe } from '@lmnr-ai/lmnr';
+
+    await observe(
+      { name: 'handle_message', sessionId: 'conversation-abc-123' },
+      async () => {
+        // ...
+      },
+    );
+    ```
+
+    **Notes:**
+    - Must run within an active span context to attach to the current trace.
+    - Prefer setting the session ID at your request/turn entry point so child spans inherit it.
+
+    ---
+
+    <Heading level={2} id="ts-laminar-set-trace-user-id">Laminar.setTraceUserId(userId)</Heading>
+
+    Associate trace with a user.
+
+    **Parameters:**
+
+    | Name | Type | Description |
+    |------|------|-------------|
+    | `userId` | `string` | User identifier to attach to the trace |
+
+    **Returns:** `void`
+
+    **Option A: Call inside an active span context**
+
+    ```typescript
+    import { Laminar, observe } from '@lmnr-ai/lmnr';
+
+    await observe({ name: 'handle_request' }, async () => {
+      Laminar.setTraceUserId('user-456');
+    });
+    ```
+
+    **Option B: Pass via `observe` options**
+
+    ```typescript
+    import { observe } from '@lmnr-ai/lmnr';
+
+    await observe(
+      { name: 'handle_request', userId: 'user-456' },
+      async () => {
+        // ...
+      },
+    );
+    ```
+
+    **Notes:**
+    - Must run within an active span context to attach to the current trace.
+    - Prefer pseudonymous IDs (avoid emails, names, phone numbers).
+
+    ---
+
+    <Heading level={2} id="ts-laminar-set-trace-metadata">Laminar.setTraceMetadata(metadata)</Heading>
+
+    Add key-value metadata to the trace.
+
+    **Parameters:**
+
+    | Name | Type | Description |
+    |------|------|-------------|
+    | `metadata` | `Record<string, any>` | JSON-serializable key-value pairs |
+
+    **Returns:** `void`
+
+    **Option A: Call inside an active span context**
+
+    ```typescript
+    import { Laminar, observe } from '@lmnr-ai/lmnr';
+
+    await observe({ name: 'handle_request' }, async () => {
+      Laminar.setTraceMetadata({
+        environment: 'production',
+        region: 'us-west',
+        feature_flag: 'new-model-v2',
+      });
+    });
+    ```
+
+    **Option B: Pass via `observe` options**
+
+    ```typescript
+    import { observe } from '@lmnr-ai/lmnr';
+
+    await observe(
+      {
+        name: 'handle_request',
+        metadata: { environment: 'production', region: 'us-west' },
+      },
+      async () => {
+        // ...
+      },
+    );
+    ```
+
+    **Notes:**
+    - Must run within an active span context to attach to the current trace.
+    - A later call overwrites previous trace metadata—set all keys in one call.
+    - Values must be JSON-serializable (non-primitive values are JSON-stringified). Stored under `lmnr.association.properties.metadata.*`.
+
+    **Overwrite semantics examples**
+
+    ```typescript
+    import { Laminar, observe } from '@lmnr-ai/lmnr';
+
+    // ✅ Good: set all keys in one call
+    await observe({ name: 'myFunction' }, async () => {
+      Laminar.setTraceMetadata({ environment: 'production', region: 'us-west' });
+    });
+    ```
+
+    ```typescript
+    import { Laminar, observe } from '@lmnr-ai/lmnr';
+
+    // ❌ Avoid: second call overwrites the first
+    await observe({ name: 'myFunction' }, async () => {
+      Laminar.setTraceMetadata({ environment: 'production' });
+      Laminar.setTraceMetadata({ region: 'us-west' });
+    });
+    ```
+
+    ---
+
+    <Heading level={2} id="ts-laminar-get-trace-id">Laminar.getTraceId()</Heading>
+
+    Get the current trace ID.
+
+    **Returns:** `string | null` — UUID string or `null` if no active span.
+
+    ```typescript
+    import { Laminar, observe } from '@lmnr-ai/lmnr';
+
+    await observe({ name: 'operation' }, async () => {
+      const traceId = Laminar.getTraceId();
+      console.log('Trace:', traceId);
+      return { traceId, result };
+    });
+    ```
+  </Tab>
+  <Tab title="Python">
+    <Heading level={2} id="py-laminar-set-trace-session-id">Laminar.set_trace_session_id(session_id=None)</Heading>
+
+    Group this trace with others in a session.
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `session_id` | `str` &#124; `None` | `None` | Session identifier to attach to the trace |
+
+    **Returns:** `None`
+
+    **Option A: Call inside an active span context**
+
+    ```python
+    from lmnr import Laminar, observe
+
+    @observe()
+    def handle_message():
+        Laminar.set_trace_session_id("conversation-abc-123")
+    ```
+
+    **Option B: Pass via `@observe(...)`**
+
+    ```python
+    from lmnr import observe
+
+    @observe(session_id="conversation-abc-123")
+    def handle_message():
+        # ...
+        pass
+    ```
+
+    **Notes:**
+    - Warns if called outside span context.
+    - For dynamic session IDs, set `session_id` inside the function body.
+
+    ---
+
+    <Heading level={2} id="py-laminar-set-trace-user-id">Laminar.set_trace_user_id(user_id=None)</Heading>
+
+    Associate trace with a user.
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `user_id` | `str` &#124; `None` | `None` | User identifier to attach to the trace |
+
+    **Returns:** `None`
+
+    **Option A: Call inside an active span context**
+
+    ```python
+    from lmnr import Laminar, observe
+
+    @observe()
+    def handle_request():
+        Laminar.set_trace_user_id("user-456")
+    ```
+
+    **Option B: Pass via `@observe(...)`**
+
+    ```python
+    from lmnr import observe
+
+    @observe(user_id="user-456")
+    def handle_request():
+        # ...
+        pass
+    ```
+
+    **Notes:**
+    - Warns if called outside span context.
+    - Prefer pseudonymous IDs (avoid emails, names, phone numbers).
+
+    ---
+
+    <Heading level={2} id="py-laminar-set-trace-metadata">Laminar.set_trace_metadata(metadata)</Heading>
+
+    Add key-value metadata to the trace.
+
+    **Option A: Call inside an active span context**
+
+    ```python
+    from lmnr import Laminar, observe
+
+    @observe()
+    def handle_request():
+        Laminar.set_trace_metadata({
+            "environment": "production",
+            "region": "us-west",
+            "feature_flag": "new-model-v2",
+        })
+    ```
+
+    **Option B: Pass via `@observe(...)`**
+
+    ```python
+    from lmnr import observe
+
+    @observe(metadata={"environment": "production", "region": "us-west"})
+    def handle_request():
+        # ...
+        pass
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Description |
+    |------|------|-------------|
+    | `metadata` | `dict[str, AttributeValue]` | Key-value pairs. Non-primitive values JSON-serialized. |
+
+    **Returns:** `None`
+
+    **Notes:**
+    - Calling again overwrites previous metadata. Set all keys in one call.
+    - Warns if called outside span context.
+
+    **Overwrite semantics examples**
+
+    ```python
+    from lmnr import Laminar, observe
+
+    # ✅ Good: set all keys in one call
+    @observe()
+    def my_function():
+        Laminar.set_trace_metadata({"environment": "production", "region": "us-west"})
+    ```
+
+    ```python
+    from lmnr import Laminar, observe
+
+    # ❌ Avoid: second call overwrites the first
+    @observe()
+    def my_function():
+        Laminar.set_trace_metadata({"environment": "production"})
+        Laminar.set_trace_metadata({"region": "us-west"})
+    ```
+
+    ---
+
+    <Heading level={2} id="py-laminar-get-trace-id">Laminar.get_trace_id()</Heading>
+
+    Get the current trace ID.
+
+    **Returns:** `uuid.UUID | None` — Returns `None` if called outside span context or invalid trace.
+
+    ```python
+    from lmnr import Laminar, observe
+
+    @observe()
+    def operation():
+        trace_id = Laminar.get_trace_id()
+        return {"trace_id": trace_id, "result": result}
+    ```
+  </Tab>
+</Tabs>

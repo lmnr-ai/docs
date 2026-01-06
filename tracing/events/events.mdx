@@ -1,0 +1,73 @@
+---
+title: Emit events from code
+---
+
+Custom events are structured signals you emit from your code to mark important domain-specific actions, decisions, or outcomes (for example, `extraction.completed`, `checkout.failed`, `handoff_to_human`).
+
+Unlike spans (which represent units of work), custom events are lightweight annotations you can use for:
+
+- Filtering and clustering runs by what happened
+- Tracking outcomes and key checkpoints
+- Creating high-signal analytics without parsing span inputs/outputs
+
+## Emitting custom events
+
+Emit events from inside a span context (for example, inside `observe()` / an `@observe`d function) so the event attaches to the correct trace.
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { Laminar, observe } from '@lmnr-ai/lmnr';
+
+    await observe({ name: 'extractProduct' }, async () => {
+      // ... your logic ...
+
+      Laminar.event({
+        name: 'extraction.completed',
+        attributes: {
+          url: 'https://example.com/product/123',
+          fields_extracted: 12,
+          duration_ms: 847,
+        },
+      });
+    });
+    ```
+
+    See also: [`Laminar.event(options)`](/sdk/span-methods#ts-laminar-event)
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import Laminar, observe
+
+    @observe()
+    def extract_product():
+        # ... your logic ...
+
+        Laminar.event(
+            "extraction.completed",
+            attributes={
+                "url": "https://example.com/product/123",
+                "fields_extracted": 12,
+                "duration_ms": 847,
+            },
+        )
+    ```
+
+    See also: [`Laminar.event(...)`](/sdk/span-methods#py-laminar-event)
+  </Tab>
+</Tabs>
+
+## Best practices
+
+- Keep event `name` values stable and low-cardinality (don’t include request IDs).
+- Put details into `attributes` (and avoid sensitive data).
+- Emit events inside a span context so they attach to the correct trace.
+
+## Viewing events
+
+In the Laminar UI, open **Events** to browse and filter event streams.
+
+You can also:
+- Extract events from traces automatically with [Semantic Events](/tracing/events/semantic-events)
+- Group similar events together with [Clusters](/tracing/events/clusters)
+- Query custom events in the [SQL Editor](/platform/sql-editor) using the `events` table

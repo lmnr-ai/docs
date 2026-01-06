@@ -1,0 +1,90 @@
+---
+title: SDK Constants
+---
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    <Heading level={2} id="ts-llm-attributes">LaminarAttributes</Heading>
+
+    Attribute constants for manual LLM span creation.
+
+    ```typescript
+    import { LaminarAttributes } from '@lmnr-ai/lmnr';
+
+    span.setAttributes({
+      [LaminarAttributes.PROVIDER]: 'anthropic',
+      [LaminarAttributes.REQUEST_MODEL]: 'claude-3-5-sonnet',
+      [LaminarAttributes.RESPONSE_MODEL]: response.model,
+      [LaminarAttributes.INPUT_TOKEN_COUNT]: response.usage.input_tokens,
+      [LaminarAttributes.OUTPUT_TOKEN_COUNT]: response.usage.output_tokens,
+    });
+    ```
+
+    | Constant | Value | Description |
+    |----------|-------|-------------|
+    | `PROVIDER` | `gen_ai.system` | LLM provider name |
+    | `REQUEST_MODEL` | `gen_ai.request.model` | Requested model |
+    | `RESPONSE_MODEL` | `gen_ai.response.model` | Actual model used |
+    | `INPUT_TOKEN_COUNT` | `gen_ai.usage.input_tokens` | Input tokens |
+    | `OUTPUT_TOKEN_COUNT` | `gen_ai.usage.output_tokens` | Output tokens |
+    | `TOTAL_TOKEN_COUNT` | `llm.usage.total_tokens` | Total tokens |
+    | `INPUT_COST` | `gen_ai.usage.input_cost` | Input cost |
+    | `OUTPUT_COST` | `gen_ai.usage.output_cost` | Output cost |
+    | `TOTAL_COST` | `gen_ai.usage.cost` | Total cost |
+
+    ---
+
+    <Heading level={2} id="ts-span-type-trace-type">SpanType / TraceType</Heading>
+
+    ```typescript
+    import type { SpanType, TraceType } from '@lmnr-ai/lmnr';
+
+    // SpanType:
+    // 'DEFAULT' | 'LLM' | 'PIPELINE' | 'EXECUTOR' | 'EVALUATOR'
+    // | 'HUMAN_EVALUATOR' | 'EVALUATION' | 'TOOL'
+    //
+    // TraceType: 'DEFAULT' | 'EVALUATION'
+    ```
+  </Tab>
+  <Tab title="Python">
+    <Heading level={2} id="py-llm-attributes">Attributes</Heading>
+
+    Attribute constants for manual LLM span creation.
+
+    ```python
+    from lmnr import Laminar, Attributes
+
+    Laminar.set_span_attributes({
+        Attributes.PROVIDER: "anthropic",
+        Attributes.REQUEST_MODEL: "claude-3-5-sonnet",
+        Attributes.RESPONSE_MODEL: response["model"],
+        Attributes.INPUT_TOKEN_COUNT: response["usage"]["input_tokens"],
+        Attributes.OUTPUT_TOKEN_COUNT: response["usage"]["output_tokens"],
+    })
+    ```
+
+    | Constant | Value | Description |
+    |----------|-------|-------------|
+    | `PROVIDER` | `gen_ai.system` | LLM provider name |
+    | `REQUEST_MODEL` | `gen_ai.request.model` | Requested model |
+    | `RESPONSE_MODEL` | `gen_ai.response.model` | Actual model used |
+    | `INPUT_TOKEN_COUNT` | `gen_ai.usage.input_tokens` | Input tokens |
+    | `OUTPUT_TOKEN_COUNT` | `gen_ai.usage.output_tokens` | Output tokens |
+    | `TOTAL_TOKEN_COUNT` | `gen_ai.usage.total_tokens` | Total tokens |
+    | `INPUT_COST` | `gen_ai.usage.input_cost` | Input cost |
+    | `OUTPUT_COST` | `gen_ai.usage.output_cost` | Output cost |
+    | `TOTAL_COST` | `gen_ai.usage.cost` | Total cost |
+    | `RESPONSE_ID` | `gen_ai.response.id` | Response ID |
+
+    ---
+
+    <Heading level={2} id="py-span-type-trace-type">SpanType / TraceType</Heading>
+
+    ```python
+    from lmnr import SpanType, TraceType
+
+    # SpanType: DEFAULT, LLM, PIPELINE, EXECUTOR, EVALUATOR, TOOL
+    # TraceType: DEFAULT, EVALUATION
+    ```
+  </Tab>
+</Tabs>

@@ -3,40 +3,36 @@ title: Laminar
 sidebarTitle: Laminar
 ---
 
-Laminar is a comprehensive **open-source platform** for observability and evaluations of AI agents.
+Laminar is an [**open-source**](https://github.com/lmnr-ai/lmnr) observability platform purpose-built for AI agents. You can trace every call to an LLM, tool execution and custom functions.
 
-- **Open-source** - Fully open-source and easy to self-host. Give us a ⭐ [here](https://github.com/lmnr-ai/lmnr)
-- **Cloud** - Managed cloud service available at [laminar.sh](https://laminar.sh)
+Laminar goes beyond tracing and is deeply focused on helping you properly use captured data and extract insights from it:
+- **During development**, Laminar allows you to rollout and replay agents from different parts of the captured trace significantly speeding up the development process.
 
-## Get Started
+- **In production**, with Laminar you can describe patterns and errors in natural language and track it across all your traces, to measure real behavior and user interactions with your agents.
 
-<Columns>
-    <Card title="Tracing" href="/tracing/introduction">
-    Instrument your entire AI application and automatically trace popular AI libraries and SDKs — **OpenAI, Anthropic, Gemini, Vercel AI SDK, LangChain, Browser Use**, and more.
-    </Card>
+<CardGroup cols={2}>
 
-    <Card title="Evaluations" href="/evaluations/introduction">
-    Measure, track, and improve your AI application performance with powerful evaluation tools.
-    </Card>
+<Card title="Tracing" icon="route" href="/tracing/introduction">
+  Trace LLM calls, tool use, and custom functions. First-class support for **AI SDK, LangChain, Browser Use, Stagehand**, and more.
+</Card>
 
-    <Card title="SQL Query Editor" href="/sql-editor/introduction">
-    Query all your data stored in Laminar using SQL for advanced analytics, custom dashboards, and dataset creation.
-    </Card>
+<Card title="Evaluations" icon="chart-line" href="/evaluations">
+  Run evals against datasets locally or in CI. Catch regressions before they ship.
+</Card>
 
-    <Card title="Custom Dashboards" href="/custom-dashboards/overview">
-    Create and manage custom dashboards from trace and evaluation data.
-    </Card>
+<Card title="Analyze" icon="magnifying-glass-chart" href="/analyze">
+  Describe patterns and errors in natural language and track it across all your traces.
+</Card>
 
-    <Card title="Playgrounds" href="/playground/introduction">
-    Experiment with prompts, test different models, and iterate on your AI application in an interactive environment.
-    </Card>
+<Card title="Datasets & Labeling" icon="database" href="/datasets">
+  Build evaluation datasets from production traces.
+</Card>
 
-    <Card title="Labeling Queues" href="/queues/quickstart">
-    Use streamlined UI to quickly label and build datasets for evaluations from trace data and other datasets.
-    </Card>
+<Card title="Playground" icon="flask" href="/playground">
+  Replay any traced span. Swap prompts or models and compare results side by side.
+</Card>
 
-    <Card title="Datasets" href="/datasets/introduction">
-    Create and manage datasets for evaluations and other use cases.
-    </Card>
-
-</Columns>
+<Card title="Platform" icon="layer-group" href="/platform">
+  Realtime traces, full-text search, raw SQL access to all your data, and dashboards for exploring traces however you need to.
+</Card>
+</CardGroup>

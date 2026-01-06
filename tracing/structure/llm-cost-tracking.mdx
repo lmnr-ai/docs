@@ -1,0 +1,166 @@
+---
+title: LLM Cost Tracking
+---
+
+Auto-instrumentation covers OpenAI, Anthropic, and other major providers. For unsupported providers or custom implementations, create LLM spans manually.
+
+## When You Need This
+
+- Self-hosted or fine-tuned models
+- Providers Laminar doesn't instrument yet
+- Direct HTTP calls to LLM APIs
+- Custom inference servers
+
+## Supported Provider Names (for Cost Calculation)
+
+When you manually instrument an LLM span, set the provider name to one of the supported values below so Laminar can match pricing.
+
+| Provider | Provider name | Example model |
+|---------|----------------|---------------|
+| OpenAI | `openai` | `gpt-4o`, `gpt-4o-2024-11-20` |
+| Anthropic | `anthropic` | `claude-3-5-sonnet`, `claude-3-5-sonnet-20241022` |
+| Google Gemini | `gemini`, `google-genai` | `models/gemini-1.5-pro` |
+| Azure OpenAI | `azure-openai` | `gpt-4o-mini-2024-07-18` |
+| AWS Bedrock (Anthropic) | `bedrock-anthropic` | `claude-3-5-sonnet-20241022-v2:0` |
+| Mistral | `mistral` | `mistral-large-2407` |
+| Groq | `groq` | `llama-3.1-70b-versatile` |
+
+If your provider isn’t listed, you can still record token usage and set explicit cost attributes (see below).
+
+## Required Attributes
+
+For Laminar to calculate costs and display LLM-specific UI, set these attributes:
+
+| Attribute | Description |
+|-----------|-------------|
+| Provider | Provider name (e.g., `openai`, `anthropic`, `custom`) |
+| Request model | Model name you requested |
+| Response model | Model name returned by the API |
+| Input token count | Number of input tokens |
+| Output token count | Number of output tokens |
+
+Set `spanType: 'LLM'` when creating the span. Without this, the span appears as a generic operation.
+
+## Example: Manually Instrument an LLM Call
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { Laminar, LaminarAttributes } from '@lmnr-ai/lmnr';
+
+    const span = Laminar.startSpan({ name: 'custom_llm_call', spanType: 'LLM' });
+
+    try {
+      const response = await fetch('https://api.custom-llm.com/v1/completions', {
+        method: 'POST',
+        body: JSON.stringify({
+          model: 'custom-model-1',
+          messages: [{ role: 'user', content: 'What is the longest river in the world?' }],
+        }),
+      }).then((res) => res.json());
+
+      span.setAttributes({
+        [LaminarAttributes.PROVIDER]: 'custom-provider',
+        [LaminarAttributes.REQUEST_MODEL]: 'custom-model-1',
+        [LaminarAttributes.RESPONSE_MODEL]: response.model,
+        [LaminarAttributes.INPUT_TOKEN_COUNT]: response.usage?.input_tokens ?? 0,
+        [LaminarAttributes.OUTPUT_TOKEN_COUNT]: response.usage?.output_tokens ?? 0,
+        // Optional: explicit costs (override calculated pricing)
+        [LaminarAttributes.INPUT_COST]: 0.001,
+        [LaminarAttributes.OUTPUT_COST]: 0.002,
+        [LaminarAttributes.TOTAL_COST]: 0.003,
+      });
+
+      return response;
+    } catch (error) {
+      span.recordException(error as Error);
+      throw error;
+    } finally {
+      span.end();
+    }
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    import requests
+    from lmnr import Attributes, Laminar
+
+    span = Laminar.start_span(name="custom_llm_call", span_type="LLM")
+    try:
+        response = requests.post(
+            "https://api.custom-llm.com/v1/completions",
+            json={
+                "model": "custom-model-1",
+                "messages": [
+                    {"role": "user", "content": "What is the longest river in the world?"}
+                ],
+            },
+        ).json()
+
+        span.set_attributes({
+            Attributes.PROVIDER.value: "custom-provider",
+            Attributes.REQUEST_MODEL.value: "custom-model-1",
+            Attributes.RESPONSE_MODEL.value: response.get("model"),
+            Attributes.INPUT_TOKEN_COUNT.value: response.get("usage", {}).get("input_tokens", 0),
+            Attributes.OUTPUT_TOKEN_COUNT.value: response.get("usage", {}).get("output_tokens", 0),
+            # Optional: explicit costs (override calculated pricing)
+            Attributes.INPUT_COST.value: 0.001,
+            Attributes.OUTPUT_COST.value: 0.002,
+            Attributes.TOTAL_COST.value: 0.003,
+        })
+    finally:
+        span.end()
+    ```
+  </Tab>
+</Tabs>
+
+## Model Name Formats
+
+Use the exact model string as returned by the provider API.
+
+- **OpenAI:** `gpt-4o`, `gpt-4o-mini-2024-07-18`
+- **Anthropic:** `claude-3-5-sonnet-20241022`, `claude-3-5-sonnet-20241022-v2:0`
+- **Gemini:** `models/gemini-1.5-pro`, `models/gemini-1.5-flash`
+
+## Custom Providers and Explicit Costs
+
+If Laminar can’t look up pricing for your provider/model, you can still attach explicit cost attributes (see the example above).
+
+If explicit cost attributes are present, they take precedence over calculated costs.
+
+## How Laminar Calculates Cost
+
+Laminar computes cost from:
+
+- Provider name
+- Model name
+- Token counts (input/output)
+
+For providers that support it, Laminar can also account for cached tokens when pricing is available.
+
+## Viewing Costs
+
+Costs show up in the Laminar UI on:
+
+- Trace details (sum of all LLM calls in the trace)
+- Individual LLM spans (per-call cost)
+- Analytics dashboards (aggregated by provider/model)
+
+## Pricing Data
+
+Laminar maintains current pricing for supported providers. A snapshot of pricing seed data is available in the open-source repo at `frontend/lib/db/initial-data.json` (table `llm_prices`).
+
+## Best Practices
+
+- Always set provider + response model if you want cost calculation.
+- Use exact model names from the API response (don’t “simplify” them).
+- Handle missing usage data gracefully (set token counts only if present).
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    See also: [`LaminarAttributes`](/sdk/constants#ts-llm-attributes) and [`span.setAttributes`](/sdk/span-methods#ts-span-set-attributes)
+  </Tab>
+  <Tab title="Python">
+    See also: [`Attributes`](/sdk/constants#py-llm-attributes) and [`span.set_attributes`](/sdk/span-methods#py-span-set-attributes)
+  </Tab>
+</Tabs>

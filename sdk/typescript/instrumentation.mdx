@@ -1,0 +1,122 @@
+---
+title: TypeScript Instrumentation
+---
+
+## Laminar.initialize(options?)
+
+Initialize Laminar tracing and auto-instrumentation.
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `projectApiKey` | `string` | `LMNR_PROJECT_API_KEY` env | Project API key |
+| `baseUrl` | `string` | `https://api.lmnr.ai` | Base URL |
+| `baseHttpUrl` | `string` | `baseUrl` | OTLP HTTP base URL |
+| `httpPort` | `number` | `443` | OTLP HTTP port |
+| `grpcPort` | `number` | `8443` | OTLP gRPC port |
+| `instrumentModules` | `Record<string, unknown>` | `undefined` | Libraries to auto-instrument |
+| `disableBatch` | `boolean` | `false` | Disable batching span processor |
+| `traceExportTimeoutMillis` | `number` | `30000` | Export timeout |
+| `maxExportBatchSize` | `number` | `512` | Max spans per export batch |
+| `forceHttp` | `boolean` | `false` | Force OTLP HTTP exporter |
+| `logLevel` | `'error'` &#124; `'warn'` &#124; `'info'` &#124; `'debug'` | `'error'` | SDK log level |
+| `sessionRecordingOptions` | `SessionRecordingOptions` | — | Browser session recording options |
+
+**Returns:** `void`
+
+## instrumentModules
+
+Pass modules to auto-instrument in `initialize()`.
+
+```typescript
+import { Laminar } from '@lmnr-ai/lmnr';
+import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
+
+Laminar.initialize({
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+  instrumentModules: {
+    openAI: OpenAI,
+    anthropic: Anthropic,
+  },
+});
+```
+
+**Supported module keys:**
+
+| Key | Package |
+|-----|---------|
+| `openAI` / `OpenAI` | `openai` |
+| `anthropic` | `@anthropic-ai/sdk` |
+| `azureOpenAI` | Azure OpenAI |
+| `cohere` | `cohere-ai` |
+| `bedrock` | AWS Bedrock |
+| `google_vertexai` | Vertex AI |
+| `google_aiplatform` | AI Platform |
+| `pinecone` | `@pinecone-database/pinecone` |
+| `langchain` | `langchain` (with submodules) |
+| `llamaIndex` | `llamaindex` |
+| `chromadb` | `chromadb` |
+| `qdrant` | `@qdrant/js-client-rest` |
+| `together` | `together-ai` |
+| `playwright` | `playwright` |
+| `puppeteer` | `puppeteer` |
+| `stagehand` | `@browserbasehq/stagehand` |
+| `kernel` | Microsoft Kernel |
+| `claudeAgentSDK` | `@anthropic-ai/claude-agent-sdk` |
+
+**Special cases:**
+- Pass `undefined` → auto-instrument all supported
+- Pass `{}` → disable all auto-instrumentation
+
+---
+
+## Laminar.patch(modules)
+
+Manually instrument modules after initialization.
+
+```typescript
+import { Laminar } from '@lmnr-ai/lmnr';
+import OpenAI from 'openai';
+
+Laminar.initialize({ projectApiKey: '...' });
+
+// Later (e.g., in Next.js server components)
+Laminar.patch({ openAI: OpenAI });
+```
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `modules` | `InitializeOptions['instrumentModules']` | — | Modules to instrument |
+
+**Returns:** `void`
+
+**Note:** Throws if `modules` empty. Warns if Laminar not initialized.
+
+---
+
+## Laminar.wrapClaudeAgentQuery(originalQuery)
+
+Instrument Claude Agent SDK query function.
+
+```typescript
+import { Laminar } from '@lmnr-ai/lmnr';
+import { query } from '@anthropic-ai/claude-agent-sdk';
+
+const instrumentedQuery = Laminar.wrapClaudeAgentQuery(query);
+```
+
+**Use when:** Claude Agent SDK imported before `Laminar.initialize()` or in ESM environments.
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `originalQuery` | `Function` | — | The original Claude Agent SDK query function |
+
+**Returns:** `Function` (same type as `originalQuery`)
+
+**Alternative:** Use the top-level export `instrumentClaudeAgentQuery(originalQuery)`.

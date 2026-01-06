@@ -1,0 +1,74 @@
+---
+title: Flushing Spans and Shutting Down
+---
+
+Serverless functions and CLI scripts terminate quickly. Laminar batches spans for performance, which means spans might not be sent before the process exits.
+
+## The Problem
+
+In long-running servers, background batching works fine—spans accumulate and flush periodically. In Lambda or a CLI script, the process may exit before the batch is sent.
+
+## The Solution
+
+**Flush before exit.** Call the flush method at the end of your handler or script. This sends all pending spans synchronously.
+
+In Python, use `force_flush()` for serverless specifically—it ensures spans are sent even when daemon threads would be terminated.
+
+## When to Flush
+
+| Scenario | Action |
+|----------|--------|
+| Web server (long-running) | Nothing needed—batching works |
+| CLI script | Flush at the end |
+| Lambda / serverless | Flush at the end of each invocation |
+| Graceful shutdown | Shutdown the SDK |
+
+Don't flush in hot paths (e.g., inside a web request handler). It adds latency. Flush only when the process is about to exit.
+
+## Examples
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { Laminar } from '@lmnr-ai/lmnr';
+
+    Laminar.initialize();
+
+    // ... your work ...
+
+    // End of script / serverless handler
+    await Laminar.flush();
+
+    // Or: flush + release resources
+    await Laminar.shutdown();
+    ```
+
+    See also: [`Laminar.flush`](/sdk/lifecycle#ts-laminar-flush) and [`Laminar.shutdown`](/sdk/lifecycle#ts-laminar-shutdown)
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import Laminar
+
+    Laminar.initialize()
+
+    # ... your work ...
+
+    # End of script
+    Laminar.flush()
+
+    # AWS Lambda / other serverless (recommended)
+    Laminar.force_flush()
+
+    # Or: flush + shut down tracing (cannot re-initialize in same process)
+    Laminar.shutdown()
+    ```
+
+    See also: [`Laminar.force_flush`](/sdk/lifecycle#py-laminar-force-flush) and [`Laminar.shutdown`](/sdk/lifecycle#py-laminar-shutdown)
+  </Tab>
+</Tabs>
+
+## Python Serverless Caveat (Why `force_flush()` Exists)
+
+In Python, `Laminar.flush()` triggers the export, but the export itself runs in a background thread. In short-lived processes (like Lambda), the process can exit before that thread completes, and spans can be lost.
+
+`Laminar.force_flush()` blocks until export completes by internally resetting the tracing pipeline, so it’s the safest option at the end of each serverless invocation.

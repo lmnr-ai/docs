@@ -1,131 +1,50 @@
 ---
-sidebarTitle: User ID
-title: Track and associate traces with specific users
-description: "Track and associate traces with specific users"
+title: User ID
 ---
 
-## Associating Traces with Users
+Link traces to your users to make debugging and analytics easier.
 
-Tracking which user triggered a particular trace is crucial for:
-- User-specific debugging
-- Analyzing usage patterns
-- Filtering traces in the dashboard
-- Compliance with data regulations
+- Set a user ID at the trace level so every span in the trace carries it.
+- Use it to filter traces by user in the Laminar UI and analyze patterns across user segments.
 
-In Laminar, you can associate traces with users by setting user ID on a trace.
+Assign the user ID at the entry point of your application (API handler, consumer, job) so all child spans inherit it.
 
 ## Setting User ID
 
-This allows you to filter and search for traces by user ID later.
+You can associate a user with a trace either by:
 
-<Tabs>
-<Tab title="JavaScript/TypeScript">
+1. Passing `userId` / `user_id` to `observe` / `@observe`
+2. Calling `setTraceUserId` / `set_trace_user_id` inside a span context
 
-```javascript
-import { Laminar, observe } from '@lmnr-ai/lmnr';
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { observe } from '@lmnr-ai/lmnr';
 
-// Option 1. directly pass userId to observe
-await observe({
-    name: 'processUserRequest',
-    userId: 'user_123'
-}, async () => {
-    // Process user request here
-});
+    export async function handleRequest(userId: string) {
+      return observe({ name: 'handleRequest', userId }, async () => {
+        // ... LLM calls / tools ...
+      });
+    }
+    ```
 
-// Option 2.Use Laminar.setTraceUserId
-await observe({
-    name: 'processUserRequest',
-}, async () => {
-    Laminar.setTraceUserId('user_123');
-    // Process user request here
-});
-```
-</Tab>
-<Tab title="Python">
+    See also: [`observe(..., { userId })`](/sdk/observe#ts-observe) and [`Laminar.setTraceUserId`](/sdk/trace-methods#ts-laminar-set-trace-user-id)
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import Laminar, observe
 
-```python
-from lmnr import Laminar, observe
+    @observe()
+    def handle_request(user_id: str):
+        Laminar.set_trace_user_id(user_id)
+        # ... LLM calls / tools ...
+    ```
 
-# Option 1: Directly in the observe decorator
-# Note that this is static, i.e. you can't change this at runtime.
-@observe(user_id='user_123')
-def process_user_request():
-    # Process user request here
-    pass
-
-# Option 2: Use Laminar.set_trace_user_id
-@observe()
-def process_user_request(req):
-    # IMPORTANT: set_trace_user_id must be called within an active span context
-    # Here, the @observe decorator creates that context
-    Laminar.set_trace_user_id('user_123')
-    # Process user request here
-```
-
-Another approach using `start_as_current_span`:
-
-```python
-from lmnr import Laminar
-
-def process_user_request(user_id):
-    with Laminar.start_as_current_span(name="process_request") as span:
-        # Now we have an active span context
-        Laminar.set_trace_user_id('user_123')
-        # Your code here
-```
-
-❌ **Incorrect usage** (will not work):
-
-```python
-# This won't work because it's outside any span context
-Laminar.set_trace_user_id('user_123')
-
-@observe()
-def my_function():
-    # The metadata set above won't be applied here
-    pass
-```
-
-✅ **Correct usage**:
-
-```python
-@observe()
-def my_function():
-    # Set metadata inside the span context
-    Laminar.set_trace_user_id('user_123')
-    # Your code here
-```
-</Tab>
+    See also: [`@observe()`](/sdk/observe#py-observe) and [`Laminar.set_trace_user_id`](/sdk/trace-methods#py-laminar-set-trace-user-id)
+  </Tab>
 </Tabs>
 
 ## Privacy Considerations
 
-When including user IDs in traces, consider the following privacy practices:
-
-- Use anonymous or pseudonymous IDs rather than personally identifiable information
-- Consider your data retention policies
-- Use Laminar's [tracing level](/tracing/structure/tracing-level) settings to control sensitive data
-- Follow relevant data protection regulations
-
-<Tabs>
-<Tab title="JavaScript/TypeScript">
-```javascript
-// Use TracingLevel.META_ONLY for sensitive user operations
-import { withTracingLevel, TracingLevel } from "@lmnr-ai/lmnr";
-
-withTracingLevel(TracingLevel.META_ONLY, () => {
-    // Sensitive operations here will only record metadata
-    // Input/output content won't be saved
-});
-```
-</Tab>
-<Tab title="Python">
-```python
-from lmnr import Laminar, TracingLevel
-
-with Laminar.set_tracing_level(TracingLevel.META_ONLY):
-    # Sensitive operations here will only record metadata
-    # Input/output content won't be saved
-```
-</Tab>
-</Tabs>
+- Prefer anonymous or pseudonymous IDs over PII (avoid emails, phone numbers, names).
+- For sensitive operations, avoid recording inputs/outputs with `observe({ ignoreInput: true, ignoreOutput: true })` / `@observe(ignore_input=True, ignore_output=True)`.

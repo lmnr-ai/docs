@@ -1,7 +1,6 @@
 ---
 sidebarTitle: Configuration
-title: Configuring Laminar evaluations
-description: This page describes how to configure evaluations in Laminar and showcases some common use cases.
+title: Configuration
 ---
 
 ## Configuring evaluations to report results to locally self-hosted Laminar
@@ -75,7 +74,7 @@ Default is 443. For local self-hosted Laminar, use 8000.
 - `grpcPort`: The port of the Laminar instance for gRPC. Used to send traces via OTel gRPC exporter.
 Default is 8443. For local self-hosted Laminar, use 8001.
 - `instrumentModules`: An object with modules to instrument.
-Read more in the [instrumentation guide](/tracing/automatic-instrumentation#instrument-specific-modules-only).
+Read more in the instrumentation section of the [SDK reference](/sdk/reference).
 </Tab>
 <Tab title="Python">
 - `project_api_key`: The API key of the project where the evaluation results will be stored.
@@ -87,40 +86,6 @@ Default is 443. For local self-hosted Laminar, use 8000.
 - `grpc_port`: The port of the Laminar instance for gRPC. Used to send traces via OTel gRPC exporter.
 Default is 8443. For local self-hosted Laminar, use 8001.
 - `instrument_modules`: A set of modules to instrument.
-Read more in the [instrumentation guide](/tracing/automatic-instrumentation#instrument-specific-modules-only).
+Read more in the instrumentation section of the [SDK reference](/sdk/reference).
 </Tab>
 </Tabs>
-
-### eval CLI reference
-
-`lmnr eval` subcommand is used to run evaluations.
-
-```bash
-lmnr eval [options]
-# or in most Node settings
-npx lmnr eval [options]
-```
-
-#### Formatting evaluation files
-
-When you run an evaluation file from the CLI, the evaluate functions must be called
-at the top level of the file. You can have one or more `evaluate` calls in the file.
-
-<Note>
-In Python, you can not `await` the calls to `evaluate` when running an evaluation file from the CLI.
-</Note>
-
-#### Options
-
-First positional argument is the path to the evaluation file. E.g.
-
-```bash
-lmnr eval ./evals/my_evaluation.eval.ts
-```
-
-If file is not provided, `lmnr eval` will run all files in the `evals` directory that match the naming pattern.
-For TypeScript/JavaScript, the pattern is `*.eval.{ts,js}`. For Python, the pattern is `eval_*.py` or `*_eval.py`.
-
-#### Params
-
-`--fail-on-error` – if set, the CLI will fail on non-critical errors, for example, if `evaluate` is not called in the file. Default is `false`.

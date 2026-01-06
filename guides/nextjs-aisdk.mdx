@@ -1,7 +1,6 @@
 ---
 title: Tracing AI SDK in Next.js with Laminar
 sidebarTitle: Tracing AI SDK in Next.js
-description: Next.js Integration with Laminar Tracing for AI Applications
 ---
 
 ## Overview
@@ -103,7 +102,7 @@ export async function register() {
     // Make sure to initialize Laminar **after** you initialize other 
     // tracing libraries, e.g. `registerOTel` from `@vercel/otel`.
     Laminar.initialize({
-      apiKey: process.env.LMNR_PROJECT_API_KEY,
+      projectApiKey: process.env.LMNR_PROJECT_API_KEY,
     })
   }
 }

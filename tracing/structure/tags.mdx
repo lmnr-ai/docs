@@ -1,257 +1,238 @@
 ---
-title: Tagging traced spans
-sidebarTitle: Tags
+title: Tags
 ---
 
 ## Overview
 
-Tags are string identifiers that you can attach to spans. They are used to categorize and filter spans.
+Tags are string identifiers that you can attach to **spans**. They’re useful for categorization and filtering:
 
-You can either add tags to a span when it is created, or post-hoc after a span has been created.
+- Filter traces/spans in the UI (for example, "show all traces tagged `beta-feature`")
+- Group traces for aggregate analysis
+- Mark traces for review (for example, `needs-review`, `regression`)
+
+You can add tags to a span when it’s created, from inside its span context, or post-hoc after a trace finishes.
+
+Tags are different from metadata: tags are strings on spans; metadata is key-value context on the trace. See [Metadata](/tracing/structure/metadata) for a detailed comparison.
+
+In Laminar, tags are managed in the UI (Tags page). You can create tags in advance, or create a new tag while tagging a span.
 
 ## 1. Adding tags to a span when it is created
 
-Sometimes you have some context prior to running a function and you want to tag it at
-creation time. For example, you may want to tag a span with the model provider
-endpoint that you use, or the test dataset that you used to run the request.
+Sometimes you have context prior to running a function and you want to tag it at creation time. For example, you may want to tag a span with the model provider endpoint you use, or the test dataset used to run a request.
 
-Note that tags are not the same as metadata. Metadata is additional information about a trace
-in a form of key-value pairs. Tags are used to categorize and filter spans, and they must
-be created in the Laminar UI in advance. See [metadata](/tracing/structure/metadata) for a more detailed
-comparison.
+### Example: Tagging a manual span
 
-### Example. Tagging a manual span
+This is a dynamic way to tag a span: decide which tags to apply at runtime when you create it.
 
-This is a dynamic way to tag a span, i.e. you can create tags at runtime.
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { Laminar } from '@lmnr-ai/lmnr';
 
-<Tabs>
-<Tab title="JavaScript/TypeScript">
+    const span = Laminar.startSpan({
+      name: 'foo',
+      tags: ['my_tag', 'another_tag'],
+    });
 
-```javascript
-import { Laminar } from '@lmnr-ai/lmnr';
+    try {
+      await Laminar.withSpan(span, async () => {
+        // your code here
+      });
+    } finally {
+      span.end();
+    }
+    ```
 
-const span = Laminar.startSpan('foo', { tags: ["my_tag", "another_tag"] });
-// elsewhere
-Laminar.withSpan(span, () => {
-    // your code here
-})
-```
+    See also: [`Laminar.startSpan`](/sdk/manual-spans#ts-laminar-start-span) and [`Laminar.withSpan`](/sdk/manual-spans#ts-laminar-with-span).
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import Laminar, use_span
 
-Note that only the span created by this `Laminar.startSpan` call will have the tags.
+    span = Laminar.start_span(
+        name="foo",
+        tags=["my_tag", "another_tag"],
+    )
+    try:
+        with use_span(span):
+            # your code here
+            pass
+    finally:
+        span.end()
+    ```
 
-</Tab>
-<Tab title="Python">
-
-```python
-from lmnr import Laminar
-
-with Laminar.start_as_current_span(name="foo", tags=["my_tag", "another_tag"]):
-    # your code here
-    pass
-```
-Note that only the span created by this `Laminar.start_as_current_span` call will have the tags.
-
-</Tab>
+    See also: [`Laminar.start_span`](/sdk/manual-spans#py-laminar-start-span) and [`use_span()`](/sdk/manual-spans#py-laminar-with-span).
+  </Tab>
 </Tabs>
 
-### Example. Tagging an `observe`d function
+Note that only the span created by this `startSpan` / `start_span` call will have the tags—child spans don’t inherit tags automatically.
 
-This is a static way to tag a span, i.e. the `observe`d function will always have the same set of tags.
+### Example: Tagging an observed function
 
-<Tabs>
-<Tab title="JavaScript/TypeScript">
+This is a static way to tag a span: the observed function will always have the same set of tags.
 
-```javascript
-import { Laminar, observe } from '@lmnr-ai/lmnr';
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { observe } from '@lmnr-ai/lmnr';
 
-await observe(
-  {
-    name: "foo",
-    tags: ["my_tag", "another_tag"]
-  },
-  async (message) => {
-    // your code here
-  },
-  "Hello, world!"
-)
-```
+    await observe(
+      {
+        name: 'foo',
+        tags: ['my_tag', 'another_tag'],
+      },
+      async (message: string) => {
+        // your code here
+      },
+      'Hello, world!'
+    );
+    ```
 
-</Tab>
-<Tab title="Python">
+    See also: [`observe(options, fn, ...args)`](/sdk/observe#ts-observe).
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import observe
 
-```python
-from lmnr import observe
+    @observe(name="foo", tags=["my_tag", "another_tag"])
+    def foo(message: str):
+        # your code here
+        pass
 
-@observe(tags=["my_tag", "another_tag"])
-def foo():
-    # your code here
-    pass
-```
+    foo("Hello, world!")
+    ```
 
-</Tab>
+    See also: [`@observe()`](/sdk/observe#py-observe).
+  </Tab>
 </Tabs>
 
-### Example. Tagging any span from within its context
+### Example: Tagging any span from within its context
 
-Note that for adding span tags to work, you must call it inside
-a span context. This is why we use `observe` here.
+For adding span tags to work, you must call it inside a span context (for example, inside `observe()` / an `@observe`d function).
 
-<Tabs>
-<Tab title="JavaScript/TypeScript">
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { Laminar, observe } from '@lmnr-ai/lmnr';
 
-```javascript
-import { Laminar, observe } from '@lmnr-ai/lmnr';
+    async function foo(message: string) {
+      if (message.length > 100) {
+        // ✅ Correct usage. We are inside a span context.
+        Laminar.setSpanTags(['long_input']);
+      }
+    }
 
-async function foo(message: string) {
-  if (message.length > 100) {
-    // ✅ Correct usage. We are inside an `observe`d function,
-    Laminar.addSpanTags(["long_input"]);
-  }
-}
+    // ❌ Incorrect usage. We are not inside any span context. This will not work.
+    // Laminar.setSpanTags(['my_tag', 'another_tag']);
 
-// ❌ Incorrect usage. We are not inside any span context. This will not work.
-// Laminar.addSpanTags(["my_tag", "another_tag"])
+    await observe({ name: 'foo' }, foo, 'a'.repeat(200));
+    ```
 
-await observe(
-  {
-    name: "foo",
-  },
-  foo,
-  "a".repeat(200)
-)
-```
+    See also: [`Laminar.setSpanTags`](/sdk/span-methods#ts-laminar-set-span-tags) and [`observe(options, fn, ...args)`](/sdk/observe#ts-observe).
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import Laminar, observe
 
-</Tab>
-<Tab title="Python">
+    @observe(name="foo")
+    def foo(message: str):
+        if len(message) > 100:
+            # ✅ Correct usage. We are inside a span context.
+            Laminar.add_span_tags(["long_input"])
 
-```python
-from lmnr import Laminar, observe
+    # ❌ Incorrect usage. We are not inside any span context. This will not work.
+    # Laminar.add_span_tags(["my_tag", "another_tag"])
 
-@observe()
-def foo(user_input: str):
-    if len(user_input) > 100:
-        # ✅ Correct usage. We are inside an `observe`d function,
-        Laminar.add_span_tags(["long_input"])
+    foo("a" * 200)
+    ```
 
-# ❌ Incorrect usage. We are not inside any span context. This will not work.
-# Laminar.add_span_tags(["my_tag", "another_tag"])
-
-foo("a" * 200)
-```
-
-</Tab>
+    See also: [`Laminar.add_span_tags`](/sdk/span-methods#py-laminar-add-span-tags) and [`@observe()`](/sdk/observe#py-observe).
+  </Tab>
 </Tabs>
 
 ## 2. Adding tags to a span once it is created
 
-This is useful to incorporate user feedback into the trace for further analysis.
+This is useful for incorporating user feedback into a trace for further analysis.
 
 ### 2.1. Tagging in the Laminar UI
 
-Once you've created and sent a trace to Laminar, you can add tags to the spans in the Laminar UI.
+Once you’ve created and sent a trace to Laminar, you can add tags to spans in the Laminar UI.
 
-<img src="/images/traces/tag-from-ui.png" alt="Tags in the Laminar UI" />
+- Open a trace (in **Traces**) or a span (in **Spans**).
+- Select the span you want to tag.
+- Click **Add tags**, then select existing tags (or create a new one).
+
+<Frame caption="Tagging in the Laminar UI">
+<img src="/images/add-tag.png" alt="Adding tags to a span in the Laminar UI" />
+</Frame>
 
 ### 2.2. Tagging in the Laminar SDK
 
-You can also add tags to a span in the Laminar SDK. You will need to save
-the trace ID and then add tags to the root span of that trace using
-`LaminarClient.tags.tag`.
+You can also add tags to a completed trace in the Laminar SDK using `LaminarClient.tags.tag`. This adds tags to the top-level (root) span of the trace.
 
-<Tabs>
-<Tab title="JavaScript/TypeScript">
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { Laminar, LaminarClient, observe } from '@lmnr-ai/lmnr';
 
-```javascript
-import { Laminar, LaminarClient, observe } from '@lmnr-ai/lmnr';
+    const laminarClient = new LaminarClient();
 
-const laminarClient = new LaminarClient();
-
-// Take note of the traceId.
-const { traceId, responseText } = await observe(
-  {
-    name: "chat_completion",
-  },
-  async (message: string) => {
-    const response = await openaiClient.chat.completions.create({
-      model: "gpt-4.1-nano",
-      messages: [{ role: "user", content: message }],
+    // Take note of the traceId.
+    const { traceId } = await observe({ name: 'chat_completion' }, async () => {
+      return {
+        // ✅ Correct usage. We are inside a span context,
+        // so `getTraceId` returns a string UUID.
+        traceId: Laminar.getTraceId(),
+      };
     });
-    const responseText = response.choices[0].message.content;
-    return {
-      // ✅ Correct usage. We are inside an `observe`d function,
-      // so `getTraceId` returns a string UUID.
-      traceId: Laminar.getTraceId(),
-      responseText,
-    }
-  },
-  "Hello, world!"
-)
 
-// Call this function later, when you get user feedback.
-const userFeedbackHandler = (
-  traceId: string,
-  userFeedback: "good" | "bad"
-) => laminarClient.tags.tag(traceId, userFeedback);
-```
-<Note>
-  Make sure to call `Laminar.getTraceId` inside a span context, e.g.
-  inside an `observe`d function. Otherwise, it will return `null`.
-</Note>
-</Tab>
-<Tab title="Python">
+    await Laminar.flush();
 
-```python
-from lmnr import Laminar, LaminarClient, observe
-import uuid
+    // Call this later, when you get user feedback.
+    const userFeedbackHandler = (traceId: string, userFeedback: 'good' | 'bad') =>
+      laminarClient.tags.tag(traceId, userFeedback);
+    ```
 
-laminar_client = LaminarClient()
+    See also: [`client.tags.tag(traceId, tags)`](/sdk/client#ts-client-tags-tag).
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import Laminar, LaminarClient, observe
 
-@observe()
-def chat_completion(user_input: str):
-    response = openai_client.chat.completions.create(
-        model="gpt-4.1-nano",
-        messages=[{"role": "user", "content": user_input}]
-    )
-    response = response.choices[0].message.content
-    # ✅ Correct usage. We are inside an `observe`d function,
-    # so `get_trace_id` returns a UUID.
-    trace_id = Laminar.get_trace_id()
-    return {
-      "trace_id": trace_id,
-      "response": response
-    }
+    laminar_client = LaminarClient()
 
-# Take note of the trace_id.
-trace_id = response["trace_id"]
-response = response["response"]
+    # Take note of the trace_id.
+    @observe(name="chat_completion")
+    def chat_completion():
+        return Laminar.get_trace_id()
 
-# Call this function later, when you get user feedback.
-def user_feedback_handler(
-    trace_id: uuid.UUID,
-    user_feedback: Literal["good", "bad"]
-):
-    laminar_client.tags.tag(trace_id, user_feedback)
-```
+    trace_id = chat_completion()
+    Laminar.flush()
 
-<Note>
-  Make sure to call `Laminar.get_trace_id` inside a span context, e.g.
-  inside an `observe`d function. Otherwise, it will return `None`.
-</Note>
+    # Call this later, when you get user feedback.
+    def user_feedback_handler(trace_id: str, user_feedback: str):
+        laminar_client.tags.tag(trace_id, user_feedback)
+    ```
 
-</Tab>
+    See also: [`client.tags.tag(trace_id, tags)`](/sdk/client#py-client-tags-tag).
+  </Tab>
 </Tabs>
+
+Make sure to call `Laminar.getTraceId()` / `Laminar.get_trace_id()` inside a span context. Outside, it returns `null` / `None`.
 
 ## Viewing tags
 
 The tags will be visible in the Laminar UI, shown on each span as shields.
 
-<img src="/images/traces/tags-example.png" alt="Tags in the Laminar UI" />
+<Frame caption="Tags in the Laminar UI">
+<img src="/images/traces/tags-example.png" alt="Span tags displayed as shields in the Laminar UI" />
+</Frame>
 
-### Filtering by span tags
+## Filtering by span tags
 
-In the traces view and the spans view, you can filter by span tags.
+In the **Traces** view and the **Spans** view, you can filter by span tags.
 
-Simply add a "Tags" filter and type the name of the tag you want to include.
+Simply add a “Tags” filter and type the name of the tag you want to include.
 
 <img src="/images/traces/tags-add-filter.png" alt="Adding a tag filter" />
 

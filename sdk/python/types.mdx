@@ -1,0 +1,82 @@
+---
+title: Python Types
+---
+
+## Datapoint
+
+Pydantic model for evaluation and dataset datapoints.
+
+```python
+Datapoint(
+    data: dict,
+    target: dict = {},
+    metadata: dict = {},
+    id: UUID | None = None,
+    created_at: datetime | None = None,
+)
+```
+
+---
+
+## HumanEvaluator
+
+```python
+HumanEvaluator(options: list[{"label": str, "value": float}] = [])
+```
+
+---
+
+## LaminarDataset
+
+```python
+LaminarDataset(
+    name: str | None = None,
+    id: UUID | None = None,
+    fetch_size: int = 25,
+)
+```
+
+---
+
+## MaskInputOptions
+
+TypedDict used for browser session recording input masking.
+
+```python
+MaskInputOptions = TypedDict(
+    "MaskInputOptions",
+    {
+        "textarea": bool | None,
+        "text": bool | None,
+        "number": bool | None,
+        "select": bool | None,
+        "email": bool | None,
+        "tel": bool | None,
+    },
+)
+```
+
+---
+
+## SessionRecordingOptions
+
+```python
+SessionRecordingOptions = TypedDict(
+    "SessionRecordingOptions",
+    {
+        "mask_input_options": MaskInputOptions | None,
+    },
+)
+```
+
+---
+
+## Version Helpers
+
+```python
+get_latest_pypi_version() -> str
+is_latest_version() -> bool
+```
+
+- `get_latest_pypi_version()` returns `__version__` on failure.
+- `is_latest_version()` returns `True` on failure.

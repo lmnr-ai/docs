@@ -1,0 +1,259 @@
+---
+title: Evaluations
+---
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    <Heading level={2} id="ts-evaluate">evaluate(options)</Heading>
+
+    Run an evaluation against a dataset.
+
+    ```typescript
+    import { evaluate, LaminarDataset } from '@lmnr-ai/lmnr';
+
+    const data = new LaminarDataset('my-dataset');
+
+    const result = await evaluate({
+      data,
+      executor: async (input) => {
+        return await myFunction(input.query);
+      },
+      evaluators: {
+        containsAnswer: (output, target) => output.includes(target.answer),
+        isValid: (output) => output.length > 0,
+      },
+    });
+
+    console.log(result.averageScores);
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `data` | `EvaluationDataset` &#124; `Datapoint[]` | — | Dataset or array |
+    | `executor` | `(data, ...args) => any` | — | Function to evaluate |
+    | `evaluators` | `Record<string, Function or HumanEvaluator>` | — | Scoring functions |
+    | `name` | `string` | — | Evaluation name |
+    | `groupName` | `string` | `'default'` | Group name |
+    | `metadata` | `Record<string, any>` | — | Evaluation metadata |
+    | `config.concurrencyLimit` | `number` | `5` | Parallel executions (min 1) |
+    | `config.projectApiKey` | `string` | env | API key |
+    | `config.traceExportBatchSize` | `number` | `64` | Batch size |
+
+    **Returns:** `Promise<EvaluationRunResult | undefined>`
+
+    If invoked in “prepare only” mode, returns `undefined`.
+
+    **Return shape:**
+
+    ```typescript
+    {
+      averageScores: Record<string, number>,
+      evaluationId: string,
+      projectId: string,
+      url: string,
+      errorMessage?: string,
+    }
+    ```
+
+    ---
+
+    <Heading level={2} id="ts-laminar-dataset">LaminarDataset</Heading>
+
+    Load a dataset from Laminar.
+
+    ```typescript
+    import { LaminarDataset } from '@lmnr-ai/lmnr';
+
+    const dataset = new LaminarDataset('my-dataset', { fetchSize: 50 });
+    ```
+
+    **Constructor parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `name` | `string` | — | Dataset name (or use `id`) |
+    | `id` | `string` | — | Dataset ID (or use `name`) |
+    | `fetchSize` | `number` | `25` | Datapoints per fetch |
+
+    **Methods:**
+    - `size()` — Returns number of datapoints
+    - `get(index)` — Get datapoint by index
+    - `slice(start, end)` — Get range of datapoints
+    - `push(paths, recursive?)` — Upload local files
+
+    **Note:** Requires exactly one of `name` or `id`.
+
+    ---
+
+    <Heading level={2} id="ts-evaluation-dataset">EvaluationDataset</Heading>
+
+    Abstract base class for custom datasets.
+
+    ```typescript
+    import { EvaluationDataset } from '@lmnr-ai/lmnr';
+
+    class MyDataset extends EvaluationDataset {
+      async size(): Promise<number> {
+        return this.items.length;
+      }
+      
+      async get(index: number): Promise<Datapoint> {
+        return this.items[index];
+      }
+    }
+    ```
+
+    **Methods to implement:**
+    - `size(): Promise<number> | number`
+    - `get(index: number): Promise<Datapoint> | Datapoint`
+
+    **Provided:**
+    - `slice(start, end)` — Helper using `get()`
+
+    ---
+
+    <Heading level={2} id="ts-human-evaluator">HumanEvaluator</Heading>
+
+    Placeholder for human evaluation.
+
+    ```typescript
+    import { HumanEvaluator } from '@lmnr-ai/lmnr';
+
+    await evaluate({
+      data,
+      executor,
+      evaluators: {
+        quality: new HumanEvaluator([
+          { value: 1, label: 'Good' },
+          { value: 0, label: 'Bad' },
+        ]),
+      },
+    });
+    ```
+
+    **Note:** Creates spans with type `HUMAN_EVALUATOR` and `null` scores for later human annotation.
+  </Tab>
+  <Tab title="Python">
+    <Heading level={2} id="py-evaluate">evaluate()</Heading>
+
+    Run an evaluation against a dataset.
+
+    ```python
+    from lmnr import evaluate, LaminarDataset
+
+    data = LaminarDataset("my-dataset")
+
+    result = evaluate(
+        data=data,
+        executor=lambda input: my_function(input["query"]),
+        evaluators={
+            "contains_answer": lambda output, target: target["answer"] in output,
+            "is_valid": lambda output: len(output) > 0,
+        },
+    )
+
+    print(result["average_scores"])
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `data` | `EvaluationDataset` &#124; `list[Datapoint]` | — | Dataset or list of datapoints |
+    | `executor` | `Callable` | — | Function to evaluate |
+    | `evaluators` | `dict[str, Callable or HumanEvaluator]` | — | Scoring functions |
+    | `name` | `str` | `None` | Evaluation name |
+    | `group_name` | `str` | `None` | Group name (defaults to `'default'` when `None`) |
+    | `metadata` | `dict` | `None` | Evaluation metadata |
+    | `concurrency_limit` | `int` | `5` | Parallel executions |
+    | `project_api_key` | `str` | `None` | Override API key |
+    | `base_url` | `str` | `None` | Override base URL |
+    | `base_http_url` | `str` | `None` | Override OTLP HTTP base URL |
+    | `http_port` | `int` | `None` | Override OTLP HTTP port |
+    | `grpc_port` | `int` | `None` | Override OTLP gRPC port |
+    | `instruments` | `set[Instruments]` | `None` | Enable only these instruments |
+    | `disabled_instruments` | `set[Instruments]` | `None` | Disable these instruments |
+    | `max_export_batch_size` | `int` | `64` | Batch size |
+    | `trace_export_timeout_seconds` | `int` | `None` | Export timeout override |
+
+    **Returns:** `EvaluationRunResult | None` (or an awaitable when an event loop is running)
+
+    **Return shape:**
+
+    ```python
+    {
+        "average_scores": {"evaluator_name": 0.85, ...},
+        "evaluation_id": UUID,
+        "project_id": UUID,
+        "url": "https://...",
+    }
+    ```
+
+    **Note:** If event loop running, returns coroutine. Otherwise runs synchronously.
+
+    ---
+
+    <Heading level={2} id="py-laminar-dataset">LaminarDataset</Heading>
+
+    Load a dataset from Laminar.
+
+    ```python
+    from lmnr import LaminarDataset
+
+    dataset = LaminarDataset("my-dataset", fetch_size=50)
+    ```
+
+    **Constructor parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `name` | `str` | `None` | Dataset name |
+    | `id` | `UUID` | `None` | Dataset ID |
+    | `fetch_size` | `int` | `25` | Datapoints per fetch |
+
+    **Methods:**
+    - `push(paths, recursive=False)` — Upload local files to dataset
+
+    ---
+
+    <Heading level={2} id="py-evaluation-dataset">EvaluationDataset</Heading>
+
+    Abstract base class for custom datasets.
+
+    ```python
+    from lmnr import EvaluationDataset, Datapoint
+
+    class MyDataset(EvaluationDataset):
+        def __len__(self) -> int:
+            return len(self.items)
+        
+        def __getitem__(self, index: int) -> Datapoint:
+            return self.items[index]
+    ```
+
+    ---
+
+    <Heading level={2} id="py-datapoint">Datapoint</Heading>
+
+    Structure for evaluation data.
+
+    ```python
+    from lmnr import Datapoint
+
+    point = Datapoint(
+        data={"query": "What is 2+2?"},
+        target={"answer": "4"},
+        metadata={"source": "math"},
+    )
+    ```
+
+    **Fields:**
+    - `data` — Input data (required)
+    - `target` — Expected output (optional)
+    - `metadata` — Additional metadata (optional)
+    - `id` — UUID (auto-generated)
+    - `created_at` — Timestamp (auto-generated)
+  </Tab>
+</Tabs>

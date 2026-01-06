@@ -1,0 +1,342 @@
+---
+title: Manual Span Creation
+---
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    <Heading level={2} id="ts-laminar-start-span">Laminar.startSpan(options)</Heading>
+
+    Create a span without activating it. Use for spans you'll pass to other functions.
+
+    ```typescript
+    const span = Laminar.startSpan({ name: 'custom_operation' });
+    try {
+      const result = doWork();
+      span.setAttributes({ 'result.count': result.length });
+    } finally {
+      span.end();
+    }
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `name` | `string` | — | Span name (required) |
+    | `input` | `any` | — | Span input (JSON-serialized) |
+    | `spanType` | `'DEFAULT'` &#124; `'LLM'` &#124; `'TOOL'` | `'DEFAULT'` | Span type |
+    | `tags` | `string[]` | — | Span tags |
+    | `userId` | `string` | — | User ID |
+    | `sessionId` | `string` | — | Session ID |
+    | `metadata` | `Record<string, any>` | — | Metadata |
+    | `parentSpanContext` | `string` &#124; `LaminarSpanContext` | — | Parent context |
+    | `context` | `Context` | — | OpenTelemetry context |
+
+    **Returns:** `Span`
+
+    **Note:** Not activated—caller must propagate context manually or use `withSpan`.
+
+    ---
+
+    <Heading level={2} id="ts-laminar-start-span-block">Laminar.startActiveSpan(options)</Heading>
+
+    Create and activate a span. Child spans nest automatically.
+
+    ```typescript
+    const span = Laminar.startActiveSpan({ name: 'parent_operation' });
+    try {
+      // Any spans created here are children of parent_operation
+      await doWork();
+    } finally {
+      span.end();
+    }
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `name` | `string` | — | Span name (required) |
+    | `input` | `any` | — | Span input (JSON-serialized) |
+    | `spanType` | `'DEFAULT'` &#124; `'LLM'` &#124; `'TOOL'` | `'DEFAULT'` | Span type |
+    | `tags` | `string[]` | — | Span tags |
+    | `userId` | `string` | — | User ID |
+    | `sessionId` | `string` | — | Session ID |
+    | `metadata` | `Record<string, any>` | — | Metadata |
+    | `parentSpanContext` | `string` &#124; `LaminarSpanContext` | — | Parent context |
+    | `context` | `Context` | — | OpenTelemetry context |
+
+    **Returns:** `LaminarSpan` &#124; `Span`
+
+    **Note:** Must call `span.end()` (recommend in `finally` block). Context push/pop handled automatically.
+
+    ---
+
+    <Heading level={2} id="ts-laminar-with-span">Laminar.withSpan(span, fn, endOnExit?)</Heading>
+
+    Activate an existing span for the duration of a function.
+
+    ```typescript
+    const parentSpan = Laminar.startSpan({ name: 'parent' });
+
+    await Laminar.withSpan(parentSpan, async () => {
+      // parentSpan is active here
+      const child = Laminar.startSpan({ name: 'child' });
+      await doWork();
+      child.end();
+    });
+
+    parentSpan.end();
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `span` | `Span` | — | Span to activate |
+    | `fn` | `() => T` | — | Function to execute |
+    | `endOnExit` | `boolean` | `false` | End span when function completes |
+
+    **Returns:** Return value of `fn` (or `Promise` if async)
+
+    **Note:** Records exception on error. If `endOnExit` is true, span ends after `fn` (awaited if Promise).
+
+    **Example: Pass span objects between functions**
+
+    ```typescript
+    import { Laminar, observe, type Span } from '@lmnr-ai/lmnr';
+
+    const processData = (span: Span, data: unknown) =>
+      Laminar.withSpan(span, async () => {
+        return observe({ name: 'dataValidation' }, async () => validateData(data));
+      });
+
+    export async function handleRequest(userInput: string) {
+      const rootSpan = Laminar.startSpan({ name: 'handleUserRequest' });
+      try {
+        return await processData(rootSpan, userInput);
+      } finally {
+        rootSpan.end();
+      }
+    }
+    ```
+
+    **Example: Custom span hierarchy**
+
+    ```typescript
+    import { Laminar } from '@lmnr-ai/lmnr';
+
+    export async function processWorkflow(workflowData: { id: string }) {
+      const workflowSpan = Laminar.startSpan({
+        name: 'workflow-execution',
+        metadata: { workflowId: workflowData.id },
+      });
+
+      try {
+        await Laminar.withSpan(workflowSpan, async () => {
+          const validationSpan = Laminar.startSpan({ name: 'validation' });
+          await Laminar.withSpan(validationSpan, async () => {
+            await validateWorkflow(workflowData);
+          });
+          validationSpan.end();
+
+          const processingSpan = Laminar.startSpan({ name: 'processing' });
+          await Laminar.withSpan(processingSpan, async () => {
+            const result = await processWithLLM(workflowData);
+            processingSpan.setAttributes({
+              'processing.items_count': result.items.length,
+            });
+          });
+          processingSpan.end();
+        });
+      } catch (error) {
+        workflowSpan.recordException(error as Error);
+        throw error;
+      } finally {
+        workflowSpan.end();
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="Python">
+    <Heading level={2} id="py-laminar-start-span-block">Laminar.start_as_current_span()</Heading>
+
+    Create and activate a span using a context manager. Recommended for most cases.
+
+    ```python
+    from lmnr import Laminar
+
+    with Laminar.start_as_current_span(name="custom_operation", input=data) as span:
+        result = process_data(data)
+        Laminar.set_span_output(result)
+        # Any spans created here are children of custom_operation
+    # Span ends automatically
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `name` | `str` | — | Span name (required) |
+    | `input` | `Any` | `None` | Span input (JSON-serialized) |
+    | `span_type` | `'DEFAULT'` &#124; `'LLM'` &#124; `'TOOL'` | `'DEFAULT'` | Span type |
+    | `labels` | `list[str]` | `None` | Deprecated |
+    | `parent_span_context` | `LaminarSpanContext` | `None` | Parent context for distributed tracing |
+    | `tags` | `list[str]` | `None` | Span tags |
+    | `user_id` | `str` | `None` | User ID |
+    | `session_id` | `str` | `None` | Session ID |
+    | `metadata` | `dict[str, AttributeValue]` | `None` | Trace metadata |
+    | `context` | `Context` | `None` | OpenTelemetry context |
+
+    **Returns:** Context manager (`LaminarSpan`)
+
+    ---
+
+    <Heading level={2} id="py-laminar-start-span">Laminar.start_span()</Heading>
+
+    Create a span without activating it. Must end manually.
+
+    ```python
+    span = Laminar.start_span(name="custom_operation")
+    try:
+        result = do_work()
+        span.set_attribute("result.count", len(result))
+    finally:
+        span.end()
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `name` | `str` | — | Span name (required) |
+    | `input` | `Any` | `None` | Span input (JSON-serialized) |
+    | `span_type` | `'DEFAULT'` &#124; `'LLM'` &#124; `'TOOL'` | `'DEFAULT'` | Span type |
+    | `parent_span_context` | `LaminarSpanContext` | `None` | Parent context for distributed tracing |
+    | `labels` | `dict[str, str]` | `None` | Deprecated |
+    | `tags` | `list[str]` | `None` | Span tags |
+    | `user_id` | `str` | `None` | User ID |
+    | `session_id` | `str` | `None` | Session ID |
+    | `metadata` | `dict[str, AttributeValue]` | `None` | Trace metadata |
+    | `context` | `Context` | `None` | OpenTelemetry context |
+
+    **Returns:** `Span`
+
+    **Note:** Does not attach to context. Combine with `use_span` to activate.
+
+    ---
+
+    <Heading level={2} id="py-laminar-start-active-span">Laminar.start_active_span()</Heading>
+
+    Create a span and immediately activate it. Must end manually.
+
+    ```python
+    span = Laminar.start_active_span(name="parent_operation")
+    try:
+        # Any spans created here are children of parent_operation
+        do_work()
+    finally:
+        span.end()
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `name` | `str` | — | Span name (required) |
+    | `input` | `Any` | `None` | Span input (JSON-serialized) |
+    | `span_type` | `'DEFAULT'` &#124; `'LLM'` &#124; `'TOOL'` | `'DEFAULT'` | Span type |
+    | `parent_span_context` | `LaminarSpanContext` | `None` | Parent context for distributed tracing |
+    | `labels` | `dict[str, str]` | `None` | Deprecated |
+    | `tags` | `list[str]` | `None` | Span tags |
+    | `user_id` | `str` | `None` | User ID |
+    | `session_id` | `str` | `None` | Session ID |
+    | `metadata` | `dict[str, AttributeValue]` | `None` | Trace metadata |
+    | `context` | `Context` | `None` | OpenTelemetry context |
+
+    **Returns:** `LaminarSpan` &#124; `Span`
+
+    **Warning:** Must end span in the same thread/async context it was created. For cross-context use, prefer `start_span` + `use_span`.
+
+    ---
+
+    <Heading level={2} id="py-laminar-with-span">Laminar.use_span() / use_span()</Heading>
+
+    Activate an existing span for a block of code.
+
+    ```python
+    from lmnr import Laminar, use_span
+
+    parent_span = Laminar.start_span(name="parent")
+
+    with use_span(parent_span):
+        # parent_span is active here
+        child_span = Laminar.start_span(name="child")
+        do_work()
+        child_span.end()
+
+    parent_span.end()
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `span` | `Span` | — | Span to activate |
+    | `end_on_exit` | `bool` | `False` | End span when context exits |
+    | `record_exception` | `bool` | `True` | Record exceptions on span |
+    | `set_status_on_exception` | `bool` | `True` | Set ERROR status on exception |
+
+    **Returns:** Context manager (`LaminarSpan` &#124; `Span`)
+
+    **Example: Pass span objects between functions**
+
+    ```python
+    from lmnr import Laminar, use_span
+
+    def process_data(span, data):
+        with use_span(span):
+            return validate_data(data)
+
+    def handle_request(user_input: str):
+        span = Laminar.start_span(name="handle_user_request")
+        try:
+            return process_data(span, user_input)
+        finally:
+            span.end()
+    ```
+
+    **Example: Custom span hierarchy**
+
+    ```python
+    from lmnr import Laminar, use_span
+
+    def process_workflow(workflow_data):
+        workflow_span = Laminar.start_span(name="workflow-execution")
+        try:
+            with use_span(workflow_span):
+                validation_span = Laminar.start_span(name="validation")
+                try:
+                    with use_span(validation_span):
+                        validate_workflow(workflow_data)
+                finally:
+                    validation_span.end()
+
+                processing_span = Laminar.start_span(name="processing")
+                try:
+                    with use_span(processing_span):
+                        result = process_with_llm(workflow_data)
+                        processing_span.set_attribute(
+                            "processing.items_count",
+                            len(result["items"]),
+                        )
+                finally:
+                    processing_span.end()
+        except Exception as e:
+            workflow_span.record_exception(e)
+            raise
+        finally:
+            workflow_span.end()
+    ```
+  </Tab>
+</Tabs>
