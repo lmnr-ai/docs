@@ -108,8 +108,7 @@
             "pages": [
               "datasets/introduction",
               "datasets/adding-data",
-              "datasets/cli",
-              "queues/quickstart"
+              "datasets/cli"
             ]
           },
           {
