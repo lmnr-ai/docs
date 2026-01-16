@@ -71,6 +71,117 @@ SessionRecordingOptions = TypedDict(
 
 ---
 
+## RolloutParam
+
+```python
+RolloutParam = TypedDict(
+    "RolloutParam",
+    {
+        "name": str,
+        "type": str,
+        "required": bool,
+        "nested": list["RolloutParam"],
+        "default": str,
+    },
+    total=False,
+)
+```
+
+---
+
+## RolloutToolOverride
+
+```python
+RolloutToolOverride = TypedDict(
+    "RolloutToolOverride",
+    {
+        "name": str,
+        "description": str,
+        "parameters": dict[str, Any],
+    },
+    total=False,
+)
+```
+
+---
+
+## RolloutLLMTextBlock
+
+```python
+RolloutLLMTextBlock = TypedDict(
+    "RolloutLLMTextBlock",
+    {
+        "type": Literal["text"],
+        "text": str,
+    },
+    total=False,
+)
+```
+
+---
+
+## RolloutPathOverride
+
+```python
+RolloutPathOverride = TypedDict(
+    "RolloutPathOverride",
+    {
+        "system": str | list[RolloutLLMTextBlock],
+        "tools": list[RolloutToolOverride],
+    },
+    total=False,
+)
+```
+
+---
+
+## RolloutRunEvent
+
+```python
+RolloutRunEventData = TypedDict(
+    "RolloutRunEventData",
+    {
+        "trace_id": str,
+        "path_to_count": dict[str, int],
+        "args": dict[str, Any] | list[Any],
+        "overrides": dict[str, RolloutPathOverride],
+    },
+    total=False,
+)
+
+RolloutRunEvent = TypedDict(
+    "RolloutRunEvent",
+    {
+        "event_type": Literal["run"],
+        "data": RolloutRunEventData,
+    },
+)
+```
+
+---
+
+## RolloutHandshakeEvent
+
+```python
+RolloutHandshakeEventData = TypedDict(
+    "RolloutHandshakeEventData",
+    {
+        "project_id": str,
+        "session_id": str,
+    },
+)
+
+RolloutHandshakeEvent = TypedDict(
+    "RolloutHandshakeEvent",
+    {
+        "event_type": Literal["handshake"],
+        "data": RolloutHandshakeEventData,
+    },
+)
+```
+
+---
+
 ## Version Helpers
 
 ```python
