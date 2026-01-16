@@ -29,7 +29,6 @@ Wrap functions with Laminar to capture inputs, outputs, and errors automatically
     |------|------|---------|-------------|
     | `name` | `string` | `fn.name` | Span name |
     | `sessionId` | `string` | — | Associate trace with session |
-    | `rolloutSessionId` | `string` | — | Associate trace with a rollout session (usually set by rollout CLI) |
     | `userId` | `string` | — | Associate trace with user |
     | `metadata` | `Record<string, any>` | — | Trace metadata (JSON-serializable) |
     | `tags` | `string[]` | — | Span tags (deduplicated) |
@@ -50,6 +49,7 @@ Wrap functions with Laminar to capture inputs, outputs, and errors automatically
     - Anonymous function name becomes `""` if `name` not provided
     - Works with both sync and async functions
     - When `rolloutEntrypoint` is true, returns a wrapped function and does not execute immediately
+    - In rollout sessions, Laminar attaches `rollout.session_id` from `LMNR_ROLLOUT_SESSION_ID`
 
     **Examples: Rollout entrypoint**
 

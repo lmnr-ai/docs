@@ -152,7 +152,7 @@ RolloutRunEventData = TypedDict(
 RolloutRunEvent = TypedDict(
     "RolloutRunEvent",
     {
-        "event_type": Literal["run"],
+        "event_type": str,
         "data": RolloutRunEventData,
     },
 )
@@ -174,7 +174,7 @@ RolloutHandshakeEventData = TypedDict(
 RolloutHandshakeEvent = TypedDict(
     "RolloutHandshakeEvent",
     {
-        "event_type": Literal["handshake"],
+        "event_type": str,
         "data": RolloutHandshakeEventData,
     },
 )
