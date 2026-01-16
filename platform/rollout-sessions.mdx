@@ -1,0 +1,69 @@
+---
+title: Rollout sessions
+sidebarTitle: Rollout sessions
+---
+
+Rollout sessions let you rerun long-running agents from the exact point you care about, without leaving Laminar.
+
+## Why rollouts
+
+When you are debugging long-running agents, three things slow you down:
+
+- You need multiple tabs open to edit code, run it, and inspect execution.
+- You wait a long time for the agent to reach the event you care about.
+- The agent can take a different path and never hit that event at all.
+
+Rollout sessions solve this by letting you cache up to a span, rerun from there, and inspect the new trace in the same page. Once the CLI is connected, you never have to leave the page.
+
+## Setup
+
+1. Wrap your main entrypoint with `observe` and set `rolloutEntrypoint: true`.
+
+```typescript
+import { observe } from '@lmnr-ai/lmnr';
+
+export const generateStream = observe(
+  { name: 'generateStream', rolloutEntrypoint: true },
+  async (messages, model, modelId, reasoningEffort) => {
+    // Your agent code here.
+  }
+);
+```
+
+2. Start the dev orchestrator: `npx lmnr-cli dev route/to/entrypoint.js`.
+3. Open the session from **Rollout sessions** in your project.
+
+<Note>
+If the file exposes multiple rollout entrypoints, pass `--function` to select one.
+Set `LMNR_PROJECT_API_KEY` or use `--project-api-key` to connect.
+</Note>
+
+## Use in Laminar
+
+1. Open **Rollout sessions** and select your session.
+2. Pick a view (Tree, Timeline, or Reader). Use Search, Filters, and Metadata as needed.
+3. Click **Cache until here** on an LLM span to reuse earlier outputs and jump ahead on the next run.
+4. Edit **Parameters** or **System Prompts** in the left sidebar.
+5. Click **Run**. New spans stream in and you can inspect them immediately.
+6. Click **Stop** to cancel a run.
+
+<Note>
+You can edit your code while the CLI is running. Hot refresh keeps the rollout session alive so you can continue debugging without leaving Laminar.
+</Note>
+
+## Example
+
+This is an example rollout session using an AI SDK vibe-code platform.
+
+<video
+  src="/images/rollout/rollout.mp4"
+  controls
+  loop
+  muted
+  playsInline
+  className="block w-full"
+/>
+
+<Note>
+Some parts of the demo are sped up for brevity.
+</Note>
