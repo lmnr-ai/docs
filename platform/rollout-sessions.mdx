@@ -9,11 +9,11 @@ Rollout sessions let you rerun long-running agents from the exact point you care
 
 When you are debugging long-running agents, three things slow you down:
 
-- You need multiple tabs open to edit code, run it, and inspect execution.
+- You constantly context-switch between windows to edit code, run it, and inspect execution.
 - You wait a long time for the agent to reach the event you care about.
 - The agent can take a different path and never hit that event at all.
 
-Rollout sessions solve this by letting you cache up to a span, rerun from there, and inspect the new trace in the same page. Once the CLI is connected, you never have to leave the page.
+Rollout sessions solve this by letting you cache up to a span, tweak configuration (like the system prompt) in the UI, rerun from there, and inspect the new trace in the same page. Once the CLI is connected, you never have to leave the page.
 
 ## Setup
 
@@ -31,7 +31,7 @@ export const generateStream = observe(
 ```
 
 2. Start the dev orchestrator: `npx lmnr-cli dev route/to/entrypoint.js`.
-3. Open the session from **Rollout sessions** in your project.
+3. Open the session from **Rollout sessions** in your project, or click the link printed by the CLI.
 
 <Note>
 If the file exposes multiple rollout entrypoints, pass `--function` to select one.
