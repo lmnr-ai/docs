@@ -63,11 +63,34 @@ You can either push individual datapoint or select a subset of datapoints in the
 <img src="/images/queues/push-from-datapoint.png" alt="Screenshot of a trace visualization" style={{ margin: '0px' }}/>
 </div>
 
+### Via API
+You can add items programmatically with the labeling queue items endpoint.
 
+`POST https://api.lmnr.ai/v1/labeling_queues/<queue_id>/items`
 
+- Auth: `Authorization: Bearer <PROJECT_API_KEY>`
+- Body: `items` array with required `data` and `target` (arbitrary JSON), plus optional `metadata` (JSON object)
 
+```bash
+curl --location 'https://api.lmnr.ai/v1/labeling_queues/<queue_id>/items' \
+  --header 'Authorization: Bearer <PROJECT_API_KEY>' \
+  --header 'Content-Type: application/json' \
+  --data-raw '{
+    "items": [
+      {
+        "data": {
+          "input": "What is the capital of France?",
+          "context": "Geography question"
+        },
+        "target": "Paris",
+        "metadata": {
+          "model": "gpt-5.1"
+        }
+      }
+    ]
+  }'
+```
 
 <Tip>
 When pushing items to a queue, they maintain the same JSON structure as datapoints in datasets, ensuring consistency between your labeling workflow and final datasets.
 </Tip>
-
