@@ -1,0 +1,95 @@
+---
+title: Observability for OpenAI Agents SDK
+sidebarTitle: OpenAI Agents SDK
+---
+
+## Overview
+
+OpenAI Agents SDK is a lightweight framework for building multi-agent workflows with tools, handoffs, and guardrails.
+Laminar provides automatic tracing for agent runs and tool calls, plus OpenAI model spans when the OpenAI SDK is enabled.
+
+## What Laminar captures
+
+- Agent runs and nested spans for tool calls, responses, handoffs, and guardrails.
+- LLM usage, latency, and model metadata (via OpenAI instrumentation).
+- Tool inputs/outputs (optional redaction supported).
+
+## Getting started
+
+### Installation
+
+```bash
+pip install 'lmnr[openai-agents]'
+```
+
+<Note>
+This integration requires a Laminar version that includes `Instruments.OPENAI_AGENTS`. If you do not see that enum,
+upgrade Laminar to the latest version.
+</Note>
+
+### Environment variables
+
+```bash
+export LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+export OPENAI_API_KEY=your-openai-api-key
+```
+
+### Initialize Laminar
+
+```python {1-2,5-9}
+import os
+from lmnr import Laminar, Instruments
+
+Laminar.initialize(
+    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
+    # Include OPENAI for lower-level OpenAI SDK spans; OPENAI_AGENTS captures agent/tool spans.
+    instruments={Instruments.OPENAI, Instruments.OPENAI_AGENTS},
+)
+```
+
+### Run an agent
+
+```python {1-2,5-12,15-19}
+from agents import Agent, Runner, function_tool
+
+@function_tool
+def get_weather(city: str) -> str:
+    return f"The weather in {city} is sunny."
+
+agent = Agent(
+    name="Assistant",
+    instructions="You are a helpful assistant.",
+    tools=[get_weather],
+)
+
+result = Runner.run_sync(agent, "What's the weather in Tokyo?")
+print(result.final_output)
+```
+
+## Optional: redact inputs and outputs
+
+Set environment variables to suppress recording of inputs and outputs:
+
+```bash
+export LMNR_SUPPRESS_INPUTS=1
+export LMNR_SUPPRESS_OUTPUTS=1
+```
+
+If you want to disable sensitive data at the source (so the Agents SDK never records it),
+set the Agents SDK flag:
+
+```bash
+export OPENAI_AGENTS_TRACE_INCLUDE_SENSITIVE_DATA=false
+```
+
+## Optional: capture full span exports
+
+To attach the raw span export payloads as attributes on spans:
+
+```bash
+export LMNR_OPENAI_AGENTS_CAPTURE_EXPORT=1
+```
+
+## Viewing traces
+
+Open the Laminar dashboard and select a trace. You should see the agent run with nested spans for tool calls and LLM responses.
