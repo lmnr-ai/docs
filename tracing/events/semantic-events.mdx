@@ -36,6 +36,37 @@ Once the signal exists:
 - Use **Jobs** to backfill a time range or filtered set of traces.
 - Use **Triggers** to keep the signal running on new traces that match your trigger filters.
 
+### Jobs (backfill)
+
+Use a job when you want to run a signal against historical traces or a filtered slice of data.
+
+How it works in the UI:
+- Go to the signal's **Jobs** tab and click **Create Job**.
+- Pick a **time range** (default is the last 24 hours).
+- Add **filters** and/or **search** to narrow the trace set.
+- Select either **specific traces** or **all traces matching your filters**.
+- Click **Create signal job** to enqueue processing.
+
+What to expect:
+- A job creates one **run per trace**.
+- Runs appear in the **Runs** tab with status (Pending, Completed, Failed).
+- If the signal is identified, you will see an **Event ID** and the signal appears in the **Events** tab.
+- If the signal is not identified, the run completes without an event.
+
+### Triggers (live)
+
+Use a trigger to run the signal automatically on new traces.
+
+How it works in the UI:
+- Go to the signal's **Triggers** tab and click **Add Trigger**.
+- Add one or more **filters** (all conditions must match).
+- The trigger runs on new traces that match those filters.
+
+What to expect:
+- Each matching trace creates a **run** with source "Trigger."
+- Signal events appear in the **Events** tab when identified.
+
+
 ## Viewing signal events
 
 In the Laminar dashboard:
