@@ -1,24 +1,34 @@
 ---
-title: Events
+title: Signals
 sidebarTitle: Introduction
 ---
 
-Events are things that happened in your system that are worth recording. Each event is associated with a span and its corresponding trace.
+Signals are the outcomes, behaviors, and failures you want to track. Each signal is stored as an event attached to a span and its trace, so you can always jump back to full context.
 
-In Laminar, events help you understand what's happening in your AI applications beyond just tracing. You can set up events to track: user actions, business outcomes, errors, state changes, or any signal that matters to your product.
+Signals are the new home for Events. Any custom events you already emit show up as signals automatically.
+
+Signals unify two sources of truth:
+
+- custom events emitted from your code
+- LLM-extracted signals from trace data
+
+Signals also support two execution modes:
+
+- backfill jobs on historical traces
+- live triggers for new traces
 
 <CardGroup cols={2}>
-  <Card title="Emit events from code" icon="code" href="/tracing/events/events">
-    Emit structured events directly from your code to track domain-specific actions and outcomes.
+  <Card title="Emit signals from code" icon="code" href="/tracing/events/events">
+    Emit structured events directly from your code and treat them as signals.
   </Card>
   <Card
-    title="Extract events from traces using LLMs"
+    title="Extract signals from traces using LLMs"
     icon="sparkles"
     href="/tracing/events/semantic-events"
   >
-    Define prompts to extract "semantic" events from trace data. Extraction is performed asynchronously in the background on the Laminar platform.
+    Define prompts to extract structured signals from trace data.
   </Card>
-  <Card title="Cluster events to identify patterns" icon="layer-group" href="/tracing/events/clusters">
-    Cluster similar events together to discover patterns, debug at scale, and detect anomalies.
+  <Card title="Cluster signals to identify patterns" icon="layer-group" href="/tracing/events/clusters">
+    Cluster similar signal events together to discover patterns, debug at scale, and detect anomalies.
   </Card>
 </CardGroup>

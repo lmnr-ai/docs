@@ -1,8 +1,8 @@
 ---
-title: Emit events from code
+title: Emit signals from code
 ---
 
-Custom events are structured signals you emit from your code to mark important domain-specific actions, decisions, or outcomes (for example, `extraction.completed`, `checkout.failed`, `handoff_to_human`).
+Custom events are the most direct way to create signals. When you emit an event, it appears as a signal event in Laminar and can be analyzed alongside LLM-extracted signals (for example, `extraction.completed`, `checkout.failed`, `handoff_to_human`).
 
 Unlike spans (which represent units of work), custom events are lightweight annotations you can use for:
 
@@ -59,15 +59,16 @@ Emit events from inside a span context (for example, inside `observe()` / an `@o
 
 ## Best practices
 
-- Keep event `name` values stable and low-cardinality (don’t include request IDs).
+- Keep event `name` values stable and low-cardinality (don't include request IDs).
 - Put details into `attributes` (and avoid sensitive data).
 - Emit events inside a span context so they attach to the correct trace.
 
-## Viewing events
+## Viewing signals
 
-In the Laminar UI, open **Events** to browse and filter event streams.
+In the Laminar UI, open **Signals** to browse and filter signal events. Each signal has an **Events** tab with the raw stream and clusters, plus **Jobs** for backfills and **Triggers** for live analysis.
 
 You can also:
-- Extract events from traces automatically with [Semantic Events](/tracing/events/semantic-events)
-- Group similar events together with [Clusters](/tracing/events/clusters)
+
+- Extract signals from traces automatically with [LLM Signals](/tracing/events/semantic-events)
+- Group similar signal events together with [Clusters](/tracing/events/clusters)
 - Query custom events in the [SQL Editor](/platform/sql-editor) using the `events` table
