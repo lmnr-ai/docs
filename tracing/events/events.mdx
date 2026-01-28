@@ -1,18 +1,18 @@
 ---
-title: Emit signals from code
+title: Emit custom events from code
 ---
 
-Custom events are the most direct way to create signals. When you emit an event, it appears as a signal event in Laminar and can be analyzed alongside LLM-extracted signals (for example, `extraction.completed`, `checkout.failed`, `handoff_to_human`).
+Custom events are lightweight annotations you emit from your code. They are stored as span events (the `events` table) and show up in the span **Events** view. They do **not** create Signals or appear in the Signals list.
 
-Unlike spans (which represent units of work), custom events are lightweight annotations you can use for:
+Unlike spans (which represent units of work), custom events are useful for:
 
-- Filtering and clustering runs by what happened
 - Tracking outcomes and key checkpoints
+- Adding structured metadata for later SQL queries
 - Creating high-signal analytics without parsing span inputs/outputs
 
 ## Emitting custom events
 
-Emit events from inside a span context (for example, inside `observe()` / an `@observe`d function) so the event attaches to the correct trace.
+Emit events from inside a span context (for example, inside `observe()` / an `@observe`d function) so the event attaches to the correct trace. If you call `Laminar.event` outside of a span, Laminar creates a span and attaches the event to it.
 
 <Tabs items={['TypeScript', 'Python']}>
   <Tab title="TypeScript">
@@ -63,12 +63,11 @@ Emit events from inside a span context (for example, inside `observe()` / an `@o
 - Put details into `attributes` (and avoid sensitive data).
 - Emit events inside a span context so they attach to the correct trace.
 
-## Viewing signals
+## Viewing custom events
 
-In the Laminar UI, open **Signals** to browse and filter signal events. Each signal has an **Events** tab with the raw stream and clusters, plus **Jobs** for backfills and **Triggers** for live analysis.
+In the Laminar UI:
 
-You can also:
+- Open a trace, select a span, and view its **Events** tab.
+- Query custom events in the [SQL Editor](/platform/sql-editor) using the `events` table.
 
-- Extract signals from traces automatically with [LLM Signals](/tracing/events/semantic-events)
-- Group similar signal events together with [Clusters](/tracing/events/clusters)
-- Query custom events in the [SQL Editor](/platform/sql-editor) using the `events` table
+If you want LLM-extracted signals, see [LLM Signals](/tracing/events/semantic-events).

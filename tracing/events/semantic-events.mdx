@@ -2,7 +2,7 @@
 title: Extract signals using LLMs
 ---
 
-LLM signals let you extract structured data that cannot be explicitly logged but can be inferred from trace data. You define a prompt that describes what to look for (for example, "Agent completes checkout process"), and the analysis LLM produces a typed signal event using the full trace as context.
+LLM signals let you extract structured data that cannot be explicitly logged but can be inferred from trace data. You define a prompt that describes what to look for (for example, "Agent completes checkout process"), and Laminar sends the signal definition plus the `trace_id` to the semantic-event service. The service returns a structured payload that Laminar stores as a signal event linked to that trace.
 
 ## When to use LLM signals
 
@@ -34,7 +34,7 @@ To define a new signal from trace data:
 Once the signal exists:
 
 - Use **Jobs** to backfill a time range or filtered set of traces.
-- Use **Triggers** to keep the signal running on new traces.
+- Use **Triggers** to keep the signal running on new traces that match your trigger filters.
 
 ## Viewing signal events
 
@@ -46,6 +46,6 @@ In the Laminar dashboard:
 
 1. Go to **Signals** and open your signal.
 2. Use **Events** to see the raw event stream and jump to traces.
-3. Export signal events to a dataset for evaluation.
+3. (Optional) Query signal events in the [SQL Editor](/platform/sql-editor) using the `signal_events` table.
 
 Once you have LLM signals running, you can [cluster them](/tracing/events/clusters) to discover patterns and group similar events together.

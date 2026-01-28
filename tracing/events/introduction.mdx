@@ -3,14 +3,9 @@ title: Signals
 sidebarTitle: Introduction
 ---
 
-Signals are the outcomes, behaviors, and failures you want to track. Each signal is stored as an event attached to a span and its trace, so you can always jump back to full context.
+Signals are the outcomes, behaviors, and failures you want to track. Each signal is stored as a signal event tied to a trace, so you can jump back to trace context.
 
-Signals are the new home for Events. Any custom events you already emit show up as signals automatically.
-
-Signals unify two sources of truth:
-
-- custom events emitted from your code
-- LLM-extracted signals from trace data
+Signals are generated from trace data by the semantic-event service (LLM signals). Custom events emitted from your code (via `Laminar.event`) are stored as span events and do not automatically create signals.
 
 Signals also support two execution modes:
 
@@ -18,8 +13,8 @@ Signals also support two execution modes:
 - live triggers for new traces
 
 <CardGroup cols={2}>
-  <Card title="Emit signals from code" icon="code" href="/tracing/events/events">
-    Emit structured events directly from your code and treat them as signals.
+  <Card title="Emit custom events from code" icon="code" href="/tracing/events/events">
+    Emit structured span events directly from your code (separate from Signals).
   </Card>
   <Card
     title="Extract signals from traces using LLMs"
@@ -29,6 +24,6 @@ Signals also support two execution modes:
     Define prompts to extract structured signals from trace data.
   </Card>
   <Card title="Cluster signals to identify patterns" icon="layer-group" href="/tracing/events/clusters">
-    Cluster similar signal events together to discover patterns, debug at scale, and detect anomalies.
+    Cluster similar signal events together to discover patterns and debug at scale.
   </Card>
 </CardGroup>
