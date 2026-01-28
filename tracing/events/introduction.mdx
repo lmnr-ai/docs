@@ -5,7 +5,7 @@ sidebarTitle: Introduction
 
 Signals are the outcomes, behaviors, and failures you want to track. Each signal is stored as a signal event tied to a trace, so you can jump back to trace context.
 
-Signals are generated from trace data by the semantic-event service (LLM signals). Custom events emitted from your code (via `Laminar.event`) are stored as span events and do not automatically create signals.
+Signals are generated from trace data by Laminar's internal AI agent (LLM signals). Custom events emitted from your code (via `Laminar.event`) are stored as span events and are not associated with a signal.
 
 Signals also support two execution modes:
 
