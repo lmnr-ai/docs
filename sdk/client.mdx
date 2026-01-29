@@ -70,6 +70,91 @@ title: Client
 
     ---
 
+    <Heading level={3} id="ts-client-rollout-sessions">client.rolloutSessions</Heading>
+
+    Rollout session management and SSE connections for rollout debugging.
+
+    ```typescript
+    const response = await client.rolloutSessions.connect({
+      sessionId: 'session-uuid',
+      name: 'generateStream',
+      params: [{ name: 'messages', required: true }],
+    });
+    ```
+
+    <Heading level={3} id="ts-client-rollout-sessions-connect">client.rolloutSessions.connect(options)</Heading>
+
+    Connect to a rollout session and return the SSE streaming response.
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `options.sessionId` | `string` | — | Rollout session UUID |
+    | `options.name` | `string` | — | Rollout entrypoint name |
+    | `options.params` | `RolloutParam[]` | — | Entrypoint parameter metadata |
+    | `options.signal` | `AbortSignal` | — | Abort signal for the request |
+
+    **Returns:** `Promise<Response>`
+
+    ---
+
+    <Heading level={3} id="ts-client-rollout-sessions-set-status">client.rolloutSessions.setStatus(options)</Heading>
+
+    Update the rollout session status.
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `options.sessionId` | `string` | — | Rollout session UUID |
+    | `options.status` | `'PENDING'` &#124; `'RUNNING'` &#124; `'FINISHED'` &#124; `'STOPPED'` | — | New status |
+
+    **Returns:** `Promise<void>`
+
+    ---
+
+    <Heading level={3} id="ts-client-rollout-sessions-send-span-update">client.rolloutSessions.sendSpanUpdate(options)</Heading>
+
+    Stream span updates to the rollout session.
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `options.sessionId` | `string` | — | Rollout session UUID |
+    | `options.span` | `object` | — | Span payload (OTel IDs and attributes) |
+
+    **Returns:** `Promise<void>`
+
+    **Span payload:**
+
+    | Name | Type | Description |
+    |------|------|-------------|
+    | `name` | `string` | Span name |
+    | `startTime` | `string` | ISO timestamp |
+    | `spanId` | `string` | OTel span ID |
+    | `traceId` | `string` | OTel trace ID |
+    | `parentSpanId` | `string` &#124; `undefined` | Parent span ID |
+    | `attributes` | `Record<string, any>` | Span attributes |
+    | `spanType` | `SpanType` | Span type |
+
+    ---
+
+    <Heading level={3} id="ts-client-rollout-sessions-delete">client.rolloutSessions.delete(options)</Heading>
+
+    Delete a rollout session.
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `options.sessionId` | `string` | — | Rollout session UUID |
+
+    **Returns:** `Promise<void>`
+
+    ---
+
     <Heading level={3} id="ts-client-datasets">client.datasets</Heading>
 
     Dataset operations.
@@ -312,6 +397,72 @@ title: Client
     **Returns:** `list[dict]` (returns `[]` on 404)
 
     **Note:** Call after the trace has ended (use `Laminar.flush()` for short-lived scripts).
+
+    ---
+
+    <Heading level={3} id="py-client-rollout">client.rollout</Heading>
+
+    Rollout session management for rollout debugging.
+
+    <Heading level={3} id="py-client-rollout-connect">client.rollout.connect(session_id, function_name, params=None)</Heading>
+
+    Connect to a rollout session and return the SSE streaming response.
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `session_id` | `uuid.UUID` | — | Rollout session UUID |
+    | `function_name` | `str` | — | Rollout entrypoint name |
+    | `params` | `list[RolloutParam]` | `None` | Entrypoint parameter metadata |
+
+    **Returns:** Context manager yielding `httpx.Response`
+
+    ---
+
+    <Heading level={3} id="py-client-rollout-update-span-info">client.rollout.update_span_info(session_id, span_data)</Heading>
+
+    Stream a span update to the rollout session.
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `session_id` | `str` | — | Rollout session UUID |
+    | `span_data` | `SpanStartData` | — | Span payload (name, IDs, attributes, start time) |
+
+    **Returns:** `None`
+
+    ---
+
+    <Heading level={3} id="py-client-rollout-update-status">client.rollout.update_status(session_id, status)</Heading>
+
+    Update the rollout session status.
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `session_id` | `str` | — | Rollout session UUID |
+    | `status` | `'PENDING'` &#124; `'RUNNING'` &#124; `'FINISHED'` &#124; `'STOPPED'` | — | New status |
+
+    **Returns:** `None`
+
+    ---
+
+    <Heading level={3} id="py-client-rollout-delete-session">client.rollout.delete_session(session_id)</Heading>
+
+    Delete a rollout session.
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `session_id` | `str` | — | Rollout session UUID |
+
+    **Returns:** `None`
+
+    **Note:** `AsyncLaminarClient.rollout` exposes the same methods; `update_span_info`, `update_status`, and `delete_session` are awaitable.
 
     ---
 
