@@ -68,5 +68,6 @@ In the Laminar UI, metadata filters currently match **exact key-value pairs** (f
 ## Best Practices
 
 - Use consistent keys (`environment`, `region`, `feature_flag`).
+- Use `environment` for prod/staging/dev; add a low-cardinality key like `developer` or `source` to separate dev traces in a shared project.
 - Keep it lightweight and JSON-serializable.
 - Avoid sensitive data (no PII).

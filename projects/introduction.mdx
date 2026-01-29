@@ -8,6 +8,12 @@ A Laminar project is a collection of [datasets](/datasets/introduction),
 [evaluations](/evaluations/introduction), and [traces](/tracing/introduction).
 Access API keys and environment variables are configured at the project level as well. Think about it as a scope of a certain work. A project always belong to a workspace.
 
+## Projects, API keys, and separation
+
+- API keys are scoped to a project. Multiple API keys for the same project write to the same data.
+- For hard separation (prod vs dev, team/customer boundaries), create separate projects and use their keys.
+- For soft separation within a project, use trace metadata or tags (for example, `environment=development`, `developer=alice`).
+
 ## Creating a project
 
 1. [Optional] create a new workspace.
