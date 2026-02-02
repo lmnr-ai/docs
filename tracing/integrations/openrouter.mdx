@@ -13,7 +13,7 @@ OpenRouter-specific headers are optional. Setting them allows your app to appear
 
 ## Recommended: OpenAI SDK with OpenRouter
 
-Laminar automatically instruments the OpenAI SDK. If you set the OpenAI SDK base URL to OpenRouter, Laminar will capture those calls with full LLM trace details.
+Laminar automatically instruments the OpenAI SDK. If you set the OpenAI SDK base URL to OpenRouter, Laminar will capture those calls as LLM spans.
 
 <Tabs items={['TypeScript', 'Python']}>
   <Tab title="TypeScript">
@@ -140,7 +140,7 @@ Laminar automatically instruments the OpenAI SDK. If you set the OpenAI SDK base
 
 ## OpenRouter SDK (Beta)
 
-If you use the OpenRouter SDK directly, wrap your call with `observe()` to capture inputs/outputs and group it in a trace.
+Laminar does not auto-instrument the OpenRouter SDK. Wrap your call with `observe()` to capture inputs/outputs and group it in a trace. LLM-specific fields (tokens, cost) are not added automatically in this mode.
 
 ```typescript
 import { Laminar, observe } from '@lmnr-ai/lmnr';
@@ -174,6 +174,10 @@ console.log(completion.choices[0].message.content);
 <Tip>
 You can use the interactive [Request Builder](https://openrouter.ai/request-builder) to generate OpenRouter API requests in the language of your choice.
 </Tip>
+
+<Note>
+Direct HTTP calls are captured as custom spans via `observe()`. LLM-specific fields (tokens, cost) are not extracted automatically from raw responses.
+</Note>
 
 <CodeGroup>
 
@@ -254,13 +258,13 @@ curl https://openrouter.ai/api/v1/chat/completions \
 
 ## Monitoring Your OpenRouter Usage
 
-After instrumenting your OpenRouter calls with Laminar, you'll be able to:
+When you use the OpenAI SDK integration above, Laminar will create LLM spans so you can:
 
 1. **View detailed traces** of each OpenRouter request, including request and response
-2. **Track token usage and cost** across different models
-3. **Monitor latency** and performance metrics
-4. **Open LLM span in Playground** for prompt engineering
-5. **Debug issues** with failed API calls or unexpected model outputs
+2. **Track token usage** when OpenRouter returns usage data
+3. **See cost estimates** when pricing data for the model is available in Laminar
+4. **Monitor latency** and performance metrics
+5. **Open LLM spans in Playground** for prompt engineering
 
 Visit your Laminar dashboard to view your OpenRouter traces and analytics.
 
