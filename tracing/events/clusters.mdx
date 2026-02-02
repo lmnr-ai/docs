@@ -1,71 +1,65 @@
 ---
-title: Event Clusters
+title: Signal Clusters
 ---
 
-Clusters group similar events together to help you discover patterns, debug at scale, and detect anomalies. When you have many events (either [custom events](/tracing/events/events) or [semantic events](/tracing/events/semantic-events)), clustering reveals what's actually happening in your system.
+Clusters group similar **signal events** together to help you discover patterns and debug at scale. Clustering applies to LLM signals (signal events), not span events emitted from code.
 
 ## What Are Clusters?
 
-Every event has an `attribute` field containing JSON data. Clusters group events by extracting a string value from this JSON using a Mustache template, then grouping events with similar extracted values.
+Every signal event has a `payload` field containing JSON data. Clusters group events by extracting a string value from this JSON using a simple Mustache-style template (top-level keys only), then grouping events with similar extracted values.
 
-For example, if your events have attributes like `{"error_message": "Connection timeout", "url": "..."}`, you can cluster by `{{error_message}}` to group similar errors together.
+For example, if your events have payloads like `{"error_message": "Connection timeout", "url": "..."}`, you can cluster by `{{error_message}}` to group similar errors together.
 
 Common patterns that emerge:
 
-- **Similar failures** — Errors with the same root cause, regardless of surface differences (for example, 47 failures all caused by lazy-loaded content).
-- **Behavioral groups** — Events that share a common action or intent (for example, all "search for product" events).
+- **Similar failures** - Errors with the same root cause, regardless of surface differences (for example, 47 failures all caused by lazy-loaded content).
+- **Behavioral groups** - Events that share a common action or intent (for example, all "search for product" events).
 
-You control clustering by defining a Mustache template that extracts the value to cluster on. Laminar handles the similarity matching and keeps clusters updated as new events arrive.
-
-Each cluster has member events and automatically generated cluster name. Cluster name is can be regenerated when the member events change significantly.
+You control clustering by defining a Mustache template that extracts the value to cluster on. Laminar renders the template and sends the extracted content to the clustering service, which groups similar events and names clusters.
 
 ## Set up clustering
 
 
-<Frame caption="Starting clustering for a semantic event definition">
-  <img src="/images/start-clustering.png" alt="Start Clustering dialog with value template input" />
+<Frame caption="Starting clustering for a signal">
+  <img src="/images/start-clustering.png" alt="Start Clustering dialog with value template input for a signal" />
 </Frame>
 
-1. In **Events**, click your event definition to open it.
-2. Click **Start Clustering**.
-3. Enter a **Value Template** — a Mustache string like `{{content}}` or `{{error.message}}` that extracts the value to cluster on from the event's `attribute` JSON.
-4. Click **Start**, then switch to **Clusters** to see grouped results.
+1. In **Signals**, click your signal to open it.
+2. In the **Events** tab, click **Start Clustering**.
+3. Enter a **Value Template** - a Mustache string like `{{content}}` or `{{error_message}}` that extracts the value to cluster on from the event's `payload` JSON. (Only top-level keys like `error_message` are supported.)
+4. Click **Start** to populate the clusters table.
 
 ## How Clustering Works
 
-Every event stores its data in an `attribute` field as JSON. When you start clustering:
+Every signal event stores its data in a `payload` JSON field. When you start clustering:
 
-1. Laminar evaluates your Mustache template against each event's `attribute` JSON
+1. Laminar renders your Mustache template against each event's `payload` JSON (top-level keys only)
 2. The template extracts a string value (for example, `{{content}}` pulls the `content` field)
-3. Events with similar extracted strings are grouped into clusters
+3. Laminar sends the extracted content to the clustering service, which assigns/updates clusters
 
-As new events arrive, clusters continuously update and stay current, so you can track emerging patterns and regressions over time.
+As new signal events arrive, Laminar sends them for clustering so the cluster view can stay current.
 
 ## What You Can Do With Clusters
 
-**Understand user behavior** — See what users are actually trying to accomplish, not just what buttons they clicked. Intent clusters reveal the "why" behind actions.
+**Understand user behavior** - See what users are actually trying to accomplish, not just what buttons they clicked. Intent clusters reveal the "why" behind actions.
 
-**Debug at scale** — When something breaks, find all similar failures instantly. One fix addresses an entire cluster of issues.
+**Debug at scale** - When something breaks, find all similar failures instantly. One fix addresses an entire cluster of issues.
 
-**Detect anomalies** — Unusual patterns surface automatically. Spot problems before users report them.
+**Spot unusual patterns** - Unusual clusters can stand out when you scan the grouped events.
 
-**Track trends** — See how behavior changes over time. New clusters emerging? Old patterns disappearing?
-
-**Build datasets** — Export clusters as evaluation datasets. Test your agent against real-world patterns, not synthetic examples.
+**Track trends** - See how behavior changes over time. New clusters emerging? Old patterns disappearing?
 
 ## Viewing Clusters
 
 In the Laminar dashboard:
 
-1. Go to **Events** to see the raw event stream
-2. Switch to **Clusters** to see grouped patterns
-3. Click any cluster to see its members, centroid, labels, and confidence score
-4. Filter by time range, event type, or cluster label
-5. Export cluster members to a dataset for evaluation
+1. Go to **Signals** and open your signal.
+2. In the **Events** tab, use the **Clusters** table to see grouped patterns.
+3. Click a cluster name to open the events list filtered by that cluster.
 
 ## Example: Finding Extraction Failures
 
-Your browser agent extracts product data. Some extractions fail. Each `extraction.failed` event has an `attribute` like:
+Your browser agent extracts product data. Some extractions fail. Each `extraction.failed` event has a `payload` like:
 
 ```json
 {

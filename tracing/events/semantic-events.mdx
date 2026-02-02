@@ -1,48 +1,82 @@
 ---
-title: Emit events using LLMs
+title: Extract signals using LLMs
 ---
 
-## Semantic Events
+LLM signals let you extract structured data that cannot be explicitly logged but can be inferred from trace data. You define a prompt that describes what to look for (for example, "Agent completes checkout process"), and Laminar sends the signal definition plus the `trace_id` to the semantic-event service. The service returns a structured payload that Laminar stores as a signal event linked to that trace.
 
-Semantic events is a way to track something or extract structured data that can't be explicitly logged but can be inferred from trace data.
-You define a prompt that describes what to look for (for example, "Agent completes checkout process"), and our analysis LLM will produce a typed event with the fields you specify using the entire trace data as context.
+## When to use LLM signals
 
-## When to Use Semantic Events
+- **Business outcomes** - Describe criteria for a successful outcome, for example "User responded with 'Thank you'".
+- **Logical errors** - Describe a case when an agent fails to complete a task, for example "Agent fails to complete checkout process".
+- **Behavioral patterns** - Categorize user requests by specifying "request category" in the structured output schema.
 
-- **Business outcomes** — You can describe criteria for a successful agent outcome, for example "User responded with 'Thank you'".
-- **Locagical errors** — Describe a case when agent fails to complete a task, for example "Agent fails to complete checkout process".
-- **Behavioral patterns** — For example, you can categorize user requests to an agent by specifiying "request category" in the structured output schema.
+If you already log structured events in your application code, you do not need LLM signals for those.
 
-If you're already logging structured events in your application code, you don't need semantic events for those.
+## Create a signal (UI)
 
-## Creating a semantic event (UI)
+To define a new signal from trace data:
 
-To define a new semantic event from trace data:
-
-<Frame caption="Creating a new semantic event in the Laminar UI">
-  <img src="/images/create-event.png" alt="Create new semantic event form showing name, prompt, structured output schema, and trigger spans" />
+<Frame caption="Creating a new signal in the Laminar UI">
+  <img src="/images/create-event.png" alt="Create new signal form showing name, prompt, structured output schema, and test trace" />
 </Frame>
 
-1. Open **Events** → **Event definitions**.
-2. Select the **Semantic** tab and click **+ Event Definition**.
-3. In the "Create new semantic event" panel:
-   - (Optional) **Start from a template** to prefill the prompt, schema, and trigger spans.
-   - **Name**: choose a stable event name (for example, `checkout.completed` or `navigation.failed`).
-   - **Prompt**: describe what the event should detect/extract from the trace/span data.
-   - **Structured Output**: define a JSON schema for the event payload (keep it small and stable).
-   - **Trigger Spans**: click **Add Span** and enter the span name(s) that should trigger this event. When Laminar recieves this span, we will initiate trace analysis and extract the event.
-   Pick spans that is finished when the trace has enough context to infer the event, for example a span that is created when agent is done with the task.
+1. Open **Signals** and click **Create signal**.
+2. (Optional) **Start from a template** to prefill the prompt and schema.
+3. Fill in:
+   - **Name**: choose a stable signal name (for example, `checkout.completed` or `navigation.failed`).
+   - **Prompt**: describe what the signal should detect or extract from trace data.
+   - **Structured Output**: define a JSON schema for the signal payload (keep it small and stable).
+   - (Optional) **Test Signal**: enter a trace ID to validate the output before creating it.
 4. Click **Create**.
 
-## Viewing Semantic Events
+## Run the signal on traces
+
+Once the signal exists:
+
+- Use **Jobs** to backfill a time range or filtered set of traces.
+- Use **Triggers** to keep the signal running on new traces that match your trigger filters.
+
+### Jobs (backfill)
+
+Use a job when you want to run a signal against historical traces or a filtered slice of data.
+
+How it works in the UI:
+- Go to the signal's **Jobs** tab and click **Create Job**.
+- Pick a **time range** (default is the last 24 hours).
+- Add **filters** and/or **search** to narrow the trace set.
+- Select either **specific traces** or **all traces matching your filters**.
+- Click **Create signal job** to enqueue processing.
+
+What to expect:
+- A job creates one **run per trace**.
+- Runs appear in the **Runs** tab with status (Pending, Completed, Failed).
+- If the signal is identified, you will see an **Event ID** and the signal appears in the **Events** tab.
+- If the signal is not identified, the run completes without an event.
+
+### Triggers (live)
+
+Use a trigger to run the signal automatically on new traces.
+
+How it works in the UI:
+- Go to the signal's **Triggers** tab and click **Add Trigger**.
+- Add one or more **filters** (all conditions must match).
+- The trigger runs on new traces that match those filters.
+
+What to expect:
+- Each matching trace creates a **run** with source "Trigger."
+- Signal events appear in the **Events** tab when identified.
+
+
+## Viewing signal events
 
 In the Laminar dashboard:
 
-1. Go to **Events** to see the raw event stream
-2. Filter by event type, time range, or custom attributes
-3. Click any event to see the trace it was extracted from
-4. Export events to a dataset for evaluation
+<Frame caption="Viewing signal events in the Signals page">
+  <img src="/images/view-events.png" alt="Signals events table with filters and trace links" />
+</Frame>
 
-Once you have semantic events running, you can [cluster them](/tracing/events/clusters) to discover patterns and group similar events together.
+1. Go to **Signals** and open your signal.
+2. Use **Events** to see the raw event stream and jump to traces.
+3. (Optional) Query signal events in the [SQL Editor](/platform/sql-editor) using the `signal_events` table.
 
-
+Once you have LLM signals running, you can [cluster them](/tracing/events/clusters) to discover patterns and group similar events together.
