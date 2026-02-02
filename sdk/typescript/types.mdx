@@ -6,11 +6,90 @@ title: TypeScript Types
 
 ```typescript
 interface LaminarSpanContext {
-  traceId: string;      // UUID
-  spanId: string;       // UUID
+  traceId: string; // UUID
+  spanId: string;  // UUID
   isRemote: boolean;
-  spanPath: string[];
-  spanIdsPath: string[];
+  spanPath?: string[];
+  spanIdsPath?: string[];
+  userId?: string;
+  sessionId?: string;
+  rolloutSessionId?: string;
+  metadata?: Record<string, any>;
+  traceType?: TraceType;
+  tracingLevel?: TracingLevel;
+}
+```
+
+---
+
+## RolloutParam
+
+```typescript
+interface RolloutParam {
+  name: string;
+  type?: string;
+  required?: boolean;
+  nested?: RolloutParam[];
+  default?: string;
+}
+```
+
+---
+
+## LanguageModelTextBlock
+
+```typescript
+interface LanguageModelTextBlock {
+  type: 'text';
+  text: string;
+}
+```
+
+---
+
+## LanguageModelToolDefinitionOverride
+
+```typescript
+interface LanguageModelToolDefinitionOverride {
+  name: string;
+  description?: string;
+  parameters?: Record<string, any>;
+}
+```
+
+---
+
+## RolloutRunEvent
+
+```typescript
+interface RolloutRunEvent {
+  event_type: 'run';
+  data: {
+    trace_id?: string;
+    path_to_count?: Record<string, number>;
+    args: Record<string, any> | any[];
+    overrides?: Record<
+      string,
+      {
+        system?: string | LanguageModelTextBlock[];
+        tools?: LanguageModelToolDefinitionOverride[];
+      }
+    >;
+  };
+}
+```
+
+---
+
+## RolloutHandshakeEvent
+
+```typescript
+interface RolloutHandshakeEvent {
+  event_type: 'handshake';
+  data: {
+    session_id: string;
+    project_id: string;
+  };
 }
 ```
 

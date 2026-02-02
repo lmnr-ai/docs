@@ -118,6 +118,7 @@
               "platform",
               "platform/viewing-traces",
               "platform/live-tracing",
+              "platform/rollout-sessions",
               "platform/sql-editor",
               "platform/search",
               "custom-dashboards/overview",
