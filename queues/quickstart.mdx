@@ -72,8 +72,13 @@ You can add items programmatically with the labeling queue items endpoint.
 - Body: `items` array with required `data` and `target` (arbitrary JSON), plus optional `metadata` (JSON object)
 
 ```bash
-curl --location 'https://api.lmnr.ai/v1/labeling_queues/<queue_id>/items' \
-  --header 'Authorization: Bearer <PROJECT_API_KEY>' \
+export QUEUE_ID="<insert your queue_id>"
+export LMNR_PROJECT_API_KEY="<insert your Laminar project API key>"
+```
+
+```bash
+curl --location "https://api.lmnr.ai/v1/labeling_queues/${QUEUE_ID}/items" \
+  --header "Authorization: Bearer ${LMNR_PROJECT_API_KEY}" \
   --header 'Content-Type: application/json' \
   --data-raw '{
     "items": [
