@@ -30,6 +30,7 @@
                 "pages": [
                   "tracing/integrations/overview",
                   "tracing/integrations/openai",
+                  "tracing/integrations/openrouter",
                   "tracing/integrations/anthropic",
                   "tracing/integrations/gemini",
                   "tracing/integrations/langchain",
