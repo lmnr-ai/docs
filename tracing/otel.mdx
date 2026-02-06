@@ -14,8 +14,9 @@ OpenTelemetry is a framework for tracing and monitoring distributed systems. Ope
 an extension of OpenTelemetry that is specifically designed for LLM tracing. The standards
 introduced in OpenLLMetry are gradually being adopted by OpenTelemetry.
 
-OpenTelemetry covers tracing, metrics, and logs, but Laminar only uses tracing. For more details
-about tracing in Laminar, and a quick intro to the core concepts, see the [Tracing](/tracing/introduction) page.
+OpenTelemetry covers tracing, metrics, and logs. Laminar focuses on tracing today; limited log ingestion
+is available for some SDK integrations and can be queried in the SQL Editor. For more details about
+tracing in Laminar, and a quick intro to the core concepts, see the [Tracing](/tracing/introduction) page.
 
 Processing of OpenTelemetry traces has many concepts and components, namely, exporters,
 processors, propagators, samplers, and collectors.
