@@ -51,6 +51,61 @@ Laminar.initialize(
 
 ---
 
+## Daytona sandbox logs (streaming)
+
+Laminar can capture streaming command logs from Daytona sandboxes. These log records are stored in the `logs` table and can be queried in the SQL Editor (there is no dedicated logs UI yet).
+
+```python
+import asyncio
+
+from daytona import AsyncDaytona, SessionExecuteRequest
+from lmnr import Laminar, observe
+
+Laminar.initialize()
+
+@observe()
+async def run_sandbox_command():
+    daytona = AsyncDaytona()
+    sandbox = await daytona.create()
+
+    session_id = "streaming-session"
+    await sandbox.process.create_session(session_id)
+
+    await sandbox.process.execute_session_command(
+        session_id,
+        SessionExecuteRequest(
+            command=(
+                'for i in {1..5}; do echo "Processing iteration $i of 5 - '
+                'This is a longer test message to verify streaming output handling '
+                'with substantial text content"; '
+                'echo "Error at iteration $i: This is a simulated error message '
+                'with extended details for testing purposes" >&2; sleep 1; done'
+            ),
+            run_async=True,
+        ),
+    )
+
+    print("Continuing execution while command runs in background...")
+    await asyncio.sleep(10)
+    print("Other operations completed!")
+
+    await sandbox.delete()
+
+if __name__ == "__main__":
+    asyncio.run(run_sandbox_command())
+```
+
+Example query:
+
+```sql
+SELECT time, severity_text, body, attributes
+FROM logs
+WHERE time > now() - INTERVAL 1 DAY
+ORDER BY time DESC
+```
+
+---
+
 ## SessionRecordingOptions
 
 Browser session recording configuration.

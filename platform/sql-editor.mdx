@@ -11,7 +11,10 @@ Query all your Laminar data directly with SQL. Find patterns, debug issues, and 
 | spans | Individual spans (LLM/tool/custom/eval spans) |
 | traces | Trace-level aggregates derived from spans |
 | events | Custom events you’ve sent |
+| signal_events | Signal-triggered events and payloads |
+| signal_runs | Signal execution runs and statuses |
 | tags | Tags attached to spans |
+| logs | Streaming logs (for example, sandbox command output) |
 | dataset_datapoints | Dataset datapoints (latest version per datapoint) |
 | dataset_datapoint_versions | Dataset datapoints (all versions/history) |
 | evaluation_datapoints | Evaluation datapoints incl. scores (JSON map), executor output, and dataset links |
@@ -119,6 +122,8 @@ For complex operations (array indexing, nested paths), use `JSONExtract*` functi
 | `LowCardinality(String)` | Low-cardinality enums (for example, `events.source`) |
 | `Float64` | Floating point numbers |
 | `Int64` | Counts, token numbers |
+| `UInt8` | Small numeric enums (for example, `logs.severity_number`) |
+| `UInt32` | Flags and bitmasks (for example, `logs.flags`) |
 | `UInt64` | Indexes and counters (`evaluation_datapoints.index`) |
 | `Bool` | Flags like `has_browser_session` |
 | `Array(String)` | Tag lists and other string arrays |
@@ -282,6 +287,62 @@ The `attributes` column is stored as a string in JSON format. That is, you can s
 #### Source
 
 `source` is either `"CODE"` or `"SEMANTIC"`.
+
+
+### signal_events
+
+| Column | Type | Example value |
+|--------|------|---------------|
+| `id` | `UUID` | `"01234567-89ab-cdef-1234-426614174000"` |
+| `signal_id` | `UUID` | `"11111111-2222-3333-4444-555555555555"` |
+| `trace_id` | `UUID` | `"01234567-1234-cdef-1234-426614174000"` |
+| `run_id` | `UUID` | `"22222222-3333-4444-5555-666666666666"` |
+| `name` | `String` | `"error.clustered"` |
+| `payload` | `String` | `"{\"error_type\": \"timeout\", \"count\": 3}"` |
+| `timestamp` | `DateTime64(9, 'UTC')` | `"2021-01-01 00:00:00"` |
+
+#### Payload
+
+The `payload` column is stored as a string in JSON format. That is, you can safely `JSON.parse` / `json.loads` it. In addition, you can use JSON* and simpleJSON* functions on it right in the queries. Payload is guaranteed to be a valid JSON object.
+
+
+### signal_runs
+
+| Column | Type | Example value |
+|--------|------|---------------|
+| `signal_id` | `UUID` | `"11111111-2222-3333-4444-555555555555"` |
+| `job_id` | `UUID` | `"33333333-4444-5555-6666-777777777777"` |
+| `trigger_id` | `UUID` | `"44444444-5555-6666-7777-888888888888"` |
+| `run_id` | `UUID` | `"22222222-3333-4444-5555-666666666666"` |
+| `trace_id` | `UUID` | `"01234567-1234-cdef-1234-426614174000"` |
+| `status` | `String` | `"COMPLETED"` |
+| `event_id` | `UUID` | `"55555555-6666-7777-8888-999999999999"` |
+| `updated_at` | `DateTime64(9, 'UTC')` | `"2021-01-01 00:00:00"` |
+
+#### Status
+
+`status` is one of `"PENDING"`, `"COMPLETED"`, `"FAILED"`, or `"UNKNOWN"`.
+
+
+### logs
+
+| Column | Type | Example value |
+|--------|------|---------------|
+| `log_id` | `UUID` | `"01234567-89ab-cdef-1234-426614174000"` |
+| `time` | `DateTime64(9, 'UTC')` | `"2021-01-01 00:00:00"` |
+| `observed_time` | `DateTime64(9, 'UTC')` | `"2021-01-01 00:00:01"` |
+| `severity_number` | `UInt8` | `9` |
+| `severity_text` | `String` | `"INFO"` |
+| `body` | `String` | `"Processing iteration 1 of 5"` |
+| `attributes` | `String` | `"{\"stream\": \"stdout\", \"sandbox_id\": \"sbx_123\"}"` |
+| `trace_id` | `UUID` | `"01234567-1234-cdef-1234-426614174000"` |
+| `span_id` | `UUID` | `"00000000-0000-0000-1234-426614174000"` |
+| `flags` | `UInt32` | `0` |
+| `event_name` | `String` | `"process.stdout"` |
+
+#### Attributes
+
+The `attributes` column is stored as a string in JSON format. That is, you can safely `JSON.parse` / `json.loads` it. In addition, you can use JSON* and simpleJSON* functions on it right in the queries. Attributes are guaranteed to be a valid JSON object.
 
 
 ### tags
