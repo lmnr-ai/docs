@@ -64,15 +64,6 @@
                   "tracing/structure/flushing-and-shutdown"
                 ]
               },
-              {
-                "group": "Traces monitoring",
-                "pages": [
-                  "tracing/events/introduction",
-                  "tracing/events/semantic-events",
-                  "tracing/events/events",
-                  "tracing/events/clusters"
-                ]
-              },
               "tracing/browser-agent-observability",
               "tracing/langgraph-visualization",
               {
@@ -117,6 +108,7 @@
             "pages": [
               "platform",
               "platform/viewing-traces",
+              "signals",
               "platform/live-tracing",
               "platform/rollout-sessions",
               "platform/sql-editor",
