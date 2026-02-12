@@ -108,7 +108,63 @@ In the Laminar dashboard:
 
 1. Go to **Signals** and open your signal.
 2. Use **Events** to see the raw event stream and jump to traces.
-3. (Optional) Query signal events in the [SQL Editor](/platform/sql-editor) using the `signal_events` table.
+3. (Optional) Query signal events in the [SQL Editor](/platform/sql-editor) using the `signal_events` table (examples below).
+
+## Querying `signal_events` in SQL
+
+The `signal_events` table stores each event's `payload` as a JSON string. The Signals UI payload filter uses a
+`key=value` match by applying `simpleJSONExtractString` / `simpleJSONExtractRaw` to `payload`, so you can
+mirror that behavior in SQL.
+
+### Quick payload filters (UI-equivalent)
+
+```sql
+SELECT
+    timestamp,
+    trace_id,
+    name,
+    payload
+FROM signal_events
+WHERE name = 'checkout.completed'
+  AND (
+    simpleJSONExtractString(payload, 'error_type') = 'timeout'
+    OR simpleJSONExtractRaw(payload, 'error_type') = 'timeout'
+  )
+  AND timestamp > now() - INTERVAL 7 DAY
+ORDER BY timestamp DESC
+LIMIT 200
+```
+
+### JSONExtractFloat for numeric comparisons
+
+```sql
+SELECT
+    timestamp,
+    trace_id,
+    JSONExtractFloat(payload, 'score') AS score,
+    JSONExtractFloat(payload, 'latency_ms') AS latency_ms
+FROM signal_events
+WHERE name = 'qa.answer_quality'
+  AND JSONExtractFloat(payload, 'score') >= 0.9
+  AND timestamp > now() - INTERVAL 30 DAY
+ORDER BY score DESC
+```
+
+### JSONExtract for typed or nested fields
+
+```sql
+SELECT
+    timestamp,
+    trace_id,
+    JSONExtract(payload, 'summary', 'String') AS summary,
+    JSONExtract(payload, 'metrics', 'confidence', 'Float64') AS confidence,
+    JSONExtract(payload, 'labels', 'Array(String)') AS labels
+FROM signal_events
+WHERE name = 'support.intent_classification'
+  AND timestamp > now() - INTERVAL 14 DAY
+ORDER BY timestamp DESC
+LIMIT 100
+```
 
 ## Clustering signal events (optional)
 
