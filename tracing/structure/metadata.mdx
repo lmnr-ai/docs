@@ -50,12 +50,19 @@ Set metadata inside an active span context (for example, inside `observe()` or a
 
 ## Notes
 
-- Setting trace metadata again overwrites the previous metadata—set all keys in one call.
+- Trace metadata is merged as spans arrive. If multiple spans set the same key, the **last span processed wins** (order is not guaranteed), so values can change while a trace is still ingesting.
+- Set each metadata key in one place per trace (ideally the root span) and avoid duplicate keys in nested `observe(...)` calls or AI SDK telemetry.
 - Keep metadata JSON-serializable and avoid sensitive data.
 
 ## Filtering by Metadata
 
 In the Laminar UI, metadata filters currently match **exact key-value pairs** (for example, `region=us-west`).
+
+<Note>
+If a trace seems to appear in results while it’s running and then disappears after it finishes, check whether
+the same metadata key is being set by multiple spans. Because metadata is merged on ingestion, the final value
+can change as more spans arrive, which can flip whether a trace matches a filter.
+</Note>
 
 ## Metadata vs Tags
 
