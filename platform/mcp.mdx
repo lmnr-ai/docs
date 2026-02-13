@@ -1,0 +1,64 @@
+---
+title: MCP Server
+description: "Connect MCP clients to Laminar to query traces with SQL and summarize trace context."
+---
+
+Laminar ships an MCP (Model Context Protocol) server so AI assistants can query trace data directly. These are **tools your agent can call**. You ask questions in the chat, the agent invokes the Laminar tools under the hood, and you get answers grounded in your trace data. This closes the dev loop: the agent that wrote the code can pull the exact traces it produced, investigate failures, and propose fixes without context switching.
+
+## Available Tools
+
+- `query_laminar_sql`  
+  Run read-only ClickHouse SQL across Laminar data and get JSON back. Use this to find trace IDs, filter by time/session/status, or pull raw span fields (`input`, `output`, `attributes`).
+- `get_trace_context`  
+  Get an LLM-optimized summary of a single trace: span tree, timings, LLM inputs/outputs, and errors. Use this to quickly understand what happened in a specific run once you have a trace ID.
+
+<Note>
+  The SQL tool is read-only (`SELECT` only) and automatically scoped to your project. If trace context truncates long inputs or outputs, use SQL to fetch full fields.
+</Note>
+
+## Connect Your Client
+
+First, grab a project API key from the Laminar dashboard. Then connect your MCP client.
+
+<Tabs items={['Claude Code', 'Cursor']}>
+  <Tab title="Claude Code">
+    ```bash
+    # Laminar Cloud
+    claude mcp add --transport http laminar https://api.lmnr.ai/v1/mcp \
+      --header "Authorization: Bearer <YOUR_PROJECT_API_KEY>"
+
+    # Local app-server on port 8000
+    claude mcp add --transport http laminar http://localhost:8000/v1/mcp \
+      --header "Authorization: Bearer <YOUR_PROJECT_API_KEY>"
+    ```
+  </Tab>
+  <Tab title="Cursor">
+    ```json
+    {
+      "mcpServers": {
+        "laminar": {
+          "type": "http",
+          "url": "https://api.lmnr.ai/v1/mcp",
+          "headers": {
+            "Authorization": "Bearer <YOUR_PROJECT_API_KEY>"
+          }
+        }
+      }
+    }
+    ```
+
+    To use a local server, change `url` to `http://localhost:8000/v1/mcp`.
+  </Tab>
+</Tabs>
+
+For self-hosted deployments, replace the base URL with your instance (for example, `https://laminar.example.com/v1/mcp`).
+
+## Example Questions You Can Ask Your LLM
+
+- “What failed in the most recent run for my `dev-claude` session?”
+- “Find the latest error trace and summarize the root cause.”
+- “Which tool call failed first in the last 20 minutes?”
+- “Show me the spans where the model returned an empty response today.”
+- “List the 5 slowest traces from the last hour and summarize the slowest one.”
+- “Find traces where `status = 'error'` and the top span name contains `checkout`.”
+- “Compare the token usage between the last two successful runs.”

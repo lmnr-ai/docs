@@ -111,6 +111,7 @@
               "signals",
               "platform/live-tracing",
               "platform/rollout-sessions",
+              "platform/mcp",
               "platform/sql-editor",
               "platform/search",
               "custom-dashboards/overview",
