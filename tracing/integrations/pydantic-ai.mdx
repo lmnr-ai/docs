@@ -1,0 +1,59 @@
+---
+title: Observability for Pydantic AI with OpenTelemetry
+sidebarTitle: Pydantic AI
+---
+
+## Overview
+
+Pydantic AI emits OpenTelemetry (OTel) spans for agent runs, model calls, and tool execution. By configuring an OTLP exporter, you can send those traces directly to Laminar.
+
+If you want more detail on OTel exporters, endpoints, or self-hosted settings, see the [OpenTelemetry guide](/tracing/otel).
+
+## Getting Started
+
+### 1. Install dependencies
+
+```bash
+pip install "pydantic-ai-slim[openai]" opentelemetry-sdk opentelemetry-exporter-otlp
+```
+
+### 2. Set environment variables
+
+```bash
+# .env or environment
+LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+OPENAI_API_KEY=your-openai-api-key
+```
+
+### 3. Configure OpenTelemetry and enable instrumentation
+
+```python {title="pydantic_ai_laminar_otel.py" test="skip"}
+import os
+
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.trace import set_tracer_provider
+
+from pydantic_ai import Agent
+
+exporter = OTLPSpanExporter(
+    endpoint="https://api.lmnr.ai:8443/v1/traces",
+    headers={"authorization": f"Bearer {os.environ['LMNR_PROJECT_API_KEY']}"},
+)
+tracer_provider = TracerProvider()
+tracer_provider.add_span_processor(BatchSpanProcessor(exporter))
+set_tracer_provider(tracer_provider)
+
+Agent.instrument_all()
+
+agent = Agent("openai:gpt-5.2")
+result = agent.run_sync("What is the capital of France?")
+print(result.output)
+```
+
+<Warning>
+The `authorization` header must be lowercase when using the gRPC exporter.
+</Warning>
+
+Once instrumentation is enabled, Laminar will display traces for each agent run and underlying model/tool calls.
