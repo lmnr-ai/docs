@@ -14,7 +14,7 @@ If you want more detail on OTel exporters, endpoints, or self-hosted settings, s
 ### 1. Install dependencies
 
 ```bash
-pip install "pydantic-ai-slim[openai]" opentelemetry-sdk opentelemetry-exporter-otlp
+pip install "pydantic-ai-slim[openai]" opentelemetry-sdk opentelemetry-exporter-otlp python-dotenv
 ```
 
 ### 2. Set environment variables
@@ -27,9 +27,12 @@ OPENAI_API_KEY=your-openai-api-key
 
 ### 3. Configure OpenTelemetry and enable instrumentation
 
+This example uses the OTLP/gRPC exporter, which Laminar recommends for reliability and performance.
+
 ```python {title="pydantic_ai_laminar_otel.py" test="skip"}
 import os
 
+from dotenv import load_dotenv
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
@@ -37,9 +40,14 @@ from opentelemetry.trace import set_tracer_provider
 
 from pydantic_ai import Agent
 
+load_dotenv()
+project_api_key = os.getenv("LMNR_PROJECT_API_KEY")
+if not project_api_key:
+    raise RuntimeError("LMNR_PROJECT_API_KEY is not set")
+
 exporter = OTLPSpanExporter(
     endpoint="https://api.lmnr.ai:8443/v1/traces",
-    headers={"authorization": f"Bearer {os.environ['LMNR_PROJECT_API_KEY']}"},
+    headers={"authorization": f"Bearer {project_api_key}"},
 )
 tracer_provider = TracerProvider()
 tracer_provider.add_span_processor(BatchSpanProcessor(exporter))
@@ -47,7 +55,7 @@ set_tracer_provider(tracer_provider)
 
 Agent.instrument_all()
 
-agent = Agent("openai:gpt-5.2")
+agent = Agent("openai:gpt-4.1-mini")
 result = agent.run_sync("What is the capital of France?")
 print(result.output)
 ```
