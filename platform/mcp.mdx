@@ -20,7 +20,7 @@ Laminar ships an MCP (Model Context Protocol) server so AI assistants can query 
 
 First, grab a project API key from the Laminar dashboard. Then connect your MCP client.
 
-<Tabs items={['Claude Code', 'Cursor']}>
+<Tabs items={['Claude Code', 'Cursor', 'Codex']}>
   <Tab title="Claude Code">
     ```bash
     # Laminar Cloud
@@ -48,6 +48,21 @@ First, grab a project API key from the Laminar dashboard. Then connect your MCP 
     ```
 
     To use a local server, change `url` to `http://localhost:8000/v1/mcp`.
+  </Tab>
+  <Tab title="Codex">
+    ```toml
+    [mcp_servers.laminar]
+    url = "https://api.lmnr.ai/v1/mcp"
+    bearer_token_env_var = "LMNR_PROJECT_API_KEY"
+    ```
+
+    For local app-server:
+
+    ```toml
+    [mcp_servers.laminar]
+    url = "http://localhost:8000/v1/mcp"
+    bearer_token_env_var = "LMNR_PROJECT_API_KEY"
+    ```
   </Tab>
 </Tabs>
 
