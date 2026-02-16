@@ -294,6 +294,18 @@ Laminar stores every evaluation result. A run for every datapoint is represented
   />
 </Frame>
 
+### Add custom columns
+
+In the evaluation results table, click `Columns` → `Add column` to create a computed column from SQL. This is useful for pulling fields out of `metadata`, `data`, `target`, or `scores` without changing your evaluation code.
+
+Example: extract a model name from JSON metadata:
+
+```sql
+simpleJSONExtractString(simpleJSONExtractRaw(metadata, 'llm'), 'model')
+```
+
+Pick a data type (usually `String` or `Float64`) and save. The expression is evaluated per row on `evaluation_datapoints`. For more JSON parsing functions, see the SQL Editor guide at `/platform/sql-editor`.
+
 ## Tracking evaluation progress
 
 To track the score progression over time or compare evaluations side-by-side, you need to group them together. This can be achieved by passing the `groupName` parameter to the `evaluate` function.
