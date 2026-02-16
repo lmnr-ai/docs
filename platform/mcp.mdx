@@ -56,11 +56,14 @@ First, grab a project API key from the Laminar dashboard. Then connect your MCP 
     bearer_token_env_var = "LMNR_PROJECT_API_KEY"
     ```
 
-    If your client returns a 406 Not Acceptable, add an explicit Accept header:
+    If you want a static token (not an env var), you can set headers directly:
 
     ```toml
+    [mcp_servers.laminar]
+    url = "https://api.lmnr.ai/v1/mcp"
+
     [mcp_servers.laminar.http_headers]
-    Accept = "application/json, text/event-stream"
+    Authorization = "Bearer <YOUR_PROJECT_API_KEY>"
     ```
 
     For local app-server:
