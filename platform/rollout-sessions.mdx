@@ -17,21 +17,107 @@ Rollout sessions solve this by letting you cache up to a span, tweak configurati
 
 ## Setup
 
-1. Wrap your main entrypoint with `observe` and set `rolloutEntrypoint: true`.
+### 1) Build a looped agent entrypoint
+
+Rollouts work best when your entrypoint makes repeated LLM/tool calls so Laminar can cache earlier steps and rerun from a later point.
+
+For AI SDK, this is often a single `generateText` / `streamText` call with `stopWhen: stepCountIs(N)`.
+
+For browser-use, use a `browser-use` `Agent` loop as your entrypoint.
+
+For general Python, write your own loop that calls LLM + tools repeatedly.
+
+### 2) Mark the entrypoint for rollouts
+
+Wrap your entrypoint with `observe` and mark it as a rollout entrypoint.
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { observe } from '@lmnr-ai/lmnr';
+
+    export const callAgent = observe(
+      { name: 'callAgent', rolloutEntrypoint: true },
+      async (messages, model, modelId, reasoningEffort) => {
+        // Your agent code here.
+      }
+    );
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import observe
+
+    @observe(rollout_entrypoint=True)
+    async def call_agent(messages, model, model_id, reasoning_effort):
+        # Your agent code here.
+        ...
+    ```
+  </Tab>
+</Tabs>
+
+Export the observed function from the entry file so the CLI can discover it.
+
+### 3) AI SDK setup (if you use Vercel AI SDK)
+
+Make sure the latest `@lmnr-ai/lmnr` is installed in the same workspace where you run rollouts.
+
+Make sure general Laminar observability is configured first. See the [AI SDK integration](/tracing/integrations/vercel-ai-sdk#node-js).
+
+Then wrap the model you pass to `generateText` / `streamText` so rollouts can cache and rerun steps.
 
 ```typescript
-import { observe } from '@lmnr-ai/lmnr';
+import { observe, Laminar, wrapLanguageModel } from '@lmnr-ai/lmnr';
+import { generateText, stepCountIs } from 'ai';
+import { openai } from '@ai-sdk/openai';
 
-export const generateStream = observe(
-  { name: 'generateStream', rolloutEntrypoint: true },
-  async (messages, model, modelId, reasoningEffort) => {
-    // Your agent code here.
-  }
-);
+Laminar.initialize({ projectApiKey: process.env.LMNR_PROJECT_API_KEY });
+
+export const callAgent = observe({ rolloutEntrypoint: true }, async () => {
+  const result = await generateText({
+    model: wrapLanguageModel(openai('gpt-4.1-nano')),
+    prompt: 'Find pricing tiers on example.com.',
+    stopWhen: stepCountIs(6),
+  });
+  return result.text;
+});
 ```
 
-2. Start the dev orchestrator: `npx lmnr-cli dev route/to/entrypoint.js`.
-3. Open the session from **Rollout sessions** in your project, or click the link printed by the CLI.
+If you pass a provider/model string instead of a model object:
+
+```typescript
+import { wrapLanguageModel } from '@lmnr-ai/lmnr';
+import { gateway } from 'ai';
+
+const model = wrapLanguageModel(gateway('openai/gpt-4.1-nano'));
+```
+
+### 4) Start a rollout session
+
+Run the CLI from the root of your project.
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```bash
+    npx lmnr-cli dev path/to/entrypoint.ts
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```bash
+    npx lmnr-cli dev path/to/entrypoint.py
+    ```
+
+    For Python modules, you can also run:
+
+    ```bash
+    npx lmnr-cli dev -m path.to.entry.file
+    ```
+  </Tab>
+</Tabs>
+
+### 5) Open the session
+
+Open the session from **Rollout sessions** in your project, or click the link printed by the CLI.
 
 <Note>
 If the file exposes multiple rollout entrypoints, pass `--function` to select one.
@@ -41,15 +127,18 @@ Set `LMNR_PROJECT_API_KEY` or use `--project-api-key` to connect.
 ## Use in Laminar
 
 1. Open **Rollout sessions** and select your session.
-2. Pick a view (Tree, Timeline, or Reader). Use Search, Filters, and Metadata as needed.
-3. Click **Cache until here** on an LLM span to reuse earlier outputs and jump ahead on the next run.
-4. Edit **Parameters** or **System Prompts** in the left sidebar.
-5. Click **Run**. New spans stream in and you can inspect them immediately.
-6. Click **Stop** to cancel a run.
+2. Enter the function arguments as JSON in the sidebar, either as an array of ordered args or an object keyed by param name.
+3. Click **Run** to generate the first trace.
+4. Hover an LLM span and click **Cache until here** to reuse earlier outputs.
+5. Optionally override **System Prompts** by path in the left sidebar, for example main agent, content extractor, or evaluator.
+6. Click **Run** again to get the updated, faster trace.
+7. Use Tree or Reader view, search, and the condensed timeline to navigate.
+8. Click **Stop** to cancel a run.
 
 <Note>
-You can edit your code while the CLI is running. Hot refresh keeps the rollout session alive so you can continue debugging without leaving Laminar.
+Keep the CLI running while you iterate. Reruns will use the latest code on disk; restart the CLI if you change dependencies or entrypoint discovery.
 </Note>
+
 
 <video
   src="/images/rollout/rollout.mp4"
