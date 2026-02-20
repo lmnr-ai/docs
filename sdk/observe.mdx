@@ -33,7 +33,7 @@ Wrap functions with Laminar to capture inputs, outputs, and errors automatically
     | `metadata` | `Record<string, any>` | — | Trace metadata (JSON-serializable) |
     | `tags` | `string[]` | — | Span tags (deduplicated) |
     | `traceType` | `'DEFAULT'` &#124; `'EVALUATION'` | `'DEFAULT'` | Trace type |
-    | `spanType` | `'DEFAULT'` &#124; `'LLM'` &#124; `'TOOL'` &#124; `'EXECUTOR'` &#124; `'EVALUATOR'` &#124; `'EVALUATION'` | `'DEFAULT'` | Span type |
+    | `spanType` | `'DEFAULT'` &#124; `'LLM'` &#124; `'TOOL'` &#124; `'EXECUTOR'` &#124; `'EVALUATOR'` &#124; `'HUMAN_EVALUATOR'` &#124; `'EVALUATION'` &#124; `'CACHED'` | `'DEFAULT'` | Span type |
     | `input` | `any` | — | Explicit input (overrides function args) |
     | `ignoreInput` | `boolean` | `false` | Don't record input |
     | `ignoreOutput` | `boolean` | `false` | Don't record output |
@@ -156,7 +156,7 @@ Wrap functions with Laminar to capture inputs, outputs, and errors automatically
     | `user_id` | `str` | `None` | Associate trace with user |
     | `metadata` | `dict` | `None` | Trace metadata (JSON-serializable) |
     | `tags` | `list[str]` | `None` | Span tags |
-    | `span_type` | `'DEFAULT'` &#124; `'LLM'` &#124; `'TOOL'` | `'DEFAULT'` | Span type |
+    | `span_type` | `'DEFAULT'` &#124; `'LLM'` &#124; `'EXECUTOR'` &#124; `'EVALUATOR'` &#124; `'HUMAN_EVALUATOR'` &#124; `'EVALUATION'` | `'DEFAULT'` | Span type (`PIPELINE` is reserved internally) |
     | `ignore_input` | `bool` | `False` | Don't record input |
     | `ignore_output` | `bool` | `False` | Don't record output |
     | `ignore_inputs` | `list[str]` | `None` | Specific parameters to skip |
