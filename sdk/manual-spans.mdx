@@ -24,13 +24,14 @@ title: Manual Span Creation
     |------|------|---------|-------------|
     | `name` | `string` | — | Span name (required) |
     | `input` | `any` | — | Span input (JSON-serialized) |
-    | `spanType` | `'DEFAULT'` &#124; `'LLM'` &#124; `'TOOL'` | `'DEFAULT'` | Span type |
+    | `spanType` | `'DEFAULT'` &#124; `'LLM'` &#124; `'TOOL'` &#124; `'EXECUTOR'` &#124; `'EVALUATOR'` &#124; `'HUMAN_EVALUATOR'` &#124; `'EVALUATION'` &#124; `'CACHED'` | `'DEFAULT'` | Span type |
     | `tags` | `string[]` | — | Span tags |
     | `userId` | `string` | — | User ID |
     | `sessionId` | `string` | — | Session ID |
     | `metadata` | `Record<string, any>` | — | Metadata |
     | `parentSpanContext` | `string` &#124; `LaminarSpanContext` | — | Parent context |
     | `context` | `Context` | — | OpenTelemetry context |
+    | `startTime` | `TimeInput` | — | Custom start timestamp |
 
     **Returns:** `Span`
 
@@ -58,13 +59,14 @@ title: Manual Span Creation
     |------|------|---------|-------------|
     | `name` | `string` | — | Span name (required) |
     | `input` | `any` | — | Span input (JSON-serialized) |
-    | `spanType` | `'DEFAULT'` &#124; `'LLM'` &#124; `'TOOL'` | `'DEFAULT'` | Span type |
+    | `spanType` | `'DEFAULT'` &#124; `'LLM'` &#124; `'TOOL'` &#124; `'EXECUTOR'` &#124; `'EVALUATOR'` &#124; `'HUMAN_EVALUATOR'` &#124; `'EVALUATION'` &#124; `'CACHED'` | `'DEFAULT'` | Span type |
     | `tags` | `string[]` | — | Span tags |
     | `userId` | `string` | — | User ID |
     | `sessionId` | `string` | — | Session ID |
     | `metadata` | `Record<string, any>` | — | Metadata |
     | `parentSpanContext` | `string` &#124; `LaminarSpanContext` | — | Parent context |
     | `context` | `Context` | — | OpenTelemetry context |
+    | `startTime` | `TimeInput` | — | Custom start timestamp |
 
     **Returns:** `LaminarSpan` &#124; `Span`
 
@@ -179,7 +181,7 @@ title: Manual Span Creation
     |------|------|---------|-------------|
     | `name` | `str` | — | Span name (required) |
     | `input` | `Any` | `None` | Span input (JSON-serialized) |
-    | `span_type` | `'DEFAULT'` &#124; `'LLM'` &#124; `'TOOL'` | `'DEFAULT'` | Span type |
+    | `span_type` | `'DEFAULT'` &#124; `'LLM'` &#124; `'EXECUTOR'` &#124; `'EVALUATOR'` &#124; `'HUMAN_EVALUATOR'` &#124; `'EVALUATION'` | `'DEFAULT'` | Span type (`PIPELINE` is reserved internally) |
     | `labels` | `list[str]` | `None` | Deprecated |
     | `parent_span_context` | `LaminarSpanContext` | `None` | Parent context for distributed tracing |
     | `tags` | `list[str]` | `None` | Span tags |
@@ -211,7 +213,7 @@ title: Manual Span Creation
     |------|------|---------|-------------|
     | `name` | `str` | — | Span name (required) |
     | `input` | `Any` | `None` | Span input (JSON-serialized) |
-    | `span_type` | `'DEFAULT'` &#124; `'LLM'` &#124; `'TOOL'` | `'DEFAULT'` | Span type |
+    | `span_type` | `'DEFAULT'` &#124; `'LLM'` &#124; `'EXECUTOR'` &#124; `'EVALUATOR'` &#124; `'HUMAN_EVALUATOR'` &#124; `'EVALUATION'` | `'DEFAULT'` | Span type (`PIPELINE` is reserved internally) |
     | `parent_span_context` | `LaminarSpanContext` | `None` | Parent context for distributed tracing |
     | `labels` | `dict[str, str]` | `None` | Deprecated |
     | `tags` | `list[str]` | `None` | Span tags |
@@ -245,7 +247,7 @@ title: Manual Span Creation
     |------|------|---------|-------------|
     | `name` | `str` | — | Span name (required) |
     | `input` | `Any` | `None` | Span input (JSON-serialized) |
-    | `span_type` | `'DEFAULT'` &#124; `'LLM'` &#124; `'TOOL'` | `'DEFAULT'` | Span type |
+    | `span_type` | `'DEFAULT'` &#124; `'LLM'` &#124; `'EXECUTOR'` &#124; `'EVALUATOR'` &#124; `'HUMAN_EVALUATOR'` &#124; `'EVALUATION'` | `'DEFAULT'` | Span type (`PIPELINE` is reserved internally) |
     | `parent_span_context` | `LaminarSpanContext` | `None` | Parent context for distributed tracing |
     | `labels` | `dict[str, str]` | `None` | Deprecated |
     | `tags` | `list[str]` | `None` | Span tags |

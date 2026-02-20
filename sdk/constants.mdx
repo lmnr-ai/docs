@@ -40,8 +40,8 @@ title: SDK Constants
     import type { SpanType, TraceType } from '@lmnr-ai/lmnr';
 
     // SpanType:
-    // 'DEFAULT' | 'LLM' | 'PIPELINE' | 'EXECUTOR' | 'EVALUATOR'
-    // | 'HUMAN_EVALUATOR' | 'EVALUATION' | 'TOOL'
+    // 'DEFAULT' | 'LLM' | 'EXECUTOR' | 'EVALUATOR' | 'HUMAN_EVALUATOR'
+    // | 'EVALUATION' | 'TOOL' | 'CACHED'
     //
     // TraceType: 'DEFAULT' | 'EVALUATION'
     ```
@@ -83,7 +83,7 @@ title: SDK Constants
     ```python
     from lmnr import SpanType, TraceType
 
-    # SpanType: DEFAULT, LLM, PIPELINE, EXECUTOR, EVALUATOR, TOOL
+    # SpanType: DEFAULT, LLM, PIPELINE (reserved), EXECUTOR, EVALUATOR, HUMAN_EVALUATOR, EVALUATION
     # TraceType: DEFAULT, EVALUATION
     ```
   </Tab>
