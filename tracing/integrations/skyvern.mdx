@@ -20,15 +20,14 @@ To trace Skyvern workflows with Laminar, **initialize Laminar at the top of your
 ```python {3-4} {8-12} {14-15}
 from skyvern import Skyvern
 import asyncio
-from lmnr import Laminar, Instruments
+from lmnr import Laminar
 from dotenv import load_dotenv
 
 load_dotenv()
 
 # Initialize Laminar
 # This will automatically trace all Skyvern functions
-# If you see duplicate LLM spans, disable OpenAI instrumentation
-Laminar.initialize(disabled_instruments=set([Instruments.OPENAI]))
+Laminar.initialize()
 
 skyvern = Skyvern()
 
