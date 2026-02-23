@@ -210,26 +210,55 @@ Now, here is my repo context + code:
 [PASTE HERE]
 `;
 
-Laminar’s entry point is tracing: once your app is instrumented, production runs become traces you can explore in the platform.
+## Set up with AI
 
-Start here:
+The fastest way to get started. Pick whichever fits your workflow.
 
-<CardGroup cols={2}>
-  <Card title="Tracing" href="/tracing/introduction">
-    Add Laminar to your app and start capturing LLM/tool spans.
-  </Card>
-  <Card title="Hosting Options" href="/hosting-options">
-    Choose between Laminar Cloud and self-hosting (and how to configure base URLs).
-  </Card>
-</CardGroup>
+**Skills** — reviewable diff in minutes, no manual setup.
 
-## LLM Implementation Prompt (Optional)
+```bash
+# Quick demo trace
+npx skills add lmnr-ai/laminar-skills --skill laminar-quickstart-trace
 
-Want an LLM (or coding agent) to help with setup? Pick the prompt that matches what you’re doing and paste it into your assistant along with your codebase context.
+# Instrument a real codebase
+npx skills add lmnr-ai/laminar-skills --skill laminar-instrument-codebase
 
-<Warning>
-  Laminar ships quickly and docs may change; LLMs can miss the latest best practices. If something looks off, follow the docs in this repo (or ask support) over the model’s output.
-</Warning>
+# Migrate from another observability tool
+npx skills add lmnr-ai/laminar-skills --skill laminar-migrate-observability
+```
+
+Browse more at [skills.sh](https://skills.sh) · Source: [lmnr-ai/laminar-skills](https://github.com/lmnr-ai/laminar-skills)
+
+**Cursor rules** — Laminar-aware completions in your editor.
+
+```bash
+pip install 'lmnr[all]'
+lmnr add-cursor-rules
+```
+
+Creates `.cursor/rules/laminar.mdc`. Reload Cursor (`Cmd+Shift+P` → "Reload Window") to activate. Or [download directly](#).
+
+**Copy a prompt** — paste [this prompt](#) into ChatGPT, Claude, or any assistant alongside your codebase.
+
+> Laminar ships fast. If AI output conflicts with these docs, follow the docs.
+
+## Manual install
+
+```bash
+pip install 'lmnr[all]'
+```
+
+```bash
+npm install @lmnr-ai/lmnr
+```
+
+→ [Tracing docs](#) · [Hosting options](#)
+
+## Guides
+
+- [Instrument an existing product](#) — structured spans, context, tags, privacy
+- [Basic install + auto-instrumentation](#) — minimal code, traces immediately
+- [Migrate from another platform](#) — swap from Langfuse/LangSmith/Helicone/OTel
 
 <div className="mx-auto mt-3 grid max-w-4xl grid-cols-1 gap-4 md:grid-cols-2">
   <div className="flex flex-col gap-2">
@@ -341,15 +370,20 @@ Want an LLM (or coding agent) to help with setup? Pick the prompt that matches w
   </div>
 </div>
 
-## Cursor rules (optional)
+---
 
-Add Laminar-specific rules to Cursor for better AI-assisted development:
+## Core setup
 
-```bash
-pip install 'lmnr[all]'
-lmnr add-cursor-rules
-```
+Whichever path you chose above, these are the two things happening under the hood.
 
-This creates `.cursor/rules/laminar.mdc` with patterns for instrumentation, tracing, and evaluation. Reload your Cursor window (`Cmd+Shift+P` → "Reload Window") to activate.
+### Tracing
 
-You can also [download the rules file directly](https://raw.githubusercontent.com/lmnr-ai/lmnr/main/.cursor/rules/laminar.mdc) and place it in `.cursor/rules/`.
+Add Laminar to your app and start capturing LLM and tool spans.
+
+→ [Tracing docs](/tracing/introduction)
+
+### Hosting
+
+Choose between Laminar Cloud and self-hosting (and how to configure base URLs).
+
+→ [Hosting options](/hosting-options)
