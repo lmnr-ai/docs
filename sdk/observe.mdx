@@ -38,7 +38,7 @@ Wrap functions with Laminar to capture inputs, outputs, and errors automatically
     | `ignoreInput` | `boolean` | `false` | Don't record input |
     | `ignoreOutput` | `boolean` | `false` | Don't record output |
     | `parentSpanContext` | `string` &#124; `LaminarSpanContext` | — | Parent context for distributed tracing |
-    | `rolloutEntrypoint` | `boolean` | `false` | Return a wrapped function for rollout sessions instead of executing immediately |
+| `rolloutEntrypoint` | `boolean` | `false` | Return a wrapped function for debugger instead of executing immediately |
 
     **Returns:** `Promise<ReturnType<F>>` (default) or wrapped function when `rolloutEntrypoint: true`
 
@@ -49,7 +49,7 @@ Wrap functions with Laminar to capture inputs, outputs, and errors automatically
     - Anonymous function name becomes `""` if `name` not provided
     - Works with both sync and async functions
     - When `rolloutEntrypoint` is true, returns a wrapped function and does not execute immediately
-    - In rollout sessions, Laminar attaches `rollout.session_id` from `LMNR_ROLLOUT_SESSION_ID`
+- In debugger, Laminar attaches `rollout.session_id` from `LMNR_ROLLOUT_SESSION_ID`
 
     **Examples: Rollout entrypoint**
 

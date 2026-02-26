@@ -1,9 +1,9 @@
 ---
-title: Rollout sessions
-sidebarTitle: Rollout sessions
+title: Debugger
+sidebarTitle: Debugger
 ---
 
-Rollout sessions let you rerun long-running agents from the exact point you care about, without leaving Laminar.
+Debugger lets you rerun long-running agents from the exact point you care about, without leaving Laminar.
 
 ## Why rollouts
 
@@ -13,7 +13,7 @@ When you are debugging long-running agents, three things slow you down:
 - You wait a long time for the agent to reach the event you care about.
 - The agent can take a different path and never hit that event at all.
 
-Rollout sessions solve this by letting you cache up to a span, tweak configuration (like the system prompt) in the UI, rerun from there, and inspect the new trace in the same page. Once the CLI is connected, you never have to leave the page.
+Debugger solves this by letting you cache up to a span, tweak configuration (like the system prompt) in the UI, rerun from there, and inspect the new trace in the same page. Once the CLI is connected, you never have to leave the page.
 
 ## Setup
 
@@ -117,7 +117,7 @@ Run the CLI from the root of your project.
 
 ### 5) Open the session
 
-Open the session from **Rollout sessions** in your project, or click the link printed by the CLI.
+Open the session from **Debugger** in your project, or click the link printed by the CLI.
 
 <Note>
 If the file exposes multiple rollout entrypoints, pass `--function` to select one.
@@ -126,7 +126,7 @@ Set `LMNR_PROJECT_API_KEY` or use `--project-api-key` to connect.
 
 ## Use in Laminar
 
-1. Open **Rollout sessions** and select your session.
+1. Open **Debugger** and select your session.
 2. Enter the function arguments as JSON in the sidebar, either as an array of ordered args or an object keyed by param name.
 3. Click **Run** to generate the first trace.
 4. Hover an LLM span and click **Cache until here** to reuse earlier outputs.
