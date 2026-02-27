@@ -3,15 +3,31 @@ title: Debugger with Browser Use
 sidebarTitle: Browser Use Debugger
 ---
 
-This guide shows a minimal, end-to-end debugger setup for a `browser-use` agent so you can rerun from a checkpoint inside Laminar.
+This guide is an end-to-end setup for running a `browser-use` agent with the Laminar Debugger so you can rerun from checkpoints.
 
-## 1) Install dependencies
+## 1) Install prerequisites
+
+Install `uv` if you do not already have it:
 
 ```bash
-pip install -U lmnr browser-use python-dotenv
+pip install -U uv
 ```
 
-If your Browser Use LLM provider needs extra packages or env vars (for example, Google/Gemini), follow the provider setup in Browser Use docs.
+Create a virtual environment and install dependencies:
+
+```bash
+uv venv --python 3.11
+source .venv/bin/activate
+uv pip install lmnr browser-use python-dotenv
+```
+
+Install the Browser Use Chromium bundle:
+
+```bash
+uvx browser-use install
+```
+
+If your Browser Use LLM provider needs extra packages or env vars, follow the provider setup in Browser Use docs.
 
 ## 2) Set environment variables
 
@@ -21,7 +37,18 @@ Create a `.env` file in your project root:
 LMNR_PROJECT_API_KEY=your_laminar_project_api_key
 ```
 
-Add any provider-specific API keys required by your Browser Use LLM (for example, Google/Gemini).
+If you are using **ChatBrowserUse** (recommended), add:
+
+```bash
+BROWSER_USE_API_KEY=your_browser_use_api_key
+```
+
+If you prefer **Claude**, add:
+
+```bash
+ANTHROPIC_API_KEY=your_anthropic_api_key
+CLAUDE_MODEL=your_claude_model_name
+```
 
 ## 3) Create the entrypoint
 
@@ -29,8 +56,7 @@ Add any provider-specific API keys required by your Browser Use LLM (for example
 import os
 import asyncio
 from dotenv import load_dotenv
-from browser_use.llm.google.chat import ChatGoogle
-from browser_use import Agent
+from browser_use import Agent, ChatBrowserUse, ChatAnthropic
 from lmnr import observe, Laminar
 
 load_dotenv()
@@ -38,12 +64,15 @@ Laminar.initialize(project_api_key=os.getenv("LMNR_PROJECT_API_KEY"))
 
 @observe(rollout_entrypoint=True)
 async def main(prompt: str):
-    agent = Agent(
-        task=prompt,
-        llm=ChatGoogle(model="gemini-3-flash-preview"),
-    )
-    result = await agent.run()
-    print(result.final_result())
+    provider = os.getenv("LLM_PROVIDER", "chatbrowseruse")
+    if provider == "anthropic":
+        llm = ChatAnthropic(model=os.getenv("CLAUDE_MODEL"), temperature=0.0)
+    else:
+        llm = ChatBrowserUse()
+
+    agent = Agent(task=prompt, llm=llm)
+    history = await agent.run()
+    print(history.final_result())
 
 if __name__ == "__main__":
     asyncio.run(
@@ -55,8 +84,11 @@ if __name__ == "__main__":
 ```
 
 Notes:
+
 - The `rollout_entrypoint=True` flag marks this function for debugger sessions.
 - Keep the CLI running while you iterate; the debugger will rerun using the latest code on disk.
+
+> [Screenshot: editor with the `@observe` entrypoint]
 
 ## 4) Start a debugger session
 
@@ -66,6 +98,40 @@ npx lmnr-cli@latest dev path/to/entrypoint.py
 
 If the file exposes multiple debugger entrypoints, pass `--function main`.
 
+> [Screenshot: terminal output with debugger session link]
+
 ## 5) Open the debugger in Laminar
 
-Open **Debugger** in your project, select the session, provide input arguments as JSON, and click **Run**. In Reader or Tree view, click the checkpoint icon on a span (**Run from here**) and rerun to iterate quickly.
+Open **Debugger** in your project, select the session, provide input arguments as JSON, and click **Run**.
+
+![Debugger session view](/images/debugger-view.png)
+
+## 6) Make a change and rerun (Debugger workflow)
+
+Use the Debugger to iterate without restarting your local process.
+
+1. In the **Run** tab, enter input JSON. Example for the `main(prompt: str)` signature:
+   ```json
+   ["go to ycombinator.com, summarize 3 startups from the latest batch"]
+   ```
+2. Click **Run** to produce the first trace.
+3. Open the trace in **Tree** or **Reader** view.
+4. Click the checkpoint icon on a span and choose **Run from here**.
+5. Expand **System Prompts** and toggle **Override System Prompt** on for the Browser Automation Agent.
+
+![System prompt override toggle](/images/debugger-view-toggle.png)
+
+6. Paste an updated System Prompt (example below), then click **Run** again.
+
+```text
+You are a browser automation agent. Goal: find 5 companies from the latest YC batch.
+Steps:
+1) Open https://www.ycombinator.com/companies
+2) Filter to the latest batch
+3) Extract 5 companies with name, one-sentence description, and a URL
+Rules: Return a JSON array only. Do not add extra commentary.
+```
+
+Notes:
+- Keep the CLI running while you iterate; the debugger reruns using the latest code on disk.
+- If you changed dependencies, restart the CLI.
