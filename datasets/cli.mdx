@@ -63,7 +63,7 @@ Or, you can also pass the `--project-api-key` flag to the global datasets comman
 <Tabs>
 <Tab title="JavaScript/TypeScript">
 ```bash
-npx lmnr datasets --project-api-key "<your-project-api-key>" list
+npx lmnr@latest datasets --project-api-key "<your-project-api-key>" list
 ```
 </Tab>
 <Tab title="Python">
@@ -85,7 +85,7 @@ The datapoints are saved to a new file in order to:
 <Tabs>
 <Tab title="JavaScript/TypeScript">
 ```bash
-npx lmnr datasets create my-cli-dataset data.json -o my-cli-dataset.json
+npx lmnr@latest datasets create my-cli-dataset data.json -o my-cli-dataset.json
 ```
 </Tab>
 <Tab title="Python">
@@ -114,7 +114,7 @@ Push the changes to Laminar.
 <Tabs>
 <Tab title="JavaScript/TypeScript">
 ```bash
-npx lmnr datasets push -n my-cli-dataset my-cli-dataset.json
+npx lmnr@latest datasets push -n my-cli-dataset my-cli-dataset.json
 ```
 </Tab>
 <Tab title="Python">
@@ -133,7 +133,7 @@ If you need to update the local dataset with the latest changes from Laminar, yo
 <Tabs>
 <Tab title="JavaScript/TypeScript">
 ```bash
-npx lmnr datasets pull -n my-cli-dataset my-cli-dataset.json
+npx lmnr@latest datasets pull -n my-cli-dataset my-cli-dataset.json
 ```
 </Tab>
 <Tab title="Python">
@@ -172,7 +172,7 @@ Or, you can also pass the `--project-api-key` flag to the global datasets comman
 <Tabs>
 <Tab title="JavaScript/TypeScript">
 ```bash
-npx lmnr datasets --project-api-key "<your-project-api-key>" list
+npx lmnr@latest datasets --project-api-key "<your-project-api-key>" list
 ```
 </Tab>
 <Tab title="Python">
@@ -190,7 +190,7 @@ List all datasets and select the one you want to work on.
 <Tabs>
 <Tab title="JavaScript/TypeScript">
 ```bash
-npx lmnr datasets list
+npx lmnr@latest datasets list
 ```
 </Tab>
 <Tab title="Python">
@@ -207,7 +207,7 @@ Pull the data from Laminar to a local file.
 <Tabs>
 <Tab title="JavaScript/TypeScript">
 ```bash
-npx lmnr datasets pull -n my-dataset my-dataset.json
+npx lmnr@latest datasets pull -n my-dataset my-dataset.json
 ```
 </Tab>
 <Tab title="Python">
@@ -242,7 +242,7 @@ Push the changes to Laminar.
 <Tabs>
 <Tab title="JavaScript/TypeScript">
 ```bash
-npx lmnr datasets push -n my-dataset my-dataset.json
+npx lmnr@latest datasets push -n my-dataset my-dataset.json
 ```
 </Tab>
 <Tab title="Python">
@@ -269,7 +269,7 @@ Global `datasets` command has optional arguments:
 <Tabs>
 <Tab title="JavaScript/TypeScript">
 ```bash
-npx lmnr datasets [command]
+npx lmnr@latest datasets [command]
 ```
 </Tab>
 <Tab title="Python">
@@ -298,7 +298,7 @@ List all datasets.
 <Tabs>
 <Tab title="JavaScript/TypeScript">
 ```bash
-npx lmnr datasets list
+npx lmnr@latest datasets list
 ```
 </Tab>
 <Tab title="Python">
@@ -315,7 +315,7 @@ Create a dataset from input files.
 <Tabs>
 <Tab title="JavaScript/TypeScript">
 ```bash
-npx lmnr datasets create [options] <name> <paths...>
+npx lmnr@latest datasets create [options] <name> <paths...>
 ```
 </Tab>
 <Tab title="Python">
@@ -344,7 +344,7 @@ Push datapoints to an existing dataset from a file or files.
 <Tabs>
 <Tab title="JavaScript/TypeScript">
 ```bash
-npx lmnr datasets push -n [options] <paths...>
+npx lmnr@latest datasets push -n [options] <paths...>
 ```
 </Tab>
 <Tab title="Python">
@@ -372,7 +372,7 @@ Pull datapoints from a dataset to a file or print them to the console.
 <Tabs>
 <Tab title="JavaScript/TypeScript">
 ```bash
-npx lmnr datasets pull [options] [output-path]
+npx lmnr@latest datasets pull [options] [output-path]
 ```
 </Tab>
 <Tab title="Python">

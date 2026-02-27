@@ -111,7 +111,7 @@
               "platform/viewing-traces",
               "signals",
               "platform/live-tracing",
-              "platform/rollout-sessions",
+              "platform/debugger",
               "platform/mcp",
               "platform/sql-editor",
               "platform/search",
@@ -126,6 +126,7 @@
         "tab": "Guides",
         "pages": [
           "guides/fastapi",
+          "guides/browser-use-debugger",
           "guides/nextjs-aisdk",
           "guides/nextjs",
           "guides/evaluating-tool-calls"

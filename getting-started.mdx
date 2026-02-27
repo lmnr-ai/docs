@@ -32,9 +32,9 @@ You are a senior observability engineer for LLM/agent systems, specializing in L
 
 ## Installation and setup expectations (for coding agents like Claude/Codex)
 - First, determine the repo’s package manager and use it (don’t invent a new one):
-  - TypeScript: if pnpm-lock.yaml -> use 'pnpm add @lmnr-ai/lmnr'; if yarn.lock -> 'yarn add @lmnr-ai/lmnr'; if package-lock.json -> 'npm add @lmnr-ai/lmnr'; if bun.lockb -> 'bun add @lmnr-ai/lmnr'.
+  - TypeScript: if pnpm-lock.yaml -> use 'pnpm add @lmnr-ai/lmnr@latest'; if yarn.lock -> 'yarn add @lmnr-ai/lmnr@latest'; if package-lock.json -> 'npm add @lmnr-ai/lmnr@latest'; if bun.lockb -> 'bun add @lmnr-ai/lmnr@latest'.
   - Python: if pyproject.toml uses Poetry -> 'poetry add lmnr'; if uv.lock -> 'uv add lmnr'; if requirements.txt -> add 'lmnr' then install; otherwise ask what dependency manager is used.
-- If Python auto-instrumentation is missing provider spans, install the relevant extras for that provider (example: 'pip install lmnr[vertexai]'). If you are unsure which extras to use, ask or consult the Laminar integrations docs.
+- If Python auto-instrumentation is missing provider spans, install the relevant extras for that provider (example: 'pip install -U lmnr[vertexai]'). If you are unsure which extras to use, ask or consult the Laminar integrations docs.
 - If this is a monorepo, install Laminar in the package(s) that actually run the traced code (server, worker, eval runner), not just the repo root.
 - Do not hardcode or commit secrets. Add the env var name (LMNR_PROJECT_API_KEY) to existing .env.example/README and tell me how to set it in my deployment platform.
 - If you can run commands, install dependencies and run the smallest relevant verification (typecheck/tests) to confirm imports and initialization work. If you cannot run commands, output the exact commands I should run.
@@ -109,7 +109,7 @@ Deliverables:
 - A naming, metadata, and tagging convention proposal (with examples)
 - Verification checklist: how to validate traces in the UI (root span exists, children nested, Reader Mode is readable, filters work, tags show)
 - Optional: 3 to 5 useful SQL queries using Laminar SQL tables (spans, traces, events, tags, dataset_datapoints, dataset_datapoint_versions, evaluation_datapoints)
-- Optional (if I ask for evals): add or migrate evaluations using Laminar evaluate(), and provide runnable commands (lmnr eval / npx lmnr eval) that work with the repo’s tooling.
+- Optional (if I ask for evals): add or migrate evaluations using Laminar evaluate(), and provide runnable commands (lmnr eval / npx lmnr@latest eval) that work with the repo’s tooling.
 
 ## Output format
 - Start with clarifying questions (if any), then the blueprint, then implementation steps, then code/pseudo-code, then verification and SQL.
@@ -204,7 +204,7 @@ You are a coding agent (Claude Code / Codex). Your job is to migrate my existing
 ## Deliverables
 - A patch-style diff (or concrete file edits), plus a short explanation of each change.
 - A verification checklist.
-- If I ask: include guidance for migrating evaluations to Laminar evaluate() and running them via lmnr eval / npx lmnr eval.
+- If I ask: include guidance for migrating evaluations to Laminar evaluate() and running them via lmnr eval / npx lmnr@latest eval.
 
 Now, here is my repo context + code:
 [PASTE HERE]
@@ -346,7 +346,7 @@ Want an LLM (or coding agent) to help with setup? Pick the prompt that matches w
 Add Laminar-specific rules to Cursor for better AI-assisted development:
 
 ```bash
-pip install 'lmnr[all]'
+pip install -U 'lmnr[all]'
 lmnr add-cursor-rules
 ```
 
