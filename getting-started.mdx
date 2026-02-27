@@ -37,6 +37,7 @@ You are a senior observability engineer for LLM/agent systems, specializing in L
 - If Python auto-instrumentation is missing provider spans, install the relevant extras for that provider (example: 'pip install -U lmnr[vertexai]'). If you are unsure which extras to use, ask or consult the Laminar integrations docs.
 - If this is a monorepo, install Laminar in the package(s) that actually run the traced code (server, worker, eval runner), not just the repo root.
 - Do not hardcode or commit secrets. Add the env var name (LMNR_PROJECT_API_KEY) to existing .env.example/README and tell me how to set it in my deployment platform.
+- If self-hosted, ensure the Laminar base URL is configured (LMNR_BASE_URL env var or baseUrl/base_url option).
 - If you can run commands, install dependencies and run the smallest relevant verification (typecheck/tests) to confirm imports and initialization work. If you cannot run commands, output the exact commands I should run.
 
 ## Your tasks
@@ -146,6 +147,7 @@ You are a coding agent (Claude Code / Codex). Your job is to add a minimal, corr
 3) Configure API key safely
 - Ensure LMNR_PROJECT_API_KEY is read from env.
 - Update existing .env.example / README with LMNR_PROJECT_API_KEY (do not add real values).
+- If self-hosted, set LMNR_BASE_URL (or pass baseUrl/base_url to Laminar.initialize) and verify the URL/ports.
 
 4) Initialize Laminar once at the right spot
 - Ensure Laminar.initialize happens early enough that auto-instrumentation can patch the AI SDK.
@@ -194,6 +196,7 @@ You are a coding agent (Claude Code / Codex). Your job is to migrate my existing
 2) Implement the migration
 - Remove/disable the old SDK where possible.
 - Install Laminar with the repo’s package manager and add LMNR_PROJECT_API_KEY env wiring.
+- If self-hosted, set LMNR_BASE_URL (or pass baseUrl/base_url to Laminar.initialize and LaminarClient).
 - Add Laminar.initialize at the right entrypoint(s) so auto-instrumentation works.
 - Replace tracing wrappers/decorators with Laminar observe() / @observe() or manual spans as needed.
 - If the repo already uses OpenTelemetry exporters, configure OTLP export to Laminar (OTLP/gRPC recommended) and ensure Authorization is set correctly.
@@ -229,6 +232,8 @@ npx skills add lmnr-ai/laminar-skills --skill laminar-migrate-observability
 
 Browse more at [skills.sh](https://skills.sh) · Source: [lmnr-ai/laminar-skills](https://github.com/lmnr-ai/laminar-skills)
 
+Once installed, prompt your LLM with something like: `Set up Laminar in this repo.`
+
 **Cursor rules** — Laminar-aware completions in your editor.
 
 ```bash
@@ -238,27 +243,7 @@ lmnr add-cursor-rules
 
 Creates `.cursor/rules/laminar.mdc`. Reload Cursor (`Cmd+Shift+P` → "Reload Window") to activate. Or [download directly](#).
 
-**Copy a prompt** — paste [this prompt](#) into ChatGPT, Claude, or any assistant alongside your codebase.
-
-> Laminar ships fast. If AI output conflicts with these docs, follow the docs.
-
-## Manual install
-
-```bash
-pip install 'lmnr[all]'
-```
-
-```bash
-npm install @lmnr-ai/lmnr
-```
-
-→ [Tracing docs](#) · [Hosting options](#)
-
-## Guides
-
-- [Instrument an existing product](#) — structured spans, context, tags, privacy
-- [Basic install + auto-instrumentation](#) — minimal code, traces immediately
-- [Migrate from another platform](#) — swap from Langfuse/LangSmith/Helicone/OTel
+## Prompt Install
 
 <div className="mx-auto mt-3 grid max-w-4xl grid-cols-1 gap-4 md:grid-cols-2">
   <div className="flex flex-col gap-2">
@@ -369,6 +354,18 @@ npm install @lmnr-ai/lmnr
     </details>
   </div>
 </div>
+
+## Manual install
+
+```bash
+pip install 'lmnr[all]'
+```
+
+```bash
+npm install @lmnr-ai/lmnr
+```
+
+→ [Tracing docs](#) · [Hosting options](#)
 
 ---
 
