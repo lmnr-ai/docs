@@ -1,11 +1,11 @@
 ---
-title: Rollout sessions
-sidebarTitle: Rollout sessions
+title: Debugger
+sidebarTitle: Debugger
 ---
 
-Rollout sessions let you rerun long-running agents from the exact point you care about, without leaving Laminar.
+Debugger lets you rerun long-running agents from the exact point you care about, without leaving Laminar.
 
-## Why rollouts
+## Why the debugger
 
 When you are debugging long-running agents, three things slow you down:
 
@@ -13,23 +13,23 @@ When you are debugging long-running agents, three things slow you down:
 - You wait a long time for the agent to reach the event you care about.
 - The agent can take a different path and never hit that event at all.
 
-Rollout sessions solve this by letting you cache up to a span, tweak configuration (like the system prompt) in the UI, rerun from there, and inspect the new trace in the same page. Once the CLI is connected, you never have to leave the page.
+Debugger solves this by letting you set a checkpoint on a span, tweak configuration (like the system prompt) in the UI, rerun from there, and inspect the new trace in the same page. Once the CLI is connected, you never have to leave the page.
 
 ## Setup
 
 ### 1) Build a looped agent entrypoint
 
-Rollouts work best when your entrypoint makes repeated LLM/tool calls so Laminar can cache earlier steps and rerun from a later point.
+Debugger sessions work best when your entrypoint makes repeated LLM/tool calls so Laminar can cache earlier steps and rerun from a later point.
 
 For AI SDK, this is often a single `generateText` / `streamText` call with `stopWhen: stepCountIs(N)`.
 
-For browser-use, use a `browser-use` `Agent` loop as your entrypoint.
+For browser-use, use a `browser-use` `Agent` loop as your entrypoint. For a full walkthrough, see the [Browser Use debugger guide](/guides/browser-use-debugger).
 
 For general Python, write your own loop that calls LLM + tools repeatedly.
 
-### 2) Mark the entrypoint for rollouts
+### 2) Mark the entrypoint for debugger sessions
 
-Wrap your entrypoint with `observe` and mark it as a rollout entrypoint.
+Wrap your entrypoint with `observe` and mark it as a debugger entrypoint.
 
 <Tabs items={['TypeScript', 'Python']}>
   <Tab title="TypeScript">
@@ -60,11 +60,11 @@ Export the observed function from the entry file so the CLI can discover it.
 
 ### 3) AI SDK setup (if you use Vercel AI SDK)
 
-Make sure the latest `@lmnr-ai/lmnr` is installed in the same workspace where you run rollouts.
+Make sure the latest `@lmnr-ai/lmnr` is installed in the same workspace where you run debugger sessions.
 
 Make sure general Laminar observability is configured first. See the [AI SDK integration](/tracing/integrations/vercel-ai-sdk#node-js).
 
-Then wrap the model you pass to `generateText` / `streamText` so rollouts can cache and rerun steps.
+Then wrap the model you pass to `generateText` / `streamText` so debugger sessions can cache and rerun steps.
 
 ```typescript
 import { observe, Laminar, wrapLanguageModel } from '@lmnr-ai/lmnr';
@@ -92,45 +92,45 @@ import { gateway } from 'ai';
 const model = wrapLanguageModel(gateway('openai/gpt-4.1-nano'));
 ```
 
-### 4) Start a rollout session
+### 4) Start a debugger session
 
 Run the CLI from the root of your project.
 
 <Tabs items={['TypeScript', 'Python']}>
   <Tab title="TypeScript">
     ```bash
-    npx lmnr-cli dev path/to/entrypoint.ts
+    npx lmnr-cli@latest dev path/to/entrypoint.ts
     ```
   </Tab>
   <Tab title="Python">
     ```bash
-    npx lmnr-cli dev path/to/entrypoint.py
+    npx lmnr-cli@latest dev path/to/entrypoint.py
     ```
 
     For Python modules, you can also run:
 
     ```bash
-    npx lmnr-cli dev -m path.to.entry.file
+    npx lmnr-cli@latest dev -m path.to.entry.file
     ```
   </Tab>
 </Tabs>
 
 ### 5) Open the session
 
-Open the session from **Rollout sessions** in your project, or click the link printed by the CLI.
+Open the session from **Debugger** in your project, or click the link printed by the CLI.
 
 <Note>
-If the file exposes multiple rollout entrypoints, pass `--function` to select one.
+If the file exposes multiple debugger entrypoints, pass `--function` to select one.
 Set `LMNR_PROJECT_API_KEY` or use `--project-api-key` to connect.
 </Note>
 
 ## Use in Laminar
 
-1. Open **Rollout sessions** and select your session.
-2. Enter the function arguments as JSON in the sidebar, either as an array of ordered args or an object keyed by param name.
+1. Open **Debugger** and select your session.
+2. In the **Run** tab, enter **Input Arguments** as JSON, either as an array of ordered args or an object keyed by param name.
 3. Click **Run** to generate the first trace.
-4. Hover an LLM span and click **Cache until here** to reuse earlier outputs.
-5. Optionally override **System Prompts** by path in the left sidebar, for example main agent, content extractor, or evaluator.
+4. In Reader or Tree view, click the checkpoint icon on a span (**Run from here**) to reuse earlier outputs.
+5. Optionally override **System Prompts** in the **Run** tab.
 6. Click **Run** again to get the updated, faster trace.
 7. Use Tree or Reader view, search, and the condensed timeline to navigate.
 8. Click **Stop** to cancel a run.

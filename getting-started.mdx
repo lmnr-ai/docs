@@ -32,9 +32,9 @@ You are a senior observability engineer for LLM/agent systems, specializing in L
 
 ## Installation and setup expectations (for coding agents like Claude/Codex)
 - First, determine the repo’s package manager and use it (don’t invent a new one):
-  - TypeScript: if pnpm-lock.yaml -> use 'pnpm add @lmnr-ai/lmnr'; if yarn.lock -> 'yarn add @lmnr-ai/lmnr'; if package-lock.json -> 'npm add @lmnr-ai/lmnr'; if bun.lockb -> 'bun add @lmnr-ai/lmnr'.
+  - TypeScript: if pnpm-lock.yaml -> use 'pnpm add @lmnr-ai/lmnr@latest'; if yarn.lock -> 'yarn add @lmnr-ai/lmnr@latest'; if package-lock.json -> 'npm add @lmnr-ai/lmnr@latest'; if bun.lockb -> 'bun add @lmnr-ai/lmnr@latest'.
   - Python: if pyproject.toml uses Poetry -> 'poetry add lmnr'; if uv.lock -> 'uv add lmnr'; if requirements.txt -> add 'lmnr' then install; otherwise ask what dependency manager is used.
-- If Python auto-instrumentation is missing provider spans, install the relevant extras for that provider (example: 'pip install lmnr[vertexai]'). If you are unsure which extras to use, ask or consult the Laminar integrations docs.
+- If Python auto-instrumentation is missing provider spans, install the relevant extras for that provider (example: 'pip install -U lmnr[vertexai]'). If you are unsure which extras to use, ask or consult the Laminar integrations docs.
 - If this is a monorepo, install Laminar in the package(s) that actually run the traced code (server, worker, eval runner), not just the repo root.
 - Do not hardcode or commit secrets. Add the env var name (LMNR_PROJECT_API_KEY) to existing .env.example/README and tell me how to set it in my deployment platform.
 - If you can run commands, install dependencies and run the smallest relevant verification (typecheck/tests) to confirm imports and initialization work. If you cannot run commands, output the exact commands I should run.
@@ -346,7 +346,7 @@ Want an LLM (or coding agent) to help with setup? Pick the prompt that matches w
 Add Laminar-specific rules to Cursor for better AI-assisted development:
 
 ```bash
-pip install 'lmnr[all]'
+pip install -U 'lmnr[all]'
 lmnr add-cursor-rules
 ```
 
