@@ -3,7 +3,7 @@ title: Debugger with Browser Use
 sidebarTitle: Browser Use Debugger
 ---
 
-This guide shows a minimal, end-to-end debugger setup for a `browser-use` agent so you can rerun from a cached step inside Laminar.
+This guide shows a minimal, end-to-end debugger setup for a `browser-use` agent so you can rerun from a checkpoint inside Laminar.
 
 ## 1) Install dependencies
 
@@ -68,4 +68,4 @@ If the file exposes multiple debugger entrypoints, pass `--function main`.
 
 ## 5) Open the debugger in Laminar
 
-Open **Debugger** in your project, select the session, provide function arguments as JSON, and click **Run**. Cache a span and rerun to iterate quickly.
+Open **Debugger** in your project, select the session, provide input arguments as JSON, and click **Run**. In Reader or Tree view, click the checkpoint icon on a span (**Run from here**) and rerun to iterate quickly.

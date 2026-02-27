@@ -109,7 +109,7 @@ Deliverables:
 - A naming, metadata, and tagging convention proposal (with examples)
 - Verification checklist: how to validate traces in the UI (root span exists, children nested, Reader Mode is readable, filters work, tags show)
 - Optional: 3 to 5 useful SQL queries using Laminar SQL tables (spans, traces, events, tags, dataset_datapoints, dataset_datapoint_versions, evaluation_datapoints)
-- Optional (if I ask for evals): add or migrate evaluations using Laminar evaluate(), and provide runnable commands (lmnr eval / npx lmnr@latest eval) that work with the repo’s tooling.
+- Optional (if I ask for evals): add or migrate evaluations using Laminar evaluate(), and provide runnable commands (lmnr eval / npx lmnr eval) that work with the repo’s tooling.
 
 ## Output format
 - Start with clarifying questions (if any), then the blueprint, then implementation steps, then code/pseudo-code, then verification and SQL.
@@ -204,7 +204,7 @@ You are a coding agent (Claude Code / Codex). Your job is to migrate my existing
 ## Deliverables
 - A patch-style diff (or concrete file edits), plus a short explanation of each change.
 - A verification checklist.
-- If I ask: include guidance for migrating evaluations to Laminar evaluate() and running them via lmnr eval / npx lmnr@latest eval.
+- If I ask: include guidance for migrating evaluations to Laminar evaluate() and running them via lmnr eval / npx lmnr eval.
 
 Now, here is my repo context + code:
 [PASTE HERE]

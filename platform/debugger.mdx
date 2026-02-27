@@ -13,7 +13,7 @@ When you are debugging long-running agents, three things slow you down:
 - You wait a long time for the agent to reach the event you care about.
 - The agent can take a different path and never hit that event at all.
 
-Debugger solves this by letting you cache up to a span, tweak configuration (like the system prompt) in the UI, rerun from there, and inspect the new trace in the same page. Once the CLI is connected, you never have to leave the page.
+Debugger solves this by letting you set a checkpoint on a span, tweak configuration (like the system prompt) in the UI, rerun from there, and inspect the new trace in the same page. Once the CLI is connected, you never have to leave the page.
 
 ## Setup
 
@@ -127,10 +127,10 @@ Set `LMNR_PROJECT_API_KEY` or use `--project-api-key` to connect.
 ## Use in Laminar
 
 1. Open **Debugger** and select your session.
-2. Enter the function arguments as JSON in the sidebar, either as an array of ordered args or an object keyed by param name.
+2. In the **Run** tab, enter **Input Arguments** as JSON, either as an array of ordered args or an object keyed by param name.
 3. Click **Run** to generate the first trace.
-4. Hover an LLM span and click **Cache until here** to reuse earlier outputs.
-5. Optionally override **System Prompts** by path in the left sidebar, for example main agent, content extractor, or evaluator.
+4. In Reader or Tree view, click the checkpoint icon on a span (**Run from here**) to reuse earlier outputs.
+5. Optionally override **System Prompts** in the **Run** tab.
 6. Click **Run** again to get the updated, faster trace.
 7. Use Tree or Reader view, search, and the condensed timeline to navigate.
 8. Click **Stop** to cancel a run.

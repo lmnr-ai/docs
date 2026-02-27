@@ -197,7 +197,7 @@ The Laminar CLI automatically detects top-level `evaluate` function calls in you
 <Tab title = "TypeScript">
 ```sh
 export LMNR_PROJECT_API_KEY=<YOUR_PROJECT_API_KEY>
-npx lmnr@latest eval my-first-evaluation.ts
+npx lmnr eval my-first-evaluation.ts
 ```
 
 To run multiple evaluations, place them in an `evals` directory with the naming pattern `*.eval.{ts,js}`:
@@ -212,7 +212,7 @@ To run multiple evaluations, place them in an `evals` directory with the naming 
 
 Then run all evaluations with a single command:
 ```sh
-npx lmnr@latest eval
+npx lmnr eval
 ```
 
 CLI options:
@@ -258,7 +258,7 @@ You can also import and call `evaluate` directly from your application code:
 <Tabs>
 <Tab title = "TypeScript">
 ```bash
-ts-node my-first-evaluation.ts
+tsx my-first-evaluation.ts
 # or
 npx tsx my-first-evaluation.ts
 ```
