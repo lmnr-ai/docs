@@ -1,0 +1,71 @@
+---
+title: Debugger with Browser Use
+sidebarTitle: Browser Use Debugger
+---
+
+This guide shows a minimal, end-to-end debugger setup for a `browser-use` agent so you can rerun from a checkpoint inside Laminar.
+
+## 1) Install dependencies
+
+```bash
+pip install -U lmnr browser-use python-dotenv
+```
+
+If your Browser Use LLM provider needs extra packages or env vars (for example, Google/Gemini), follow the provider setup in Browser Use docs.
+
+## 2) Set environment variables
+
+Create a `.env` file in your project root:
+
+```bash
+LMNR_PROJECT_API_KEY=your_laminar_project_api_key
+```
+
+Add any provider-specific API keys required by your Browser Use LLM (for example, Google/Gemini).
+
+## 3) Create the entrypoint
+
+```python
+import os
+import asyncio
+from dotenv import load_dotenv
+from browser_use.llm.google.chat import ChatGoogle
+from browser_use import Agent
+from lmnr import observe, Laminar
+
+load_dotenv()
+Laminar.initialize(project_api_key=os.getenv("LMNR_PROJECT_API_KEY"))
+
+@observe(rollout_entrypoint=True)
+async def main(prompt: str):
+    agent = Agent(
+        task=prompt,
+        llm=ChatGoogle(model="gemini-3-flash-preview"),
+    )
+    result = await agent.run()
+    print(result.final_result())
+
+if __name__ == "__main__":
+    asyncio.run(
+        main(
+            "go to ycombinator.com, summarize 3 startups from the summer 2025 batch."
+            # "go to laminar.sh, summarize the pricing page."
+        )
+    )
+```
+
+Notes:
+- The `rollout_entrypoint=True` flag marks this function for debugger sessions.
+- Keep the CLI running while you iterate; the debugger will rerun using the latest code on disk.
+
+## 4) Start a debugger session
+
+```bash
+npx lmnr-cli@latest dev path/to/entrypoint.py
+```
+
+If the file exposes multiple debugger entrypoints, pass `--function main`.
+
+## 5) Open the debugger in Laminar
+
+Open **Debugger** in your project, select the session, provide input arguments as JSON, and click **Run**. In Reader or Tree view, click the checkpoint icon on a span (**Run from here**) and rerun to iterate quickly.
