@@ -41,6 +41,7 @@
                   "tracing/integrations/litellm",
                   "tracing/integrations/kernel",
                   "tracing/integrations/claude-agent-sdk",
+                  "tracing/integrations/openhands-sdk",
                   "tracing/integrations/browser-use",
                   "tracing/integrations/stagehand",
                   "tracing/integrations/skyvern",

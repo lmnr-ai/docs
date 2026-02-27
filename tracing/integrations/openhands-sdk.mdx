@@ -1,0 +1,151 @@
+---
+title: Observability for OpenHands Software Agent SDK
+sidebarTitle: OpenHands SDK
+---
+
+## Overview
+
+[OpenHands Software Agent SDK](https://github.com/OpenHands/software-agent-sdk) is a Python SDK for building AI software agents that can work with code. It provides tools for terminal access, file editing, task tracking, and browser automation, enabling agents to perform software development tasks.
+
+## What Laminar captures
+
+- The entire structure of the OpenHands SDK conversation flow, including agent steps and tool calls.
+- LLM prompts and responses sent to the model via LiteLLM.
+- Tool calls (`bash`, `file_editor`, `task_tracker`, etc.) and their results.
+- Latencies, token counts, and token costs.
+- Conversation sessions grouped by their unique conversation ID.
+- Browser session replays when using browser-use tools.
+
+## Getting started
+
+<Steps>
+<Step title="Install uv package manager">
+
+The OpenHands SDK requires the [uv package manager](https://docs.astral.sh/uv/) (version 0.8.13+):
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+</Step>
+<Step title="Install the SDK">
+
+<Tabs>
+<Tab title="From PyPI">
+
+```bash
+pip install openhands-sdk openhands-tools
+```
+
+</Tab>
+<Tab title="From Source (recommended)">
+
+```bash
+git clone https://github.com/OpenHands/software-agent-sdk.git
+cd software-agent-sdk
+make build
+```
+
+</Tab>
+</Tabs>
+
+</Step>
+<Step title="Set up your environment variables">
+
+Export your Laminar API key and LLM API key:
+
+```bash
+export LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+export LLM_API_KEY=your-llm-api-key
+```
+
+</Step>
+<Step title="Run your agent">
+
+The OpenHands SDK automatically initializes Laminar when `LMNR_PROJECT_API_KEY` is set. No additional code is required.
+
+```python
+import os
+
+from openhands.sdk import LLM, Agent, Conversation, Tool
+from openhands.tools.terminal import TerminalTool
+
+# Configure LLM and Agent
+llm = LLM(
+    model=os.getenv("LLM_MODEL", "anthropic/claude-sonnet-4-5-20250929"),
+    api_key=os.getenv("LLM_API_KEY"),
+    base_url=os.getenv("LLM_BASE_URL"),
+)
+
+agent = Agent(
+    llm=llm,
+    tools=[Tool(name=TerminalTool.name)],
+)
+
+# Create conversation and run a simple task
+conversation = Conversation(agent=agent, workspace=".")
+conversation.send_message("List the files in the current directory and print them.")
+conversation.run()
+print("All done! Check your Laminar dashboard for traces.")
+```
+
+Run with uv:
+
+```bash
+uv run python your_script.py
+```
+
+</Step>
+</Steps>
+
+## Automatic instrumentation
+
+The OpenHands SDK automatically instruments the following when Laminar is initialized:
+
+- **Conversations**: Each conversation is traced as a session, with the conversation UUID used as the session ID.
+- **Agent steps**: Each `agent.step` iteration is captured as a span within the conversation trace.
+- **LLM calls**: All LLM calls via LiteLLM are automatically traced with prompts, responses, token counts, and costs.
+- **Tool calls**: Terminal commands (`bash`), file edits (`file_editor`), and other tool executions are captured with their inputs and outputs.
+- **Browser sessions**: When using browser-use tools, session replays are automatically captured.
+
+## Trace hierarchy
+
+Traces are organized hierarchically:
+
+```
+conversation
+└── conversation.run
+    └── agent.step
+        ├── llm.completion
+        └── tool.execute (bash, file_editor, etc.)
+    └── agent.step
+        ├── llm.completion
+        └── ...
+```
+
+Each conversation gets its own session ID (the conversation UUID), allowing you to group all traces from a single conversation together.
+
+## Alternative OTEL configuration
+
+For non-Laminar OpenTelemetry backends, you can configure the SDK using standard OTEL environment variables:
+
+```bash
+# OTEL endpoint
+export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4317/v1/traces
+
+# Headers (comma-separated, key=value url-encoded pairs)
+export OTEL_EXPORTER_OTLP_TRACES_HEADERS="Authorization=Bearer%20<KEY>"
+
+# Protocol (http/protobuf recommended for most backends)
+export OTEL_EXPORTER_OTLP_TRACES_PROTOCOL=http/protobuf
+```
+
+## View the traces in Laminar
+
+Go to the Laminar dashboard, and you will see the traces for the OpenHands SDK. Each conversation appears as a separate session, making it easy to track multi-turn interactions.
+
+The trace view shows:
+- The conversation span as the root
+- Nested spans for each agent step
+- LLM calls with prompts, responses, and token usage
+- Tool calls with their inputs and outputs
