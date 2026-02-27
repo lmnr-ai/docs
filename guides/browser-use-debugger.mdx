@@ -108,29 +108,14 @@ Open **Debugger** in your project, select the session, provide input arguments a
 
 Use the Debugger to iterate without restarting your local process.
 
-1. In the **Run** tab, enter input JSON. Example for the `main(prompt: str)` signature:
-   ```json
-   ["go to ycombinator.com, summarize 3 startups from the latest batch"]
-   ```
-2. Click **Run** to produce the first trace.
-3. Open the trace in **Tree** or **Reader** view.
-4. Click the checkpoint icon on a span and choose **Run from here**.
-5. Expand **System Prompts** and toggle **Override System Prompt** on for the Browser Automation Agent.
+1. Open the trace in **Tree** or **Reader** view.
+2. Click the checkpoint icon on a span and choose **Run from here**.
+3. Expand **System Prompts** and toggle **Override System Prompt** on for the Browser Automation Agent.
 
 ![System prompt override toggle](/images/debugger-view-toggle.png)
 
-6. Paste an updated System Prompt (example below), then click **Run** again.
-
-```text
-You are a browser automation agent. Goal: find 5 companies from the latest YC batch.
-Steps:
-1) Open https://www.ycombinator.com/companies
-2) Filter to the latest batch
-3) Extract 5 companies with name, one-sentence description, and a URL
-Rules: Return a JSON array only. Do not add extra commentary.
-```
+4. Edit the prompt in place, then click **Run** again to rerun with the updated instructions.
 
 Notes:
-
 - Keep the CLI running while you iterate; the debugger reruns using the latest code on disk.
 - If you changed dependencies, restart the CLI.
