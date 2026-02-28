@@ -47,62 +47,7 @@ Laminar.initialize(
 ```
 
 **Available instruments:**
-`OPENAI`, `ANTHROPIC`, `BEDROCK`, `COHERE`, `GOOGLE_GENAI`, `GROQ`, `MISTRAL`, `OLLAMA`, `TOGETHER`, `VERTEXAI`, `LANGCHAIN`, `LANGGRAPH`, `LLAMA_INDEX`, `HAYSTACK`, `CREWAI`, `PINECONE`, `QDRANT`, `CHROMA`, `MILVUS`, `WEAVIATE`, `LANCEDB`, `MARQO`, `PLAYWRIGHT`, `PATCHRIGHT`, `BROWSER_USE`, `BROWSER_USE_SESSION`, `SKYVERN`, `CLAUDE_AGENT`, `KERNEL`, `MCP`, and more.
-
----
-
-## Daytona sandbox logs (streaming)
-
-Laminar can capture streaming command logs from Daytona sandboxes. These log records are stored in the `logs` table and can be queried in the SQL Editor (there is no dedicated logs UI yet).
-
-```python
-import asyncio
-
-from daytona import AsyncDaytona, SessionExecuteRequest
-from lmnr import Laminar, observe
-
-Laminar.initialize()
-
-@observe()
-async def run_sandbox_command():
-    daytona = AsyncDaytona()
-    sandbox = await daytona.create()
-
-    session_id = "streaming-session"
-    await sandbox.process.create_session(session_id)
-
-    await sandbox.process.execute_session_command(
-        session_id,
-        SessionExecuteRequest(
-            command=(
-                'for i in {1..5}; do echo "Processing iteration $i of 5 - '
-                'This is a longer test message to verify streaming output handling '
-                'with substantial text content"; '
-                'echo "Error at iteration $i: This is a simulated error message '
-                'with extended details for testing purposes" >&2; sleep 1; done'
-            ),
-            run_async=True,
-        ),
-    )
-
-    print("Continuing execution while command runs in background...")
-    await asyncio.sleep(10)
-    print("Other operations completed!")
-
-    await sandbox.delete()
-
-if __name__ == "__main__":
-    asyncio.run(run_sandbox_command())
-```
-
-Example query:
-
-```sql
-SELECT time, severity_text, body, attributes
-FROM logs
-WHERE time > now() - INTERVAL 1 DAY
-ORDER BY time DESC
-```
+`ALEPHALPHA`, `ANTHROPIC`, `BEDROCK`, `BROWSER_USE`, `BROWSER_USE_SESSION`, `BUBUS`, `CHROMA`, `CLAUDE_AGENT`, `COHERE`, `CREWAI`, `CUA_AGENT`, `CUA_COMPUTER`, `GOOGLE_GENAI`, `GROQ`, `HAYSTACK`, `KERNEL`, `LANCEDB`, `LANGCHAIN`, `LANGGRAPH`, `LITELLM`, `LLAMA_INDEX`, `MARQO`, `MCP`, `MILVUS`, `MISTRAL`, `OLLAMA`, `OPENAI`, `OPENHANDS`, `OPENTELEMETRY`, `PATCHRIGHT`, `PINECONE`, `PLAYWRIGHT`, `QDRANT`, `REPLICATE`, `SAGEMAKER`, `SKYVERN`, `TOGETHER`, `TRANSFORMERS`, `VERTEXAI`, `WATSONX`, `WEAVIATE`.
 
 ---
 

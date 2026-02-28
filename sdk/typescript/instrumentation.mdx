@@ -22,6 +22,9 @@ Initialize Laminar tracing and auto-instrumentation.
 | `forceHttp` | `boolean` | `false` | Force OTLP HTTP exporter |
 | `logLevel` | `'error'` &#124; `'warn'` &#124; `'info'` &#124; `'debug'` | `'error'` | SDK log level |
 | `sessionRecordingOptions` | `SessionRecordingOptions` | — | Browser session recording options |
+| `metadata` | `Record<string, any>` | — | Global metadata merged with per-span metadata |
+| `inheritGlobalContext` | `boolean` | `false` | Inherit existing OTEL context instead of forcing Laminar context |
+| `spanProcessor` | `SpanProcessor` | — | Provide a custom OTEL span processor |
 
 **Returns:** `void`
 
@@ -37,7 +40,7 @@ import Anthropic from '@anthropic-ai/sdk';
 Laminar.initialize({
   projectApiKey: process.env.LMNR_PROJECT_API_KEY,
   instrumentModules: {
-    openAI: OpenAI,
+    OpenAI: OpenAI,
     anthropic: Anthropic,
   },
 });
@@ -47,7 +50,7 @@ Laminar.initialize({
 
 | Key | Package |
 |-----|---------|
-| `openAI` / `OpenAI` | `openai` |
+| `OpenAI` | `openai` |
 | `anthropic` | `@anthropic-ai/sdk` |
 | `azureOpenAI` | Azure OpenAI |
 | `cohere` | `cohere-ai` |
@@ -69,6 +72,7 @@ Laminar.initialize({
 **Special cases:**
 - Pass `undefined` → auto-instrument all supported
 - Pass `{}` → disable all auto-instrumentation
+- `openAI` (lowercase) is deprecated. Use `OpenAI` to avoid initialization errors.
 
 ---
 
@@ -83,7 +87,7 @@ import OpenAI from 'openai';
 Laminar.initialize({ projectApiKey: '...' });
 
 // Later (e.g., in Next.js server components)
-Laminar.patch({ openAI: OpenAI });
+Laminar.patch({ OpenAI: OpenAI });
 ```
 
 **Parameters:**

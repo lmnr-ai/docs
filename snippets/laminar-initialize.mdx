@@ -3,11 +3,11 @@
 
 ```javascript
 import { Laminar } from '@lmnr-ai/lmnr';
-import { OpenAI } from 'openai';
+import OpenAI from 'openai';
 Laminar.initialize({
     projectApiKey: process.env.LMNR_PROJECT_API_KEY,
     instrumentModules: {
-        openAI: OpenAI,
+        OpenAI: OpenAI,
         // add other libraries as you need
     }
 });
@@ -27,11 +27,13 @@ Laminar should be initialized once in your application. This could be
 at the server startup, or in the entry point of your application.
 </Tip>
 
-This will automatically instrument all major LLM provider SDKs, LLM frameworks including
-LangChain and LlamaIndex, and calls to vector databases.
+If `instrumentModules` is omitted, Laminar will auto-instrument supported SDKs that are
+already loaded. For best results in Node.js, pass the SDKs you want to instrument
+explicitly or call `Laminar.patch(...)` in the module where you construct your clients.
 
 <Tip>
-For Node JS setups, you need to manually pass the modules you want to instrument, such as OpenAI.
+For Node.js setups, you should pass the modules you want to instrument, such as OpenAI,
+or use `Laminar.patch(...)` if initialization happens before the SDK is imported.
 See `instrumentModules` in the [SDK reference](/sdk/reference).
 </Tip>
 

@@ -42,7 +42,7 @@ import { OpenAI } from "openai";
 Laminar.initialize({
     projectApiKey: 'your_project_api_key',
     instrumentModules: {
-        openAI: OpenAI  // Automatically traces OpenAI calls
+        OpenAI: OpenAI  // Automatically traces OpenAI calls
     }
 });
 
@@ -226,7 +226,7 @@ import { OpenAI } from "openai";
 Laminar.initialize({
     projectApiKey: 'your_project_api_key',
     instrumentModules: {
-    openAI: OpenAI
+    OpenAI: OpenAI
     }
 });
 

@@ -44,22 +44,29 @@ Reader Mode gives you a readable, flattened view of a trace designed for fast sc
 
 Use Reader Mode when you want a narrative, high-signal view of a trace focused on LLM + tool calls, without drilling through nested spans.
 
-## Timeline View
+## Timeline
 
-### Open Timeline View
+### Open Timeline
 
 1. Open a trace (from **Traces**).
-2. In the trace view toolbar, open the view mode dropdown.
-3. Select **Timeline** (you can switch back the same way).
+2. In the trace header, click the **Timeline** toggle (Gantt icon) below the
+   search bar.
+3. The condensed timeline appears at the top of the trace view. Click the
+   toggle again to hide it.
 
 ![Timeline view](/images/timeline-view.png)
 
-- **Time-first view**: Renders each span as a colored bar on a single time axis.
-- **Zoom controls**: Use +/- to zoom in for fine-grained alignment or out for a high-level overview.
-- **Event markers**: Span events appear as ticks inside the bar.
-- **Inline labels**: Name + duration (and tokens/cost for LLM spans) are shown on the bar when space allows.
+- **Time-first overview**: Spans render as colored bars on a single time axis.
+- **Zoom controls**: Use the +/- buttons (or cmd/ctrl + scroll) to zoom in/
+  out.
+- **Hover needle**: Move your cursor to see precise time markers.
+- **Span selection**: Drag to select a range; non-selected spans dim and you
+  can clear the selection.
+- **Session playhead (if available)**: Shows the browser session position on
+  the timeline.
 
-Use Timeline View when you’re diagnosing latency, overlaps, gaps, or long-running steps.
+Use the condensed timeline when diagnosing latency, overlaps, gaps, or long-
+running steps.
 
 ## Metadata
 
@@ -76,12 +83,12 @@ Use Timeline View when you’re diagnosing latency, overlaps, gaps, or long-runn
 
 Use Metadata when you need to verify context fields (inputs, run config, tags, custom attributes) without digging through spans. See [Metadata](/tracing/structure/metadata).
 
-## Ask AI
+## Chat with trace
 
-### Open Ask AI
+### Open Chat with trace
 
 1. Open a trace (from **Traces**).
-2. In the trace view toolbar, click **Ask AI**.
+2. In the trace view toolbar, click **Chat with trace**.
 
 ![Ask AI](/images/ai-view.png)
 
@@ -90,7 +97,7 @@ Use Metadata when you need to verify context fields (inputs, run config, tags, c
 - **Iterate fast**: Ask follow-ups about errors, unexpected outputs, tool calls, or performance.
 - **Resettable**: Start a new chat when you want a fresh thread.
 
-Use Ask AI when you want a quick narrative explanation or guided debugging without manually scanning the whole trace.
+Use Chat with trace when you want a quick narrative explanation or guided debugging without manually scanning the whole trace.
 
 ## Open in SQL Editor
 

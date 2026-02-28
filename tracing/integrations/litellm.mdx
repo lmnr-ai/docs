@@ -15,31 +15,29 @@ sidebarTitle: LiteLLM
 pip install -U lmnr[all]
 ```
 </Step>
-<Step title="Initialize Laminar and integrate the callback">
+<Step title="Initialize Laminar">
 
-You need to initialize Laminar **before** adding the callback to LiteLLM.
+Laminar auto-instruments LiteLLM. No callback is required.
 
 ```python
 import litellm
-from lmnr import Laminar, LaminarLiteLLMCallback
+from lmnr import Laminar
 
-# 1. Initialize Laminar
 Laminar.initialize(project_api_key="LMNR_PROJECT_API_KEY")
-
-# 2. Integrate the callback
-litellm.callbacks = [LaminarLiteLLMCallback()]
 ```
 </Step>
+<Note>
+`LaminarLiteLLMCallback` is deprecated and does nothing. Remove it if you already use it.
+</Note>
 <Step title="Run your code and see traces in Laminar">
 
 Example code:
 
 ```python
 import litellm
-from lmnr import Laminar, LaminarLiteLLMCallback
+from lmnr import Laminar
 
 Laminar.initialize(project_api_key="LMNR_PROJECT_API_KEY")
-litellm.callbacks = [LaminarLiteLLMCallback()]
 
 response = litellm.completion(
     model="gpt-4.1-nano",
