@@ -1,0 +1,42 @@
+---
+title: Integrations
+sidebarTitle: Integrations
+---
+
+Connect third-party services to your Laminar workspace to receive notifications and stay up to date with what is happening across your projects.
+
+<Frame caption="Workspace integrations page">
+  <img src="/images/integrations/workspace-integrations.png" alt="Workspace integrations page showing Slack connection card" />
+</Frame>
+
+## Slack
+
+The Slack integration lets you receive real-time notifications in your Slack channels when [signal](/signals) events occur. Once connected, notifications work across all projects in the workspace.
+
+<Note>
+  Slack integration is available on paid plans only.
+</Note>
+
+### Connect Slack
+
+1. Go to your **Workspace** page and select **Integrations** from the sidebar.
+2. Find the **Slack** card and click **Connect to Slack**.
+3. You will be redirected to Slack's authorization page. Select the Slack workspace you want to connect and click **Allow**.
+4. After authorization, you will be redirected back to Laminar. The Slack card will show a **Connected** badge with your Slack workspace name.
+
+The Laminar Slack app requests permission to post messages to public channels in your Slack workspace. It does not access private channels.
+
+### Remove Slack integration
+
+1. Go to your **Workspace** page and select **Integrations** from the sidebar.
+2. On the connected Slack card, click the dropdown menu (three dots).
+3. Select **Remove**.
+4. Confirm the removal in the dialog.
+
+<Warning>
+  Removing the integration deletes all alert subscriptions connected to that Slack workspace. This action cannot be undone.
+</Warning>
+
+### What you can do with Slack connected
+
+- **[Alerts](/platform/alerts)** — Create per-project alerts that send Slack notifications to a channel of your choice whenever a signal event is detected.

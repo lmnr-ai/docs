@@ -1,0 +1,57 @@
+---
+title: Alerts
+sidebarTitle: Alerts
+---
+
+Alerts send real-time Slack notifications when [signal](/signals) events are detected in your traces. Each alert is tied to a signal and a Slack channel — whenever the signal fires, Laminar posts a notification to that channel.
+
+<Frame caption="Project settings — Alerts tab">
+  <img src="/images/alerts/project-alerts.png" alt="Project alerts settings page showing Slack connection and alert management" />
+</Frame>
+
+<Note>
+  Alerts require a [Slack integration](/platform/integrations) and are available on paid plans only.
+</Note>
+
+## Prerequisites
+
+Before creating alerts, you need:
+
+1. **A connected Slack integration** — Connect Slack from **Workspace > Integrations** (see [Integrations](/platform/integrations)). You can also connect Slack directly from the Alerts settings page.
+2. **At least one signal** — Create a signal in your project (see [Signals](/signals)). Alerts fire based on signal events.
+
+## Create an alert
+
+1. Go to **Project Settings** and select **Alerts** from the sidebar.
+2. Click the **+ Alert** button.
+3. Fill in the alert form:
+   - **Name** — A descriptive name for the alert (for example, "High error rate alert").
+   - **Signal** — Select the signal that will trigger the alert. After selecting a signal, a preview chart shows how often it would have triggered in a recent time period.
+   - **Slack Channel** — Pick the public Slack channel where notifications should be sent.
+4. (Optional) Click **Test** to send a test notification to the selected channel.
+5. Click **Create**.
+
+The alert is immediately active. Whenever the selected signal detects an event, Laminar sends a notification to the configured Slack channel with the event details and a link to the trace.
+
+## Edit an alert
+
+1. Go to **Project Settings > Alerts**.
+2. Find the alert in the table and click the **edit** (pencil) icon.
+3. Update the name, signal, or Slack channel.
+4. Click **Save**.
+
+## Delete an alert
+
+1. Go to **Project Settings > Alerts**.
+2. Find the alert in the table and click the **delete** (trash) icon.
+3. Confirm the deletion in the dialog.
+
+You will stop receiving notifications for that alert immediately.
+
+## How alert notifications work
+
+When a signal event is detected on a trace, Laminar checks if any alerts are configured for that signal. For each matching alert, a Slack message is sent to the configured channel containing:
+
+- The **signal name**
+- **Extracted information** from the signal's structured output
+- A **link to the trace** so you can investigate directly
