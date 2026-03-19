@@ -22,7 +22,7 @@ Laminar automatically detects and stores image data sent to vision-capable model
       instrumentModules: { OpenAI },
     });
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const openai = new OpenAI.OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
     const analyzeImage = (imagePath: string, userQuestion: string) =>
       observe({ name: 'analyzeImage' }, async () => {
@@ -98,7 +98,7 @@ If you reference an image by URL instead of uploading it, Laminar traces the URL
     import OpenAI from 'openai';
     import { observe } from '@lmnr-ai/lmnr';
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const openai = new OpenAI.OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
     const analyzeWebImage = (imageUrl: string, analysisPrompt: string) =>
       observe({ name: 'analyzeWebImage' }, async () => {
