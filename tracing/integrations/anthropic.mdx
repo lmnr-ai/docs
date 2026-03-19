@@ -47,11 +47,12 @@ Laminar automatically instruments the official Anthropic package with a single l
       instrumentModules: { anthropic: Anthropic }
     });
 
-    // Initialize Anthropic client as usual
-    const anthropic = new Anthropic();
+    // Initialize Anthropic client
+    const anthropic = new Anthropic.Anthropic();
     ```
     <Note>
-    It is important to pass `Anthropic` to `instrumentModules` as a named export.
+    `import Anthropic from '@anthropic-ai/sdk'` imports the module. Pass it to
+    `instrumentModules`, then create the client with `new Anthropic.Anthropic()`.
     </Note>
 
     ### 4. Use Anthropic as usual

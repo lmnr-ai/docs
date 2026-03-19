@@ -47,11 +47,12 @@ Laminar automatically instruments the official OpenAI package with a single line
       instrumentModules: { OpenAI: OpenAI }
     });
 
-    // Initialize OpenAI client as usual
-    const openai = new OpenAI();
+    // Initialize OpenAI client
+    const openai = new OpenAI.OpenAI();
     ```
     <Note>
-    It is important to pass `OpenAI` to `instrumentModules` as a named export.
+    `import OpenAI from 'openai'` imports the module. Pass it to
+    `instrumentModules`, then create the client with `new OpenAI.OpenAI()`.
     </Note>
 
     ### 4. Use OpenAI as usual

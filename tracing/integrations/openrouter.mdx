@@ -51,7 +51,7 @@ Laminar automatically instruments the OpenAI SDK. If you set the OpenAI SDK base
       instrumentModules: { OpenAI: OpenAI }
     });
 
-    const openai = new OpenAI({
+    const openai = new OpenAI.OpenAI({
       baseURL: 'https://openrouter.ai/api/v1',
       apiKey: process.env.OPENROUTER_API_KEY,
       defaultHeaders: {
