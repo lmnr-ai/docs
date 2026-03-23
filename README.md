@@ -18,7 +18,7 @@ Run the following command at the root of your documentation (where mint.json is)
 mintlify dev
 ```
 
-Before committing, make sure to run `mintlify dev` to check that the changes are rendered correctly.
+Before committing, make sure to run `mintlify dev` to check that the changes are rendered correctly locally.
 Also run
 
 ```
