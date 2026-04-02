@@ -101,11 +101,6 @@ If you don't end a span, it won't appear in your traces. Use context managers (`
 
 ## Span Types
 
-Spans can have a type that affects how they appear in the Laminar UI:
+Spans can have a type (`DEFAULT`, `LLM`, `TOOL`, `EXECUTOR`) that affects how they appear in the Laminar UI. Set the type when creating the span — for example, tool execution functions should use `span_type="TOOL"` so they're distinguishable from general application logic.
 
-- **DEFAULT** — General-purpose span.
-- **LLM** — Language model call (enables token counts, cost tracking).
-- **TOOL** — Tool or function call within an agent.
-- **EXECUTOR** — Orchestration or routing logic.
-
-Set the type when creating the span. LLM spans expect specific attributes for cost calculation—see [LLM Cost Tracking](./llm-cost-tracking) and the SDK reference for span creation options.
+See [Span Types](/tracing/structure/span-types) for a full guide on when and how to use each type.

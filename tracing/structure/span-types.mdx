@@ -1,0 +1,293 @@
+---
+title: Span Types
+---
+
+Every span has a **type** that tells Laminar what kind of work it represents. The type controls how the span appears in the trace view and which features are available for it.
+
+## Available Types
+
+| Type | Purpose | Set by |
+|------|---------|--------|
+| `DEFAULT` | General-purpose span | You (default when no type is specified) |
+| `LLM` | Language model call | Auto-instrumentation or you |
+| `TOOL` | Tool / function call | You |
+| `EXECUTOR` | Orchestration or routing logic | You |
+
+<Note>
+  There are additional internal types (`EVALUATOR`, `HUMAN_EVALUATOR`, `EVALUATION`, `CACHED`) used by the platform for evaluations and caching. You typically don't set these yourself.
+</Note>
+
+## DEFAULT spans
+
+When you use `@observe()` or create a manual span without specifying a type, the span is `DEFAULT`. This is the right choice for general application logic — request handlers, data processing, business logic, or any function that isn't an LLM call or a tool execution.
+
+```python
+from lmnr import observe
+
+@observe()
+def handle_request(user_id: str, query: str):
+    # This span is DEFAULT — it groups downstream work
+    context = retrieve_context(query)
+    return generate_answer(query, context)
+```
+
+```typescript
+import { observe } from '@lmnr-ai/lmnr';
+
+const handleRequest = (userId: string, query: string) =>
+  observe({ name: 'handleRequest' }, async () => {
+    // This span is DEFAULT — it groups downstream work
+    const context = await retrieveContext(query);
+    return generateAnswer(query, context);
+  });
+```
+
+DEFAULT spans are general-purpose. If the work you're tracing is specifically an LLM call or a tool execution, use `LLM` or `TOOL` instead for better visibility.
+
+## LLM spans
+
+LLM spans represent language model calls. Auto-instrumentation sets this type automatically for supported providers (OpenAI, Anthropic, Gemini, etc.), so you rarely need to set it yourself.
+
+LLM spans enable:
+- Token count display (input/output tokens)
+- Cost tracking and calculation
+- Model name display
+- Provider-specific UI in the trace view
+
+If you're calling an unsupported LLM provider directly, create an LLM span manually. See [LLM Cost Tracking](/tracing/structure/llm-cost-tracking) for details.
+
+## TOOL spans
+
+Tool spans represent tool or function calls within an agent. When your agent calls a tool — a database query, an API request, a file operation, a code execution step — that work should be a `TOOL` span.
+
+### Why type tool calls as TOOL
+
+Without explicit typing, tool execution spans default to `DEFAULT` and look the same as any other application logic in the trace view. Typing them as `TOOL`:
+
+- Makes it immediately clear which spans are tool executions vs. application logic
+- Enables filtering by span type in the Laminar UI and SQL editor (e.g. `WHERE span_type = 'TOOL'`)
+- Gives a more accurate picture of your agent's behavior — you can see at a glance how many tool calls happened, which tools were used, and how long each took
+
+### Setting the TOOL type
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    **With `observe`:**
+
+    ```typescript
+    import { observe } from '@lmnr-ai/lmnr';
+
+    const searchDatabase = (query: string) =>
+      observe({ name: 'searchDatabase', spanType: 'TOOL' }, async () => {
+        const results = await db.query(query);
+        return results;
+      });
+    ```
+
+    **With manual spans:**
+
+    ```typescript
+    import { Laminar } from '@lmnr-ai/lmnr';
+
+    const span = Laminar.startSpan({ name: 'searchDatabase', spanType: 'TOOL' });
+    try {
+      const results = await db.query(query);
+      return results;
+    } finally {
+      span.end();
+    }
+    ```
+  </Tab>
+  <Tab title="Python">
+    **With `@observe`:**
+
+    ```python
+    from lmnr import observe
+
+    @observe(span_type="TOOL")
+    def search_database(query: str):
+        results = db.query(query)
+        return results
+    ```
+
+    **With manual spans:**
+
+    ```python
+    from lmnr import Laminar
+
+    with Laminar.start_as_current_span(name="search_database", span_type="TOOL") as span:
+        results = db.query(query)
+    ```
+  </Tab>
+</Tabs>
+
+### Example: agent with tool calls
+
+A typical agent loop calls the LLM, receives tool call requests, executes those tools, and feeds the results back. Here's how to type the tool execution spans:
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { Laminar, observe } from '@lmnr-ai/lmnr';
+    import OpenAI from 'openai';
+
+    const openai = new OpenAI();
+
+    // Each tool function is typed as TOOL
+    const searchDatabase = (query: string) =>
+      observe({ name: 'searchDatabase', spanType: 'TOOL' }, async () => {
+        return await db.query(query);
+      });
+
+    const createVisualization = (data: string, chartType: string) =>
+      observe({ name: 'createVisualization', spanType: 'TOOL' }, async () => {
+        return await charts.create(data, chartType);
+      });
+
+    // The agent loop itself is a DEFAULT span
+    const agent = (userMessage: string) =>
+      observe({ name: 'agent' }, async () => {
+        const messages = [{ role: 'user' as const, content: userMessage }];
+
+        while (true) {
+          // LLM call — auto-instrumented, type set automatically
+          const response = await openai.chat.completions.create({
+            model: 'gpt-4o',
+            messages,
+            tools: toolDefinitions,
+          });
+
+          const message = response.choices[0].message;
+          messages.push(message);
+
+          if (!message.tool_calls) return message.content;
+
+          // Execute tool calls — each is a TOOL span
+          for (const toolCall of message.tool_calls) {
+            const result = await executeTool(toolCall);
+            messages.push({
+              role: 'tool',
+              tool_call_id: toolCall.id,
+              content: result,
+            });
+          }
+        }
+      });
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import Laminar, observe
+    from openai import OpenAI
+
+    client = OpenAI()
+
+    # Each tool function is typed as TOOL
+    @observe(span_type="TOOL")
+    def search_database(query: str) -> str:
+        return db.query(query)
+
+    @observe(span_type="TOOL")
+    def create_visualization(data: str, chart_type: str) -> str:
+        return charts.create(data, chart_type)
+
+    # The agent loop itself is a DEFAULT span
+    @observe()
+    def agent(user_message: str) -> str:
+        messages = [{"role": "user", "content": user_message}]
+
+        while True:
+            # LLM call — auto-instrumented, type set automatically
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=messages,
+                tools=tool_definitions,
+            )
+
+            message = response.choices[0].message
+            messages.append(message)
+
+            if not message.tool_calls:
+                return message.content
+
+            # Execute tool calls — each is a TOOL span
+            for tool_call in message.tool_calls:
+                result = execute_tool(tool_call)
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": result,
+                })
+    ```
+  </Tab>
+</Tabs>
+
+The resulting trace tree looks like this:
+
+```
+agent (DEFAULT)
+├── openai.chat (LLM) ← auto-instrumented
+├── searchDatabase (TOOL)
+├── openai.chat (LLM) ← auto-instrumented
+├── createVisualization (TOOL)
+└── openai.chat (LLM) ← auto-instrumented
+```
+
+### Querying TOOL spans
+
+Once your tool calls are properly typed, you can query them in the [SQL editor](/platform/sql-editor):
+
+```sql
+-- Find all tool calls in a trace
+SELECT name, input, output, start_time, end_time
+FROM spans
+WHERE span_type = 'TOOL'
+ORDER BY start_time;
+
+-- Find slow tool calls
+SELECT name, end_time - start_time AS duration
+FROM spans
+WHERE span_type = 'TOOL'
+ORDER BY duration DESC
+LIMIT 10;
+```
+
+## EXECUTOR spans
+
+Executor spans represent orchestration or routing logic — the code that decides which path to take, which agent to delegate to, or how to combine results from multiple steps. Use this type for router functions, orchestrators, and coordination logic.
+
+```python
+@observe(span_type="EXECUTOR")
+def route_request(query: str) -> str:
+    intent = classify_intent(query)
+    if intent == "analysis":
+        return analysis_agent(query)
+    elif intent == "search":
+        return search_agent(query)
+    return fallback_agent(query)
+```
+
+## Setting span type
+
+You can set span type through any span creation method:
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    | Method | Parameter |
+    |--------|-----------|
+    | `observe()` | `spanType: 'TOOL'` |
+    | `Laminar.startActiveSpan()` | `spanType: 'TOOL'` |
+    | `Laminar.startSpan()` | `spanType: 'TOOL'` |
+
+    See also: [`observe`](/sdk/observe#ts-observe), [`Laminar.startActiveSpan`](/sdk/manual-spans#ts-laminar-start-span-block), [`SpanType`](/sdk/constants#ts-span-type-trace-type)
+  </Tab>
+  <Tab title="Python">
+    | Method | Parameter |
+    |--------|-----------|
+    | `@observe()` | `span_type="TOOL"` |
+    | `Laminar.start_as_current_span()` | `span_type="TOOL"` |
+    | `Laminar.start_span()` | `span_type="TOOL"` |
+
+    See also: [`@observe`](/sdk/observe#py-observe), [`Laminar.start_as_current_span`](/sdk/manual-spans#py-laminar-start-span-block), [`SpanType`](/sdk/constants#py-span-type-trace-type)
+  </Tab>
+</Tabs>
