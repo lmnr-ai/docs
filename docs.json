@@ -116,6 +116,7 @@
               "platform/reports",
               "platform/live-tracing",
               "platform/debugger",
+              "platform/cli",
               "platform/mcp",
               "platform/sql-editor",
               "platform/search",

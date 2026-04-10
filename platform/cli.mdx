@@ -1,0 +1,362 @@
+---
+title: CLI
+sidebarTitle: CLI
+description: "Language-agnostic CLI for managing datasets, running debugger sessions, and querying trace data."
+---
+
+Laminar CLI (`lmnr-cli`) is a language-agnostic command-line tool for interacting with the Laminar platform. Use it to manage datasets, start debugger sessions, and run SQL queries against your trace data — all from your terminal.
+
+## Installation
+
+```bash
+# Run directly with npx (no install needed)
+npx lmnr-cli@latest <command>
+
+# Or install globally
+npm install -g lmnr-cli
+```
+
+<Note>
+  `lmnr-cli` requires Node.js. It works with TypeScript, Python, and JavaScript projects — the CLI itself is language-agnostic and delegates language-specific execution to worker processes.
+</Note>
+
+## Authentication
+
+All commands require a project API key. You can provide it in three ways:
+
+1. **Environment variable** (recommended):
+   ```bash
+   export LMNR_PROJECT_API_KEY=<your-project-api-key>
+   ```
+
+2. **`.env` file** in your working directory:
+   ```bash
+   LMNR_PROJECT_API_KEY=<your-project-api-key>
+   ```
+
+3. **CLI flag** on any command:
+   ```bash
+   npx lmnr-cli@latest <command> --project-api-key <your-project-api-key>
+   ```
+
+## Global options
+
+These options are available on all commands:
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--project-api-key <key>` | Project API key | `LMNR_PROJECT_API_KEY` env var |
+| `--base-url <url>` | Base URL for the Laminar API | `https://api.lmnr.ai` |
+| `--port <port>` | Port for the Laminar API | `443` |
+| `-v, --version` | Display version number | |
+| `-h, --help` | Display help | |
+
+For self-hosted Laminar, set `--base-url` to your instance URL and `--port` to `8000`.
+
+## Commands
+
+### `dev` — Agent debugger
+
+Start a debugger session that connects your local code to the Laminar backend. The CLI spawns a worker process for your code, connects to the backend via SSE, and orchestrates the debugging flow.
+
+```bash
+# TypeScript
+npx lmnr-cli@latest dev agent.ts
+
+# Python — script mode
+npx lmnr-cli@latest dev agent.py
+
+# Python — module mode
+npx lmnr-cli@latest dev -m src.agent
+
+# Specific function (when the file exports multiple entrypoints)
+npx lmnr-cli@latest dev agent.ts --function myAgent
+```
+
+#### Options
+
+| Option | Description |
+|--------|-------------|
+| `-m, --python-module <module>` | Python module path (e.g. `src.myfile`) |
+| `--function <name>` | Specific function to serve |
+| `--grpc-port <port>` | gRPC port for Laminar API (default: `8443`) |
+| `--frontend-port <port>` | Frontend port for Laminar (default: `5667`) |
+
+<Expandable title="Advanced options">
+| Option | Description |
+|--------|-------------|
+| `--external-packages <packages...>` | Packages to pass as external to esbuild |
+| `--dynamic-imports-to-skip <modules...>` | Dynamic imports to skip |
+| `--command <command>` | Custom worker command (e.g. `python3`, `node`) |
+| `--command-args <args...>` | Arguments for the custom command |
+</Expandable>
+
+#### How it works
+
+The CLI orchestrates three components:
+
+1. **SSE Client** — connects to the Laminar backend and receives run events.
+2. **Cache Server** — a local HTTP server (port `35667`) that provides cached spans to workers, enabling checkpoint-based reruns.
+3. **Worker Process** — a language-specific subprocess that executes your code.
+
+```
+┌─────────────────┐
+│  Laminar API    │
+└────────┬────────┘
+         │ SSE
+┌────────▼────────┐      ┌──────────────┐
+│   CLI Process   │◄────►│ Cache Server │
+│  (Orchestrator) │      │ (port 35667) │
+└────────┬────────┘      └──────▲───────┘
+         │ spawn                │ HTTP
+┌────────▼────────┐      ┌──────┴───────┐
+│ Worker Process  │─────►│  Your Code   │
+└─────────────────┘      └──────────────┘
+```
+
+The worker is selected automatically based on file extension:
+
+| Extension | Worker |
+|-----------|--------|
+| `.ts`, `.tsx`, `.js`, `.mjs`, `.cjs` | Node.js (via `@lmnr-ai/lmnr`) |
+| `.py` | Python (via `lmnr` package) |
+
+For other languages, use `--command` and `--command-args` to specify a custom worker.
+
+<Card title="Debugger setup guide" icon="bug" href="/platform/debugger">
+  Learn how to set up your entrypoint, mark it for debugger sessions, and iterate in the Laminar UI.
+</Card>
+
+### `dataset` — Dataset management {"\#datasets"}
+
+List, create, push, and pull datasets from your Laminar project.
+
+```bash
+lmnr-cli dataset <subcommand> [options]
+```
+
+All dataset subcommands support the `--json` flag for structured JSON output to stdout (useful for piping to other tools or AI agents).
+
+#### `dataset list`
+
+List all datasets in your project.
+
+```bash
+npx lmnr-cli@latest dataset list
+npx lmnr-cli@latest dataset list --json
+```
+
+#### `dataset create`
+
+Create a new dataset from local files.
+
+```bash
+npx lmnr-cli@latest dataset create <name> <paths...> [options]
+```
+
+| Argument / Option | Description |
+|-------------------|-------------|
+| `<name>` | Name of the dataset to create |
+| `<paths...>` | Paths to files or directories containing data |
+| `-o, --output-file <file>` | **(Required)** Path to save the created dataset with IDs |
+| `--output-format <format>` | Output format: `json`, `csv`, `jsonl` (inferred from extension) |
+| `-r, --recursive` | Recursively read files in directories |
+| `--batch-size <size>` | Batch size for pushing/pulling data (default: `100`) |
+
+The output file stores datapoints with their assigned IDs, which is important for [versioning](/datasets/introduction#versioning).
+
+```bash
+npx lmnr-cli@latest dataset create my-dataset data.jsonl -o my-dataset.jsonl
+npx lmnr-cli@latest dataset create my-dataset data/ -o output.json -r
+```
+
+#### `dataset push`
+
+Push datapoints to an existing dataset from local files.
+
+```bash
+npx lmnr-cli@latest dataset push <paths...> [options]
+```
+
+| Argument / Option | Description |
+|-------------------|-------------|
+| `<paths...>` | Paths to files or directories containing data |
+| `-n, --name <name>` | Name of the dataset (either name or id required) |
+| `--id <id>` | ID of the dataset (either name or id required) |
+| `-r, --recursive` | Recursively read files in directories |
+| `--batch-size <size>` | Batch size for pushing data (default: `100`) |
+
+```bash
+npx lmnr-cli@latest dataset push data.jsonl -n my-dataset
+npx lmnr-cli@latest dataset push data/ -n my-dataset -r --json
+```
+
+#### `dataset pull`
+
+Pull datapoints from a dataset to a local file or stdout.
+
+```bash
+npx lmnr-cli@latest dataset pull [output-path] [options]
+```
+
+| Argument / Option | Description |
+|-------------------|-------------|
+| `[output-path]` | Path to save the data (prints to console if omitted) |
+| `-n, --name <name>` | Name of the dataset (either name or id required) |
+| `--id <id>` | ID of the dataset (either name or id required) |
+| `--output-format <format>` | Output format: `json`, `csv`, `jsonl` (inferred from extension) |
+| `--batch-size <size>` | Batch size for pulling data (default: `100`) |
+| `--limit <limit>` | Limit number of datapoints to pull |
+| `--offset <offset>` | Offset for pagination (default: `0`) |
+
+```bash
+npx lmnr-cli@latest dataset pull output.jsonl -n my-dataset
+npx lmnr-cli@latest dataset pull -n my-dataset --json    # Print to stdout
+npx lmnr-cli@latest dataset pull output.csv -n my-dataset --limit 50
+```
+
+#### Supported file formats
+
+- **JSONL** (`.jsonl`) — one JSON object per line
+- **JSON** (`.json`) — array of objects
+- **CSV** (`.csv`) — comma-separated values with headers
+
+Every datapoint must have at least a `data` field. See [Datasets introduction](/datasets/introduction) for the full schema.
+
+### `sql` — SQL queries
+
+Run SQL queries against your Laminar project data — spans, traces, events, and more.
+
+```bash
+npx lmnr-cli@latest sql query "SELECT * FROM spans LIMIT 10"
+npx lmnr-cli@latest sql query "SELECT * FROM spans LIMIT 10" --json
+npx lmnr-cli@latest sql schema
+```
+
+All sql subcommands support the `--json` flag for structured JSON output.
+
+#### `sql query`
+
+Execute a read-only SQL query against your project data.
+
+```bash
+npx lmnr-cli@latest sql query "<query>" [--json]
+```
+
+**Examples:**
+
+```bash
+# List recent spans
+npx lmnr-cli@latest sql query "SELECT name, duration, status FROM spans ORDER BY start_time DESC LIMIT 10"
+
+# Find error traces
+npx lmnr-cli@latest sql query "SELECT id, top_span_name, total_cost FROM traces WHERE status = 'error' LIMIT 5" --json
+
+# Join traces and spans
+npx lmnr-cli@latest sql query "SELECT t.id, s.name FROM traces t JOIN spans s ON t.id = s.trace_id LIMIT 10"
+```
+
+#### `sql schema`
+
+Show all available tables and their columns.
+
+```bash
+npx lmnr-cli@latest sql schema
+```
+
+#### Available tables
+
+<Expandable title="spans">
+| Column | Type |
+|--------|------|
+| span_id | UUID |
+| name | String |
+| span_type | String (DEFAULT, LLM, TOOL) |
+| start_time | DateTime64 |
+| end_time | DateTime64 |
+| duration | Float64 |
+| input_cost | Float64 |
+| output_cost | Float64 |
+| total_cost | Float64 |
+| input_tokens | Int64 |
+| output_tokens | Int64 |
+| total_tokens | Int64 |
+| request_model | String |
+| response_model | String |
+| model | String |
+| trace_id | UUID |
+| provider | String |
+| path | String |
+| input | String |
+| output | String |
+| status | String |
+| parent_span_id | UUID |
+| attributes | String |
+| tags | Array(String) |
+</Expandable>
+
+<Expandable title="traces">
+| Column | Type |
+|--------|------|
+| id | UUID |
+| start_time | DateTime64 |
+| end_time | DateTime64 |
+| input_tokens | Int64 |
+| output_tokens | Int64 |
+| total_tokens | Int64 |
+| input_cost | Float64 |
+| output_cost | Float64 |
+| total_cost | Float64 |
+| duration | Float64 |
+| metadata | String |
+| session_id | String |
+| user_id | String |
+| status | String |
+| top_span_id | UUID |
+| top_span_name | String |
+| top_span_type | String |
+| trace_type | String |
+| tags | Array(String) |
+| has_browser_session | Bool |
+</Expandable>
+
+<Expandable title="events">
+| Column | Type |
+|--------|------|
+| id | UUID |
+| type | String |
+| name | String |
+| span_id | UUID |
+| timestamp | DateTime64 |
+| attributes | String |
+</Expandable>
+
+<Expandable title="evaluation_datapoints">
+| Column | Type |
+|--------|------|
+| id | UUID |
+| evaluation_id | UUID |
+| data | String |
+| target | String |
+| metadata | String |
+| executor_output | String |
+| index | UInt64 |
+| trace_id | UUID |
+| group_id | String |
+| scores | String |
+| created_at | DateTime64 |
+| dataset_id | UUID |
+| dataset_datapoint_id | UUID |
+| dataset_datapoint_created_at | DateTime64 |
+</Expandable>
+
+<Expandable title="dataset_datapoints">
+| Column | Type |
+|--------|------|
+| id | UUID |
+| created_at | DateTime64 |
+| dataset_id | UUID |
+| data | String |
+| target | String |
+| metadata | String |
+</Expandable>
