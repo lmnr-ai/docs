@@ -37,7 +37,6 @@
                   "tracing/integrations/pydantic-ai",
                   "tracing/integrations/cohere",
                   "tracing/integrations/vercel-ai-sdk",
-                  "tracing/integrations/nextjs",
                   "tracing/integrations/litellm",
                   "tracing/integrations/kernel",
                   "tracing/integrations/claude-agent-sdk",
