@@ -1,16 +1,27 @@
 ---
-title: "LLM Observability for AI SDK by Vercel"
+title: "Vercel AI SDK Observability – Tracing and Monitoring"
 sidebarTitle: Vercel AI SDK
+description: "Add observability to your Vercel AI SDK applications. Trace LLM calls, monitor token usage, and debug AI workflows in Next.js and Node.js with OpenTelemetry-based tracing."
 ---
+
 import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
 
-[AI SDK](https://sdk.vercel.ai/docs/introduction) is a library that allows you to add LLM features to your JS/TS applications. It supports tracing using [OpenTelemetry](https://opentelemetry.io/). 
+[AI SDK](https://sdk.vercel.ai/docs/introduction) by Vercel is a TypeScript library for building AI-powered applications. It provides a unified API for calling LLMs like OpenAI, Anthropic, Google Gemini, and others using functions like `generateText`, `streamText`, and `generateObject`.
 
-Laminar tracing is based on OpenTelemetry, so it is fully compatible with Vercel AI SDK tracing and you can start sending Vercel AI SDK traces to Laminar right away.
+AI SDK supports tracing via [OpenTelemetry](https://opentelemetry.io/). Since Laminar's observability platform is built on OpenTelemetry, it integrates natively with Vercel AI SDK — giving you full visibility into every LLM call, token usage, latency, and cost.
+
+## Quick start
 
 <Steps>
 <Step title="Get your project API key">
 <GetProjectApiKey />
+</Step>
+<Step title="Install Laminar">
+
+```bash
+npm add @lmnr-ai/lmnr@latest
+```
+
 </Step>
 <Step title="Initialize Laminar">
 <Tabs>
@@ -55,9 +66,9 @@ Laminar.initialize({
 </Tab>
 </Tabs>
 </Step>
-<Step title="Update your AI SDK calls">
+<Step title="Pass the Laminar tracer to AI SDK calls">
 
-We need to pass the Laminar tracer to the `generateText`, or `streamText`, or any other `generate*` calls.
+Pass the Laminar tracer to `generateText`, `streamText`, `generateObject`, or any other AI SDK function via `experimental_telemetry`.
 
 ```javascript {3,8-11}
 import { openai } from '@ai-sdk/openai';
@@ -75,3 +86,205 @@ const { text } = await generateText({
 ```
 </Step>
 </Steps>
+
+## What you get
+
+Once tracing is enabled, Laminar automatically captures:
+
+- **LLM call details** — model, provider, prompt, and completion for every `generateText`, `streamText`, and `generateObject` call
+- **Token usage** — input and output token counts per call
+- **Cost estimation** — estimated cost for each LLM call based on the model's pricing
+- **Latency** — end-to-end duration of each AI SDK call
+- **Trace hierarchy** — nested spans showing the full execution flow of your AI application
+
+## Using Vercel AI SDK with Next.js
+
+Next.js is the most common framework used with Vercel AI SDK. This section covers everything you need to set up observability for AI SDK in a Next.js application.
+
+<Note>
+For a complete example application, see the [Next.js + AI SDK guide](/guides/nextjs-aisdk).
+</Note>
+
+### Installation
+
+```bash
+npm add ai@latest @ai-sdk/openai@latest @lmnr-ai/lmnr@latest
+```
+
+### Next.js configuration
+
+Add `@lmnr-ai/lmnr` to `serverExternalPackages` in your `next.config.ts`:
+
+```typescript next.config.ts
+const nextConfig = {
+  serverExternalPackages: ['@lmnr-ai/lmnr'],
+};
+
+export default nextConfig;
+```
+
+This is required because Laminar depends on OpenTelemetry, which uses Node.js-specific APIs. Learn more in the [Next.js docs](https://nextjs.org/docs/app/api-reference/config/next-config-js/serverExternalPackages).
+
+### Initialize Laminar in instrumentation.ts
+
+Next.js provides an `instrumentation.ts` file that runs during server startup — the ideal place to initialize tracing.
+
+```typescript instrumentation.ts
+export async function register() {
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+    const { Laminar } = await import('@lmnr-ai/lmnr');
+    Laminar.initialize({
+      projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+    });
+  }
+}
+```
+
+<Note>
+`instrumentation.ts` is experimental in Next.js versions before 15. If you use Next.js &lt; 15, add the following to your `next.config.js`:
+
+```javascript next.config.js
+module.exports = {
+    experimental: { instrumentationHook: true }
+};
+```
+</Note>
+
+Learn more about `instrumentation.ts` in the [Next.js docs](https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation).
+
+### Tracing AI SDK calls in API routes
+
+In your Next.js API routes, import `getTracer` from Laminar and pass it to AI SDK's `experimental_telemetry` option:
+
+```typescript app/api/chat/route.ts {3, 25-28}
+import { openai } from "@ai-sdk/openai";
+import { generateText } from "ai";
+import { getTracer } from "@lmnr-ai/lmnr";
+import { NextRequest, NextResponse } from "next/server";
+
+export async function POST(request: NextRequest) {
+  const body = await request.json();
+  const { messages } = body;
+
+  const systemMessage = {
+    role: 'system',
+    content: 'You are a helpful AI assistant.',
+  };
+
+  const response = await generateText({
+    model: openai("gpt-4.1-nano"),
+    messages: [systemMessage, ...messages],
+    experimental_telemetry: {
+      isEnabled: true,
+      tracer: getTracer(),
+    }
+  });
+
+  return NextResponse.json({ message: response.text });
+}
+```
+
+### Using other LLM SDKs alongside AI SDK
+
+If your Next.js app uses other LLM SDKs (e.g. OpenAI or Anthropic clients directly) alongside Vercel AI SDK, you need to manually patch them. This is because imports in `instrumentation.ts` are not visible to the rest of the app in Next.js.
+
+```javascript lib/llm-clients.ts {3-8}
+import { OpenAI } from "openai";
+import * as anthropic from "@anthropic-ai/sdk";
+import { Laminar } from "@lmnr-ai/lmnr";
+
+Laminar.patch({
+  OpenAI: OpenAI,
+  anthropic: anthropic,
+});
+
+const openai = new OpenAI();
+const anthropicClient = new anthropic.Anthropic();
+
+export { openai, anthropicClient as anthropic };
+```
+
+### Grouping traces within one route
+
+If your app makes multiple LLM calls within a single route, you can group them into a single trace using the `observe` wrapper.
+
+You might get this functionality by default if your app is instrumented with OpenTelemetry and
+some Next.js instrumentation, e.g. `@vercel/otel` or `@sentry/nextjs`.
+
+Otherwise, wrap your route handler with `observe`:
+
+```javascript app/api/chat/route.ts {1-2}
+import { NextRequest } from 'next/server';
+import { getTracer, observe } from '@lmnr-ai/lmnr';
+
+export const GET = observe(async (req: NextRequest) => {
+  const tracer = getTracer();
+
+  const { firstText, secondText } = await observe(
+    {
+      name: 'GET /api/chat',
+    },
+    async () => {
+      const { firstText } = await generateText({
+      model: openai('gpt-4.1-nano'),
+      prompt: 'What is Laminar flow?',
+      experimental_telemetry: {
+        isEnabled: true,
+        tracer,
+      },
+    });
+
+    const { secondText } = await generateText({
+      model: openai('gpt-4.1-nano'),
+      prompt: 'What is Laminar flow?',
+      experimental_telemetry: {
+        isEnabled: true,
+        tracer,
+      },
+    });
+
+    return { firstText, secondText };
+    }
+  );
+
+  return NextResponse.json({ firstText, secondText });
+});
+```
+
+Learn more about `observe` in the [SDK reference](/sdk/observe).
+
+## Streaming support
+
+AI SDK's `streamText` and `streamObject` functions are fully supported. Pass the same `experimental_telemetry` configuration:
+
+```javascript
+import { openai } from '@ai-sdk/openai';
+import { streamText } from 'ai';
+import { getTracer } from '@lmnr-ai/lmnr';
+
+const result = streamText({
+  model: openai('gpt-4.1-nano'),
+  prompt: 'Write a poem about observability.',
+  experimental_telemetry: {
+    isEnabled: true,
+    tracer: getTracer(),
+  },
+});
+
+for await (const chunk of result.textStream) {
+  process.stdout.write(chunk);
+}
+```
+
+Laminar captures the full streamed response, token counts, and latency for streamed calls.
+
+## Troubleshooting
+
+If traces are not appearing in your Laminar dashboard:
+
+- Verify that `Laminar.initialize` is called before any AI SDK calls
+- Check that `experimental_telemetry` is enabled and `tracer: getTracer()` is passed
+- For Next.js, confirm `@lmnr-ai/lmnr` is listed in `serverExternalPackages`
+- For Next.js, ensure `instrumentation.ts` is in the project root (not inside `app/` or `src/`)
+- Verify your `LMNR_PROJECT_API_KEY` is set correctly in your environment
+- Check the [general troubleshooting guide](/tracing/troubleshooting) for more help

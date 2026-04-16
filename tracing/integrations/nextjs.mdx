@@ -1,6 +1,7 @@
 ---
-title: Observability for Next.js
+title: "Observability for Next.js LLM Applications"
 sidebarTitle: Next.js
+description: "Add LLM observability to your Next.js applications. Trace OpenAI, Anthropic, and other LLM calls with OpenTelemetry-based monitoring."
 ---
 
 ## Overview
@@ -8,10 +9,12 @@ sidebarTitle: Next.js
 [Next.js](https://nextjs.org/) is a popular React framework for building web applications.
 
 <Note>
-For a full example app, see [the Next.js guide](/guides/nextjs) and the [Next.js + AI SDK guide](/guides/nextjs-aisdk).
+If you are using Vercel AI SDK, see the [Vercel AI SDK integration](/tracing/integrations/vercel-ai-sdk) which includes a full Next.js setup guide.
+
+For complete example apps, see the [Next.js + AI SDK guide](/guides/nextjs-aisdk) and the [Next.js guide](/guides/nextjs).
 </Note>
 
-## Getting Started
+## Getting started
 
 ### 1. Install Laminar
 
@@ -50,10 +53,10 @@ export async function register() {
 ```
 
 <Note>
-`instrumentation.ts` is experimental in Next.js < 15.
+`instrumentation.ts` is experimental in Next.js &lt; 15.
 </Note>
 
-If you use Next.js < 15, add the following to your `next.config.js`:
+If you use Next.js &lt; 15, add the following to your `next.config.js`:
 
 ```javascript next.config.js
 module.exports = {
@@ -64,8 +67,10 @@ module.exports = {
 ### 4. Patch LLM SDKs
 
 <Tabs>
-<Tab title="AI SDKs">
+<Tab title="Vercel AI SDK">
 AI SDK is already instrumented implicitly, but you need to direct it to use Laminar tracer.
+
+See the full setup in the [Vercel AI SDK integration guide](/tracing/integrations/vercel-ai-sdk).
 
 ```javascript {3,8-11}
 import { openai } from '@ai-sdk/openai';
@@ -103,9 +108,9 @@ Laminar.patch({
 });
 
 const openai = new OpenAI();
-const anthropic = new anthropic.Anthropic();
+const anthropicClient = new anthropic.Anthropic();
 
-export { openai, anthropic };
+export { openai, anthropicClient as anthropic };
 ```
 </Tab>
 </Tabs>
@@ -157,4 +162,4 @@ export const GET = observe(async (req: NextRequest) => {
 });
 ```
 
-Learn more about `observe` in the SDK reference.
+Learn more about `observe` in the [SDK reference](/sdk/observe).
