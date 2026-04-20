@@ -171,8 +171,8 @@ export async function POST(req: Request) {
 
 Open the trace in Laminar and you get the transcript view: system prompt, user messages, model output, tool calls, and tool results laid out as a conversation. Sub-agents collapse to their input and final output so you read what mattered, not a tree of span names.
 
-<Frame caption="Vercel AI SDK trace in Laminar: the generateText span with its underlying provider call and the model response.">
-<img src="/images/tutorials/nextjs-guide-example-trace.png" alt="Vercel AI SDK trace in Laminar" />
+<Frame caption="Vercel AI SDK trace in Laminar: the generateText call with tool invocations, the model response, and each step shown as a transcript entry.">
+<img src="/images/tutorials/vercel-ai-sdk-trace.png" alt="Vercel AI SDK trace in Laminar" />
 </Frame>
 
 Tool calls appear as nested spans with their arguments and return values captured. More on the trace UX: [Viewing traces](/platform/viewing-traces).
