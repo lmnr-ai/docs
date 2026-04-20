@@ -1,6 +1,6 @@
 # Laminar Docs: Agent Notes
 
-This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reusable fragments in `/snippets`, images in `/images`. The `docs-writing` skill contains the canonical voice, SEO, and template guidance. Read it before making non-trivial edits.
+This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reusable fragments in `/snippets`, images in `/images`.
 
 ## Navigation and linking
 
@@ -16,18 +16,15 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - Direct SDK clients (OpenAI, Anthropic) imported outside `instrumentation.ts` are not auto-instrumented in Next.js. Call `Laminar.patch({ OpenAI, anthropic })` where the client is constructed.
 - AI SDK is TypeScript-only; there is no Python AI SDK integration page to write.
 
-## Prod-mode screenshots
+## Screenshots
 
-- Use the `running-lmnr-stack-prod` skill (not dev mode). Dev overlays and the dev indicator look unprofessional in published screenshots.
-- Viewport: **1512 x 982** (MBP 14" equivalent) per `docs-writing`. The `agent-browser` README says 1280x720, but `docs-writing` wins for docs work.
-- Staging DB schema drift has blocked screenshot capture before: the traces list and trace detail page can 404 or show "Trace not found" if Postgres/ClickHouse migrations in the staging DBs lag behind the app-server code. When this happens, reuse an existing real screenshot from `/images/` and note the limitation in the PR body rather than substituting a dev-mode shot.
-- Never `ALTER` staging schemas to work around drift. The sandbox constraint is explicit: "NEVER alter schemas unless explicitly requested." Revert any exploratory changes before committing.
-- "Schema drift" in the sandbox is usually tracking-table drift, not real DDL drift. The real DDL from `lib/db/migrations/*.sql` is typically already applied; what's inconsistent is the `drizzle.__drizzle_migrations` table (dummy hashes, stale rows). Reconciling that table with the sha256 of each migration file's contents (matching `_journal.json` order) lets the frontend boot with `FORCE_RUN_MIGRATIONS=true` without touching schema. `clickhouse-migrations` tracking lives in `default._migrations` and is usually also already consistent.
-- Shell env `LMNR_PROJECT_API_KEY` is set to a background-agent key (not the sandbox e2e key). `.env` loading does NOT override pre-existing process env. When running local demos that ingest to the sandbox app-server, pass the key literal explicitly to `Laminar.initialize({ projectApiKey: 'lmnr_e2e_test_key_abc123xyz', ... })` instead of `process.env.LMNR_PROJECT_API_KEY`, or the SDK will send the wrong bearer and app-server will 401. Symptom in `/tmp/as.log`: `Error validating project_token: invalid project API key`.
+- Capture from the production build of the frontend, not the dev server: dev overlays and the Next.js dev indicator look unprofessional in published shots.
+- Viewport: **1512 x 982** (MBP 14" equivalent).
+- Wrap screenshots in `<Frame caption="...">` and keep them in `/images/` organized by area (e.g. `/images/tutorials/`, `/images/platform/`).
 
 ## Voice gotchas not caught by linters
 
-- `grep "[em-dash]" <file>` before committing (em dashes are banned by `docs-writing` and easy to sneak in from copy-paste).
+- `grep "[em-dash]" <file>` before committing. Em dashes should not appear in docs prose; they sneak in easily from copy-paste.
 - `grep -E "seamless|powerful|unleash|cutting-edge|best-in-class|revolutionary|supercharge"` returns banned marketing words.
 - Every integration page needs the three forward links in data-flow order: viewing traces, then Signals, then SQL access (editor/API/MCP).
 
