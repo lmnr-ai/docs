@@ -65,7 +65,7 @@ import { generateText } from 'ai';
 import { getTracer } from '@lmnr-ai/lmnr';
 
 const { text } = await generateText({
-  model: openai('gpt-4.1-nano'),
+  model: openai('gpt-5-mini'),
   prompt: 'What is laminar flow?',
   experimental_telemetry: {
     isEnabled: true,
@@ -151,7 +151,7 @@ export async function POST(req: Request) {
   const { messages } = await req.json();
 
   const result = streamText({
-    model: openai('gpt-4.1-nano'),
+    model: openai('gpt-5-mini'),
     system: 'You are a helpful assistant.',
     messages,
     experimental_telemetry: {
@@ -166,6 +166,95 @@ export async function POST(req: Request) {
 
 </Step>
 </Steps>
+
+## Tracing a multi-step agent
+
+The AI SDK runs the tool-calling loop for you: the model calls a tool, the SDK runs the tool's `execute`, feeds the result back, and repeats until the model stops calling tools or a stop condition trips. Laminar records every step as a span under one trace, so the transcript shows each tool call and its result in order.
+
+Two shapes are common. `generateText` with `tools` and `stopWhen` is the workhorse. `ToolLoopAgent` is a thin wrapper if you want to reuse the same tools and instructions across many calls.
+
+### generateText with tools
+
+```typescript
+import { openai } from '@ai-sdk/openai';
+import { generateText, stepCountIs, tool } from 'ai';
+import { getTracer } from '@lmnr-ai/lmnr';
+import { z } from 'zod';
+
+const result = await generateText({
+  model: openai('gpt-5-mini'),
+  system:
+    'You are a concise travel assistant. Call tools to look up weather and local time before answering.',
+  prompt:
+    'I have meetings in Paris and Tokyo tomorrow. What is the weather and local time in each city right now?',
+  tools: {
+    weather: tool({
+      description: 'Get the current weather for a city.',
+      inputSchema: z.object({ city: z.string() }),
+      execute: async ({ city }) => {
+        const res = await fetch(`https://wttr.in/${encodeURIComponent(city)}?format=j1`);
+        const data = await res.json();
+        const c = data.current_condition[0];
+        return { tempC: Number(c.temp_C), condition: c.weatherDesc[0].value };
+      },
+    }),
+    timezone: tool({
+      description: 'Get the current local time for a city.',
+      inputSchema: z.object({ city: z.string() }),
+      execute: async ({ city }) => {
+        const res = await fetch(
+          `https://timeapi.io/api/time/current/zone?timeZone=${encodeURIComponent(
+            `Europe/${city}`,
+          )}`,
+        );
+        return res.ok ? await res.json() : { error: 'unknown city' };
+      },
+    }),
+  },
+  stopWhen: stepCountIs(5),
+  experimental_telemetry: {
+    isEnabled: true,
+    tracer: getTracer(),
+    functionId: 'travel-assistant',
+    metadata: { env: 'production' },
+  },
+});
+
+console.log(result.text);
+console.log(`Completed in ${result.steps.length} steps`);
+```
+
+`stopWhen: stepCountIs(5)` caps the loop at five model-and-tool rounds. You can combine conditions (`stopWhen: [stepCountIs(20), hasToolCall('finalize')]`) or pass a custom predicate.
+
+### ToolLoopAgent
+
+Reuse the same configuration across calls by constructing a `ToolLoopAgent` once:
+
+```typescript
+import { openai } from '@ai-sdk/openai';
+import { ToolLoopAgent, stepCountIs } from 'ai';
+import { getTracer } from '@lmnr-ai/lmnr';
+import { weather, timezone } from './tools';
+
+const travelAgent = new ToolLoopAgent({
+  model: openai('gpt-5-mini'),
+  instructions:
+    'You are a concise travel assistant. Call tools to look up weather and local time before answering.',
+  tools: { weather, timezone },
+  stopWhen: stepCountIs(5),
+  experimental_telemetry: {
+    isEnabled: true,
+    tracer: getTracer(),
+    functionId: 'travel-agent',
+  },
+});
+
+const result = await travelAgent.generate({
+  prompt: 'Weather and local time in Paris and Tokyo?',
+});
+```
+
+Both shapes produce the same trace structure in Laminar: one parent span per call, nested tool-call spans, and the final model output in the transcript.
 
 ## See what happened in a trace
 
@@ -206,13 +295,13 @@ export const POST = async (req: Request) => {
       const tracer = getTracer();
 
       const { text: outline } = await generateText({
-        model: openai('gpt-4.1-nano'),
+        model: openai('gpt-5-mini'),
         prompt: `Outline an article about ${topic}.`,
         experimental_telemetry: { isEnabled: true, tracer },
       });
 
       const { text: draft } = await generateText({
-        model: openai('gpt-4.1-nano'),
+        model: openai('gpt-5-mini'),
         prompt: `Write a draft based on: ${outline}`,
         experimental_telemetry: { isEnabled: true, tracer },
       });
