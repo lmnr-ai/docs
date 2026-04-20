@@ -1,25 +1,126 @@
 ---
-title: "LLM Observability for AI SDK by Vercel"
+title: Observability and Tracing for Vercel AI SDK in Next.js and Node.js
 sidebarTitle: Vercel AI SDK
+description: Trace every generateText, streamText, generateObject, and tool call in the Vercel AI SDK with Laminar. Open-source, OpenTelemetry-native observability for AI SDK apps.
 ---
+
 import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
 
-[AI SDK](https://sdk.vercel.ai/docs/introduction) is a library that allows you to add LLM features to your JS/TS applications. It supports tracing using [OpenTelemetry](https://opentelemetry.io/). 
+## Overview
 
-Laminar tracing is based on OpenTelemetry, so it is fully compatible with Vercel AI SDK tracing and you can start sending Vercel AI SDK traces to Laminar right away.
+The [Vercel AI SDK](https://ai-sdk.dev/) exposes OpenTelemetry hooks via `experimental_telemetry`. Laminar is OpenTelemetry-native, so you get full traces of `generateText`, `streamText`, `generateObject`, `streamObject`, tool calls, and provider-level request and response payloads with a single tracer wired in.
+
+What Laminar captures:
+
+- Prompts, messages, and system instructions sent to the model.
+- Model output, reasoning, and structured object results.
+- Tool calls, arguments, and tool results.
+- Token counts, latency, and cost per call.
+- Provider identity (OpenAI, Anthropic, Google, Mistral, and others) and model name.
+
+This page covers both Node.js and Next.js setups. If you are using the AI SDK inside Next.js, scroll to [Next.js setup](#nextjs-setup): the order of imports and file placement matters.
+
+## Node.js setup
 
 <Steps>
-<Step title="Get your project API key">
+<Step title="Install">
+
+```bash
+npm install @lmnr-ai/lmnr@latest ai@latest @ai-sdk/openai@latest
+```
+
+Swap `@ai-sdk/openai` for any provider adapter you use ([full list](https://ai-sdk.dev/providers/ai-sdk-providers)).
+
+</Step>
+<Step title="Set environment variables">
+
+```bash
+# .env
+LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+OPENAI_API_KEY=your-openai-api-key
+```
+
 <GetProjectApiKey />
+
 </Step>
 <Step title="Initialize Laminar">
-<Tabs>
-<Tab title="Next.js">
-In Next.js, place `Laminar.initialize` in the `instrumentation.ts` file.
 
-```typescript {3-4, 6-8} instrumentation.ts
+Call `Laminar.initialize()` once at the entry point of your application, before any AI SDK call runs.
+
+```typescript
+import { Laminar } from '@lmnr-ai/lmnr';
+import 'dotenv/config';
+
+Laminar.initialize();
+```
+
+</Step>
+<Step title="Pass the tracer to AI SDK calls">
+
+Enable `experimental_telemetry` and hand it Laminar's tracer. Do this on every `generate*` and `stream*` call you want traced.
+
+```typescript
+import { openai } from '@ai-sdk/openai';
+import { generateText } from 'ai';
+import { getTracer } from '@lmnr-ai/lmnr';
+
+const { text } = await generateText({
+  model: openai('gpt-4.1-nano'),
+  prompt: 'What is laminar flow?',
+  experimental_telemetry: {
+    isEnabled: true,
+    tracer: getTracer(),
+  },
+});
+```
+
+The same pattern works for `streamText`, `generateObject`, `streamObject`, and `embed`.
+
+</Step>
+</Steps>
+
+## Next.js setup
+
+<Steps>
+<Step title="Install">
+
+```bash
+npm install @lmnr-ai/lmnr@latest ai@latest @ai-sdk/openai@latest
+```
+
+</Step>
+<Step title="Set environment variables">
+
+Add your keys to `.env.local`:
+
+```bash
+# .env.local
+LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+OPENAI_API_KEY=your-openai-api-key
+```
+
+</Step>
+<Step title="Update next.config.ts">
+
+Tell Next.js to treat Laminar as an external server package. Laminar depends on OpenTelemetry, which uses Node-specific APIs Next.js cannot bundle.
+
+```typescript next.config.ts
+const nextConfig = {
+  serverExternalPackages: ['@lmnr-ai/lmnr'],
+};
+
+export default nextConfig;
+```
+
+More on this option in the [Next.js docs](https://nextjs.org/docs/app/api-reference/config/next-config-js/serverExternalPackages).
+
+</Step>
+<Step title="Initialize Laminar in instrumentation.ts">
+
+Create `instrumentation.ts` at the project root. Next.js auto-loads this file before any route or server component runs.
+
+```typescript instrumentation.ts
 export async function register() {
-  // prevent this from running in the edge runtime
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     const { Laminar } = await import('@lmnr-ai/lmnr');
 
@@ -30,48 +131,166 @@ export async function register() {
 }
 ```
 
-You will also need to update your `next.config.ts` file to include the `serverExternalPackages` option.
+<Note>
+Laminar only runs in the `nodejs` runtime. The guard skips Edge runtime routes automatically.
+</Note>
 
-```typescript next.config.ts
-const nextConfig = {
-  serverExternalPackages: ['@lmnr-ai/lmnr'],
+<Note>
+If you already use `@vercel/otel` or `@sentry/nextjs`, initialize them first, then Laminar. See [Coexisting with @vercel/otel](#coexisting-with-vercelotel) below.
+</Note>
+
+</Step>
+<Step title="Use the AI SDK in a route handler">
+
+```typescript app/api/chat/route.ts
+import { openai } from '@ai-sdk/openai';
+import { streamText } from 'ai';
+import { getTracer } from '@lmnr-ai/lmnr';
+
+export async function POST(req: Request) {
+  const { messages } = await req.json();
+
+  const result = streamText({
+    model: openai('gpt-4.1-nano'),
+    system: 'You are a helpful assistant.',
+    messages,
+    experimental_telemetry: {
+      isEnabled: true,
+      tracer: getTracer(),
+    },
+  });
+
+  return result.toTextStreamResponse();
+}
+```
+
+</Step>
+</Steps>
+
+## See what happened in a trace
+
+Open the trace in Laminar and you get the transcript view: system prompt, user messages, model output, tool calls, and tool results laid out as a conversation. Sub-agents collapse to their input and final output so you read what mattered, not a tree of span names.
+
+<Frame caption="Vercel AI SDK trace in Laminar: the generateText span with its underlying provider call and the model response.">
+<img src="/images/tutorials/nextjs-guide-example-trace.png" alt="Vercel AI SDK trace in Laminar" />
+</Frame>
+
+Tool calls appear as nested spans with their arguments and return values captured. More on the trace UX: [Viewing traces](/platform/viewing-traces).
+
+## Track outcomes with Signals
+
+Traces tell you what happened on one run. [Signals](/signals) turn traces into structured outcomes: describe a behavior or failure in natural language ("the agent recommended a product that wasn't in stock", "the tool call returned an empty result") and Laminar extracts matching events across your history and every new trace. Route them to alerts, dashboards, or datasets.
+
+## Query across traces
+
+- **[SQL editor](/platform/sql-editor)** for ad-hoc queries across traces, spans, signals, and evals.
+- **SQL API** for programmatic access from scripts and pipelines.
+- **[MCP server](/platform/mcp)** to query Laminar from Claude Code, Cursor, or Codex.
+
+## Grouping calls inside one route
+
+If a single route makes multiple LLM calls, wrap them in `observe` to group them under one parent span.
+
+```typescript app/api/chat/route.ts
+import { openai } from '@ai-sdk/openai';
+import { generateText } from 'ai';
+import { getTracer, observe } from '@lmnr-ai/lmnr';
+import { NextResponse } from 'next/server';
+
+export const POST = async (req: Request) => {
+  const { topic } = await req.json();
+
+  const result = await observe(
+    { name: 'POST /api/chat' },
+    async () => {
+      const tracer = getTracer();
+
+      const { text: outline } = await generateText({
+        model: openai('gpt-4.1-nano'),
+        prompt: `Outline an article about ${topic}.`,
+        experimental_telemetry: { isEnabled: true, tracer },
+      });
+
+      const { text: draft } = await generateText({
+        model: openai('gpt-4.1-nano'),
+        prompt: `Write a draft based on: ${outline}`,
+        experimental_telemetry: { isEnabled: true, tracer },
+      });
+
+      return { outline, draft };
+    },
+  );
+
+  return NextResponse.json(result);
 };
 ```
 
-This is because Laminar depends on OpenTelemetry, which uses some Node.js-specific functionality, and we need to inform Next.js about it. Learn more in the [Next.js docs](https://nextjs.org/docs/app/api-reference/config/next-config-js/serverExternalPackages).
-</Tab>
-<Tab title="Node.js">
-In Node.js, place `Laminar.initialize` in the entry point to your application.
+You also get grouping for free if another tracing library (for example `@vercel/otel` or `@sentry/nextjs`) is already wrapping your handler.
 
-This must be done once, in an entry point of your application after any other tracing SDK initialization.
+See the full [observe reference](/tracing/structure/observe-decorator) for session IDs, user IDs, metadata, and tags.
 
-```javascript
-import { Laminar } from '@lmnr-ai/lmnr';
+## Coexisting with @vercel/otel
 
-Laminar.initialize({
-  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
-});
+If you already register a tracer provider with `@vercel/otel`, do not call `Laminar.initialize()` (that would register a second provider). Plug Laminar's span processor into the existing one instead:
+
+```typescript instrumentation.ts
+import { registerOTel } from '@vercel/otel';
+
+export async function register() {
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+    const { LaminarSpanProcessor, initializeLaminarInstrumentations } =
+      await import('@lmnr-ai/lmnr');
+
+    registerOTel({
+      serviceName: 'my-service',
+      spanProcessors: [new LaminarSpanProcessor()],
+      instrumentations: initializeLaminarInstrumentations(),
+    });
+  }
+}
 ```
-</Tab>
-</Tabs>
-</Step>
-<Step title="Update your AI SDK calls">
 
-We need to pass the Laminar tracer to the `generateText`, or `streamText`, or any other `generate*` calls.
+## Troubleshooting
 
-```javascript {3,8-11}
-import { openai } from '@ai-sdk/openai';
-import { generateText } from 'ai';
-import { getTracer } from '@lmnr-ai/lmnr';
+<AccordionGroup>
+  <Accordion title="I don't see any traces in Laminar">
+    - Confirm `LMNR_PROJECT_API_KEY` is set in the runtime environment, not just your shell.
+    - `Laminar.initialize()` must run before the first AI SDK call. In Next.js, that means it lives in `instrumentation.ts`.
+    - `experimental_telemetry` is opt-in per call. If you forget to pass `{ isEnabled: true, tracer: getTracer() }`, the call is not traced.
+    - Edge runtime is not supported. Make sure your route runs in `nodejs`.
+  </Accordion>
+  <Accordion title="Build fails with OpenTelemetry / require errors">
+    Add `@lmnr-ai/lmnr` to `serverExternalPackages` in `next.config.ts`. OpenTelemetry uses Node-specific APIs that Next.js cannot bundle.
+  </Accordion>
+  <Accordion title="Using Next.js < 15">
+    `instrumentation.ts` is experimental before Next.js 15. Enable it in `next.config.js`:
 
-const { text } = await generateText({
-  model: openai('gpt-4.1-nano'),
-  prompt: 'What is Laminar flow?',
-  experimental_telemetry: {
-    isEnabled: true,
-    tracer: getTracer(),
-  },
-});
-```
-</Step>
-</Steps>
+    ```javascript next.config.js
+    module.exports = {
+      experimental: { instrumentationHook: true },
+    };
+    ```
+  </Accordion>
+  <Accordion title="Mixing the AI SDK with a direct OpenAI or Anthropic client">
+    Direct SDK calls are auto-instrumented by `Laminar.initialize()` in Node.js. In Next.js, imports inside `instrumentation.ts` are not visible to the rest of the app, so auto-instrumentation may miss them. Call `Laminar.patch({ OpenAI, anthropic })` where you construct the client:
+
+    ```typescript lib/llm-clients.ts
+    import { OpenAI } from 'openai';
+    import * as anthropic from '@anthropic-ai/sdk';
+    import { Laminar } from '@lmnr-ai/lmnr';
+
+    Laminar.patch({ OpenAI, anthropic });
+
+    export const openai = new OpenAI();
+    export const claude = new anthropic.Anthropic();
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## What's next
+
+- [Viewing traces](/platform/viewing-traces): read the transcript view, filter, and search across traces.
+- [Signals](/signals): extract structured outcomes and failures from your AI SDK traces.
+- [SQL editor](/platform/sql-editor) and [MCP server](/platform/mcp): query traces programmatically.
+- [Tracing structure](/tracing/structure/overview): sessions, user IDs, metadata, and tags.
+- Mixing AI SDK with direct providers? See the [OpenAI](/tracing/integrations/openai) and [Anthropic](/tracing/integrations/anthropic) integration pages.
