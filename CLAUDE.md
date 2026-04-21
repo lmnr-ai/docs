@@ -30,6 +30,17 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - `grep -E "seamless|powerful|unleash|cutting-edge|best-in-class|revolutionary|supercharge"` returns banned marketing words.
 - Every integration page needs the three forward links in data-flow order: viewing traces, then Signals, then SQL access (editor/API/MCP).
 
+## Prose style Robert favors (observed from edits on `signals/introduction.mdx`)
+
+- **Use italics for rhetorical hypotheticals**, not plain quotes. `*did it get stuck, did the user give up*` reads better than `"did it get stuck..."`.
+- **Use bold for the thesis sentence and the call-to-action phrase**, and inline links inside the bold (`**[query](...), [cluster](...), and [alert](...) on**`). It lets the eye land on the payoff.
+- **Lead with the image early**, not after several sections of exposition. First image should sit right after the opening pitch so scanners see the product.
+- **Three-column `<CardGroup>` feels crowded**; default to `cols={2}` for next-step nav.
+- **Drop fields that are self-evident** from surrounding context. When listing the parts of an object, don't enumerate every attribute — skip the ones a reader would assume exist (e.g. a Name on a Signal). Trim to the parts that are actually interesting to describe.
+- **Conversational H2s**: prefer "Run a Signal on new traces or historical traces" over "Ways to run a Signal". Headers can be long if they answer a question directly.
+- **Concrete speech, not abstract definitions**: "If you've written a Slack message that starts with 'can you look through today's runs...'" beats "Signals are for open-ended investigations".
+- Keep one or two `<Note>` callouts per page for side information that would otherwise break flow (e.g. "these are queryable via `signal_events`"). Don't inline the detail into prose.
+
 ## Formatting
 
 - Run `prettier --write` ONLY on the specific files you changed. Never `pnpm format:write` or `prettier --write .`; it touches unrelated files. Note that the docs repo itself has no `package.json` or prettier config, so prettier is not part of the workflow here.

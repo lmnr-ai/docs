@@ -3,16 +3,20 @@ title: Quickstart
 sidebarTitle: Quickstart
 ---
 
-This quickstart walks through the full Signals loop: generate some traces, write a Signal that reads them, run it, and inspect events.
+This quickstart walks through the full Signals loop: *generate traces, write a Signal that reads them, run it, and look at the events*.
+
+<Note>
+Every new Laminar project ships with a **Failure Detector** signal pre-created and triggered automatically on traces with more than 1000 tokens. It categorizes issues as `tool_error`, `api_error`, `logic_error`, `looping`, `wrong_tool`, `timeout`, or `other`. You don't need to build this one yourself. Open it from the Signals list to see events as soon as your traces start arriving.
+</Note>
 
 ## Prerequisites
 
 - A Laminar project and `LMNR_PROJECT_API_KEY`.
-- An agent or LLM app whose traces land in Laminar. If you don't have one handy, the example below uses the [Claude Agent SDK](/tracing/integrations/claude-agent-sdk) to generate traces quickly.
+- An agent or LLM app whose traces land in Laminar. The example below uses the [Claude Agent SDK](/tracing/integrations/claude-agent-sdk) to produce traces quickly.
 
-## 1. Generate traces to run the Signal on
+## 1. Generate traces
 
-Any traced application will do. Below is a minimal example using the Claude Agent SDK that sends a handful of prompts and emits one trace per prompt. Enough to exercise a Signal end-to-end.
+Any traced application will do. The Claude Agent SDK example below sends a handful of prompts and emits one trace per prompt. Enough to exercise a Signal end-to-end.
 
 ```python
 import asyncio
@@ -54,29 +58,31 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-Run it, then refresh the Laminar traces page to confirm the `quickstart_agent` traces show up.
+Run it, then refresh the Laminar traces page to confirm the `quickstart_agent` traces arrive.
 
-## 2. Create a Signal
+## 2. Open Signals
 
-Open your project and click **Signals** in the sidebar. The Signals page lists every Signal in the project along with recent event activity.
+Click **Signals** in the project sidebar. If this is a new project, the **Failure Detector** signal is already there, ready to run on any trace over 1000 tokens.
 
-<Frame caption="Signals list: one card per Signal with recent events and sparkline">
-  <img src="/images/signals/signals-list.png" alt="Signals list view showing cards for each Signal with event counts" />
+<Frame caption="Signals list: one card per Signal with recent events and a sparkline">
+  <img src="/images/signals/signals-list.png" alt="Signals list view with cards for each Signal and recent event counts" />
 </Frame>
 
-Click **Create signal** to open the creation dialog.
+To write your own, click **Create signal**.
 
 <Frame caption="Empty Create Signal dialog">
-  <img src="/images/signals/create-signal-empty.png" alt="Empty signal creation form with name, template, prompt, schema, triggers, and sampling sections" />
+  <img src="/images/signals/create-signal-empty.png" alt="Empty signal creation form" />
 </Frame>
 
-Fill it in:
+## 3. Write the Signal
 
-1. **Name**: a stable identifier. Use snake_case or dot-notation (for example, `agent_response_quality`, `checkout.completed`). The name is what you'll filter, alert, and query by.
-2. **Template** (optional): pick a starting point. Laminar ships templates for common patterns such as task completion, user friction, safety, hallucination, and intent. Templates prefill the prompt and schema; you still edit both before saving.
-3. **Prompt**: describe what the Signal should detect or extract from the trace. Be concrete. "The agent answered the user's question correctly and completely" is a better prompt than "good response".
-4. **Structured output**: define the JSON schema for the payload. Keep fields small and stable; they become filterable columns.
-5. **Triggers** (optional): toggle on to run this Signal automatically on new traces. Add filters to narrow which traces it runs against. See [running live vs. batched](#running-a-signal-triggers-and-jobs).
+Fill in the form:
+
+1. **Name**: a stable identifier. Use snake_case or dot-notation (`agent_response_quality`, `checkout.completed`). The name is what you filter, alert, and query by.
+2. **Template** (optional): pick a starting point. Laminar ships templates for task completion, user friction, safety, hallucination, and intent. Templates prefill the prompt and schema; edit both before saving.
+3. **Prompt**: describe what the Signal should detect or extract from the trace. *Be concrete.* "The agent answered the user's question correctly and completely" is a better prompt than "good response".
+4. **Structured output**: define the JSON schema for the payload. Keep fields small and stable; they become filterable columns on `signal_events`.
+5. **Triggers**: toggle on to run this Signal automatically on new traces. Add filters to narrow which traces it runs against.
 6. **Sampling** (optional): cap how many matching traces the trigger consumes per time window. Useful when a high-volume filter would otherwise fan out across every trace.
 
 <Frame caption="Create Signal dialog filled in with a Task-template Signal">
@@ -86,33 +92,33 @@ Fill it in:
 Click **Create**. The Signal is live from this point on: any configured Trigger starts processing new traces immediately.
 
 <Note>
-  Creating a Signal automatically creates a CRITICAL-severity alert subscribed to every workspace member's email. Visit **Project Settings > Alerts** to configure Slack routing, change severity, or remove subscribers. See [Alerts](/signals/alerts).
+Creating a Signal automatically creates a CRITICAL-severity alert subscribed to every workspace member's email. Open **Project Settings > Alerts** to route it to Slack, change the severity, or trim the subscriber list. See [Alerts](/signals/alerts).
 </Note>
 
-## 3. Running a Signal: Triggers and Jobs
+## 4. Run the Signal: Triggers and Jobs
 
-A Signal can run in two modes, independent of each other:
+A Signal can run in two modes, independent of each other.
 
 ### Triggers (live)
 
-Triggers run the Signal automatically on new traces that match your filter set. Triggers are what feed live dashboards and Alerts.
+Triggers run the Signal automatically on new traces that match your filter set. **This is what feeds live dashboards and Alerts.**
 
-- Go to the Signal's **Triggers** tab and click **Add Trigger** (or configure Triggers when creating the Signal).
+- Open the Signal's **Triggers** tab and click **Add Trigger** (or configure Triggers while creating the Signal).
 - Add one or more filters. All filters are AND-combined.
 - Choose a mode:
   - **Batch** processes matching traces in micro-batches after they finish. Lower cost, slightly higher latency.
   - **Realtime** processes each matching trace as soon as it completes. Use this when you want Alerts to fire within seconds.
-- Save. From now on, every matching trace produces a Run; runs that detect the Signal produce events.
+- Save. Every matching trace now produces a Run; runs that detect the Signal produce events.
 
 ### Jobs (backfill)
 
-Use Jobs to run a Signal across historical traces, for example to evaluate a freshly-created Signal over the last 24 hours.
+Use Jobs to run a Signal across historical traces, for example to evaluate a freshly-created Signal over the last 24 hours of traffic.
 
 <Frame caption="Create a Signal Job: pick traces or filters, then enqueue">
   <img src="/images/signals/create-job.png" alt="Create signal job page with trace selection, filters, and trace table" />
 </Frame>
 
-1. On the Signal detail page, open the **Jobs** tab.
+1. Open the Signal's **Jobs** tab.
 2. Click **Create Job**.
 3. Pick a **time range** (defaults to the last 24 hours).
 4. Optionally narrow with **filters** or **search**.
@@ -125,7 +131,7 @@ Use Jobs to run a Signal across historical traces, for example to evaluate a fre
 
 Runs appear in the **Runs** tab with a status (Pending, Completed, Failed). Each Run that detects the Signal links to the resulting event in the **Events** tab.
 
-## 4. Inspect events
+## 5. Inspect events
 
 Open the Signal detail page and switch to the **Events** tab. Each row is one detected event, linked back to the trace that produced it.
 
@@ -137,12 +143,12 @@ From here you can:
 
 - Filter events by any field you defined in the structured output schema.
 - Click any row to open the corresponding trace.
-- Switch to the **Clusters** panel to see similar events grouped together. See [Clusters](/signals/clusters).
-- Query the raw events in the [SQL Editor](/platform/sql-editor) using the `signal_events` table.
+- Use the **Clusters** panel to see similar events grouped together. See [Clusters](/signals/clusters).
+- Query the raw events in the [SQL Editor](/platform/sql-editor) via the `signal_events` table.
 
 ## Querying `signal_events` in SQL
 
-`signal_events` stores each event's payload as a JSON string. The payload filter in the UI uses `simpleJSONExtractString` / `simpleJSONExtractRaw`, so you can mirror the same behavior in SQL.
+`signal_events` stores each event's payload as a JSON string. The UI's payload filter uses `simpleJSONExtractString` / `simpleJSONExtractRaw`, so you can mirror the same behavior in SQL.
 
 ### Quick payload filter (UI-equivalent)
 
@@ -201,6 +207,6 @@ LIMIT 100
     Group similar events into recurring patterns.
   </Card>
   <Card title="Alerts" href="/signals/alerts" icon="bell">
-    Send Slack or email notifications when a Signal fires.
+    Send Slack or email notifications on new signal events.
   </Card>
 </CardGroup>
