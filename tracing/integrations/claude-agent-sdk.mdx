@@ -6,16 +6,20 @@ description: Trace Claude Agent SDK runs in Laminar. Every model call, tool call
 
 ## Overview
 
-Claude Agent SDK lets you call Claude Code from your own code: it manages the underlying process and the model calls so you can drive agents programmatically. Laminar instruments the SDK at the client-method level, so a single `Laminar.initialize()` captures every `query`, `receive_messages`, LLM call, tool call, and (crucially) every subagent the main agent spawns via the `Task` tool.
+Claude Agent SDK lets you call Claude Code from your own code: it manages the underlying process and the model calls so you can drive agents programmatically. Laminar instruments the SDK at the client-method level, so a single `Laminar.initialize()` captures every `query`, `receive_messages`, LLM call, tool call, and (crucially) every subagent the main agent spawns via the Agent tool.
 
 The payoff is the **transcript view**: Laminar extracts the agent's inputs (from the system and user messages), groups each subagent spawn into a collapsible card that shows its input and final output, and lays everything out as a conversation instead of a span tree.
+
+<Note>
+In Claude Code v2.1.63 the subagent tool was renamed from `Task` to `Agent`. Laminar's grouping works for both names: it matches the spawn prompt against the first LLM call inside the subagent, not the tool name.
+</Note>
 
 ## What Laminar captures
 
 - The full shape of the SDK call graph: `connect`, `query`, `receive_messages`, `receive_response`, `interrupt`, `disconnect`.
 - Every LLM prompt, response, token count, and cost.
 - Every tool call (`Bash`, `Read`, `Grep`, `Edit`, etc.) with arguments and results.
-- Every subagent spawned via `Task`, grouped into a collapsible card with the subagent's input and final output surfaced at the top.
+- Every subagent the orchestrator spawns via the Agent tool (programmatically via the `agents` parameter, or a filesystem-based agent in `.claude/agents/`), grouped into a collapsible card with the subagent's input and final output surfaced at the top.
 - A transcript timeline you can scrub with any attached browser session or media.
 
 ## Getting started
@@ -118,7 +122,7 @@ run();
 
 ## Transcript view: read the conversation, not the span tree
 
-Open the trace in Laminar and the default view is a transcript. Laminar pulls the agent's inputs from the system and user messages, shows the orchestrator's LLM turns inline, and renders every subagent spawned via `Task` as its own collapsible card with **Input** and **Output** previews at the top.
+Open the trace in Laminar and the default view is a transcript. Laminar pulls the agent's inputs from the system and user messages, shows the orchestrator's LLM turns inline, and renders every subagent spawn as its own collapsible card with **Input** and **Output** previews at the top.
 
 <Frame caption="Claude Agent SDK trace in Laminar: orchestrator LLM turns, inline Bash tool calls, and a Code Assistant subagent card with its input and final output surfaced.">
 <img src="/images/traces/claude-agent-sdk.png" alt="Claude Agent SDK trace in Laminar" />
@@ -130,46 +134,61 @@ More on the trace UX: [Viewing traces](/platform/viewing-traces).
 
 ## Subagents: collapsible cards with full context
 
-When the orchestrator uses the `Task` tool to spawn a subagent, Laminar detects the boundary (matching the spawn prompt against the subagent's first LLM call) and groups every span inside that subagent under one card. The card is collapsed by default so you can scan the run end-to-end; expand one to see the subagent's inner LLM turns and tool calls without losing your place.
+When the orchestrator delegates to a subagent (via the Agent tool, formerly `Task`), Laminar detects the boundary by matching the spawn prompt against the subagent's first LLM call and groups every span inside that subagent under one card. The card is collapsed by default so you can scan the run end-to-end; expand one to see the subagent's inner LLM turns and tool calls without losing your place.
 
-Try this: spawn a handful of parallel subagents and open the trace.
+Try this: define a few specialized subagents via the `agents` parameter, let the orchestrator dispatch them in parallel, and open the trace.
 
 ```python example.py
 """Orchestrator that delegates to 4 parallel research subagents."""
 import anyio
 
-from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
+from claude_agent_sdk import AgentDefinition, ClaudeAgentOptions, ClaudeSDKClient
 from lmnr import Laminar, observe
 
 Laminar.initialize()
 
 SYSTEM_PROMPT = """You are a lead research orchestrator.
 
-You have access to the Task tool. For every discrete research subtask,
-spawn a subagent with Task rather than doing the work inline. Good
-candidates for a subagent: reading a specific file, running a web
-search, summarizing a section, comparing two items.
+For every discrete research subtask, delegate to one of the specialized
+subagents (gather, taskgroup, cancellation, pitfalls) rather than doing
+the work inline. Dispatch them in parallel whenever the subtasks are
+independent.
 
 After all subagents finish, produce a final consolidated answer."""
 
 USER_PROMPT = """Write a short briefing on Python's asyncio.
 
-Spawn separate Task subagents for each of these, in parallel when
-possible:
-1. Explain the difference between asyncio.gather and asyncio.wait.
-2. Explain structured concurrency with asyncio.TaskGroup (3.11+).
-3. Give a short example of cancellation with CancelScope / anyio.
-4. List three common pitfalls beginners hit with asyncio.
+Delegate each of these to the matching subagent, in parallel when possible:
+1. Explain the difference between asyncio.gather and asyncio.wait. (gather)
+2. Explain structured concurrency with asyncio.TaskGroup (3.11+). (taskgroup)
+3. Give a short example of cancellation with CancelScope / anyio. (cancellation)
+4. List three common pitfalls beginners hit with asyncio. (pitfalls)
 
 When every subagent has returned, combine their outputs into a
 single briefing with one short section per topic."""
+
+
+def researcher(topic: str) -> AgentDefinition:
+    return AgentDefinition(
+        description=f"Research specialist for {topic}. Use for anything about {topic}.",
+        prompt=f"You are a concise Python asyncio expert focused on {topic}. Return a tight paragraph.",
+        tools=["Read", "Grep", "Glob"],
+        model="sonnet",
+    )
 
 
 @observe(name="asyncio_research_briefing")
 async def run() -> None:
     options = ClaudeAgentOptions(
         system_prompt=SYSTEM_PROMPT,
-        allowed_tools=["Task"],
+        # "Agent" is required so the orchestrator can invoke subagents.
+        allowed_tools=["Read", "Grep", "Glob", "Agent"],
+        agents={
+            "gather": researcher("asyncio.gather vs asyncio.wait"),
+            "taskgroup": researcher("asyncio.TaskGroup / structured concurrency"),
+            "cancellation": researcher("cancellation with CancelScope and anyio"),
+            "pitfalls": researcher("common asyncio pitfalls"),
+        },
         max_turns=25,
     )
     async with ClaudeSDKClient(options=options) as client:
@@ -182,14 +201,14 @@ if __name__ == "__main__":
     anyio.run(run)
 ```
 
-In the trace, each of the four `Task` spawns becomes its own card labelled with the subagent's role. Expand a card to see its LLM turns, tool calls (`Bash`, `Read`, `Grep`, `Edit`), and nested work.
+In the trace, each of the four subagent dispatches becomes its own card labelled with the subagent's role. Expand a card to see its LLM turns, tool calls (`Bash`, `Read`, `Grep`, `Edit`), and nested work.
 
 <Frame caption="A subagent card expanded inline: input at the top, nested Claude Sonnet turns and tool calls in the middle, the final output collapsed back into the parent transcript.">
 <img src="/images/traces/claude-agent-sdk-multi-agent.png" alt="Expanded Claude Agent SDK subagent card in Laminar" />
 </Frame>
 
 <Note>
-Laminar groups subagents by matching the orchestrator's spawn prompt against the first LLM call inside the Task. You don't need to annotate anything: just use `Task` the way the SDK intends.
+Laminar groups subagents by matching the orchestrator's spawn prompt against the first LLM call inside the subagent. You don't need to annotate anything: define agents via the `agents` parameter (or in `.claude/agents/`), include `"Agent"` in `allowed_tools`, and grouping works automatically.
 </Note>
 
 ## Track outcomes with Signals
