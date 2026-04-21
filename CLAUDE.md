@@ -23,6 +23,9 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - Capture from the production build of the frontend, not the dev server: dev overlays and the Next.js dev indicator look unprofessional in published shots.
 - Viewport: **1512 x 982** (MBP 14" equivalent).
 - Wrap screenshots in `<Frame caption="...">` and keep them in `/images/` organized by area (e.g. `/images/tutorials/`, `/images/platform/`).
+- Trace view has an inner scrollable container, so `agent-browser scroll down` moves the outer page (usually a no-op) instead of the transcript. Scroll it via `agent-browser eval "document.querySelector('.styled-scrollbar.overflow-x-hidden').scrollTop = N"`.
+- To dismiss the "New: Transcript view" hint popover for clean screenshots, set `localStorage['trace-view:transcript-hint-dismissed'] = 'true'` on a non-trace page first, then navigate to the trace URL. The component reads localStorage only at mount, so setting it after the trace page loads does nothing.
+- Close the "Signal events" side panel (button in the top toolbar, next to Tags) before screenshotting — a trace with signals attached shows it by default and steals half the viewport.
 
 ## Voice gotchas not caught by linters
 
@@ -44,3 +47,9 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 ## Formatting
 
 - Run `prettier --write` ONLY on the specific files you changed. Never `pnpm format:write` or `prettier --write .`; it touches unrelated files. Note that the docs repo itself has no `package.json` or prettier config, so prettier is not part of the workflow here.
+
+## Claude Agent SDK integration specifics
+
+- Laminar's transcript view detects subagent boundaries by matching the orchestrator's `Task` spawn prompt hash against the first LLM call inside the subagent (`computeSubagentBoundaries` in `frontend/components/traces/trace-view/store/utils.ts`). Integration docs can promise this works without any user annotation.
+- Python integration is an extra: `pip install 'lmnr[claude-agent-sdk]'`. Don't imply it ships in the default `lmnr` package.
+- The Python SDK's `Laminar.initialize()` defaults to `https://api.lmnr.ai` and does NOT read `LMNR_BASE_URL`/`LMNR_HTTP_PORT`/`LMNR_GRPC_PORT` env vars for ports. To point at a local stack, pass `base_url`, `http_port`, `grpc_port` explicitly. Keep examples in docs simple (`Laminar.initialize()` with no args) since users ship to cloud by default.

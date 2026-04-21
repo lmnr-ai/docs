@@ -1,85 +1,38 @@
 ---
 title: Observability for Claude Agent SDK
 sidebarTitle: Claude Agent SDK
+description: Trace Claude Agent SDK runs in Laminar. Every model call, tool call, and subagent spawn shows up as a transcript, not a tree of span names.
 ---
 
 ## Overview
 
-Claude Agent SDK is a framework for calling Claude Code from your own code.
-It abstracts away the underlying process management and calls to the model API.
+Claude Agent SDK lets you call Claude Code from your own code: it manages the underlying process and the model calls so you can drive agents programmatically. Laminar instruments the SDK at the client-method level, so a single `Laminar.initialize()` captures every `query`, `receive_messages`, LLM call, tool call, and (crucially) every subagent the main agent spawns via the `Task` tool.
+
+The payoff is the **transcript view**: Laminar extracts the agent's inputs (from the system and user messages), groups each subagent spawn into a collapsible card that shows its input and final output, and lays everything out as a conversation instead of a span tree.
 
 ## What Laminar captures
 
-- The entire structure of the Claude Agent SDK function calls, including `connect`, `query`, and `receive_messages`.
-- LLM prompts and responses sent to the model.
-- Tool calls and their results.
-- Latencies, token counts, and token costs.
+- The full shape of the SDK call graph: `connect`, `query`, `receive_messages`, `receive_response`, `interrupt`, `disconnect`.
+- Every LLM prompt, response, token count, and cost.
+- Every tool call (`Bash`, `Read`, `Grep`, `Edit`, etc.) with arguments and results.
+- Every subagent spawned via `Task`, grouped into a collapsible card with the subagent's input and final output surfaced at the top.
+- A transcript timeline you can scrub with any attached browser session or media.
 
 ## Getting started
 
 <Tabs>
-<Tab title="TypeScript / JavaScript">
-<Steps>
-<Step title="Installation">
-
-Ensure you are using `@lmnr-ai/lmnr` version `0.7.10` or higher.
-
-```bash
-npm install @lmnr-ai/lmnr@latest @anthropic-ai/claude-agent-sdk@latest
-# or
-pnpm add @lmnr-ai/lmnr@latest @anthropic-ai/claude-agent-sdk@latest
-```
-
-</Step>
-<Step title="Set up your environment variables">
-
-Export your API keys as environment variables.
-
-```bash
-export LMNR_PROJECT_API_KEY=your-laminar-project-api-key
-export ANTHROPIC_API_KEY=your-anthropic-api-key
-```
-
-</Step>
-<Step title="Wrap the query function">
-
-```typescript {2,5,8}
-import { query as origQuery } from '@anthropic-ai/claude-agent-sdk';
-import { Laminar } from '@lmnr-ai/lmnr';
-
-// Initialize Laminar
-Laminar.initialize();
-
-// Wrap the original query function
-const query = Laminar.wrapClaudeAgentQuery(origQuery);
-
-async function run() {
-  const result = await query({
-    prompt: "Scan the current directory for TODOs and create a summary markdown file."
-  });
-
-  console.log(result);
-}
-run();
-```
-
-</Step>
-</Steps>
-</Tab>
 <Tab title="Python">
 <Steps>
-<Step title="Installation">
+<Step title="Install">
 
-Claude Agent SDK integration is packaged as a separate extra.
+Claude Agent SDK support is a separate extra.
 
 ```bash
-pip install -U 'lmnr[claude-agent-sdk]'
+pip install -U 'lmnr[claude-agent-sdk]' claude-agent-sdk
 ```
 
 </Step>
-<Step title="Set up your environment variables">
-
-Store your API keys in a `.env` file or export them as environment variables.
+<Step title="Set your API keys">
 
 ```bash
 export LMNR_PROJECT_API_KEY=your-laminar-project-api-key
@@ -89,9 +42,9 @@ export ANTHROPIC_API_KEY=your-anthropic-api-key
 </Step>
 <Step title="Initialize Laminar">
 
-Initialize Laminar at the start of your application or file.
+Call `Laminar.initialize()` once at process start. Wrap the entrypoint with `@observe()` so the whole run groups under a single trace.
 
-```python {4-6}
+```python
 import asyncio
 
 from claude_agent_sdk import ClaudeSDKClient
@@ -103,8 +56,8 @@ Laminar.initialize()
 async def main():
     async with ClaudeSDKClient() as client:
         await client.query(
-            "Explain to me with examples, how memoization speeds up recursive "
-            "function calls. Use the Fibonacci sequence as an example."
+            "Explain, with examples, how memoization speeds up recursive "
+            "function calls. Use the Fibonacci sequence."
         )
         async for msg in client.receive_response():
             print(msg)
@@ -116,20 +69,148 @@ if __name__ == "__main__":
 </Step>
 </Steps>
 </Tab>
+<Tab title="TypeScript / JavaScript">
+<Steps>
+<Step title="Install">
+
+Requires `@lmnr-ai/lmnr` `0.7.10` or higher.
+
+```bash
+npm install @lmnr-ai/lmnr@latest @anthropic-ai/claude-agent-sdk@latest
+# or
+pnpm add @lmnr-ai/lmnr@latest @anthropic-ai/claude-agent-sdk@latest
+```
+
+</Step>
+<Step title="Set your API keys">
+
+```bash
+export LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+export ANTHROPIC_API_KEY=your-anthropic-api-key
+```
+
+</Step>
+<Step title="Wrap the query function">
+
+Laminar exports a helper that wraps `query` so every call gets traced.
+
+```typescript {2,5,8}
+import { query as origQuery } from '@anthropic-ai/claude-agent-sdk';
+import { Laminar } from '@lmnr-ai/lmnr';
+
+Laminar.initialize();
+
+const query = Laminar.wrapClaudeAgentQuery(origQuery);
+
+const run = async () => {
+  const result = await query({
+    prompt: 'Scan the current directory for TODOs and write a summary markdown file.',
+  });
+  console.log(result);
+};
+run();
+```
+
+</Step>
+</Steps>
+</Tab>
 </Tabs>
 
-## View the traces in Laminar
+## Transcript view: read the conversation, not the span tree
 
-Go to the Laminar dashboard, and you will see the traces for the Claude Agent SDK.
+Open the trace in Laminar and the default view is a transcript. Laminar pulls the agent's inputs from the system and user messages, shows the orchestrator's LLM turns inline, and renders every subagent spawned via `Task` as its own collapsible card with **Input** and **Output** previews at the top.
 
-Example trace:
+<Frame caption="Claude Agent SDK trace in Laminar: orchestrator LLM turns, inline Bash tool calls, and a Code Assistant subagent card with its input and final output surfaced.">
+<img src="/images/traces/claude-agent-sdk.png" alt="Claude Agent SDK trace in Laminar" />
+</Frame>
 
-<img src="/images/traces/claude-agent-sdk.png" alt="Claude Agent SDK Trace" />
+A span tree tells you the shape of the call graph; a transcript tells you what the agent actually did. For long-running, multi-step agents the difference is the point.
 
-## Multi-agent visualization
+More on the trace UX: [Viewing traces](/platform/viewing-traces).
 
-When multiple Claude agents collaborate in a single run, Laminar renders each agent as a distinct branch in the trace so you can follow handoffs and parallel work.
+## Subagents: collapsible cards with full context
 
-Example multi-agent trace:
+When the orchestrator uses the `Task` tool to spawn a subagent, Laminar detects the boundary (matching the spawn prompt against the subagent's first LLM call) and groups every span inside that subagent under one card. The card is collapsed by default so you can scan the run end-to-end; expand one to see the subagent's inner LLM turns and tool calls without losing your place.
 
-<img src="/images/traces/claude-agent-sdk-multi-agent.png" alt="Claude Agent SDK multi-agent trace" />
+Try this: spawn a handful of parallel subagents and open the trace.
+
+```python example.py
+"""Orchestrator that delegates to 4 parallel research subagents."""
+import anyio
+
+from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
+from lmnr import Laminar, observe
+
+Laminar.initialize()
+
+SYSTEM_PROMPT = """You are a lead research orchestrator.
+
+You have access to the Task tool. For every discrete research subtask,
+spawn a subagent with Task rather than doing the work inline. Good
+candidates for a subagent: reading a specific file, running a web
+search, summarizing a section, comparing two items.
+
+After all subagents finish, produce a final consolidated answer."""
+
+USER_PROMPT = """Write a short briefing on Python's asyncio.
+
+Spawn separate Task subagents for each of these, in parallel when
+possible:
+1. Explain the difference between asyncio.gather and asyncio.wait.
+2. Explain structured concurrency with asyncio.TaskGroup (3.11+).
+3. Give a short example of cancellation with CancelScope / anyio.
+4. List three common pitfalls beginners hit with asyncio.
+
+When every subagent has returned, combine their outputs into a
+single briefing with one short section per topic."""
+
+
+@observe(name="asyncio_research_briefing")
+async def run() -> None:
+    options = ClaudeAgentOptions(
+        system_prompt=SYSTEM_PROMPT,
+        allowed_tools=["Task"],
+        max_turns=25,
+    )
+    async with ClaudeSDKClient(options=options) as client:
+        await client.query(USER_PROMPT)
+        async for message in client.receive_response():
+            print(message)
+
+
+if __name__ == "__main__":
+    anyio.run(run)
+```
+
+In the trace, each of the four `Task` spawns becomes its own card labelled with the subagent's role. Expand a card to see its LLM turns, tool calls (`Bash`, `Read`, `Grep`, `Edit`), and nested work.
+
+<Frame caption="A subagent card expanded inline: input at the top, nested Claude Sonnet turns and tool calls in the middle, the final output collapsed back into the parent transcript.">
+<img src="/images/traces/claude-agent-sdk-multi-agent.png" alt="Expanded Claude Agent SDK subagent card in Laminar" />
+</Frame>
+
+<Note>
+Laminar groups subagents by matching the orchestrator's spawn prompt against the first LLM call inside the Task. You don't need to annotate anything: just use `Task` the way the SDK intends.
+</Note>
+
+## Track outcomes with Signals
+
+Traces tell you what happened on one run. [Signals](/signals/introduction) turn traces into structured outcomes: describe a behavior or failure in natural language ("the orchestrator returned without spawning any subagents", "a subagent Bash call failed and the parent didn't retry") and Laminar extracts matching events across your history and every new trace. Route them to alerts, dashboards, or datasets.
+
+## Query across traces
+
+- **[SQL editor](/platform/sql-editor)** for ad-hoc queries across traces, spans, signals, and evals.
+- **SQL API** for programmatic access from scripts and pipelines.
+- **[MCP server](/platform/mcp)** to query Laminar from Claude Code, Cursor, or Codex. Useful when you want the agent debugging the trace to read it directly.
+
+## Advanced
+
+- Wrap your own orchestration code with [`observe`](/tracing/structure/observe-decorator) to group a multi-query run under one parent span and attach sessions, user IDs, metadata, or tags.
+- Add [tags](/tracing/structure/tags) to a span to slice traces in the UI and in SQL.
+- If you also call providers directly (e.g. `anthropic.Anthropic()` or OpenAI), those calls are auto-instrumented once `Laminar.initialize()` has run. See the [Anthropic](/tracing/integrations/anthropic) and [OpenAI](/tracing/integrations/openai) integration pages.
+
+## What's next
+
+- [Viewing traces](/platform/viewing-traces): the transcript view, search, and filters in depth.
+- [Signals](/signals/introduction): structured outcome extraction over Claude Agent SDK traces.
+- [SQL editor](/platform/sql-editor) and [MCP server](/platform/mcp): query your traces programmatically.
+- [Tracing structure](/tracing/structure/overview): sessions, user IDs, metadata, and tags for richer context.
