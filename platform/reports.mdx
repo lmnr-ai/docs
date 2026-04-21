@@ -3,29 +3,73 @@ title: Reports
 sidebarTitle: Reports
 ---
 
-Laminar sends periodic summary reports to your email so you can keep track of [signal](/signals/introduction) activity across all projects in a workspace without opening the dashboard.
+Laminar sends periodic summaries of [signal](/signals/introduction) activity across every project in a workspace. Reports cover patterns you would miss when paging alert-by-alert: new failure modes, recurring issues, and signals whose volume changed.
 
 <Frame caption="Workspace reports page">
-  <img src="/images/reports/workspace-reports.png" alt="Workspace reports page showing available report subscriptions" />
+  <img src="/images/reports/workspace-reports.png" alt="Workspace reports page showing daily and weekly signal summaries with Slack and email targets" />
 </Frame>
 
-## Default subscriptions
+Reports live at the workspace level. Open **Workspace > Reports** to see every report configured for the workspace and who each one is sent to.
 
-When you create your first workspace, Laminar automatically subscribes you to two reports:
+## Defaults on workspace creation
 
-- **Weekdays signals summary** — Delivered on weekdays (Monday through Friday) summarizing signal events from the previous day.
-- **Weekly signals summary** — Delivered once a week (Sunday) summarizing signal events from the previous week.
+Every new workspace ships with two reports, both on by default:
 
-Both reports cover all projects in the workspace and are sent to the email address associated with your account.
+- **Daily signals summary**: delivered Monday through Friday at 10:00 AM UTC, summarizing signal activity from the previous day.
+- **Weekly signals summary**: delivered Saturday at 10:00 AM UTC, summarizing the previous week.
 
-## Manage report subscriptions
+The creator of the workspace is auto-subscribed by email to both reports. Other workspace members can subscribe themselves from the Reports page.
 
-1. Go to your **Workspace** page and select **Reports** from the sidebar.
-2. You will see the list of available reports with their delivery schedule.
-3. Use the **toggle switch** next to each report to subscribe or unsubscribe.
+## What a report contains
 
-When subscribed, the report card shows your email address and a **Subscribed** badge. When you unsubscribe, you will stop receiving that report until you re-enable it.
+Each report summarizes signal events across every project in the workspace for the report's time window. The summary includes:
 
-## What is included in a report
+- A per-signal event count for the period.
+- An AI-generated narrative of recurring patterns and notable changes.
+- A short list of noteworthy events with links into the source traces.
 
-Each report summarizes signal events across every project in the workspace for the relevant time period. This gives you a quick overview of detected patterns, recurring issues, and notable activity without needing to check each project individually.
+## Notification channels
+
+Every report posts to the in-app notification center by default. Slack and email are optional and configured per report.
+
+### In-app notifications
+
+The notification bell in the project sidebar shows a card for each recent report alongside signal alerts. Each report card expands to show the AI summary and noteworthy events. Trace links jump straight to the source trace.
+
+<Note>
+In-app display of reports is scoped to daily-style reports. Weekly reports are delivered to Slack and email only to avoid duplicating information already shown by the daily report.
+</Note>
+
+### Slack
+
+Reports can post to a single Slack channel per report. Slack messages include the same per-signal counts, AI summary, and noteworthy events as the email. Connect Slack from **Workspace > Integrations** (see [Integrations](/platform/integrations)) or from the Reports page.
+
+### Email
+
+Each workspace member manages their own email subscription. Subscribing adds your workspace email address to the report's target list; unsubscribing removes it. Other subscribers are unaffected.
+
+## Manage a report
+
+1. Open **Workspace > Reports**.
+2. Click the pencil icon on the row for the report you want to change.
+3. In the side sheet:
+   - **Slack channel**: pick a channel or clear the selection to stop posting to Slack.
+   - **Email**: toggle to subscribe or unsubscribe *your own* email address.
+4. Click **Save**.
+
+Report schedules are fixed. Only the notification targets are user-configurable.
+
+## Reports vs. alerts
+
+Reports send periodic rollups across an entire workspace. [Alerts](/signals/alerts) fire on individual signal events or new clusters within a single project. Use reports for a regular pulse; use alerts to page on things you need to see now.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Alerts" href="/signals/alerts" icon="bell">
+    Page on individual signal events and new clusters.
+  </Card>
+  <Card title="Integrations" href="/platform/integrations" icon="plug">
+    Connect Slack so reports can post to a channel.
+  </Card>
+</CardGroup>

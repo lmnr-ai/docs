@@ -3,76 +3,110 @@ title: Alerts
 sidebarTitle: Alerts
 ---
 
-**Alerts turn signal events into notifications.** When a Signal fires on a trace and an alert is configured for it, Laminar posts a message to Slack or emails subscribed workspace members.
+**Alerts turn signal activity into notifications.** When an alert fires, Laminar drops the notification into the in-app notification center and, if configured, sends it to Slack and email.
 
 <Frame caption="Project settings: Alerts tab">
   <img src="/images/signals/alerts.png" alt="Project alerts settings page showing configured alerts and Slack connection" />
 </Frame>
 
-Every Signal you create gets a default alert wired up automatically: severity **CRITICAL**, delivered by email to every workspace member. Edit that alert to route it to Slack, change the severity, or trim the subscriber list.
+Alerts live at the project level. Open **Project Settings > Alerts** to see every alert configured for the project, or create one from scratch.
+
+## Defaults on signal creation
+
+Creating a new Signal auto-creates two alerts so you start receiving notifications immediately:
+
+1. A **Signal event** alert on the new Signal, scoped to **Critical** severity, with *skip similar events* on.
+2. A **New cluster** alert on the new Signal (when clustering is available on your workspace).
+
+Both alerts default to in-app notifications only. To route to Slack or email, open **Project Settings > Alerts** and edit the alert.
+
+<Note>
+Alerts created before the severity field existed default to **Critical**, so historical alerts do not suddenly page on lower-severity events.
+</Note>
+
+## Alert types
+
+Each alert has one of two triggers:
+
+- **Signal event**: fires when a new event is extracted for the selected Signal. Filter by severity and, optionally, skip semantically similar events.
+- **New cluster**: fires when a new [cluster](/signals/clusters) is created for the selected Signal. Useful for spotting failure modes that did not exist yesterday.
+
+Both trigger types are scoped to a single Signal. To cover multiple Signals, create one alert per Signal.
 
 ## Severity levels
 
-Each alert has a severity threshold and only fires on events at or above that threshold:
+`Signal event` alerts fire only on events whose severity is included in the alert's severity set. Pick any combination of:
 
-- **Info**: fires on every matching event. Good for low-volume Signals where each event is interesting.
-- **Warning**: fires on warnings and criticals.
-- **Critical**: fires only on the highest-severity events. This is the default for newly created Signals.
+- **Info**: low-severity events. Useful for low-volume signals where every event is interesting.
+- **Warning**: mid-severity events.
+- **Critical**: the highest severity. This is the default for alerts auto-created with a Signal.
 
-The severity of each individual event is set by the Signal's extractor based on the Signal's prompt.
+The severity of each individual event is set by the Signal's extractor based on the Signal's prompt. A good way to learn what each level looks like on your data is to inspect a few events on the Signal detail page.
+
+## Skip notifications for similar events
+
+`Signal event` alerts have an optional **Skip notifications for similar events** toggle. When enabled, only the first event in a group of semantically similar events triggers a notification. Subsequent events in the same group are suppressed until a new group forms.
+
+Turn this on when a Signal fires often on repetitive cases (the same timeout loop, the same tool error) and you only want to know about new failure modes. Turn it off when every event is worth paging.
 
 <Note>
-Alerts that predate the severity field default to **Critical** so historical alerts don't suddenly page on low-severity events.
+Similar-event detection relies on Laminar's clustering service. The toggle is only shown when clustering is available on your workspace.
 </Note>
 
-## Slack notifications
+## Notification channels
 
-Slack messages contain the Signal name, the extracted payload fields, and a link to the trace.
+Every alert posts to the in-app notification center by default. Slack and email are optional and configured per alert.
 
-### Prerequisites
+### In-app notifications
 
-- **A connected Slack workspace.** Connect from **Workspace > Integrations** (see [Integrations](/platform/integrations)), or directly from the Alerts settings page.
-- **At least one Signal** (see [Signals quickstart](/signals/quickstart)). Alerts fire on signal events, so a Signal must exist first.
+The notification bell in the project sidebar shows unread alerts for the current project. Each notification links to the trace that triggered it, and `Signal event` notifications also link to similar events in the same cluster.
+
+In-app notifications always include:
+
+- Signal (or cluster) name and severity.
+- The extracted payload fields from the event.
+- A **View trace** link that opens the transcript at the source trace.
+
+### Slack
+
+Slack messages contain the signal name, the extracted payload fields, and a link to the trace. Connect Slack once per workspace from **Workspace > Integrations** (see [Integrations](/platform/integrations)) or from the Alerts settings page.
 
 <Note>
 Slack alerts require a paid plan.
 </Note>
 
-### Create a Slack alert
+### Email
 
-1. Go to **Project Settings** and open the **Alerts** tab.
-2. Click **+ Alert**.
-3. Fill in the form:
+Email alerts go to the subscribed user's address. Each user manages their own email subscription from the alert's edit form.
+
+## Create an alert
+
+1. Open **Project Settings > Alerts** and click **+ Alert**.
+2. Fill in the form:
+   - **Trigger**: *Signal event* or *New cluster*.
    - **Name**: a descriptive label (*"Checkout failures, #eng-oncall"*).
-   - **Signal**: pick the Signal the alert watches. A preview chart shows how often the Signal fired recently so you can gauge the expected volume.
-   - **Severity**: the minimum severity that will trigger the alert.
-   - **Slack channel**: pick the public channel to post into.
-4. (Optional) Click **Test** to post a sample message to the channel.
-5. Click **Create**.
-
-The alert is active immediately. New signal events that clear the severity threshold will post to the channel.
+   - **Signal**: the Signal the alert watches. A preview chart shows how often the Signal fired recently so you can gauge the expected volume.
+   - **Severity** (signal event alerts only): select one or more of Info, Warning, Critical.
+   - **Skip notifications for similar events** (signal event alerts only): on or off.
+   - **Slack channel**: optional. Pick a channel to post into and click **Test** to send a sample message.
+   - **Email**: toggle on to receive emails at your workspace email address.
+3. Click **Create**. The alert is active immediately.
 
 ### Edit or delete
 
-In **Project Settings > Alerts**, use the row actions to edit or delete. Edits take effect on the next matching event; deletes are immediate.
-
-## Email alerts
-
-Email alerts share the same severity and signal-selection model as Slack alerts. Creating a Signal auto-subscribes every current workspace member to a CRITICAL-severity email alert for that Signal. Members added later are not automatically subscribed; add them from the alert's edit form.
-
-To turn email off for a specific Signal, open the alert in **Project Settings > Alerts** and clear the subscriber list (or delete the alert).
+In **Project Settings > Alerts**, use the row actions to edit or delete an alert. Edits take effect on the next matching event; deletes are immediate.
 
 ## Reports vs. alerts
 
-Alerts fire on individual events. [Reports](/platform/reports) send periodic email summaries of Signal activity across a workspace. Use alerts to *page on things you need to see now*; use reports to *keep a weekly pulse*.
+Alerts fire on individual signal events or new clusters. [Reports](/platform/reports) send periodic summaries of signal activity across a workspace. Use alerts to *page on things you need to see now*; use reports to *keep a daily or weekly pulse*.
 
 ## Next steps
 
 <CardGroup cols={2}>
   <Card title="Integrations" href="/platform/integrations" icon="plug">
-    Connect Slack for alert delivery.
+    Connect Slack so alerts can post to a channel.
   </Card>
   <Card title="Reports" href="/platform/reports" icon="envelope">
-    Receive periodic email summaries of Signal activity.
+    Receive daily and weekly summaries of signal activity.
   </Card>
 </CardGroup>

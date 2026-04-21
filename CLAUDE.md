@@ -41,6 +41,13 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - **Concrete speech, not abstract definitions**: "If you've written a Slack message that starts with 'can you look through today's runs...'" beats "Signals are for open-ended investigations".
 - Keep one or two `<Note>` callouts per page for side information that would otherwise break flow (e.g. "these are queryable via `signal_events`"). Don't inline the detail into prose.
 
+## Alerts and reports coupling
+
+- Alerts are **project-level** (`/repos/lmnr/app-server` writes to `alerts` / `alert_targets`); reports are **workspace-level** (`reports` / `report_targets`). Docs must keep these scopes straight — `/signals/alerts` lives under the Signals tab, `/platform/reports` under Platform.
+- Alert types are `SIGNAL_EVENT` and `NEW_CLUSTER`. `skipSimilar` and `NEW_CLUSTER` both depend on the clustering service and are gated behind `Feature.CLUSTERING` in the UI — call this out explicitly in any doc that mentions them.
+- Every new Signal auto-creates a Critical-severity `SIGNAL_EVENT` alert plus (when clustering is on) a `NEW_CLUSTER` alert, both defaulting to in-app only. The `/signals/quickstart` Note must stay in sync with this behavior if the default-alert logic changes.
+- Reports post to the in-app notification center only for short periods (≤3 days); weekly-style rollups are suppressed in-app to avoid duplicating daily summaries (see `formatReportNotification` in `frontend/components/notifications/notification-panel.tsx`). Reflect this when describing in-app behavior.
+
 ## Formatting
 
 - Run `prettier --write` ONLY on the specific files you changed. Never `pnpm format:write` or `prettier --write .`; it touches unrelated files. Note that the docs repo itself has no `package.json` or prettier config, so prettier is not part of the workflow here.
