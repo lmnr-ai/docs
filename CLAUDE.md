@@ -41,6 +41,13 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - **Concrete speech, not abstract definitions**: "If you've written a Slack message that starts with 'can you look through today's runs...'" beats "Signals are for open-ended investigations".
 - Keep one or two `<Note>` callouts per page for side information that would otherwise break flow (e.g. "these are queryable via `signal_events`"). Don't inline the detail into prose.
 
+## OpenCode integration
+
+- `opencode.json`'s config key is `"plugin"` (singular). `"plugins"` is silently ignored by OpenCode — neither the CLI nor the plugin logs anything.
+- The `@lmnr-ai/opencode-plugin` reads `LMNR_PROJECT_API_KEY`, `LMNR_BASE_URL`, `LMNR_GRPC_PORT` from the environment of the process that **launches the OpenCode server**, not from any Laminar-side config. A `.env` in the project dir is auto-loaded by OpenCode.
+- `Laminar.initialize()` destructures `{ grpcPort, httpPort }` — NOT `port`. `port` silently does nothing at the public API level (it is only read inside `LaminarSpanExporter`), so a self-hosted setup needs `grpcPort: 8001`, not `port: 8001`.
+- Cross-process trace linking is a real feature of the combined SDK + plugin setup. The TS SDK instrumentation injects a synthetic `text` part into each `session.prompt` body carrying `lmnrSpanContext`; the plugin filters those parts out and uses the context as `parentSpanContext` for the server's `turn` span. Result: an `observe(...)` block in the caller becomes the parent of the server's `turn` span in one trace. Both sides need `@lmnr-ai/lmnr` >= 0.8.15.
+
 ## Formatting
 
 - Run `prettier --write` ONLY on the specific files you changed. Never `pnpm format:write` or `prettier --write .`; it touches unrelated files. Note that the docs repo itself has no `package.json` or prettier config, so prettier is not part of the workflow here.
