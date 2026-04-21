@@ -10,19 +10,13 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - Mintlify auto-redirects `/<group-slug>` to the first page in the group when you add a sidebar group whose slug matches an existing single-page URL (verified: `/signals` → 307 → `/signals/introduction` after converting `signals.mdx` into a `signals/` group). No explicit redirect entry is needed in `docs.json` when splitting a page into a group, but inbound links should still be updated to the canonical first-page URL.
 - Run `npx mintlify broken-links` from `/repos/docs` after any restructuring that moves or renames pages; it catches intra-docs link regressions in seconds and is more reliable than grepping for old paths.
 
-## Vercel AI SDK integration (v0.8.x SDK)
-
-- AI SDK telemetry is opt-in per call via `experimental_telemetry: { isEnabled: true, tracer: getTracer() }`. Forgetting to pass the tracer is the single most common "no traces" failure.
-- Next.js: Laminar must go in `instrumentation.ts` with a `NEXT_RUNTIME === 'nodejs'` guard, and `@lmnr-ai/lmnr` must be in `serverExternalPackages` in `next.config.ts`. OpenTelemetry uses Node-specific APIs Next.js cannot bundle.
-- Coexistence with `@vercel/otel`: do NOT call `Laminar.initialize()` (that registers a second provider). Pass `new LaminarSpanProcessor()` into `registerOTel({ spanProcessors: [...] })` instead.
-- Direct SDK clients (OpenAI, Anthropic) imported outside `instrumentation.ts` are not auto-instrumented in Next.js. Call `Laminar.patch({ OpenAI, anthropic })` where the client is constructed.
-- AI SDK is TypeScript-only; there is no Python AI SDK integration page to write.
-
 ## Screenshots
 
 - Capture from the production build of the frontend, not the dev server: dev overlays and the Next.js dev indicator look unprofessional in published shots.
 - Viewport: **1512 x 982** (MBP 14" equivalent).
 - Wrap screenshots in `<Frame caption="...">` and keep them in `/images/` organized by area (e.g. `/images/tutorials/`, `/images/platform/`).
+- For screenshots of a resulting trace, open the trace in **transcript view** and expand the first LLM span. Span-tree-only shots (and raw-JSON-only shots) understate what users actually get; the transcript is the default Laminar UX and should be what they see first.
+- Close the "Chat with trace" and Signals side panels before capturing so the trace plus transcript are the dominant content.
 
 ## Voice gotchas not caught by linters
 
@@ -40,13 +34,6 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - **Conversational H2s**: prefer "Run a Signal on new traces or historical traces" over "Ways to run a Signal". Headers can be long if they answer a question directly.
 - **Concrete speech, not abstract definitions**: "If you've written a Slack message that starts with 'can you look through today's runs...'" beats "Signals are for open-ended investigations".
 - Keep one or two `<Note>` callouts per page for side information that would otherwise break flow (e.g. "these are queryable via `signal_events`"). Don't inline the detail into prose.
-
-## OpenCode integration
-
-- `opencode.json`'s config key is `"plugin"` (singular). `"plugins"` is silently ignored by OpenCode: neither the CLI nor the plugin logs anything.
-- The `@lmnr-ai/opencode-plugin` reads `LMNR_PROJECT_API_KEY`, `LMNR_BASE_URL`, `LMNR_GRPC_PORT` from the environment of the process that **launches the OpenCode server**, not from any Laminar-side config. A `.env` in the project dir is auto-loaded by OpenCode.
-- `Laminar.initialize()` destructures `{ grpcPort, httpPort }`, NOT `port`. `port` silently does nothing at the public API level (it is only read inside `LaminarSpanExporter`), so a self-hosted setup needs `grpcPort: 8001`, not `port: 8001`.
-- Cross-process trace linking is a real feature of the combined SDK + plugin setup. The TS SDK instrumentation injects a synthetic `text` part into each `session.prompt` body carrying `lmnrSpanContext`; the plugin filters those parts out and uses the context as `parentSpanContext` for the server's `turn` span. Result: an `observe(...)` block in the caller becomes the parent of the server's `turn` span in one trace. Prefer installing both sides with `@lmnr-ai/lmnr@latest`; pin-style version mentions in docs go stale fast.
 
 ## Formatting
 

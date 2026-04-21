@@ -15,10 +15,12 @@ import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
 
 What Laminar captures:
 
-- Every conversation turn, one trace per turn, grouped by OpenCode session.
+- Every conversation turn, one trace per turn.
 - LLM prompts, responses, token counts, latency, and cost.
 - Tool calls (`bash`, `read`, `write`, `edit`, custom tools) with arguments and results.
 - Sub-agents (the Title Generator, task runners) as nested spans.
+
+Each trace carries the OpenCode session ID as its Laminar session ID, so every turn in the same OpenCode conversation shows up under one session in Laminar. Open the session to scroll through the turns in order; filter by session ID in SQL to pull a whole conversation.
 
 ## Using the OpenCode CLI
 
@@ -163,7 +165,7 @@ Traces tell you what happened on one turn. [Signals](/signals/introduction) turn
 
 <AccordionGroup>
   <Accordion title="I don't see any traces in Laminar">
-    - `LMNR_PROJECT_API_KEY` must be set in the environment of the process that launches the OpenCode server, not just in the shell where you read the trace. If you started `opencode` from a different terminal, re-export there.
+    - `LMNR_PROJECT_API_KEY` must be set in the environment of the process that launches the OpenCode server, not just in the process that creates the OpenCode client. The plugin runs on the server side and reads the key there.
     - Check the OpenCode startup log for `Laminar tracing initialized → ...`. If you see `LMNR_PROJECT_API_KEY not set, skipping plugin initialization`, the plugin loaded but had no key.
     - Confirm `opencode.json` uses the key `"plugin"` (singular). `"plugins"` silently does nothing.
   </Accordion>
