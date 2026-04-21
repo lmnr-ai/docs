@@ -89,8 +89,6 @@ If you drive the OpenCode server from your own TypeScript code via `@opencode-ai
 <Steps>
 <Step title="Install">
 
-You need `@lmnr-ai/lmnr` v0.8.15 or higher.
-
 ```bash
 npm install @lmnr-ai/lmnr@latest @opencode-ai/sdk@latest
 ```
@@ -170,7 +168,7 @@ Traces tell you what happened on one turn. [Signals](/signals/introduction) turn
     - Confirm `opencode.json` uses the key `"plugin"` (singular). `"plugins"` silently does nothing.
   </Accordion>
   <Accordion title="Traces from my TypeScript caller aren't linked to the server turn">
-    - Make sure `@lmnr-ai/lmnr` is 0.8.15 or higher on both the caller side and inside the server's plugin dependency tree.
+    - Make sure both sides are on a current `@lmnr-ai/lmnr` (install with `@latest`). The caller-side instrumentation and the plugin's context extraction need to match up.
     - The server process also needs the plugin in `opencode.json`. Without it, the caller-side span lands in Laminar but the server spans land in their own trace.
     - Wrap the `client.session.prompt` call in `observe` (or another active span). The SDK instrumentation only injects the context if there is one.
   </Accordion>
