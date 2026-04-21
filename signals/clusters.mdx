@@ -15,6 +15,10 @@ A cluster is a group of signal events whose summaries are semantically similar. 
 
 Read top-down when you want the shape of the problem (*"most failures are tool loops"*). Read bottom-up when you want the specific example (*"this one loop is the config-validation tool calling itself twelve times"*).
 
+<Note>
+Clustering is performed automatically. No additional configuration is needed.
+</Note>
+
 ## Where to find them
 
 On any Signal detail page, open the **Events** tab. The right-hand panel lists clusters for the current filter and time window.
@@ -38,10 +42,6 @@ If your Signal has a small, well-defined set of payload fields (say, a category 
 3. Clusters are re-computed on a rolling basis, so new events settle into existing groups and new groups emerge when patterns shift.
 
 Clusters are a view over the underlying events, not a copy. Deleting a Signal or purging events removes cluster membership automatically.
-
-<Note>
-Clustering is automatic on Laminar cloud. On self-hosted deployments, set `CLUSTERING_SERVICE_URL` and `CLUSTERING_SERVICE_SECRET_KEY` on the app server. Signals keep producing events without clustering enabled; the cluster panel simply stays empty.
-</Note>
 
 ## Next steps
 

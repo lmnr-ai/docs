@@ -235,5 +235,8 @@
       "apiKey": "phc_dUMdjfNKf11jcHgtn7juSnT4P1pO0tafsPUWt4PuwG7",
       "apiHost": "https://p.lmnr.ai"
     }
+  },
+  "icons": {
+  "library": "lucide"
   }
 }
