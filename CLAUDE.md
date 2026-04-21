@@ -25,6 +25,17 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - Wrap screenshots in `<Frame caption="...">` and keep them in `/images/` organized by area (e.g. `/images/tutorials/`, `/images/platform/`).
 - For screenshots of a resulting trace, open the trace in **transcript view** and expand the first LLM span. Span-tree-only shots (and raw-JSON-only shots) understate what users actually get; the transcript is the default Laminar UX and should be what they see first.
 - Close the "Chat with trace" and Signals side panels before capturing so the trace plus transcript are the dominant content.
+- The "New: Transcript view" onboarding popover and the Signals side panel both auto-reopen after clicking their X. For reliable clean shots, inject `<style>.bg-popover { display: none !important; }</style>` via `agent-browser eval` before capturing instead of relying on click-through.
+
+## Python SDK integrations: extras vs core deps
+
+- Not every integration has a `pip install 'lmnr[<name>]'` extra. Check `/repos/lmnr-python/pyproject.toml` `[project.optional-dependencies]` before writing install instructions. In particular, `claude-agent-sdk` has NO extra — the proxy (`lmnr-claude-code-proxy`) is already a core dependency of `lmnr`, so the correct install is just `pip install lmnr claude-agent-sdk`.
+- When writing a new integration page, grep the Python instrumentor initializer (`/repos/lmnr-python/src/lmnr/opentelemetry_lib/tracing/_instrument_initializers.py`) for `is_package_installed("<pkg>")` checks to see exactly which packages the instrumentation gates on.
+
+## Claude Agent SDK integration
+
+- Subagent spans only appear when `"Agent"` is in `allowed_tools` / `allowedTools`. Without it Claude can't invoke the subagents declared in `ClaudeAgentOptions.agents`, so the transcript shows only the outer model's prose description of the work. This is the #1 reason subagents don't show up.
+- A "coordinator + specialized subagents" demo (e.g. one reviewer agent delegating to style / security / test-coverage / dependency reviewers) is the pattern that actually sells the transcript view: parallel subagents collapse to readable input/output cards instead of a deep span tree.
 
 ## Voice gotchas not caught by linters
 
