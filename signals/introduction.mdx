@@ -1,0 +1,64 @@
+---
+title: Signals
+sidebarTitle: Introduction
+---
+
+When your agent goes into production, the questions you care about are things like: did it get stuck, did the user give up, did this run fail for a different reason than last week's. You can answer them by opening a trace and reading it. You can't answer them across ten thousand traces without help.
+
+That's the gap Signals close. A Signal is an instruction, written in plain language, that reads every trace and produces a structured record when it sees what you described.
+
+You write what to look for. Laminar reads each trace against your instruction and writes down what it found, in a shape you define. The result is a stream of events you can count, query, cluster, and alert on.
+
+From here, [quickstart](/signals/quickstart) walks through writing your first Signal. [Clusters](/signals/clusters) covers how Laminar groups similar events into patterns. [Alerts](/signals/alerts) covers firing on thresholds you care about.
+
+## How a Signal becomes an event
+
+A Signal has four parts:
+
+- **Name**: a stable identifier used in filters, alerts, and SQL (for example, `checkout.completed`, `agent_response_quality`).
+- **Prompt**: plain-language instructions that describe what the Signal should detect or extract from a trace.
+- **Structured output schema**: a JSON schema the extracted payload must conform to. Keep fields small and stable so they are useful in filters and SQL.
+- **Execution**: when and which traces the Signal runs against.
+
+When a Signal runs on a trace, Laminar sends the trace and the Signal definition to its evaluator. The evaluator returns a structured payload that matches your schema, or reports that the Signal was not identified. Each run produces one of two outcomes:
+
+- A **signal event** linked to the trace, carrying the structured payload. This is what you filter, chart, cluster, and alert on.
+- A **run** marked complete with no event, which means the Signal wasn't found in that trace.
+
+<Frame caption="A Signal's events tab: each row is one detected event linked back to a trace">
+  <img src="/images/signals/signal-detail.png" alt="Signal detail view with events list, per-event payload, and cluster sidebar" />
+</Frame>
+
+## When to reach for Signals
+
+Signals are built for the questions that are hard to answer from raw spans:
+
+- **Business outcomes**: describe success in words ("User completed checkout", "Agent answered the question"). Count events instead of writing brittle span matchers.
+- **Logical failures**: the trace didn't throw, but the agent still failed. Describe the failure shape ("agent loops on the same tool without progress", "agent gave up after one retry") and let the Signal flag matching traces.
+- **Behavioral categorization**: sort traces by user intent, topic, severity, or any categorical field in the schema.
+- **Cost and waste**: flag "long context, short answer", "overpowered model for trivial task", or any pattern that suggests wasted tokens.
+
+If you already emit structured events from your application code, you do not need a Signal for those; they're better tracked as trace attributes or metadata. Signals are for the cases where the outcome only becomes visible when you read the whole trace.
+
+## Ways to run a Signal
+
+Each Signal can run in two modes, configured independently:
+
+- **Triggers** run the Signal on new traces as they arrive. Use Triggers for anything you want to watch in real time (live error rates, live success counts, anything that feeds Alerts). Trigger filters are AND-combined and are evaluated against accumulated trace state, so Signals fire once per matching trace regardless of batch boundaries.
+- **Jobs** run the Signal across a historical slice. Use Jobs to backfill a new Signal, re-run a changed prompt over last week's traffic, or investigate a window of traces that match a filter.
+
+Both paths produce the same kind of signal event; the only difference is when and which traces the Signal reads.
+
+## Next steps
+
+<CardGroup cols={3}>
+  <Card title="Quickstart" href="/signals/quickstart" icon="play">
+    Write your first Signal, run it on traces, and see events.
+  </Card>
+  <Card title="Clusters" href="/signals/clusters" icon="diagram-project">
+    Let Laminar group similar events so you can see patterns.
+  </Card>
+  <Card title="Alerts" href="/signals/alerts" icon="bell">
+    Fire Slack or email notifications when a Signal triggers.
+  </Card>
+</CardGroup>

@@ -77,6 +77,15 @@
             ]
           },
           {
+            "group": "Signals",
+            "pages": [
+              "signals/introduction",
+              "signals/quickstart",
+              "signals/clusters",
+              "signals/alerts"
+            ]
+          },
+          {
             "group": "Evaluations",
             "pages": [
               "evaluations/introduction",
@@ -109,8 +118,6 @@
             "pages": [
               "platform",
               "platform/viewing-traces",
-              "signals",
-              "platform/alerts",
               "platform/integrations",
               "platform/reports",
               "platform/live-tracing",

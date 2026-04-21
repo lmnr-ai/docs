@@ -1,0 +1,206 @@
+---
+title: Quickstart
+sidebarTitle: Quickstart
+---
+
+This quickstart walks through the full Signals loop: generate some traces, write a Signal that reads them, run it, and inspect events.
+
+## Prerequisites
+
+- A Laminar project and `LMNR_PROJECT_API_KEY`.
+- An agent or LLM app whose traces land in Laminar. If you don't have one handy, the example below uses the [Claude Agent SDK](/tracing/integrations/claude-agent-sdk) to generate traces quickly.
+
+## 1. Generate traces to run the Signal on
+
+Any traced application will do. Below is a minimal example using the Claude Agent SDK that sends a handful of prompts and emits one trace per prompt. Enough to exercise a Signal end-to-end.
+
+```python
+import asyncio
+import os
+
+from claude_agent_sdk import ClaudeSDKClient
+from lmnr import Laminar, observe
+
+Laminar.initialize(project_api_key=os.environ["LMNR_PROJECT_API_KEY"])
+
+PROMPTS = [
+    "Give me a one-line Python function to reverse a string.",
+    "Explain backpressure in distributed systems in one sentence.",
+    "What is the CAP theorem? Answer in one sentence.",
+    "Write a single bash command to find all .py files modified in the last day.",
+    "Why does TCP use three-way handshake? One sentence.",
+    "Give me a one-line idiomatic replacement for `for item in arr: print(item)` in Python.",
+    "Explain memoization in one sentence.",
+    "What is a REST API? One sentence.",
+    "What is an LLM hallucination? One sentence.",
+    "One-line SQL to find top 5 users by order count.",
+]
+
+
+@observe(name="quickstart_agent")
+async def ask(prompt: str) -> None:
+    async with ClaudeSDKClient() as client:
+        await client.query(prompt)
+        async for _ in client.receive_response():
+            pass
+
+
+async def main() -> None:
+    for p in PROMPTS:
+        await ask(p)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+Run it, then refresh the Laminar traces page to confirm the `quickstart_agent` traces show up.
+
+## 2. Create a Signal
+
+Open your project and click **Signals** in the sidebar. The Signals page lists every Signal in the project along with recent event activity.
+
+<Frame caption="Signals list: one card per Signal with recent events and sparkline">
+  <img src="/images/signals/signals-list.png" alt="Signals list view showing cards for each Signal with event counts" />
+</Frame>
+
+Click **Create signal** to open the creation dialog.
+
+<Frame caption="Empty Create Signal dialog">
+  <img src="/images/signals/create-signal-empty.png" alt="Empty signal creation form with name, template, prompt, schema, triggers, and sampling sections" />
+</Frame>
+
+Fill it in:
+
+1. **Name**: a stable identifier. Use snake_case or dot-notation (for example, `agent_response_quality`, `checkout.completed`). The name is what you'll filter, alert, and query by.
+2. **Template** (optional): pick a starting point. Laminar ships templates for common patterns such as task completion, user friction, safety, hallucination, and intent. Templates prefill the prompt and schema; you still edit both before saving.
+3. **Prompt**: describe what the Signal should detect or extract from the trace. Be concrete. "The agent answered the user's question correctly and completely" is a better prompt than "good response".
+4. **Structured output**: define the JSON schema for the payload. Keep fields small and stable; they become filterable columns.
+5. **Triggers** (optional): toggle on to run this Signal automatically on new traces. Add filters to narrow which traces it runs against. See [running live vs. batched](#running-a-signal-triggers-and-jobs).
+6. **Sampling** (optional): cap how many matching traces the trigger consumes per time window. Useful when a high-volume filter would otherwise fan out across every trace.
+
+<Frame caption="Create Signal dialog filled in with a Task-template Signal">
+  <img src="/images/signals/create-signal-filled.png" alt="Create signal form populated with name, prompt, schema fields, and a realtime trigger" />
+</Frame>
+
+Click **Create**. The Signal is live from this point on: any configured Trigger starts processing new traces immediately.
+
+<Note>
+  Creating a Signal automatically creates a CRITICAL-severity alert subscribed to every workspace member's email. Visit **Project Settings > Alerts** to configure Slack routing, change severity, or remove subscribers. See [Alerts](/signals/alerts).
+</Note>
+
+## 3. Running a Signal: Triggers and Jobs
+
+A Signal can run in two modes, independent of each other:
+
+### Triggers (live)
+
+Triggers run the Signal automatically on new traces that match your filter set. Triggers are what feed live dashboards and Alerts.
+
+- Go to the Signal's **Triggers** tab and click **Add Trigger** (or configure Triggers when creating the Signal).
+- Add one or more filters. All filters are AND-combined.
+- Choose a mode:
+  - **Batch** processes matching traces in micro-batches after they finish. Lower cost, slightly higher latency.
+  - **Realtime** processes each matching trace as soon as it completes. Use this when you want Alerts to fire within seconds.
+- Save. From now on, every matching trace produces a Run; runs that detect the Signal produce events.
+
+### Jobs (backfill)
+
+Use Jobs to run a Signal across historical traces, for example to evaluate a freshly-created Signal over the last 24 hours.
+
+<Frame caption="Create a Signal Job: pick traces or filters, then enqueue">
+  <img src="/images/signals/create-job.png" alt="Create signal job page with trace selection, filters, and trace table" />
+</Frame>
+
+1. On the Signal detail page, open the **Jobs** tab.
+2. Click **Create Job**.
+3. Pick a **time range** (defaults to the last 24 hours).
+4. Optionally narrow with **filters** or **search**.
+5. Choose **specific traces** or **all traces matching your filters**.
+6. Click **Create signal job**. The job enqueues one Run per trace.
+
+<Frame caption="Jobs tab on a Signal detail page">
+  <img src="/images/signals/jobs-tab.png" alt="Signal Jobs tab showing empty state before the first backfill" />
+</Frame>
+
+Runs appear in the **Runs** tab with a status (Pending, Completed, Failed). Each Run that detects the Signal links to the resulting event in the **Events** tab.
+
+## 4. Inspect events
+
+Open the Signal detail page and switch to the **Events** tab. Each row is one detected event, linked back to the trace that produced it.
+
+<Frame caption="Events tab: structured payloads, timestamps, and jump-to-trace links">
+  <img src="/images/signals/signal-detail.png" alt="Signal events view with chart, event list, and cluster sidebar" />
+</Frame>
+
+From here you can:
+
+- Filter events by any field you defined in the structured output schema.
+- Click any row to open the corresponding trace.
+- Switch to the **Clusters** panel to see similar events grouped together. See [Clusters](/signals/clusters).
+- Query the raw events in the [SQL Editor](/platform/sql-editor) using the `signal_events` table.
+
+## Querying `signal_events` in SQL
+
+`signal_events` stores each event's payload as a JSON string. The payload filter in the UI uses `simpleJSONExtractString` / `simpleJSONExtractRaw`, so you can mirror the same behavior in SQL.
+
+### Quick payload filter (UI-equivalent)
+
+```sql
+SELECT
+    timestamp,
+    trace_id,
+    name,
+    payload
+FROM signal_events
+WHERE name = 'checkout.completed'
+  AND (
+    simpleJSONExtractString(payload, 'error_type') = 'timeout'
+    OR simpleJSONExtractRaw(payload, 'error_type') = 'timeout'
+  )
+  AND timestamp > now() - INTERVAL 7 DAY
+ORDER BY timestamp DESC
+LIMIT 200
+```
+
+### Numeric comparisons with JSONExtractFloat
+
+```sql
+SELECT
+    timestamp,
+    trace_id,
+    JSONExtractFloat(payload, 'score') AS score,
+    JSONExtractFloat(payload, 'latency_ms') AS latency_ms
+FROM signal_events
+WHERE name = 'agent_response_quality'
+  AND JSONExtractFloat(payload, 'score') >= 0.9
+  AND timestamp > now() - INTERVAL 30 DAY
+ORDER BY score DESC
+```
+
+### Typed or nested fields with JSONExtract
+
+```sql
+SELECT
+    timestamp,
+    trace_id,
+    JSONExtract(payload, 'summary', 'String') AS summary,
+    JSONExtract(payload, 'metrics', 'confidence', 'Float64') AS confidence,
+    JSONExtract(payload, 'labels', 'Array(String)') AS labels
+FROM signal_events
+WHERE name = 'support.intent_classification'
+  AND timestamp > now() - INTERVAL 14 DAY
+ORDER BY timestamp DESC
+LIMIT 100
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Clusters" href="/signals/clusters" icon="diagram-project">
+    Group similar events into recurring patterns.
+  </Card>
+  <Card title="Alerts" href="/signals/alerts" icon="bell">
+    Send Slack or email notifications when a Signal fires.
+  </Card>
+</CardGroup>
