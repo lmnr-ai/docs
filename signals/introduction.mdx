@@ -1,0 +1,65 @@
+---
+title: Signals
+sidebarTitle: Introduction
+---
+
+
+When your agent goes into production, the questions you care about are things like: *did it get stuck, did the user give up, did this run fail for a different reason than last week's*. You can answer them by opening a trace and reading it. You can't answer them across ten thousand traces.
+
+**Signals are how Laminar answers them.** A Signal is an instruction, written in plain language, that reads every trace and produces a structured record when it sees what you described. The result is a stream of events you can **[query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on**.
+
+<Frame caption="A Signal's events tab: each row is one detected event linked back to a trace">
+  <img src="/images/signals/signal-detail.png" alt="Signal detail view with events list, per-event payload, and cluster sidebar" />
+</Frame>
+
+## What Signals can help you answer
+
+If you can describe it to a colleague, you can write a Signal for it.
+
+- **Business outcomes**: "agent completed checkout," "agent answered the question correctly."
+- **Logical failures**: "agent loops on the same tool without progress," "agent gave up after one retry."
+- **Behavioral categorization**: user intent, topic, any categorical field you want on the trace.
+- **User friction**: "user asked for the same information multiple times", "user gave up after multiple retries".
+- **Cost and waste**: "long context, short answer," "tool called with malformed arguments and retried."
+ 
+Essentially, **anything you've ever had to ask a teammate to skim traces for**. If you've written a Slack message that starts with "can you look through today's runs and tell me how often...", that's a Signal.
+
+## Anatomy of a Signal run
+
+A Signal has three parts:
+
+- **Prompt**: plain-language instructions that describe what the Signal should detect or extract from an agent trace.
+- **Structured output schema**: a JSON schema the extracted payload must conform to.
+- **Triggers**: trace conditions that must be met for the Signal to run.
+
+When a trace that matches trigger conditions, Laminar reads the full trace and runs your prompt against it, attempting to extract a structured payload that conforms to your schema. This produces one of two outcomes:
+
+- A **signal event** linked to the trace, carrying the structured payload that matches the user-defined schema.
+- No event, which means the Signal wasn't found in that trace.
+
+<Note>
+Signal events are accessible via the `signal_events` table and can be easily queried using the [SQL Editor](/platform/sql-editor). All signal events are linked to the traces that produced them. You can use event payloads to query corresponding traces. In a sense, you can think of signal event payload being an additional column of traces table.
+</Note>
+
+## Run a Signal on new traces or historical traces
+
+Each Signal can run in two modes, configured independently:
+
+- **Triggers** run the Signal on new traces as they arrive. Use Triggers for anything you want to watch in real time (live error rates, live success counts, anything that feeds Alerts). Trigger filters are AND-combined and are evaluated against accumulated trace state, so Signals fire once per matching trace.
+- **Jobs** run the Signal across a historical slice of traces. Use Jobs to backfill a new Signal, re-run a changed prompt over last week's traffic, or investigate a window of traces that match a filter.
+
+Both paths produce the same kind of signal event; the only difference is when and which traces the Signal reads.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" href="/signals/quickstart" icon="play">
+    Write your first Signal, trigger it on new traces arriving in real-time, and see events.
+  </Card>
+  <Card title="Clusters" href="/signals/clusters" icon="boxes">
+    Learn how Laminar groups similar signal events so you can see patterns.
+  </Card>
+  <Card title="Alerts" href="/signals/alerts" icon="bell">
+    Fire Slack or email notifications on new signal events or clusters.
+  </Card>
+</CardGroup>

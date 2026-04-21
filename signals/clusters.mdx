@@ -1,0 +1,55 @@
+---
+title: Clusters
+sidebarTitle: Clusters
+---
+
+When a Signal has fired across thousands of traces, reading the event list by hand stops working. **Clusters group similar events so you see patterns instead of scrolling.**
+
+<Frame caption="Clusters panel alongside the events list on a Signal detail page">
+  <img src="/images/signals/signal-detail.png" alt="Signal detail page showing event chart, event table, and the cluster sidebar" />
+</Frame>
+
+## What a cluster is
+
+A cluster is a group of signal events whose summaries are semantically similar. Laminar generates a short summary of each event's payload, embeds it, and groups events hierarchically. You get a handful of broad clusters at the top that break down into more specific sub-clusters as you drill in.
+
+Read top-down when you want the shape of the problem (*"most failures are tool loops"*). Read bottom-up when you want the specific example (*"this one loop is the config-validation tool calling itself twelve times"*).
+
+<Note>
+Clustering is performed automatically. No additional configuration is needed.
+</Note>
+
+## Where to find them
+
+On any Signal detail page, open the **Events** tab. The right-hand panel lists clusters for the current filter and time window.
+
+Clicking a cluster filters the events list to that cluster's members. Clicking a sub-cluster narrows further. From any event you can jump to the trace that produced it.
+
+## When clusters earn their keep
+
+Clusters pay off when you have hundreds or thousands of events and an open-ended question:
+
+- **Triage**: *"Of the 4,000 traces flagged by `agent_failure` this week, which handful of failure modes account for most of them?"*
+- **Regression detection**: a cluster that was empty yesterday and full today is a new failure mode.
+- **Prompt tuning**: if a cluster contains events you don't consider matches, your prompt is too broad. If expected events split across unrelated clusters, your payload schema isn't capturing the discriminating fields.
+
+If your Signal has a small, well-defined set of payload fields (say, a category enum with five values), grouping in the [SQL Editor](/platform/sql-editor) or a custom dashboard is usually enough. Reach for clusters when the events are free-form or when you don't yet know what categories exist.
+
+## How clusters are built
+
+1. Every new signal event is sent to Laminar's clustering service with a short, human-readable summary of its payload.
+2. The service embeds the summary and places the event near semantically similar neighbors.
+3. Clusters are re-computed on a rolling basis, so new events settle into existing groups and new groups emerge when patterns shift.
+
+Clusters are a view over the underlying events, not a copy. Deleting a Signal or purging events removes cluster membership automatically.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Alerts" href="/signals/alerts" icon="bell">
+    Fire Slack or email notifications on new signal events or clusters.
+  </Card>
+  <Card title="SQL Editor" href="/platform/sql-editor" icon="database">
+    Query raw events from the `signal_events` table.
+  </Card>
+</CardGroup>

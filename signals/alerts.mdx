@@ -1,0 +1,78 @@
+---
+title: Alerts
+sidebarTitle: Alerts
+---
+
+**Alerts turn signal events into notifications.** When a Signal fires on a trace and an alert is configured for it, Laminar posts a message to Slack or emails subscribed workspace members.
+
+<Frame caption="Project settings: Alerts tab">
+  <img src="/images/signals/alerts.png" alt="Project alerts settings page showing configured alerts and Slack connection" />
+</Frame>
+
+Every Signal you create gets a default alert wired up automatically: severity **CRITICAL**, delivered by email to every workspace member. Edit that alert to route it to Slack, change the severity, or trim the subscriber list.
+
+## Severity levels
+
+Each alert has a severity threshold and only fires on events at or above that threshold:
+
+- **Info**: fires on every matching event. Good for low-volume Signals where each event is interesting.
+- **Warning**: fires on warnings and criticals.
+- **Critical**: fires only on the highest-severity events. This is the default for newly created Signals.
+
+The severity of each individual event is set by the Signal's extractor based on the Signal's prompt.
+
+<Note>
+Alerts that predate the severity field default to **Critical** so historical alerts don't suddenly page on low-severity events.
+</Note>
+
+## Slack notifications
+
+Slack messages contain the Signal name, the extracted payload fields, and a link to the trace.
+
+### Prerequisites
+
+- **A connected Slack workspace.** Connect from **Workspace > Integrations** (see [Integrations](/platform/integrations)), or directly from the Alerts settings page.
+- **At least one Signal** (see [Signals quickstart](/signals/quickstart)). Alerts fire on signal events, so a Signal must exist first.
+
+<Note>
+Slack alerts require a paid plan.
+</Note>
+
+### Create a Slack alert
+
+1. Go to **Project Settings** and open the **Alerts** tab.
+2. Click **+ Alert**.
+3. Fill in the form:
+   - **Name**: a descriptive label (*"Checkout failures, #eng-oncall"*).
+   - **Signal**: pick the Signal the alert watches. A preview chart shows how often the Signal fired recently so you can gauge the expected volume.
+   - **Severity**: the minimum severity that will trigger the alert.
+   - **Slack channel**: pick the public channel to post into.
+4. (Optional) Click **Test** to post a sample message to the channel.
+5. Click **Create**.
+
+The alert is active immediately. New signal events that clear the severity threshold will post to the channel.
+
+### Edit or delete
+
+In **Project Settings > Alerts**, use the row actions to edit or delete. Edits take effect on the next matching event; deletes are immediate.
+
+## Email alerts
+
+Email alerts share the same severity and signal-selection model as Slack alerts. Creating a Signal auto-subscribes every current workspace member to a CRITICAL-severity email alert for that Signal. Members added later are not automatically subscribed; add them from the alert's edit form.
+
+To turn email off for a specific Signal, open the alert in **Project Settings > Alerts** and clear the subscriber list (or delete the alert).
+
+## Reports vs. alerts
+
+Alerts fire on individual events. [Reports](/platform/reports) send periodic email summaries of Signal activity across a workspace. Use alerts to *page on things you need to see now*; use reports to *keep a weekly pulse*.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Integrations" href="/platform/integrations" icon="plug">
+    Connect Slack for alert delivery.
+  </Card>
+  <Card title="Reports" href="/platform/reports" icon="envelope">
+    Receive periodic email summaries of Signal activity.
+  </Card>
+</CardGroup>

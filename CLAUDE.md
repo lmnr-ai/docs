@@ -6,7 +6,9 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 
 - Every new page MUST be added to `docs.json`. Pages not listed there are unreachable from the sidebar even if they exist on disk.
 - When deleting or moving a page, also `grep -r "tracing/integrations/<slug>"` across the repo to find inbound links. Common offenders: sibling integration pages often cross-link via a `<Note>` block and those must be updated in lockstep.
-- Internal links use absolute paths from the docs root with no `.mdx` extension: `[Signals](/signals)`.
+- Internal links use absolute paths from the docs root with no `.mdx` extension: `[Signals](/signals/introduction)`.
+- Mintlify auto-redirects `/<group-slug>` to the first page in the group when you add a sidebar group whose slug matches an existing single-page URL (verified: `/signals` → 307 → `/signals/introduction` after converting `signals.mdx` into a `signals/` group). No explicit redirect entry is needed in `docs.json` when splitting a page into a group, but inbound links should still be updated to the canonical first-page URL.
+- Run `npx mintlify broken-links` from `/repos/docs` after any restructuring that moves or renames pages; it catches intra-docs link regressions in seconds and is more reliable than grepping for old paths.
 
 ## Vercel AI SDK integration (v0.8.x SDK)
 
@@ -24,9 +26,20 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 
 ## Voice gotchas not caught by linters
 
-- `grep "[em-dash]" <file>` before committing. Em dashes should not appear in docs prose; they sneak in easily from copy-paste.
+- `grep "[em-dash]" <file>` before committing. Em dashes should not appear in docs prose; they sneak in easily from copy-paste. `<Frame caption="...">` strings are a frequent source — prefer a colon over an em dash inside captions.
 - `grep -E "seamless|powerful|unleash|cutting-edge|best-in-class|revolutionary|supercharge"` returns banned marketing words.
 - Every integration page needs the three forward links in data-flow order: viewing traces, then Signals, then SQL access (editor/API/MCP).
+
+## Prose style Robert favors (observed from edits on `signals/introduction.mdx`)
+
+- **Use italics for rhetorical hypotheticals**, not plain quotes. `*did it get stuck, did the user give up*` reads better than `"did it get stuck..."`.
+- **Use bold for the thesis sentence and the call-to-action phrase**, and inline links inside the bold (`**[query](...), [cluster](...), and [alert](...) on**`). It lets the eye land on the payoff.
+- **Lead with the image early**, not after several sections of exposition. First image should sit right after the opening pitch so scanners see the product.
+- **Three-column `<CardGroup>` feels crowded**; default to `cols={2}` for next-step nav.
+- **Drop fields that are self-evident** from surrounding context. When listing the parts of an object, don't enumerate every attribute — skip the ones a reader would assume exist (e.g. a Name on a Signal). Trim to the parts that are actually interesting to describe.
+- **Conversational H2s**: prefer "Run a Signal on new traces or historical traces" over "Ways to run a Signal". Headers can be long if they answer a question directly.
+- **Concrete speech, not abstract definitions**: "If you've written a Slack message that starts with 'can you look through today's runs...'" beats "Signals are for open-ended investigations".
+- Keep one or two `<Note>` callouts per page for side information that would otherwise break flow (e.g. "these are queryable via `signal_events`"). Don't inline the detail into prose.
 
 ## Formatting
 
