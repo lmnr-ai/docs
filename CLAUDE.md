@@ -23,6 +23,8 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - Capture from the production build of the frontend, not the dev server: dev overlays and the Next.js dev indicator look unprofessional in published shots.
 - Viewport: **1512 x 982** (MBP 14" equivalent).
 - Wrap screenshots in `<Frame caption="...">` and keep them in `/images/` organized by area (e.g. `/images/tutorials/`, `/images/platform/`).
+- For screenshots of a resulting trace, open the trace in **transcript view** and expand the first LLM span. Span-tree-only shots (and raw-JSON-only shots) understate what users actually get; the transcript is the default Laminar UX and should be what they see first.
+- Close the "Chat with trace" and Signals side panels before capturing so the trace plus transcript are the dominant content.
 
 ## Voice gotchas not caught by linters
 
