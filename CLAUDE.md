@@ -23,6 +23,8 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - Capture from the production build of the frontend, not the dev server: dev overlays and the Next.js dev indicator look unprofessional in published shots.
 - Viewport: **1512 x 982** (MBP 14" equivalent).
 - Wrap screenshots in `<Frame caption="...">` and keep them in `/images/` organized by area (e.g. `/images/tutorials/`, `/images/platform/`).
+- For the **Reports** page: workspaces that predate the default-reports logic (created before LAM-1474) will have an empty reports table in staging. Seed two rows into `reports` (`type=SIGNAL_EVENTS_SUMMARY`, `weekdays={0,1,2,3,4}`/`{6}`, `hour=10`) + matching `report_targets` so the screenshot shows "Weekday/Weekly signals summary" rows instead of the empty state.
+- For the **project Alerts** page: insert a `NEW_CLUSTER` alert alongside the existing `SIGNAL_EVENT` alerts in staging to visibly exercise the Trigger + Severity columns (severity is blank/"—" for `NEW_CLUSTER` rows, which is the expected rendering).
 
 ## Voice gotchas not caught by linters
 
