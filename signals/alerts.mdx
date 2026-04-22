@@ -15,14 +15,10 @@ Alerts live at the project level. Open **Project Settings > Alerts** to see ever
 
 Creating a new Signal auto-creates two alerts so you start receiving notifications immediately:
 
-1. A **Signal event** alert on the new Signal, scoped to **Critical** severity, with *skip similar events* on.
-2. A **New cluster** alert on the new Signal (when clustering is available on your workspace).
+1. A **Signal event** alert on the new Signal, scoped to **Critical** severity, with [*skip similar events*](#skip-notifications-for-similar-events) on.
+2. A **New cluster** alert on the new Signal.
 
 Both alerts default to in-app notifications only. To route to Slack or email, open **Project Settings > Alerts** and edit the alert.
-
-<Note>
-Alerts created before the severity field existed default to **Critical**, so historical alerts do not suddenly page on lower-severity events.
-</Note>
 
 ## Alert types
 
@@ -45,27 +41,13 @@ The severity of each individual event is set by the Signal's extractor based on 
 
 ## Skip notifications for similar events
 
-`Signal event` alerts have an optional **Skip notifications for similar events** toggle. When enabled, only the first event in a group of semantically similar events triggers a notification. Subsequent events in the same group are suppressed until a new group forms.
+`Signal event` alerts have an optional **Skip notifications for similar events** toggle. When enabled, only the first event in a group of semantically similar events triggers a notification. Subsequent events in the same group are suppressed.
 
-Turn this on when a Signal fires often on repetitive cases (the same timeout loop, the same tool error) and you only want to know about new failure modes. Turn it off when every event is worth paging.
-
-<Note>
-Similar-event detection relies on Laminar's clustering service. The toggle is only shown when clustering is available on your workspace.
-</Note>
+Turn this on when a Signal fires often on repetitive cases (the same timeout loop, the same tool error) and you only want to know about new failure modes. Turn it off when every event is worth paging. 
 
 ## Notification channels
 
 Every alert posts to the in-app notification center by default. Slack and email are optional and configured per alert.
-
-### In-app notifications
-
-The notification bell in the project sidebar shows unread alerts for the current project. Each notification links to the trace that triggered it, and `Signal event` notifications also link to similar events in the same cluster.
-
-In-app notifications always include:
-
-- Signal (or cluster) name and severity.
-- The extracted payload fields from the event.
-- A **View trace** link that opens the transcript at the source trace.
 
 ### Slack
 
@@ -83,12 +65,12 @@ Email alerts go to the subscribed user's address. Each user manages their own em
 
 1. Open **Project Settings > Alerts** and click **+ Alert**.
 2. Fill in the form:
-   - **Trigger**: *Signal event* or *New cluster*.
+   - **Trigger**: *New event* or *New cluster*.
    - **Name**: a descriptive label (*"Checkout failures, #eng-oncall"*).
-   - **Signal**: the Signal the alert watches. A preview chart shows how often the Signal fired recently so you can gauge the expected volume.
-   - **Severity** (signal event alerts only): select one or more of Info, Warning, Critical.
+   - **Signal**: the Signal the alert watches. A preview chart shows how often notification would have fired recently so you can gauge the expected volume.
+   - **Severity** (signal event alerts only): select among Info, Warning, Critical.
    - **Skip notifications for similar events** (signal event alerts only): on or off.
-   - **Slack channel**: optional. Pick a channel to post into and click **Test** to send a sample message.
+   - **Slack channel**: Pick a channel to post into and click **Test** to send a sample message.
    - **Email**: toggle on to receive emails at your workspace email address.
 3. Click **Create**. The alert is active immediately.
 
@@ -96,7 +78,7 @@ Email alerts go to the subscribed user's address. Each user manages their own em
 
 In **Project Settings > Alerts**, use the row actions to edit or delete an alert. Edits take effect on the next matching event; deletes are immediate.
 
-## Reports vs. alerts
+## Reports vs Alerts
 
 Alerts fire on individual signal events or new clusters. [Reports](/platform/reports) send periodic summaries of signal activity across a workspace. Use alerts to *page on things you need to see now*; use reports to *keep a daily or weekly pulse*.
 
