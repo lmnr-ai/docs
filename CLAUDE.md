@@ -61,6 +61,7 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - Alert types are `SIGNAL_EVENT` and `NEW_CLUSTER`. `skipSimilar` and `NEW_CLUSTER` both depend on the clustering service and are gated behind `Feature.CLUSTERING` in the UI — call this out explicitly in any doc that mentions them.
 - Every new Signal auto-creates a Critical-severity `SIGNAL_EVENT` alert plus (when clustering is on) a `NEW_CLUSTER` alert, both defaulting to in-app only. The `/signals/quickstart` Note must stay in sync with this behavior if the default-alert logic changes.
 - Reports post to the in-app notification center only for short periods (≤3 days); weekly-style rollups are suppressed in-app to avoid duplicating daily summaries (see `formatReportNotification` in `frontend/components/notifications/notification-panel.tsx`). Reflect this when describing in-app behavior.
+- Report names are derived from the schedule via `getReportLabel` in `frontend/lib/actions/reports/types.ts`: Mon–Fri → **Weekday signals summary**, single day → **Weekly signals summary**, all 7 → **Daily signals summary**. Docs must use the same label the UI renders (the two defaults are *Weekday* and *Weekly*, not "Daily" and "Weekly").
 
 ## Claude Agent SDK integration
 
