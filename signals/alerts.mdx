@@ -15,7 +15,7 @@ Alerts live at the project level. Open **Project Settings > Alerts** to see ever
 
 Creating a new Signal auto-creates two alerts so you start receiving notifications immediately:
 
-1. A **Signal event** alert on the new Signal, scoped to **Critical** severity, with [*skip similar events*](#skip-notifications-for-similar-events) on.
+1. A **New event** alert on the new Signal, scoped to **Critical** severity, with [*skip similar events*](#skip-notifications-for-similar-events) on.
 2. A **New cluster** alert on the new Signal.
 
 Both alerts default to in-app notifications only. To route to Slack or email, open **Project Settings > Alerts** and edit the alert.
@@ -24,14 +24,14 @@ Both alerts default to in-app notifications only. To route to Slack or email, op
 
 Each alert has one of two triggers:
 
-- **Signal event**: fires when a new event is extracted for the selected Signal. Filter by severity and, optionally, skip semantically similar events.
+- **New event**: fires when a new event is extracted for the selected Signal. Filter by severity and, optionally, skip semantically similar events.
 - **New cluster**: fires when a new [cluster](/signals/clusters) is created for the selected Signal. Useful for spotting failure modes that did not exist yesterday.
 
 Both trigger types are scoped to a single Signal. To cover multiple Signals, create one alert per Signal.
 
 ## Severity levels
 
-`Signal event` alerts fire only on events whose severity is included in the alert's severity set. Pick any combination of:
+`New event` alerts fire only on events whose severity is included in the alert's severity set. Pick any combination of:
 
 - **Info**: low-severity events. Useful for low-volume signals where every event is interesting.
 - **Warning**: mid-severity events.
@@ -41,9 +41,9 @@ The severity of each individual event is set by the Signal's extractor based on 
 
 ## Skip notifications for similar events
 
-`Signal event` alerts have an optional **Skip notifications for similar events** toggle. When enabled, only the first event in a group of semantically similar events triggers a notification. Subsequent events in the same group are suppressed.
+`New event` alerts have an optional **Skip notifications for similar events** toggle. When enabled, only the first event in a group of semantically similar events triggers a notification. Subsequent events in the same group are suppressed.
 
-Turn this on when a Signal fires often on repetitive cases (the same timeout loop, the same tool error) and you only want to know about new failure modes. Turn it off when every event is worth paging. 
+Turn this on when a Signal fires often on repetitive cases (the same timeout loop, the same tool error) and you only want to know about new failure modes. Turn it off when every event is worth paging.
 
 ## Notification channels
 
@@ -67,9 +67,9 @@ Email alerts go to the subscribed user's address. Each user manages their own em
 2. Fill in the form:
    - **Trigger**: *New event* or *New cluster*.
    - **Name**: a descriptive label (*"Checkout failures, #eng-oncall"*).
-   - **Signal**: the Signal the alert watches. A preview chart shows how often notification would have fired recently so you can gauge the expected volume.
-   - **Severity** (signal event alerts only): select among Info, Warning, Critical.
-   - **Skip notifications for similar events** (signal event alerts only): on or off.
+   - **Signal**: the Signal the alert watches. A preview chart shows how often the notification would have fired recently so you can gauge the expected volume.
+   - **Severity** (new-event alerts only): select among Info, Warning, Critical.
+   - **Skip notifications for similar events** (new-event alerts only): on or off.
    - **Slack channel**: Pick a channel to post into and click **Test** to send a sample message.
    - **Email**: toggle on to receive emails at your workspace email address.
 3. Click **Create**. The alert is active immediately.
