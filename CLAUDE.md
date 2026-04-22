@@ -2,6 +2,10 @@
 
 This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reusable fragments in `/snippets`, images in `/images`.
 
+## Frontmatter
+
+- Do NOT include a `description:` field in MDX frontmatter. It renders awkwardly in Mintlify and doesn't help SEO. Keep frontmatter to `title:` (and `sidebarTitle:` where needed).
+
 ## Navigation and linking
 
 - Every new page MUST be added to `docs.json`. Pages not listed there are unreachable from the sidebar even if they exist on disk.
@@ -24,7 +28,8 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - Viewport: **1512 x 982** (MBP 14" equivalent).
 - Wrap screenshots in `<Frame caption="...">` and keep them in `/images/` organized by area (e.g. `/images/tutorials/`, `/images/platform/`).
 - For screenshots of a resulting trace, open the trace in **transcript view** and expand the first LLM span. Span-tree-only shots (and raw-JSON-only shots) understate what users actually get; the transcript is the default Laminar UX and should be what they see first.
-- Close the "Chat with trace" and Signals side panels before capturing so the trace plus transcript are the dominant content.
+- Exception: when the *point* of the screenshot is to show span nesting across processes (e.g. a caller-side `observe` wrapping a server-side turn span), capture the **tree view** alongside the transcript view. Use both in the same section so the hierarchy is obvious.
+- Close the "Chat with trace" and Signals side panels before capturing so the trace plus transcript are the dominant content. Dismiss any "New: …" Mintlify-style feature popups too.
 
 ## Voice gotchas not caught by linters
 
