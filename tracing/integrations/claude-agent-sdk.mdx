@@ -5,6 +5,8 @@ sidebarTitle: Claude Agent SDK
 
 ## Overview
 
+Laminar is an open-source, OpenTelemetry-native observability platform for the Claude Agent SDK. Trace, debug, and monitor every agent turn, tool call, and subagent spawned by `ClaudeSDKClient.query` and the module-level `query` function. Self-host via Helm or use managed cloud.
+
 [Claude Agent SDK](https://docs.claude.com/en/api/agent-sdk/overview) (formerly Claude Code SDK) lets you call the same agent that powers Claude Code from your own code. It handles process management, tool execution, and model calls, and exposes a `query` function (TypeScript) and `ClaudeSDKClient` (Python) for driving a session.
 
 Laminar captures the full structure of each run: the root call, every model turn, each tool call, and every subagent spawned via the `Agent` tool. Nested subagents show up as child spans under the invocation that spawned them, so you can read the whole agent tree in one trace.

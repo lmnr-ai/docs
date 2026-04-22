@@ -6,6 +6,11 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 
 - Do NOT include a `description:` field in MDX frontmatter. It renders awkwardly in Mintlify and doesn't help SEO. Keep frontmatter to `title:` (and `sidebarTitle:` where needed).
 
+## SEO
+
+- The first ~150 words of a page matter disproportionately for search ranking and snippets. On integration and overview pages, lead paragraph one with what Laminar is plus the framework/SDK name (e.g. "Laminar is an open-source, OpenTelemetry-native observability platform for <X>. Trace, debug, and monitor ..."). Include the key product nouns (observability, OpenTelemetry, self-host/Helm, managed cloud) and action verbs (trace, debug, monitor).
+- Defer "what the third-party SDK is" to paragraph two. The opening shouldn't burn SEO real estate on content that never names Laminar.
+
 ## Navigation and linking
 
 - Every new page MUST be added to `docs.json`. Pages not listed there are unreachable from the sidebar even if they exist on disk.
