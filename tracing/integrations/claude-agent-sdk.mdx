@@ -5,22 +5,25 @@ sidebarTitle: Claude Agent SDK
 
 ## Overview
 
-Claude Agent SDK is a framework for calling Claude Code from your own code.
-It abstracts away the underlying process management and calls to the model API.
+Laminar is an open-source, OpenTelemetry-native observability platform for the Claude Agent SDK. Trace, debug, and monitor every agent turn, tool call, and subagent spawned by `ClaudeSDKClient.query` and the module-level `query` function. Self-host via Helm or use managed cloud.
 
-## What Laminar captures
+[Claude Agent SDK](https://docs.claude.com/en/api/agent-sdk/overview) (formerly Claude Code SDK) lets you call the same agent that powers Claude Code from your own code. It handles process management, tool execution, and model calls, and exposes a `query` function (TypeScript) and `ClaudeSDKClient` (Python) for driving a session.
 
-- The entire structure of the Claude Agent SDK function calls, including `connect`, `query`, and `receive_messages`.
-- LLM prompts and responses sent to the model.
-- Tool calls and their results.
-- Latencies, token counts, and token costs.
+Laminar captures the full structure of each run: the root call, every model turn, each tool call, and every subagent spawned via the `Agent` tool. Nested subagents show up as child spans under the invocation that spawned them, so you can read the whole agent tree in one trace.
+
+What Laminar captures:
+
+- The root call (`ClaudeSDKClient.query` / module-level `query`) with the prompt you sent.
+- Every model turn with prompts, responses, token counts, latency, and cost.
+- Tool calls (`Read`, `Write`, `Edit`, `Bash`, `Glob`, `Grep`, `WebSearch`, custom MCP tools) with arguments and results.
+- Subagents spawned via the `Agent` tool as nested spans under the parent turn.
 
 ## Getting started
 
-<Tabs>
-<Tab title="TypeScript / JavaScript">
+<Tabs items={['TypeScript', 'Python']}>
+<Tab title="TypeScript">
 <Steps>
-<Step title="Installation">
+<Step title="Install">
 
 Ensure you are using `@lmnr-ai/lmnr` version `0.7.10` or higher.
 
@@ -31,9 +34,7 @@ pnpm add @lmnr-ai/lmnr@latest @anthropic-ai/claude-agent-sdk@latest
 ```
 
 </Step>
-<Step title="Set up your environment variables">
-
-Export your API keys as environment variables.
+<Step title="Set environment variables">
 
 ```bash
 export LMNR_PROJECT_API_KEY=your-laminar-project-api-key
@@ -47,39 +48,38 @@ export ANTHROPIC_API_KEY=your-anthropic-api-key
 import { query as origQuery } from '@anthropic-ai/claude-agent-sdk';
 import { Laminar } from '@lmnr-ai/lmnr';
 
-// Initialize Laminar
 Laminar.initialize();
 
-// Wrap the original query function
+// Wrap the original query function to capture every turn, tool call, and subagent.
 const query = Laminar.wrapClaudeAgentQuery(origQuery);
 
 async function run() {
-  const result = await query({
-    prompt: "Scan the current directory for TODOs and create a summary markdown file."
-  });
-
-  console.log(result);
+  for await (const message of query({
+    prompt: "Scan the current directory for TODOs and create a summary markdown file.",
+  })) {
+    // Messages stream in; Laminar records the full span tree.
+  }
 }
 run();
 ```
+
+<Note>
+`query` is an async generator. You must iterate it (or collect it) for the agent to run to completion. If you need the return value before initialization, the module-level `instrumentClaudeAgentQuery(originalQuery)` export is equivalent to `Laminar.wrapClaudeAgentQuery`.
+</Note>
 
 </Step>
 </Steps>
 </Tab>
 <Tab title="Python">
 <Steps>
-<Step title="Installation">
-
-Claude Agent SDK integration is packaged as a separate extra.
+<Step title="Install">
 
 ```bash
-pip install -U 'lmnr[claude-agent-sdk]'
+pip install -U lmnr claude-agent-sdk
 ```
 
 </Step>
-<Step title="Set up your environment variables">
-
-Store your API keys in a `.env` file or export them as environment variables.
+<Step title="Set environment variables">
 
 ```bash
 export LMNR_PROJECT_API_KEY=your-laminar-project-api-key
@@ -89,7 +89,7 @@ export ANTHROPIC_API_KEY=your-anthropic-api-key
 </Step>
 <Step title="Initialize Laminar">
 
-Initialize Laminar at the start of your application or file.
+`Laminar.initialize()` auto-instruments `claude-agent-sdk` when the package is importable. No wrapping call is needed.
 
 ```python {4-6}
 import asyncio
@@ -103,8 +103,8 @@ Laminar.initialize()
 async def main():
     async with ClaudeSDKClient() as client:
         await client.query(
-            "Explain to me with examples, how memoization speeds up recursive "
-            "function calls. Use the Fibonacci sequence as an example."
+            "Explain with examples how memoization speeds up recursive calls, "
+            "using Fibonacci as the example."
         )
         async for msg in client.receive_response():
             print(msg)
@@ -113,23 +113,160 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
+<Note>
+Wrapping your entry point in `@observe()` is optional but recommended: it creates a root span that captures inputs and outputs and makes the trace easy to find in the UI.
+</Note>
+
 </Step>
 </Steps>
 </Tab>
 </Tabs>
 
-## View the traces in Laminar
+## See what happened in a trace
 
-Go to the Laminar dashboard, and you will see the traces for the Claude Agent SDK.
+Open the trace in Laminar and you land on the transcript view: each turn reads as a conversation, with the prompt, the model's response, tool calls inline with their inputs and outputs, and any subagents collapsed to their final output. A tree of span names tells you the shape of the run; the transcript tells you what actually happened.
 
-Example trace:
+<Frame caption="Transcript view: the user prompt, tool calls, and model responses read as a dialogue. Expand any span to see its full input and output.">
+<img src="/images/traces/claude-agent-sdk.png" alt="Claude Agent SDK trace in Laminar, transcript view" />
+</Frame>
 
-<img src="/images/traces/claude-agent-sdk.png" alt="Claude Agent SDK Trace" />
+More on the trace UX: [Viewing traces](/platform/viewing-traces).
 
-## Multi-agent visualization
+## Multi-agent runs
 
-When multiple Claude agents collaborate in a single run, Laminar renders each agent as a distinct branch in the trace so you can follow handoffs and parallel work.
+The Claude Agent SDK lets you define subagents programmatically with the `agents` option. Each subagent gets its own system prompt and tool allowlist, and the orchestrator invokes them via the `Agent` tool (formerly `Task`). In Laminar, every subagent invocation becomes a child span of the turn that spawned it, with its own LLM calls and tool calls nested underneath.
 
-Example multi-agent trace:
+<Tabs items={['TypeScript', 'Python']}>
+<Tab title="TypeScript">
+```typescript
+import { query as origQuery } from '@anthropic-ai/claude-agent-sdk';
+import { Laminar } from '@lmnr-ai/lmnr';
 
-<img src="/images/traces/claude-agent-sdk-multi-agent.png" alt="Claude Agent SDK multi-agent trace" />
+Laminar.initialize();
+const query = Laminar.wrapClaudeAgentQuery(origQuery);
+
+for await (const _ of query({
+  prompt: `Review fizzbuzz.py. Kick off three subagents in parallel:
+1. researcher: summarize what the code does.
+2. reviewer: flag bugs, naming, and missing edge cases.
+3. test-runner: propose 3-5 unit tests.
+Combine their findings into a short report.`,
+  options: {
+    allowedTools: ['Read', 'Glob', 'Grep', 'Agent'],
+    agents: {
+      researcher: {
+        description: 'Summarizes what code does. Use for investigation and overview.',
+        prompt: 'Read the code and describe in 3-5 bullets what it does, its inputs, and outputs.',
+        tools: ['Read', 'Glob', 'Grep'],
+      },
+      reviewer: {
+        description: 'Reviews code for quality, bugs, and maintainability.',
+        prompt: 'Identify bugs, unclear naming, missing edge cases, and style issues. Respond with a numbered list.',
+        tools: ['Read', 'Glob', 'Grep'],
+      },
+      'test-runner': {
+        description: 'Designs unit tests. Use for test planning.',
+        prompt: 'Propose 3-5 unit tests covering happy path and edge cases.',
+        tools: ['Read', 'Glob', 'Grep'],
+      },
+    },
+  },
+})) {
+  // stream through messages
+}
+```
+</Tab>
+<Tab title="Python">
+```python
+import asyncio
+from claude_agent_sdk import query, ClaudeAgentOptions, AgentDefinition
+from lmnr import Laminar, observe
+
+Laminar.initialize()
+
+@observe(name="multi-agent-code-review")
+async def main():
+    options = ClaudeAgentOptions(
+        allowed_tools=["Read", "Glob", "Grep", "Agent"],
+        agents={
+            "researcher": AgentDefinition(
+                description="Summarizes what code does. Use for investigation and overview.",
+                prompt="Read the code and describe in 3-5 bullets what it does, its inputs, and outputs.",
+                tools=["Read", "Glob", "Grep"],
+            ),
+            "reviewer": AgentDefinition(
+                description="Reviews code for quality, bugs, and maintainability.",
+                prompt="Identify bugs, unclear naming, missing edge cases, and style issues. Respond with a numbered list.",
+                tools=["Read", "Glob", "Grep"],
+            ),
+            "test-runner": AgentDefinition(
+                description="Designs unit tests. Use for test planning.",
+                prompt="Propose 3-5 unit tests covering happy path and edge cases.",
+                tools=["Read", "Glob", "Grep"],
+            ),
+        },
+    )
+
+    prompt = (
+        "Review fizzbuzz.py. Kick off three subagents in parallel (researcher, reviewer, "
+        "test-runner) and combine their findings into a short report."
+    )
+    async for _ in query(prompt=prompt, options=options):
+        pass
+
+asyncio.run(main())
+```
+</Tab>
+</Tabs>
+
+<Note>
+Subagents are only invoked when `Agent` is in `allowedTools` / `allowed_tools`. Without it, the orchestrator cannot delegate and you'll see a single-threaded trace.
+</Note>
+
+The resulting trace renders each subagent as a branch under the turn that spawned it. Switch to tree view when you want to see the hierarchy at a glance:
+
+<Frame caption="Tree view of a multi-agent run: the ClaudeSDKClient.query root contains the orchestrator turn and three Agent-tool subagents, each with its own LLM and tool calls nested underneath.">
+<img src="/images/traces/claude-agent-sdk-multi-agent.png" alt="Claude Agent SDK multi-agent trace in Laminar" />
+</Frame>
+
+## Track outcomes with Signals
+
+Traces tell you what happened on one run. [Signals](/signals/introduction) turn that into structured outcomes: describe a behavior or failure in natural language ("the agent edited a file it wasn't asked to", "a subagent exceeded 5 tool calls", "the reviewer missed a null-check bug") and Laminar extracts matching events across your history and every new trace. Route them to alerts or datasets.
+
+## Query across traces
+
+- **[SQL editor](/platform/sql-editor)** for ad-hoc queries across traces, spans, signals, and evals.
+- **SQL API** for programmatic access from scripts and pipelines.
+- **[MCP server](/platform/mcp)** to query Laminar directly from Claude Code, Cursor, Codex, or any MCP-aware client.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="I don't see any traces in Laminar">
+    - Confirm `LMNR_PROJECT_API_KEY` is set in the same process that runs the SDK.
+    - In TypeScript, make sure you're iterating the async generator returned by `query`. The agent only runs while you consume messages.
+    - In Python, `claude-agent-sdk` must be importable when `Laminar.initialize()` runs. Install it with `pip install claude-agent-sdk`.
+  </Accordion>
+  <Accordion title="Subagents aren't showing up as child spans">
+    - Add `Agent` to `allowedTools` / `allowed_tools`. Without it the orchestrator falls back to doing everything in-line.
+    - Define subagents on the `agents` option; otherwise the `Agent` tool has nothing to invoke.
+    - The `Agent` tool was called `Task` in earlier Claude Agent SDK versions (&lt; 2.1.63). Upgrade to the latest SDK to match the examples above.
+  </Accordion>
+  <Accordion title="Self-hosting Laminar">
+    Set `LMNR_BASE_URL` and the ports of your instance before initializing. For a local OSS deployment:
+
+    ```bash
+    export LMNR_BASE_URL=http://localhost
+    # Python
+    # Laminar.initialize(base_url="http://localhost", http_port=8000, grpc_port=8001)
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## What's next
+
+- [Viewing traces](/platform/viewing-traces): read the transcript view, filter, and search across traces.
+- [Signals](/signals/introduction): extract structured outcomes and failures from your agent runs.
+- [SQL editor](/platform/sql-editor) and [MCP server](/platform/mcp): query traces programmatically.
+- [Tracing structure](/tracing/structure/overview): sessions, metadata, and tags for deeper control.
+- Running Claude Agent SDK alongside OpenCode? See the [OpenCode](/tracing/integrations/opencode) integration page.
