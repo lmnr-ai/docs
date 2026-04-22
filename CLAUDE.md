@@ -48,6 +48,15 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - **Concrete speech, not abstract definitions**: "If you've written a Slack message that starts with 'can you look through today's runs...'" beats "Signals are for open-ended investigations".
 - Keep one or two `<Note>` callouts per page for side information that would otherwise break flow (e.g. "these are queryable via `signal_events`"). Don't inline the detail into prose.
 
+## Claude Agent SDK integration
+
+- Public TS API is `Laminar.wrapClaudeAgentQuery(originalQuery)` (alias: module-level `instrumentClaudeAgentQuery`). Document the static-method form; it's the one in the TSDoc example.
+- Python integration is auto-instrumented by `Laminar.initialize()` when `claude-agent-sdk` is importable. There is NO `[claude-agent-sdk]` extra in `lmnr`'s `pyproject.toml`; install is `pip install lmnr claude-agent-sdk`. Don't repeat the old `pip install -U 'lmnr[claude-agent-sdk]'` pattern.
+- Subagents only become nested spans if `Agent` is in `allowedTools` / `allowed_tools` and subagents are declared in `agents`. The tool was `Task` before Claude Agent SDK v2.1.63.
+- Python ships a Rust proxy (`lmnr-claude-code-proxy`) that binds to port 45667 to intercept Anthropic HTTP calls from subprocess subagents. If `ANTHROPIC_BASE_URL` is pre-set (common in sandboxes/agent runtimes), the proxy fails with "Address already in use" and subagent spans go missing — `unset ANTHROPIC_BASE_URL ANTHROPIC_BEDROCK_BASE_URL ANTHROPIC_ORIGINAL_BASE_URL` before running demos.
+- When running CAS demos inside another claude-agent sandbox, the parent agent already owns port 45667 for its own proxy. Override before `Laminar.initialize()` via module-level monkey-patch: `from lmnr.opentelemetry_lib.opentelemetry.instrumentation.claude_agent import proxy as _p; _p._DEFAULT_PORT = 55667; _p._NEXT_PORT = 55667`. No public env var exists for this today.
+- Traces from the running background agent land in the same project as the demo you're running, so transcript screenshots can be polluted by the agent's own Bash/Read spans. Filter the trace list by root-span name (e.g. `multi-agent-code-review`) before screenshotting, or run the demo in a project separate from `LMNR_PROJECT_API_KEY`.
+
 ## Formatting
 
 - Run `prettier --write` ONLY on the specific files you changed. Never `pnpm format:write` or `prettier --write .`; it touches unrelated files. Note that the docs repo itself has no `package.json` or prettier config, so prettier is not part of the workflow here.
