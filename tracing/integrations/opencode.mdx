@@ -1,17 +1,13 @@
 ---
 title: Observability for OpenCode coding agents
 sidebarTitle: OpenCode
-description: Trace OpenCode conversation turns, tool calls, and LLM requests with Laminar. Open-source, OpenTelemetry-native observability for OpenCode.
 ---
 
 import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
 
 ## Overview
 
-[OpenCode](https://opencode.ai/) is an open-source AI coding agent you run as a TUI or embed as a server. Laminar ships two pieces so you can trace either setup:
-
-- **`@lmnr-ai/opencode-plugin`** runs inside the OpenCode server. It records every conversation turn as a trace, with one span per LLM call and tool invocation.
-- **SDK instrumentation** inside `@lmnr-ai/lmnr` patches `@opencode-ai/sdk` so TypeScript code that drives OpenCode programmatically shows up as the parent of each turn. The whole call stack lands in a single trace.
+[OpenCode](https://opencode.ai/) is an open-source AI coding agent. Its [`@opencode-ai/sdk`](https://opencode.ai/docs/sdk/) package lets you call OpenCode programmatically — spin up a server, drive a session, and build products on top of the agent instead of using the TUI. Laminar makes those runs observable.
 
 What Laminar captures:
 
@@ -19,22 +15,30 @@ What Laminar captures:
 - LLM prompts, responses, token counts, latency, and cost.
 - Tool calls (`bash`, `read`, `write`, `edit`, custom tools) with arguments and results.
 - Sub-agents (the Title Generator, task runners) as nested spans.
+- When you wrap `client.session.prompt` in `observe`, the server-side turn nests under your caller span, so the entire call stack lands in a single trace.
 
-Each trace carries the OpenCode session ID as its Laminar session ID, so every turn in the same OpenCode conversation shows up under one session in Laminar. Open the session to scroll through the turns in order; filter by session ID in SQL to pull a whole conversation.
+Each trace carries the OpenCode session ID as its Laminar session ID, so every turn in the same OpenCode conversation shows up under one session in Laminar.
 
-## Using the OpenCode CLI
+## Calling OpenCode from TypeScript
 
-Add the Laminar plugin to the OpenCode config and export your key. Every `opencode` run then ships traces to Laminar.
+Laminar ships two pieces that cooperate:
+
+- **`@lmnr-ai/lmnr`** patches `@opencode-ai/sdk` on the caller side. When you wrap a `client.session.prompt` call in `observe`, the instrumentation injects the current span context into the request.
+- **`@lmnr-ai/opencode-plugin`** runs inside the OpenCode server, picks up that context, and emits the turn, LLM, and tool-call spans as children of your caller span.
+
+The result: one trace per turn that spans from your `observe` block into the server's `turn` span and all the way down to each LLM call.
 
 <Steps>
-<Step title="Install the OpenCode CLI">
+<Step title="Install">
 
-Follow [OpenCode's install guide](https://opencode.ai/docs/#install). You do not need to install the plugin package yourself; OpenCode resolves it from npm on first run.
+```bash
+npm install @lmnr-ai/lmnr@latest @opencode-ai/sdk@latest
+```
 
 </Step>
 <Step title="Add the Laminar plugin to opencode.json">
 
-Edit (or create) `opencode.json`:
+The caller-side instrumentation only injects context; the server-side plugin is what actually emits the turn and tool spans. Create (or edit) `opencode.json` next to your code:
 
 ```json opencode.json
 {
@@ -52,53 +56,17 @@ OpenCode reads config from [multiple locations](https://opencode.ai/docs/config/
 </Step>
 <Step title="Set LMNR_PROJECT_API_KEY">
 
-The plugin reads `LMNR_PROJECT_API_KEY` from the environment of whatever process starts the OpenCode server. Exporting it in your shell is enough:
+The plugin reads `LMNR_PROJECT_API_KEY` from the environment of whatever process starts the OpenCode server. When you use `opencode.createOpencode()`, that's the same process that runs your TypeScript code, so exporting it in your shell is enough:
 
 ```bash
 export LMNR_PROJECT_API_KEY=your-laminar-project-api-key
 ```
-
-Or put it in `.env` in the project directory; OpenCode loads the file automatically on launch.
 
 <GetProjectApiKey />
 
 <Tip>
 Self-hosting Laminar? Also set `LMNR_BASE_URL` and `LMNR_GRPC_PORT` to point at your instance. For the OSS default, that's `http://localhost` and `8001`.
 </Tip>
-
-</Step>
-<Step title="Run opencode">
-
-```bash
-opencode
-```
-
-The first run downloads the plugin. On startup you'll see a log line like `Laminar tracing initialized → https://api.lmnr.ai`. The plugin also flips OpenCode's experimental OpenTelemetry flag on for you, so you don't need to touch the OTel config.
-
-</Step>
-</Steps>
-
-Open Laminar and you'll see one trace per turn, grouped by OpenCode session. Each trace contains the model call, tool calls, and any sub-agent activity:
-
-<Frame caption="OpenCode trace in Laminar: the turn span wraps the model response, the write tool call, and the bash tool call for a Python factorial task.">
-<img src="/images/traces/opencode.png" alt="OpenCode trace in Laminar" />
-</Frame>
-
-## Calling OpenCode from TypeScript
-
-If you drive the OpenCode server from your own TypeScript code via `@opencode-ai/sdk`, add Laminar to the caller too. The SDK instrumentation injects a span context into each `prompt` call, and the server-side plugin picks it up. The result: one trace per turn that spans from your `observe` block into the server's `turn` span and all the way down to the LLM call.
-
-<Steps>
-<Step title="Install">
-
-```bash
-npm install @lmnr-ai/lmnr@latest @opencode-ai/sdk@latest
-```
-
-</Step>
-<Step title="Keep the plugin on the server">
-
-The two sides cooperate, so `opencode.json` still needs the plugin entry from the section above, and the server process still needs `LMNR_PROJECT_API_KEY` in its environment.
 
 </Step>
 <Step title="Initialize Laminar with the opencode module">
@@ -141,15 +109,51 @@ If you import `@opencode-ai/sdk` before `Laminar.initialize()` (common when the 
 </Step>
 </Steps>
 
-The trace you get back is a single tree: your `observe` span is the root, `turn` is its child, and the model and tool calls hang off `turn`.
+## Trace structure
 
-<Frame caption="SDK-driven OpenCode run in Laminar: the outer-observe span from the TypeScript caller is the parent of the server's turn, session.llm, and model spans.">
-<img src="/images/traces/opencode-sdk.png" alt="OpenCode SDK plus plugin trace in Laminar" />
+Because the caller-side instrumentation hands the span context to the server-side plugin, the trace comes back as a single tree: your `observe` span is the root, the server's `turn` span is its child, and every `session.llm`, model call, and tool call hangs off `turn`. There is no separate trace for the server — everything the OpenCode process does on this turn shows up nested under the TypeScript code that kicked it off.
+
+The tree view makes that nesting obvious:
+
+<Frame caption="Tree view: the outer my-agent-step span from the TypeScript caller is the parent of the server's turn, which wraps every session.llm, model call, and tool call (write, bash) the agent made on this turn.">
+<img src="/images/traces/opencode-sdk-tree.png" alt="OpenCode SDK trace in Laminar, tree view" />
 </Frame>
 
-## See what happened in a trace
+Switch to transcript view on the same trace to read the conversation — user prompt, model output, tool calls, and tool results read as a dialogue instead of a span tree. More on the trace UX: [Viewing traces](/platform/viewing-traces).
 
-Open any turn and you get the transcript view: user prompt, model output, tool calls, and tool results read as a conversation instead of a tree of span names. Sub-agents like the Title Generator collapse to their input and final output so you see what mattered. More on the trace UX: [Viewing traces](/platform/viewing-traces).
+<Frame caption="Same trace in transcript view: the turn reads as a dialogue with the model responses and tool invocations inline.">
+<img src="/images/traces/opencode-sdk.png" alt="OpenCode SDK trace in Laminar, transcript view" />
+</Frame>
+
+## Using the OpenCode CLI
+
+The plugin works the same way on a standalone `opencode` CLI run: add it to `opencode.json`, export `LMNR_PROJECT_API_KEY`, and every conversation turn gets traced. There's no TypeScript caller to be the parent span, so each turn becomes its own top-level trace.
+
+<Steps>
+<Step title="Install the OpenCode CLI">
+
+Follow [OpenCode's install guide](https://opencode.ai/docs/#install). You do not need to install the plugin package yourself; OpenCode resolves it from npm on first run.
+
+</Step>
+<Step title="Configure the plugin and key">
+
+Use the same `opencode.json` plugin entry as the SDK section above, and export `LMNR_PROJECT_API_KEY` in the shell you launch `opencode` from. You can also put the key in a `.env` file in the project directory; OpenCode loads it automatically.
+
+</Step>
+<Step title="Run opencode">
+
+```bash
+opencode
+```
+
+The first run downloads the plugin. On startup you'll see a log line like `Laminar tracing initialized → https://api.lmnr.ai`. The plugin also flips OpenCode's experimental OpenTelemetry flag on for you, so you don't need to touch the OTel config.
+
+</Step>
+</Steps>
+
+<Frame caption="CLI run traced on its own: the turn span is the root, wrapping the model response, the write tool call, and the bash tool call for a Python factorial task.">
+<img src="/images/traces/opencode.png" alt="OpenCode CLI trace in Laminar" />
+</Frame>
 
 ## Track outcomes with Signals
 
