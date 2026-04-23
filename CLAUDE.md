@@ -73,6 +73,15 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - When running CAS demos inside another claude-agent sandbox, the parent agent already owns port 45667 for its own proxy. Override before `Laminar.initialize()` via module-level monkey-patch: `from lmnr.opentelemetry_lib.opentelemetry.instrumentation.claude_agent import proxy as _p; _p._DEFAULT_PORT = 55667; _p._NEXT_PORT = 55667`. No public env var exists for this today.
 - Traces from the running background agent land in the same project as the demo you're running, so transcript screenshots can be polluted by the agent's own Bash/Read spans. Filter the trace list by root-span name (e.g. `multi-agent-code-review`) before screenshotting, or run the demo in a project separate from `LMNR_PROJECT_API_KEY`.
 
+## OpenAI Agents SDK integration
+
+- Python integration is auto-instrumented by `Laminar.initialize()` when `openai-agents` is importable. No wrapping call like `wrapClaudeAgentQuery` exists. Install is `pip install lmnr openai-agents`; there is no `[openai-agents]` extra.
+- Requires `openai-agents >= 0.7.0` and `lmnr >= 0.7.48`. The instrumentor initializer is gated by `is_package_installed("openai-agents")` in `_instrument_initializers.py`.
+- The integration hooks `agents.tracing.add_trace_processor` (not OTel model wrapping) via `LaminarAgentsTraceProcessor`, and additionally wraps `OpenAIResponsesModel.get_response/stream_response` + the Chat Completions variants to inject the agent's `instructions` into the input messages via a ContextVar. That's why system prompts show up on every LLM span without the user opting in.
+- Span hierarchy: root `@observe` → `Agent workflow` → `agents.task` → `<AgentName>` → `agents.turn` → `gpt-4.1-mini` LLM span. Handoffs appear as a `transfer_to_<agent>` tool call on the source agent followed by an `agents.handoff` span; the destination agent's turns land as siblings under the same parent task — they do NOT nest under the source agent. Recommend tree view in docs when describing handoff structure.
+- For screenshots, the transcript view needs `Runner.run` to produce at least one tool call or handoff to be visually interesting; a single-turn math tutor run fills most of the screenshot with the prompt. Use a multi-agent airline-style demo for the multi-agent screenshots.
+- Default `Laminar.initialize()` targets cloud on port 8443 over gRPC/HTTPS. For local stack testing always pass `base_url="http://localhost", http_port=8000, grpc_port=8001` — otherwise the demos silently send to cloud.
+
 ## Formatting
 
 - Run `prettier --write` ONLY on the specific files you changed. Never `pnpm format:write` or `prettier --write .`; it touches unrelated files. Note that the docs repo itself has no `package.json` or prettier config, so prettier is not part of the workflow here.
