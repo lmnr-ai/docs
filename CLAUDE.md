@@ -35,6 +35,8 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - For screenshots of a resulting trace, open the trace in **transcript view** and expand the first LLM span. Span-tree-only shots (and raw-JSON-only shots) understate what users actually get; the transcript is the default Laminar UX and should be what they see first.
 - Exception: when the *point* of the screenshot is to show span nesting across processes (e.g. a caller-side `observe` wrapping a server-side turn span), capture the **tree view** alongside the transcript view. Use both in the same section so the hierarchy is obvious.
 - Close the "Chat with trace" and Signals side panels before capturing so the trace plus transcript are the dominant content. Dismiss any "New: …" Mintlify-style feature popups too.
+- For the **Reports** page: workspaces that predate the default-reports logic (created before LAM-1474) will have an empty reports table in staging. Seed two rows into `reports` (`type=SIGNAL_EVENTS_SUMMARY`, `weekdays={0,1,2,3,4}`/`{6}`, `hour=10`) + matching `report_targets` so the screenshot shows "Weekday/Weekly signals summary" rows instead of the empty state.
+- For the **project Alerts** page: insert a `NEW_CLUSTER` alert alongside the existing `SIGNAL_EVENT` alerts in staging to visibly exercise the Trigger + Severity columns (severity is blank/"—" for `NEW_CLUSTER` rows, which is the expected rendering).
 
 ## Voice gotchas not caught by linters
 
@@ -52,6 +54,15 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - **Conversational H2s**: prefer "Run a Signal on new traces or historical traces" over "Ways to run a Signal". Headers can be long if they answer a question directly.
 - **Concrete speech, not abstract definitions**: "If you've written a Slack message that starts with 'can you look through today's runs...'" beats "Signals are for open-ended investigations".
 - Keep one or two `<Note>` callouts per page for side information that would otherwise break flow (e.g. "these are queryable via `signal_events`"). Don't inline the detail into prose.
+
+## Alerts and reports coupling
+
+- Alerts are **project-level** (`/repos/lmnr/app-server` writes to `alerts` / `alert_targets`); reports are **workspace-level** (`reports` / `report_targets`). Both live under the Signals sidebar group in `docs.json` (`/signals/alerts` and `/signals/reports`), since they're the two notification-channel primitives for Signals.
+- Alert types are `SIGNAL_EVENT` and `NEW_CLUSTER`. `skipSimilar` and `NEW_CLUSTER` both depend on the clustering service and are gated behind `Feature.CLUSTERING` in the UI — call this out explicitly in any doc that mentions them.
+- Every new Signal auto-creates a Critical-severity `SIGNAL_EVENT` alert plus (when clustering is on) a `NEW_CLUSTER` alert, both defaulting to in-app only. The `/signals/quickstart` Note must stay in sync with this behavior if the default-alert logic changes.
+- Reports post to the in-app notification center only for short periods (≤3 days); weekly-style rollups are suppressed in-app to avoid duplicating daily summaries (see `formatReportNotification` in `frontend/components/notifications/notification-panel.tsx`). Reflect this when describing in-app behavior.
+- Report names are derived from the schedule via `getReportLabel` in `frontend/lib/actions/reports/types.ts`: Mon–Fri → **Weekday signals summary**, single day → **Weekly signals summary**, all 7 → **Daily signals summary**. Docs must use the same label the UI renders (the two defaults are *Weekday* and *Weekly*, not "Daily" and "Weekly").
+- Alert trigger labels in the UI come from `ALERT_TYPE_LABELS` in `frontend/lib/actions/alerts/types.ts`: `SIGNAL_EVENT` → **New event**, `NEW_CLUSTER` → **New cluster**. Docs should use these user-facing labels, not the raw enum names, when describing the trigger picker or alert rows.
 
 ## Claude Agent SDK integration
 
