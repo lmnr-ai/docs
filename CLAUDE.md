@@ -57,7 +57,7 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 
 ## Alerts and reports coupling
 
-- Alerts are **project-level** (`/repos/lmnr/app-server` writes to `alerts` / `alert_targets`); reports are **workspace-level** (`reports` / `report_targets`). Docs must keep these scopes straight — `/signals/alerts` lives under the Signals tab, `/platform/reports` under Platform.
+- Alerts are **project-level** (`/repos/lmnr/app-server` writes to `alerts` / `alert_targets`); reports are **workspace-level** (`reports` / `report_targets`). Both live under the Signals sidebar group in `docs.json` (`/signals/alerts` and `/signals/reports`), since they're the two notification-channel primitives for Signals.
 - Alert types are `SIGNAL_EVENT` and `NEW_CLUSTER`. `skipSimilar` and `NEW_CLUSTER` both depend on the clustering service and are gated behind `Feature.CLUSTERING` in the UI — call this out explicitly in any doc that mentions them.
 - Every new Signal auto-creates a Critical-severity `SIGNAL_EVENT` alert plus (when clustering is on) a `NEW_CLUSTER` alert, both defaulting to in-app only. The `/signals/quickstart` Note must stay in sync with this behavior if the default-alert logic changes.
 - Reports post to the in-app notification center only for short periods (≤3 days); weekly-style rollups are suppressed in-app to avoid duplicating daily summaries (see `formatReportNotification` in `frontend/components/notifications/notification-panel.tsx`). Reflect this when describing in-app behavior.
