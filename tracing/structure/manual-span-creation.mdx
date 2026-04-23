@@ -108,4 +108,53 @@ Spans can have a type that affects how they appear in the Laminar UI:
 - **TOOL** — Tool or function call within an agent.
 - **EXECUTOR** — Orchestration or routing logic.
 
-Set the type when creating the span. LLM spans expect specific attributes for cost calculation—see [LLM Cost Tracking](./llm-cost-tracking) and the SDK reference for span creation options.
+Set the type when creating the span:
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { Laminar, observe } from '@lmnr-ai/lmnr';
+
+    // With observe()
+    const searchDatabase = (query: string) =>
+      observe({ name: 'searchDatabase', spanType: 'TOOL' }, async () => {
+        return await db.search(query);
+      });
+
+    // With manual spans
+    const span = Laminar.startActiveSpan({
+      name: 'searchDatabase',
+      spanType: 'TOOL',
+      input: { query },
+    });
+    try {
+      const results = await db.search(query);
+      span.setAttributes({ 'result.count': results.length });
+      return results;
+    } finally {
+      span.end();
+    }
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import Laminar, observe
+
+    # With @observe()
+    @observe(span_type="TOOL")
+    def search_database(query: str) -> list[dict]:
+        return db.search(query)
+
+    # With manual spans
+    with Laminar.start_as_current_span(
+        name="search_database",
+        span_type="TOOL",
+        input={"query": query},
+    ) as span:
+        results = db.search(query)
+        Laminar.set_span_output(results)
+    ```
+  </Tab>
+</Tabs>
+
+LLM spans expect specific attributes for cost calculation—see [LLM Cost Tracking](./llm-cost-tracking) and the SDK reference for span creation options.

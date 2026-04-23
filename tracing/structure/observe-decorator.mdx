@@ -73,6 +73,36 @@ Wrap a function you own so it shows up as a parent operation with downstream spa
   </Tab>
 </Tabs>
 
+## Setting Span Type
+
+By default, observed functions create `DEFAULT` spans. You can set the `span_type` / `spanType` parameter to change how the span appears in the Laminar UI. Use `TOOL` for functions that represent tool or function calls within an agent.
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { observe } from '@lmnr-ai/lmnr';
+
+    const searchDatabase = (query: string) =>
+      observe({ name: 'searchDatabase', spanType: 'TOOL' }, async () => {
+        return await db.search(query);
+      });
+    ```
+
+    See also: [Span Types](/tracing/structure/manual-span-creation#span-types)
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import observe
+
+    @observe(span_type="TOOL")
+    def search_database(query: str) -> list[dict]:
+        return db.search(query)
+    ```
+
+    See also: [Span Types](/tracing/structure/manual-span-creation#span-types)
+  </Tab>
+</Tabs>
+
 ## In the Laminar UI
 
 - The observed function appears as a span (often the root span for the trace).
