@@ -6,6 +6,7 @@ New releases and improvements.
 
 ## April 2026
 
+- **Pydantic AI integration** — Opt in with `Instruments.PYDANTIC_AI` on `Laminar.initialize()` and get transcript-view traces for every agent run, tool call, and model call. Laminar now parses OpenTelemetry GenAI semantic conventions natively. See [Pydantic AI](/tracing/integrations/pydantic-ai).
 - **Alerts and reports overhaul** — Alerts now support multi-severity filtering (Info, Warning, Critical), a *skip similar events* option, and a second trigger type for new clusters. Every new Signal ships with a critical-severity event alert and a cluster alert by default. Workspaces get weekday and weekly signal summary reports out of the box. Alerts and reports post to an in-app notification center; Slack and email are configurable per alert or report. See [Alerts](/signals/alerts) and [Reports](/signals/reports).
 - **Claude Agent SDK integration refresh** — Updated the [Claude Agent SDK](/tracing/integrations/claude-agent-sdk) page with end-to-end setup for TypeScript and Python, a multi-subagent example, and real transcript and tree-view screenshots.
 

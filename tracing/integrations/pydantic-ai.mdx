@@ -1,67 +1,97 @@
 ---
-title: Observability for Pydantic AI with OpenTelemetry
+title: Pydantic AI Observability and Tracing
 sidebarTitle: Pydantic AI
 ---
 
 ## Overview
 
-Pydantic AI emits OpenTelemetry (OTel) spans for agent runs, model calls, and tool execution. By configuring an OTLP exporter, you can send those traces directly to Laminar.
+Laminar is an open-source, OpenTelemetry-native observability platform for Pydantic AI agents. Trace, debug, and monitor every agent run, LLM call, and tool invocation with one opt-in flag on `Laminar.initialize()`.
 
-If you want more detail on OTel exporters, endpoints, or self-hosted settings, see the [OpenTelemetry guide](/tracing/otel).
+Pydantic AI already emits spans that follow the [OpenTelemetry GenAI semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/). Laminar's Python SDK wires those spans into your project automatically when you pass `Instruments.PYDANTIC_AI` to `initialize`. Laminar's backend understands the GenAI format natively, so agent runs, tool spans, and model calls render in the [transcript view](/platform/viewing-traces) without extra configuration.
+
+<Note>
+Pydantic AI instrumentation is opt-in and requires `pydantic-ai >= 1.0`. When you opt in, Laminar auto-disables the overlapping provider instrumentors (OpenAI, Anthropic, Google GenAI, Bedrock, Cohere, Groq, Mistral, Ollama, Together, Vertex AI, LiteLLM) so you don't get duplicate spans for the same call. If you explicitly list one of those providers alongside `PYDANTIC_AI`, your explicit choice wins and the auto-block is skipped for that provider.
+</Note>
 
 ## Getting Started
 
-### 1. Install dependencies
+### 1. Install
 
 ```bash
-pip install -U "pydantic-ai-slim[openai]" opentelemetry-sdk opentelemetry-exporter-otlp python-dotenv
+pip install -U "lmnr" "pydantic-ai-slim[openai]>=1.0"
 ```
 
 ### 2. Set environment variables
 
 ```bash
-# .env or environment
 LMNR_PROJECT_API_KEY=your-laminar-project-api-key
 OPENAI_API_KEY=your-openai-api-key
 ```
 
-### 3. Configure OpenTelemetry and enable instrumentation
+### 3. Initialize with the Pydantic AI instrument
 
-This example uses the OTLP/gRPC exporter, which Laminar recommends for reliability and performance.
-
-```python {title="pydantic_ai_laminar_otel.py" test="skip"}
-import os
-
-from dotenv import load_dotenv
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.trace import set_tracer_provider
-
+```python
+from lmnr import Laminar, Instruments
 from pydantic_ai import Agent
 
-load_dotenv()
-project_api_key = os.getenv("LMNR_PROJECT_API_KEY")
-if not project_api_key:
-    raise RuntimeError("LMNR_PROJECT_API_KEY is not set")
-
-exporter = OTLPSpanExporter(
-    endpoint="https://api.lmnr.ai:8443/v1/traces",
-    headers={"authorization": f"Bearer {project_api_key}"},
-)
-tracer_provider = TracerProvider()
-tracer_provider.add_span_processor(BatchSpanProcessor(exporter))
-set_tracer_provider(tracer_provider)
-
-Agent.instrument_all()
+Laminar.initialize(instruments={Instruments.PYDANTIC_AI})
 
 agent = Agent("openai:gpt-4.1-mini")
 result = agent.run_sync("What is the capital of France?")
 print(result.output)
 ```
 
-<Warning>
-The `authorization` header must be lowercase when using the gRPC exporter.
-</Warning>
+That's the full setup. Every agent run, tool call, and model call is now traced.
 
-Once instrumentation is enabled, Laminar will display traces for each agent run and underlying model/tool calls.
+## Tool calls and multi-step agents
+
+Tool definitions and multi-agent delegation work the same way. No extra instrumentation needed.
+
+```python
+from lmnr import Laminar, Instruments
+from pydantic_ai import Agent
+
+Laminar.initialize(instruments={Instruments.PYDANTIC_AI})
+
+agent = Agent("openai:gpt-4.1-mini")
+
+@agent.tool_plain
+def lookup_capital(country: str) -> str:
+    """Return the capital of a country."""
+    return {"France": "Paris", "Japan": "Tokyo"}.get(country, "unknown")
+
+result = agent.run_sync("What is the capital of Japan?")
+print(result.output)
+```
+
+Each `execute_tool` span lands in the trace with the tool arguments as input and the return value as output.
+
+## Run Pydantic AI alongside another SDK
+
+If you instrument Pydantic AI for one flow and the raw OpenAI SDK for another (same process), opt in to both explicitly. Laminar will keep both instrumentors active.
+
+```python
+from lmnr import Laminar, Instruments
+
+Laminar.initialize(
+    instruments={Instruments.PYDANTIC_AI, Instruments.OPENAI},
+)
+```
+
+## See what happened in a trace
+
+Open a trace in Laminar and you get a [transcript view](/platform/viewing-traces): the agent's system and user messages at the top, the model's responses inline, and every tool call expanded with its arguments and result. You read the conversation instead of a span tree.
+
+## Track outcomes with Signals
+
+Define [Signals](/signals/introduction) in natural language to extract outcomes or failures from Pydantic AI traces: "the agent gave up without calling the `lookup` tool," "the final answer didn't match the expected format." Signals backfill on history and trigger on new traces, and feed into [alerts](/signals/alerts).
+
+## Query across traces
+
+Use the [SQL editor](/platform/sql-editor) to filter agent runs by model, tool, token usage, or latency. Hit the same tables from the SQL API or the [MCP server](/platform/mcp) for Claude Code, Cursor, and Codex.
+
+## Advanced
+
+- See [Tracing Structure](/tracing/structure/overview) to wrap business logic in `observe`, attach session IDs, metadata, and tags.
+- If your app also uses [LangChain](/tracing/integrations/langchain), see that page for how to combine instrumentors.
+- For OTel endpoint, self-hosted, or exporter tuning, see the [OpenTelemetry guide](/tracing/otel).

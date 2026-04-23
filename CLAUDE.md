@@ -64,6 +64,13 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - Report names are derived from the schedule via `getReportLabel` in `frontend/lib/actions/reports/types.ts`: Mon–Fri → **Weekday signals summary**, single day → **Weekly signals summary**, all 7 → **Daily signals summary**. Docs must use the same label the UI renders (the two defaults are *Weekday* and *Weekly*, not "Daily" and "Weekly").
 - Alert trigger labels in the UI come from `ALERT_TYPE_LABELS` in `frontend/lib/actions/alerts/types.ts`: `SIGNAL_EVENT` → **New event**, `NEW_CLUSTER` → **New cluster**. Docs should use these user-facing labels, not the raw enum names, when describing the trigger picker or alert rows.
 
+## pydantic_ai integration
+
+- Python SDK integration is **opt-in**: users must pass `instruments={Instruments.PYDANTIC_AI}` to `Laminar.initialize()`. It is NOT in the default set. Call this out in the docs page; it's the top cause of "I installed it but got no traces".
+- When `PYDANTIC_AI` is opted in, the Laminar SDK auto-skips the raw provider instrumentors (OpenAI, Anthropic, Google, Bedrock, Groq, etc.) unless the user also passes them explicitly. Document this trade-off so users who want HTTP-level spans from non-pydantic_ai code know to opt those back in.
+- Minimum SDK: `pydantic-ai-slim>=1.0`. Laminar calls `Agent.instrument_all(InstrumentationSettings(version=5))` internally — do not tell users to set `instrument=True` themselves, that path conflicts with Laminar's auto-setup.
+- There is no TypeScript pydantic_ai integration (pydantic_ai is Python-only). The MDX page should not include a TypeScript tab.
+
 ## Claude Agent SDK integration
 
 - Public TS API is `Laminar.wrapClaudeAgentQuery(originalQuery)` (alias: module-level `instrumentClaudeAgentQuery`). Document the static-method form; it's the one in the TSDoc example.
