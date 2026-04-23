@@ -3,70 +3,87 @@ title: Viewing Traces
 sidebarTitle: Viewing traces
 ---
 
-The trace view supports multiple ways to explore the same trace: Tree, Timeline, and Reader (via the View dropdown), plus Metadata and Ask AI (via dedicated buttons/toggles). In any view, selecting a span opens the full span detail pane on the right.
+A Laminar trace can have thousands of spans. The trace view gives you several ways to read it: **Transcript** (the default), **Tree**, and **Timeline** (via the view-mode dropdown), plus **Metadata** and **Chat with trace** side panels. Selecting any span in any view opens the full span detail pane on the right.
 
-## Tree View
+## Transcript view
 
-### Open Tree View
+Transcript view presents an agent trace as a conversation rather than a tree of span names. Laminar auto-extracts the agent input, the LLM turns, the tool calls, and the subagent invocations, and lays them out top-to-bottom so you can read what happened instead of click-hunting for it. It is the default view on every trace.
+
+<Frame caption="Transcript view of a single-agent fizzbuzz review: the input, two LLM turns, and a Read tool call laid out in reading order.">
+  <img src="/images/transcript-view/single-agent.png" alt="Single-agent trace in transcript view" />
+</Frame>
+
+### Why transcript, not a span tree
+
+A span tree gives every row equal visual weight: the outer agent span, its query span, the planning LLM turn, each tool call, and every nested subagent are all just rows. On a long trace (six to ten subagents, dozens of tool calls) you end up scrolling an outline to reconstruct what the agent actually did.
+
+Transcript view flips that: it shows the **agent input**, the **LLM outputs**, the **tool-call arguments and results**, and each **subagent as a single collapsed card**. Spans that exist only to hold children (wrappers, framework internals) are elided from the reading flow. The decision you care about when debugging an agent (*what did it see, what did it decide, what did it call*) is what transcript view surfaces first.
+
+### Inputs to every agent and subagent, surfaced for free
+
+The input to the root call and to each subagent is parsed out of system and user messages and rendered inline as a labelled `Input` block. You do not need to instrument anything: any OpenAI- or Anthropic-style chat completion is parsed automatically, and Laminar will surface the task prompt even when it is buried many messages deep in the request.
+
+This matters most when you are reading a trace that someone else wrote, or a trace from a run you started three days ago. Before transcript view, recovering *what did we actually ask this agent to do?* meant opening the first LLM span, finding the input JSON, expanding the messages array, and scrolling to the last user message. Now it is the first thing on the page.
+
+### Subagents are cards, not a flood of spans
+
+Multi-agent runs (Claude Agent SDK, OpenAI Agents SDK, LangGraph, custom orchestrators) produce deeply nested trees. Transcript view collapses each subagent invocation into a named card that shows the subagent's name, duration, token/cost badges, the **Input** prompt it was given, and an **Output** preview of its final message.
+
+<Frame caption="Transcript view of a multi-agent Claude Agent SDK run. Each Code Analyst subagent is a single card with its input prompt and output preview inline. Click a card to expand it in place.">
+  <img src="/images/transcript-view/multi-agent.png" alt="Multi-agent trace in transcript view" />
+</Frame>
+
+Clicking a card expands it in place: the card fills out with the subagent's own LLM turns, tool calls, and any further nested subagents. Other cards on the page stay collapsed, so you can drill into one branch without flooding the rest of the view.
+
+<Frame caption="The first Code Analyst subagent card expanded in place. Its Input, the subagent's LLM turn, and the Read tool call it made sit inside the card.">
+  <img src="/images/transcript-view/subagent-expanded.png" alt="Subagent card expanded in place" />
+</Frame>
+
+### Inline previews on every row
+
+LLM turns and tool calls render a one-line preview next to the row: the first part of the model's response for an LLM turn, and the first argument or result for a tool call (for example, `Read fizzbuzz.py` or `Read /sandbox/scratch/...`). You can scan a long trace and get a sense of what was happening at each step without expanding anything.
+
+### Switch between Transcript and Tree
+
+Transcript is the default, but Tree view is one click away and useful when you need to confirm parent/child nesting, debug a custom integration, or inspect span attributes at specific nodes in the hierarchy. Use the view-mode dropdown in the trace toolbar.
+
+<Frame caption="The same multi-agent trace in Tree view: every span rendered as a row, with the three subagents and their children interleaved in the list.">
+  <img src="/images/transcript-view/multi-agent-tree.png" alt="Multi-agent trace in tree view" />
+</Frame>
+
+## Tree view
+
+### Open Tree view
 
 1. Open a trace (from **Traces**).
-2. In the trace view toolbar, open the view mode dropdown.
-3. Select **Tree** (you can switch back the same way).
+2. In the trace view toolbar, open the view-mode dropdown.
+3. Select **Tree** (switch back the same way).
 
-![Tree view](/images/tree-view.png)
+- **Hierarchy-first**: Shows parent/child nesting so you can follow the trace's call structure.
+- **Collapsible branches**: Collapse spans with children to hide entire subtrees.
+- **Inline metrics**: Duration on every row; tokens and cost badges on LLM spans.
+- **Fast navigation**: Virtualized list stays responsive on large traces.
+- **Synced minimap**: Jump to spans and scrub the shared session-time cursor.
 
-- **Hierarchy-first view**: Shows parent/child nesting so you can follow the trace’s call structure.
-- **Collapsible branches**: Collapse spans with children to hide entire subtrees and reduce noise.
-- **Inline metrics**: Duration on every row; tokens/cost badges on LLM spans.
-- **Fast navigation**: Virtualized list stays responsive even on large traces.
-- **Synced minimap**: Jump to spans quickly and scrub the shared session-time cursor.
-
-Use Tree View when you want to understand structure: what called what, and where time/cost sits in the hierarchy.
-
-## Reader Mode
-
-Reader Mode gives you a readable, flattened view of a trace designed for fast scanning and review.
-
-![Reader Mode screenshot](/images/reader-mode.png)
-
-### Open Reader Mode
-
-1. Open a trace (from **Traces**).
-2. In the trace view header, open the view mode dropdown.
-3. Select **Reader Mode** (you can switch back the same way).
-
-- **High-signal view**: Shows only LLM and tool-call spans by default (other spans hidden), making the trace much easier to parse.
-- **At-a-glance columns**: Type/model, timing, tokens/cost, and breadcrumbs per row.
-- **Expandable rows**: Open any row to see formatted outputs; selecting still opens the full span detail pane on the right.
-- **Lazy-loaded outputs**: Fetches only what’s on screen to keep the UI fast.
-- **Templates per path**: Apply saved Mustache templates per span path to reshape how outputs render.
-- **Synced minimap**: Highlights spans in view and lets you jump or scrub session time.
-
-Use Reader Mode when you want a narrative, high-signal view of a trace focused on LLM + tool calls, without drilling through nested spans.
+Use Tree view when you want to understand structure: what called what, and where time or cost sits in the hierarchy.
 
 ## Timeline
 
 ### Open Timeline
 
 1. Open a trace (from **Traces**).
-2. In the trace header, click the **Timeline** toggle (Gantt icon) below the
-   search bar.
-3. The condensed timeline appears at the top of the trace view. Click the
-   toggle again to hide it.
+2. In the trace header, click the **Timeline** toggle (Gantt icon) below the search bar.
+3. The condensed timeline appears at the top of the trace view. Click the toggle again to hide it.
 
 ![Timeline view](/images/timeline-view.png)
 
 - **Time-first overview**: Spans render as colored bars on a single time axis.
-- **Zoom controls**: Use the +/- buttons (or cmd/ctrl + scroll) to zoom in/
-  out.
+- **Zoom controls**: Use the +/- buttons (or cmd/ctrl + scroll) to zoom in and out.
 - **Hover needle**: Move your cursor to see precise time markers.
-- **Span selection**: Drag to select a range; non-selected spans dim and you
-  can clear the selection.
-- **Session playhead (if available)**: Shows the browser session position on
-  the timeline.
+- **Span selection**: Drag to select a range; non-selected spans dim and the selection is clearable.
+- **Session playhead (if available)**: Shows the browser session position on the timeline.
 
-Use the condensed timeline when diagnosing latency, overlaps, gaps, or long-
-running steps.
+Use the condensed timeline when diagnosing latency, overlaps, gaps, or long-running steps.
 
 ## Metadata
 
@@ -106,6 +123,17 @@ Use Chat with trace when you want a quick narrative explanation or guided debugg
 3. Select **Open in SQL editor** (opens in a new tab).
 
 - **Pre-filled query (trace)**: Starts with `SELECT * FROM spans WHERE trace_id = ... ORDER BY start_time ASC`.
-- **Pre-filled query (span)**: From a span’s detail header dropdown, **Open in SQL editor** creates `SELECT * FROM spans WHERE span_id = ...`.
+- **Pre-filled query (span)**: From a span's detail header dropdown, **Open in SQL editor** creates `SELECT * FROM spans WHERE span_id = ...`.
 
 Use SQL Editor when you need precise filtering, aggregation, or auditing on the raw spans table beyond what the UI exposes. See [SQL Editor](/platform/sql-editor).
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Define Signals" icon="radio" href="/signals/introduction">
+    Turn outcomes and failures you see in the transcript into structured events you can query and alert on.
+  </Card>
+  <Card title="Query across traces" icon="database" href="/platform/sql-editor">
+    Use the SQL editor, SQL API, or [MCP server](/platform/mcp) to slice every span, event, and signal across your traces.
+  </Card>
+</CardGroup>
