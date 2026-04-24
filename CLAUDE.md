@@ -18,6 +18,7 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - Internal links use absolute paths from the docs root with no `.mdx` extension: `[Signals](/signals/introduction)`.
 - Mintlify auto-redirects `/<group-slug>` to the first page in the group when you add a sidebar group whose slug matches an existing single-page URL (verified: `/signals` → 307 → `/signals/introduction` after converting `signals.mdx` into a `signals/` group). No explicit redirect entry is needed in `docs.json` when splitting a page into a group, but inbound links should still be updated to the canonical first-page URL.
 - Run `npx mintlify broken-links` from `/repos/docs` after any restructuring that moves or renames pages; it catches intra-docs link regressions in seconds and is more reliable than grepping for old paths.
+- `npx mintlify broken-links` parses every `.md`/`.mdx` under the cwd, including this `CLAUDE.md`. A parse error here (e.g. a literal `<X>` in prose) aborts the run before any broken-link output is printed. If the check dies on `CLAUDE.md`, temporarily `mv CLAUDE.md .CLAUDE.md.bak`, rerun, then restore. Long-term fix: escape stray `<tag>`-looking tokens in this file.
 
 ## Vercel AI SDK integration (v0.8.x SDK)
 
@@ -37,6 +38,11 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - Close the "Chat with trace" and Signals side panels before capturing so the trace plus transcript are the dominant content. Dismiss any "New: …" Mintlify-style feature popups too.
 - For the **Reports** page: workspaces that predate the default-reports logic (created before LAM-1474) will have an empty reports table in staging. Seed two rows into `reports` (`type=SIGNAL_EVENTS_SUMMARY`, `weekdays={0,1,2,3,4}`/`{6}`, `hour=10`) + matching `report_targets` so the screenshot shows "Weekday/Weekly signals summary" rows instead of the empty state.
 - For the **project Alerts** page: insert a `NEW_CLUSTER` alert alongside the existing `SIGNAL_EVENT` alerts in staging to visibly exercise the Trigger + Severity columns (severity is blank/"—" for `NEW_CLUSTER` rows, which is the expected rendering).
+
+## Trace view naming
+
+- The UI labels the default view **Transcript** (see `frontend/components/traces/trace-view/view-dropdown.tsx`: `label: "Transcript"`). Docs must call it "Transcript view," not "Reader Mode" — the old Reader Mode label is dead. Canonical page is `/platform/viewing-traces` (under it: `#transcript-view`, `#tree-view`, `#timeline`, `#metadata`, `#chat-with-trace`).
+- When citing user-facing transcript behavior, describe the **three primitives** surfaced for free: (1) auto-extracted `Input` block on every agent and subagent (parsed from system + user messages, no instrumentation required), (2) subagents render as collapsible cards with Input/Output previews that expand in place, (3) one-line inline previews on LLM turns and tool-call rows. These are the selling points vs. a span tree.
 
 ## Voice gotchas not caught by linters
 

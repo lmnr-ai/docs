@@ -6,6 +6,7 @@ New releases and improvements.
 
 ## April 2026
 
+- **Transcript view docs** - New [Viewing traces](/platform/viewing-traces) page covers transcript view: auto-extracted agent inputs, LLM turns, tool-call previews, and collapsible subagent cards. Tree view is still one click away when you want raw span structure.
 - **Alerts and reports overhaul** — Alerts now support multi-severity filtering (Info, Warning, Critical), a *skip similar events* option, and a second trigger type for new clusters. Every new Signal ships with a critical-severity event alert and a cluster alert by default. Workspaces get weekday and weekly signal summary reports out of the box. Alerts and reports post to an in-app notification center; Slack and email are configurable per alert or report. See [Alerts](/signals/alerts) and [Reports](/signals/reports).
 - **Claude Agent SDK integration refresh** — Updated the [Claude Agent SDK](/tracing/integrations/claude-agent-sdk) page with end-to-end setup for TypeScript and Python, a multi-subagent example, and real transcript and tree-view screenshots.
 - **OpenAI Agents SDK integration** — `Laminar.initialize()` now auto-instruments the [OpenAI Agents SDK](/tracing/integrations/openai-agents-sdk) in Python. Agent workflows, turns, tool calls, and handoffs land in Laminar as nested spans with system instructions preserved on every LLM call.
