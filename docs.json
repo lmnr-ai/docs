@@ -39,6 +39,7 @@
                   "tracing/integrations/vercel-ai-sdk",
                   "tracing/integrations/litellm",
                   "tracing/integrations/kernel",
+                  "tracing/integrations/openai-agents-sdk",
                   "tracing/integrations/claude-agent-sdk",
                   "tracing/integrations/opencode",
                   "tracing/integrations/openhands-sdk",

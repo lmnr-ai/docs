@@ -1,0 +1,192 @@
+---
+title: Observability for OpenAI Agents SDK
+sidebarTitle: OpenAI Agents SDK
+---
+
+## Overview
+
+Laminar is an open-source, OpenTelemetry-native observability platform for the [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/). Trace, debug, and monitor every agent turn, tool call, handoff, and sub-agent with a single `Laminar.initialize()` call. Self-host via Helm or use managed cloud.
+
+The OpenAI Agents SDK lets you build agent workflows in Python with `Agent`, `Runner.run`, tool functions, and handoffs between specialists. Laminar hooks into the SDK's built-in `TracingProcessor` to mirror every agent workflow span into Laminar, plus adds the system instructions so the full prompt is visible in the trace.
+
+What Laminar captures:
+
+- The root agent workflow, each `agents.task`, and every `agents.turn` with the model, prompt, response, token counts, latency, and cost.
+- Every `function_tool` invocation, with arguments and return value.
+- Handoffs between agents, with the destination agent's turns nested under the handoff span.
+- Agent instructions prepended to the input messages on every LLM span.
+
+## Getting started
+
+<Steps>
+<Step title="Install">
+
+Ensure you have `lmnr` version `0.7.48` or higher:
+
+```bash
+pip install -U lmnr openai-agents
+```
+
+</Step>
+<Step title="Set environment variables">
+
+```bash
+export LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+export OPENAI_API_KEY=your-openai-api-key
+```
+
+</Step>
+<Step title="Initialize Laminar">
+
+`Laminar.initialize()` auto-instruments the OpenAI Agents SDK when `openai-agents` is importable. No wrapping call is needed.
+
+```python {4-6}
+import asyncio
+
+from agents import Agent, Runner
+from lmnr import Laminar, observe
+
+Laminar.initialize()
+
+@observe(name="math-homework")
+async def main():
+    agent = Agent(
+        name="MathHelper",
+        instructions="You are a patient math tutor. Explain each step clearly.",
+        model="gpt-5-mini",
+    )
+    result = await Runner.run(agent, "A train leaves Boston at 9am at 60 mph...")
+    print(result.final_output)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+<Note>
+Wrapping your entry point in `@observe()` is optional but recommended: it creates a root span that captures inputs and outputs and makes the trace easy to find in the UI.
+</Note>
+
+</Step>
+</Steps>
+
+## See what happened in a trace
+
+Open the trace in Laminar and you land on the transcript view: each turn reads as a conversation, with the prompt, the model's response, and any tool calls inline with their inputs and outputs. A tree of span names tells you the shape of the run; the transcript tells you what actually happened.
+
+<Frame caption="Transcript view of a single-agent run. The agent's system instructions are prepended to the input, the model's full response is shown inline, and token counts and cost are attached to the LLM span.">
+<img src="/images/traces/openai-agents-sdk.png" alt="OpenAI Agents SDK trace in Laminar, transcript view" />
+</Frame>
+
+More on the trace UX: [Viewing traces](/platform/viewing-traces).
+
+## Multi-agent runs with handoffs
+
+The OpenAI Agents SDK models specialization through handoffs: a triage agent routes the user to a specialist via `handoff(other_agent)`, and the SDK exposes each handoff as a `transfer_to_<agent>` tool call. In Laminar, the destination agent's turns and tool calls nest under the handoff, so you can follow the full multi-agent conversation in one trace.
+
+```python
+import asyncio
+
+from agents import Agent, Runner, function_tool, handoff
+from lmnr import Laminar, observe
+
+Laminar.initialize()
+
+
+@function_tool
+def cancel_booking(confirmation_code: str) -> str:
+    return f"Booking {confirmation_code} cancelled. Refund in 5-7 business days."
+
+
+@function_tool
+def lookup_loyalty_balance(member_id: str) -> str:
+    return f"Member {member_id}: 48,200 points, Gold tier."
+
+
+booking_agent = Agent(
+    name="BookingAgent",
+    handoff_description="Handles cancellations and loyalty balance lookups.",
+    instructions=(
+        "You handle cancellations and loyalty questions. Use cancel_booking for "
+        "cancellations and lookup_loyalty_balance for points and tier."
+    ),
+    tools=[cancel_booking, lookup_loyalty_balance],
+    model="gpt-5-mini",
+)
+
+triage_agent = Agent(
+    name="TriageAgent",
+    instructions=(
+        "Route the user to the correct specialist. For cancellations or loyalty, "
+        "hand off to BookingAgent. Do not answer specialist topics yourself."
+    ),
+    handoffs=[handoff(booking_agent)],
+    model="gpt-5-mini",
+)
+
+
+@observe(name="airline-support")
+async def main():
+    result = await Runner.run(
+        triage_agent,
+        "Cancel my booking Z9X7K2 and look up loyalty for member M-88421.",
+    )
+    print(result.final_output)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+The resulting trace shows the triage turn, the handoff, and the booking agent's tool calls in a single conversation:
+
+<Frame caption="Transcript view of a multi-agent handoff. The first LLM call is the TriageAgent deciding to hand off; the collapsed BookingAgent span shows the sub-agent's final output.">
+<img src="/images/traces/openai-agents-sdk-multi-agent.png" alt="OpenAI Agents SDK multi-agent trace in Laminar, transcript view" />
+</Frame>
+
+Switch to tree view when you want the full hierarchy at a glance:
+
+<Frame caption="Tree view of the same run: TriageAgent's LLM turn, the agents.handoff span, then BookingAgent with its own turns, cancel_booking, and lookup_loyalty_balance tool spans nested underneath.">
+<img src="/images/traces/openai-agents-sdk-multi-agent-tree.png" alt="OpenAI Agents SDK multi-agent trace in Laminar, tree view" />
+</Frame>
+
+## Track outcomes with Signals
+
+Traces tell you what happened on one run. [Signals](/signals/introduction) turn that into structured outcomes: describe a behavior or failure in natural language ("the triage agent answered a cancellation itself instead of handing off", "a tool returned an error", "the agent exceeded three turns") and Laminar extracts matching events across your history and every new trace. Route them to alerts or datasets.
+
+## Query across traces
+
+- **[SQL editor](/platform/sql-editor)** for ad-hoc queries across traces, spans, signals, and evals.
+- **SQL API** for programmatic access from scripts and pipelines.
+- **[MCP server](/platform/mcp)** to query Laminar directly from Claude Code, Cursor, Codex, or any MCP-aware client.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="I don't see any traces in Laminar">
+    - Confirm `LMNR_PROJECT_API_KEY` is set in the same process that runs the SDK.
+    - `openai-agents` must be importable when `Laminar.initialize()` runs. Install with `pip install openai-agents`.
+    - The integration requires `openai-agents >= 0.7.0` and `lmnr >= 0.7.48`.
+  </Accordion>
+  <Accordion title="Handoffs aren't nested under the source agent">
+    The SDK emits a `transfer_to_<agent>` tool call followed by an `agents.handoff` span, and the destination agent's work lands as a sibling under the same parent task. Open the trace in tree view to see the full structure.
+  </Accordion>
+  <Accordion title="Self-hosting Laminar">
+    Set `base_url` and the ports of your instance when initializing. For a local OSS deployment:
+
+    ```python
+    Laminar.initialize(
+        base_url="http://localhost",
+        http_port=8000,
+        grpc_port=8001,
+    )
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## What's next
+
+- [Viewing traces](/platform/viewing-traces): read the transcript view, filter, and search across traces.
+- [Signals](/signals/introduction): extract structured outcomes and failures from your agent runs.
+- [SQL editor](/platform/sql-editor) and [MCP server](/platform/mcp): query traces programmatically.
+- [Tracing structure](/tracing/structure/overview): sessions, metadata, and tags for deeper control.
+- Using the OpenAI Python SDK directly (without Agents)? See the [OpenAI](/tracing/integrations/openai) integration page.
