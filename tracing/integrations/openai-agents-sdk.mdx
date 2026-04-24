@@ -53,7 +53,7 @@ async def main():
     agent = Agent(
         name="MathHelper",
         instructions="You are a patient math tutor. Explain each step clearly.",
-        model="gpt-4.1-mini",
+        model="gpt-5-mini",
     )
     result = await Runner.run(agent, "A train leaves Boston at 9am at 60 mph...")
     print(result.final_output)
@@ -110,7 +110,7 @@ booking_agent = Agent(
         "cancellations and lookup_loyalty_balance for points and tier."
     ),
     tools=[cancel_booking, lookup_loyalty_balance],
-    model="gpt-4.1-mini",
+    model="gpt-5-mini",
 )
 
 triage_agent = Agent(
@@ -120,7 +120,7 @@ triage_agent = Agent(
         "hand off to BookingAgent. Do not answer specialist topics yourself."
     ),
     handoffs=[handoff(booking_agent)],
-    model="gpt-4.1-mini",
+    model="gpt-5-mini",
 )
 
 
