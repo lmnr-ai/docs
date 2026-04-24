@@ -72,6 +72,13 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - Python ships a Rust proxy (`lmnr-claude-code-proxy`) that binds to port 45667 to intercept Anthropic HTTP calls from subprocess subagents. If `ANTHROPIC_BASE_URL` is pre-set (common in sandboxes/agent runtimes), the proxy fails with "Address already in use" and subagent spans go missing — `unset ANTHROPIC_BASE_URL ANTHROPIC_BEDROCK_BASE_URL ANTHROPIC_ORIGINAL_BASE_URL` before running demos.
 - When running CAS demos inside another claude-agent sandbox, the parent agent already owns port 45667 for its own proxy. Override before `Laminar.initialize()` via module-level monkey-patch: `from lmnr.opentelemetry_lib.opentelemetry.instrumentation.claude_agent import proxy as _p; _p._DEFAULT_PORT = 55667; _p._NEXT_PORT = 55667`. No public env var exists for this today.
 - Traces from the running background agent land in the same project as the demo you're running, so transcript screenshots can be polluted by the agent's own Bash/Read spans. Filter the trace list by root-span name (e.g. `multi-agent-code-review`) before screenshotting, or run the demo in a project separate from `LMNR_PROJECT_API_KEY`.
+- The Python `Laminar.initialize(base_url=...)` argument must NOT include a port. Pass the scheme+host only (e.g. `base_url="http://localhost"`) and set `http_port=8000, grpc_port=8001` separately. Including `:8000` in `base_url` produces a `Failed to send trace: client error (Connect)` with no other indication that the URL is malformed.
+- In this sandbox, `CLAUDE_CODE_USE_BEDROCK`, `ANTHROPIC_BEDROCK_BASE_URL`, and the `AWS_*` / `AGENT_MODEL` env vars are pre-set by the parent runtime and will route subprocess LLM calls through Bedrock, failing with "The provided model identifier is invalid" on a standard Anthropic model ID. Strip all of them in the demo script before `Laminar.initialize()` if you want the CAS subprocess to hit the direct Anthropic API with `ANTHROPIC_API_KEY`.
+
+## Trace view screenshot capture
+
+- The timeline view can only be zoomed/panned visibly when the trace is at least a few seconds long. Very short (sub-second) runs collapse the bars into an unreadable strip; generate a multi-second trace (e.g. a Claude Agent SDK run with multiple subagents) before capturing the timeline for docs or blog.
+- "Chat with trace" populates span-reference pills (orange chips like `Agent`, `anthropic.messages`, `Write`) in its responses only when the trace actually contains those span names. Ask a question that would naturally cite spans (e.g. "which subagent was slowest and why") to surface the pills for screenshots — generic "summarize this run" replies are prose-only.
 
 ## OpenAI Agents SDK integration
 
