@@ -50,6 +50,11 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - `grep -E "seamless|powerful|unleash|cutting-edge|best-in-class|revolutionary|supercharge"` returns banned marketing words.
 - Every integration page needs the three forward links in data-flow order: viewing traces, then Signals, then SQL access (editor/API/MCP).
 
+## Example code conventions
+
+- **Always use the newest model for each provider.** In any Python string literal, TS SDK init call, or CLI invocation that names a model, use the latest release (e.g. `gpt-5-mini` / `gpt-5` family, not `gpt-4.1-mini`). Older models make pages read as stale and point readers at discontinued SKUs. This applies to sandbox demos too — their output lands in trace screenshots that ship here.
+- **Format "What's next" as a two-column CardGroup**, not a bullet list. Every page closing with a "What's next" section uses `<CardGroup cols={2}>` of `<Card title="..." href="...">` elements with one-sentence bodies. Keep the card count even so the grid stays square. The `analyze.mdx` / `platform.mdx` hub pages already follow this pattern; integration pages match it.
+
 ## Prose style Robert favors (observed from edits on `signals/introduction.mdx`)
 
 - **Use italics for rhetorical hypotheticals**, not plain quotes. `*did it get stuck, did the user give up*` reads better than `"did it get stuck..."`.
