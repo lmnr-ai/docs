@@ -49,7 +49,7 @@ from lmnr import Laminar, observe
 Laminar.initialize()
 
 agent = Agent(
-    "openai:gpt-4.1-mini",
+    "openai:gpt-5-mini",
     system_prompt="You are a concise assistant. Answer in one sentence.",
 )
 
@@ -96,7 +96,7 @@ from lmnr import Laminar, observe
 Laminar.initialize()
 
 agent = Agent(
-    "openai:gpt-4.1-mini",
+    "openai:gpt-5-mini",
     system_prompt=(
         "You are a travel concierge. Use the available tools to answer "
         "booking and loyalty questions, then reply in one sentence."
@@ -169,8 +169,20 @@ Traces tell you what happened on one run. [Signals](/signals/introduction) turn 
 
 ## What's next
 
-- [Viewing traces](/platform/viewing-traces): read the transcript view, filter, and search across traces.
-- [Signals](/signals/introduction): extract structured outcomes and failures from your agent runs.
-- [SQL editor](/platform/sql-editor) and [MCP server](/platform/mcp): query traces programmatically.
-- [Tracing structure](/tracing/structure/overview): sessions, metadata, and tags for deeper control.
-- Using the OpenAI SDK directly (without Pydantic AI)? See the [OpenAI](/tracing/integrations/openai) integration page.
+<CardGroup cols={2}>
+  <Card title="Viewing traces" href="/platform/viewing-traces">
+    Read the transcript view, filter, and search across traces.
+  </Card>
+  <Card title="Signals" href="/signals/introduction">
+    Extract structured outcomes and failures from your agent runs.
+  </Card>
+  <Card title="SQL editor and MCP server" href="/platform/sql-editor">
+    Query traces programmatically from the UI, API, or your IDE.
+  </Card>
+  <Card title="Tracing structure" href="/tracing/structure/overview">
+    Sessions, metadata, and tags for deeper control.
+  </Card>
+  <Card title="OpenAI SDK" href="/tracing/integrations/openai">
+    Using the OpenAI SDK directly without Pydantic AI? Trace it here.
+  </Card>
+</CardGroup>
