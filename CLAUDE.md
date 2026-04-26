@@ -88,6 +88,14 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - For screenshots, the transcript view needs `Runner.run` to produce at least one tool call or handoff to be visually interesting; a single-turn math tutor run fills most of the screenshot with the prompt. Use a multi-agent airline-style demo for the multi-agent screenshots.
 - Default `Laminar.initialize()` targets cloud on port 8443 over gRPC/HTTPS. For local stack testing always pass `base_url="http://localhost", http_port=8000, grpc_port=8001` — otherwise the demos silently send to cloud.
 
+## Pydantic AI integration
+
+- Auto-instrumented by `Laminar.initialize()` when `pydantic-ai-slim` (or full `pydantic-ai`) is importable. No `Agent.instrument_all()` call or manual OTLP exporter setup is needed; the integration monkey-patches `InstrumentationSettings` to use Laminar's tracer provider for every `Agent` constructed after init. Don't document the old OTLP-exporter pattern.
+- Requires `pydantic-ai-slim >= 1.0.0` and `lmnr >= 0.7.49`. Released in lmnr-python PR #283.
+- When Pydantic AI is auto-enabled, Laminar auto-REMOVES the overlapping raw provider instrumentors (OpenAI, Anthropic, Google GenAI, Groq, Mistral, Cohere, Bedrock) from the default set because Pydantic AI already emits GenAI-semconv spans at the model abstraction layer. Running both would double-count every model call. Opt back into both with an explicit `instruments={Instruments.PYDANTIC_AI, Instruments.OPENAI, ...}` set.
+- Span names follow OTel GenAI semconv: `agent run`, `chat <model>` (per turn), `execute_tool <name>` (per tool call). Nesting mirrors the conversation — tool spans sit under the chat turn that invoked them.
+- Tools registered with `@agent.tool_plain` (no `RunContext`) work out of the box; `@agent.tool` is the variant with injected dependencies. Both emit `execute_tool <name>` spans identically.
+
 ## Formatting
 
 - Run `prettier --write` ONLY on the specific files you changed. Never `pnpm format:write` or `prettier --write .`; it touches unrelated files. Note that the docs repo itself has no `package.json` or prettier config, so prettier is not part of the workflow here.
