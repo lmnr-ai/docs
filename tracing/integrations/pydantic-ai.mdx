@@ -5,7 +5,7 @@ sidebarTitle: Pydantic AI
 
 ## Overview
 
-Laminar is an open-source, OpenTelemetry-native observability platform for [Pydantic AI](https://ai.pydantic.dev/). Trace, debug, and monitor every agent run, model turn, and tool call with a single `Laminar.initialize()` call. Self-host via Helm or use managed cloud.
+Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. Trace, debug, and monitor every [Pydantic AI](https://ai.pydantic.dev/) agent run, model turn, and tool call with a single `Laminar.initialize()` call. Self-host via Helm or use managed cloud.
 
 Pydantic AI is a Python agent framework built by the Pydantic team. `Agent` drives the loop, typed tools are added with `@agent.tool`, and the framework emits its own OpenTelemetry GenAI semconv spans for agent runs, model calls, and tool executions. Laminar wires those spans to its tracer provider so the full conversation lands in your project with no manual exporter setup.
 
@@ -75,46 +75,63 @@ When Laminar auto-enables the Pydantic AI instrument, it auto-removes the overla
 
 ## See what happened in a trace
 
-Open the trace in Laminar and you land on the transcript view: each agent run reads as a conversation, with the system prompt, the model's response, and tool calls inline with their inputs and outputs. A tree of span names tells you the shape of the run; the transcript tells you what actually happened.
+Open a multi-agent trace and switch to tree view to see how Pydantic AI nests sub-agents and tool calls. The example below is a concierge agent that delegates flight and hotel booking to two sub-agents, each running its own model turns and tool calls, so the full hierarchy is visible at a glance.
 
-<Frame caption="Transcript view of a Pydantic AI run. The agent's system prompt is prepended to the input, the model's full response is shown inline, and token counts and cost are attached to the chat span.">
-<img src="/images/traces/pydantic-ai.png" alt="Pydantic AI trace in Laminar, transcript view" />
+<Frame caption="Tree view of a multi-agent Pydantic AI run. The concierge calls `book_flight` and `book_hotel` tools that spawn `flight_agent` and `hotel_agent` sub-agents, each running their own model turns and tool calls. Nesting mirrors the conversation structure.">
+<img src="/images/traces/pydantic-ai-tree.png" alt="Pydantic AI multi-agent trace in Laminar, tree view showing nested sub-agents" />
 </Frame>
 
 More on the trace UX: [Viewing traces](/platform/viewing-traces).
 
-## Agents with tools
+## Multi-agent with tool delegation
 
-Register tools with `@agent.tool_plain` (no dependency state) or `@agent.tool` (with injected `RunContext`). Pydantic AI emits an `execute_tool <name>` span for each invocation; Laminar nests it under the turn that called it, so you can see the arguments, the return value, and how many turns the agent took to finish.
+Register tools with `@agent.tool_plain` (no dependency state) or `@agent.tool` (with injected `RunContext`). A coordinator agent can delegate to specialist sub-agents by calling `Agent.run()` inside a tool. Pydantic AI emits an `execute_tool <name>` span for each invocation, and Laminar nests the sub-agent's run underneath it so the hierarchy mirrors the conversation.
 
 ```python
 import asyncio
 
-from pydantic_ai import Agent
+from pydantic_ai import Agent, RunContext
 from lmnr import Laminar, observe
 
 Laminar.initialize()
 
-agent = Agent(
+flight_agent = Agent(
     "openai:gpt-5-mini",
-    system_prompt=(
-        "You are a travel concierge. Use the available tools to answer "
-        "booking and loyalty questions, then reply in one sentence."
-    ),
+    system_prompt="You are a flight search specialist. Return one recommended flight.",
 )
 
-@agent.tool_plain
-def cancel_booking(confirmation_code: str) -> str:
-    return f"Booking {confirmation_code} cancelled. Refund in 5-7 business days."
+@flight_agent.tool_plain
+def search_flights(origin: str, destination: str, date: str) -> str:
+    return f"Options {origin}->{destination} on {date}: DL204 Delta $412, UA880 United $438."
 
-@agent.tool_plain
-def lookup_loyalty_balance(member_id: str) -> str:
-    return f"Member {member_id}: 48,200 points, Gold tier."
+hotel_agent = Agent(
+    "openai:gpt-5-mini",
+    system_prompt="You are a hotel booking specialist. Return one recommended hotel.",
+)
 
-@observe(name="airline-support")
+@hotel_agent.tool_plain
+def search_hotels(city: str, check_in: str, check_out: str) -> str:
+    return f"Hotels in {city}: Kimpton Gray $285/nt, Hyatt Place $199/nt."
+
+concierge = Agent(
+    "openai:gpt-5-mini",
+    system_prompt="You are a travel concierge. Use the tools to book a flight and a hotel.",
+)
+
+@concierge.tool
+async def book_flight(ctx: RunContext, origin: str, destination: str, date: str) -> str:
+    result = await flight_agent.run(f"Find a flight from {origin} to {destination} on {date}.")
+    return result.output
+
+@concierge.tool
+async def book_hotel(ctx: RunContext, city: str, check_in: str, check_out: str) -> str:
+    result = await hotel_agent.run(f"Find a hotel in {city} from {check_in} to {check_out}.")
+    return result.output
+
+@observe(name="plan-trip")
 async def main():
-    result = await agent.run(
-        "Cancel my booking Z9X7K2 and look up loyalty for member M-88421."
+    result = await concierge.run(
+        "Plan a trip from JFK to Chicago on 2026-05-12, returning 2026-05-15."
     )
     print(result.output)
 
@@ -122,7 +139,11 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-Every tool call renders inline with its arguments and result. Switch to tree view from the view dropdown when you want the full span hierarchy at a glance.
+The transcript view reads as a conversation: the input prompt, each `book_flight` / `book_hotel` tool call with its sub-agent's input and output, and the final concierge summary.
+
+<Frame caption="Transcript view of the multi-agent run above. Each `book_flight` / `book_hotel` tool call expands inline with the sub-agent's input and output, and the final LLM turn shows the concierge's summary response.">
+<img src="/images/traces/pydantic-ai.png" alt="Pydantic AI multi-agent trace in Laminar, transcript view" />
+</Frame>
 
 ## Track outcomes with Signals
 
