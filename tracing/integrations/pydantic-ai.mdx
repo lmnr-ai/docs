@@ -77,7 +77,7 @@ When Laminar auto-enables the Pydantic AI instrument, it auto-removes the overla
 
 Open a multi-agent trace and switch to tree view to see how Pydantic AI nests sub-agents and tool calls. The example below is a concierge agent that delegates flight and hotel booking to two sub-agents, each running its own model turns and tool calls, so the full hierarchy is visible at a glance.
 
-<Frame caption="Tree view of a multi-agent Pydantic AI run. The concierge calls `book_flight` and `book_hotel` tools that spawn `flight_agent` and `hotel_agent` sub-agents, each running their own model turns and tool calls. Nesting mirrors the conversation structure.">
+<Frame caption="Tree view of a multi-agent Pydantic AI run.">
 <img src="/images/traces/pydantic-ai-tree.png" alt="Pydantic AI multi-agent trace in Laminar, tree view showing nested sub-agents" />
 </Frame>
 
