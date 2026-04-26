@@ -50,6 +50,11 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - `grep -E "seamless|powerful|unleash|cutting-edge|best-in-class|revolutionary|supercharge"` returns banned marketing words.
 - Every integration page needs the three forward links in data-flow order: viewing traces, then Signals, then SQL access (editor/API/MCP).
 
+## Example code conventions
+
+- **Always use the newest model for each provider.** In any Python string literal, TS SDK init call, or CLI invocation that names a model, use the latest release (e.g. `gpt-5-mini` / `gpt-5` family, not `gpt-4.1-mini`). Older models make pages read as stale and point readers at discontinued SKUs. This applies to sandbox demos too — their output lands in trace screenshots that ship here.
+- **Format "What's next" as a two-column CardGroup**, not a bullet list. Every page closing with a "What's next" section uses `<CardGroup cols={2}>` of `<Card title="..." href="...">` elements with one-sentence bodies. Keep the card count even so the grid stays square. The `analyze.mdx` / `platform.mdx` hub pages already follow this pattern; integration pages match it.
+
 ## Prose style Robert favors (observed from edits on `signals/introduction.mdx`)
 
 - **Use italics for rhetorical hypotheticals**, not plain quotes. `*did it get stuck, did the user give up*` reads better than `"did it get stuck..."`.
@@ -87,6 +92,16 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - Span hierarchy: root `@observe` → `Agent workflow` → `agents.task` → `<AgentName>` → `agents.turn` → `<model>` LLM span (e.g. `gpt-5-mini`). Handoffs appear as a `transfer_to_<agent>` tool call on the source agent followed by an `agents.handoff` span; the destination agent's turns land as siblings under the same parent task — they do NOT nest under the source agent. Recommend tree view in docs when describing handoff structure.
 - For screenshots, the transcript view needs `Runner.run` to produce at least one tool call or handoff to be visually interesting; a single-turn math tutor run fills most of the screenshot with the prompt. Use a multi-agent airline-style demo for the multi-agent screenshots.
 - Default `Laminar.initialize()` targets cloud on port 8443 over gRPC/HTTPS. For local stack testing always pass `base_url="http://localhost", http_port=8000, grpc_port=8001` — otherwise the demos silently send to cloud.
+
+## Pydantic AI integration
+
+- Auto-instrumented by `Laminar.initialize()` when `pydantic-ai-slim` (or full `pydantic-ai`) is importable. No `Agent.instrument_all()` call or manual OTLP exporter setup is needed; the integration monkey-patches `InstrumentationSettings` to use Laminar's tracer provider for every `Agent` constructed after init. Don't document the old OTLP-exporter pattern.
+- Requires `pydantic-ai-slim >= 1.0.0` and `lmnr >= 0.7.49`. Released in lmnr-python PR #283.
+- When Pydantic AI is auto-enabled, Laminar auto-REMOVES the overlapping raw provider instrumentors (OpenAI, Anthropic, Google GenAI, Groq, Mistral, Cohere, Bedrock) from the default set because Pydantic AI already emits GenAI-semconv spans at the model abstraction layer. Running both would double-count every model call. Opt back into both with an explicit `instruments={Instruments.PYDANTIC_AI, Instruments.OPENAI, ...}` set.
+- Span names follow OTel GenAI semconv: `agent run`, `chat <model>` (per turn), `execute_tool <name>` (per tool call). Nesting mirrors the conversation — tool spans sit under the chat turn that invoked them.
+- Tools registered with `@agent.tool_plain` (no `RunContext`) work out of the box; `@agent.tool` is the variant with injected dependencies. Both emit `execute_tool <name>` spans identically.
+- **Multi-agent delegation pattern**: Have a coordinator `Agent` expose `@agent.tool` methods that internally call `await sub_agent.run(...)`. Laminar nests the sub-agent's full run (its own turns and tool calls) directly underneath the parent `execute_tool <name>` span. This is the shape Rainhunter13 asked for in PR #139 — it produces rich tree-view screenshots (concierge → gpt-5-mini → book_flight → flight_agent → gpt-5-mini → search_flights). Single-agent-with-flat-tools demos look thin by comparison.
+- Opening paragraphs on integration pages should lead with "Laminar is an open-source, OpenTelemetry-native observability platform for AI agents" (generic), then name the framework in the *second* clause ("...Trace, debug, and monitor every [Framework] ..."). Phrasing the opener as "observability platform for [Framework]" reads like the platform only serves that one framework — Rainhunter13 flagged this on PR #139.
 
 ## Formatting
 

@@ -1,67 +1,209 @@
 ---
-title: Observability for Pydantic AI with OpenTelemetry
+title: Observability for Pydantic AI
 sidebarTitle: Pydantic AI
 ---
 
 ## Overview
 
-Pydantic AI emits OpenTelemetry (OTel) spans for agent runs, model calls, and tool execution. By configuring an OTLP exporter, you can send those traces directly to Laminar.
+Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. Trace, debug, and monitor every [Pydantic AI](https://ai.pydantic.dev/) agent run, model turn, and tool call with a single `Laminar.initialize()` call. Self-host via Helm or use managed cloud.
 
-If you want more detail on OTel exporters, endpoints, or self-hosted settings, see the [OpenTelemetry guide](/tracing/otel).
+Pydantic AI is a Python agent framework built by the Pydantic team. `Agent` drives the loop, typed tools are added with `@agent.tool`, and the framework emits its own OpenTelemetry GenAI semconv spans for agent runs, model calls, and tool executions. Laminar wires those spans to its tracer provider so the full conversation lands in your project with no manual exporter setup.
 
-## Getting Started
+What Laminar captures:
 
-### 1. Install dependencies
+- The root `agent run` span with the prompt you sent and the final output.
+- Every `chat <model>` turn with prompts, responses, token counts, latency, and cost.
+- Every `execute_tool <name>` call with arguments and return value.
+- Multi-agent handoffs and sub-agent runs nested under the call that spawned them.
+
+## Getting started
+
+<Steps>
+<Step title="Install">
+
+Ensure you have `lmnr` version `0.7.49` or higher and `pydantic-ai-slim >= 1.0` (or the full `pydantic-ai` distribution):
 
 ```bash
-pip install -U "pydantic-ai-slim[openai]" opentelemetry-sdk opentelemetry-exporter-otlp python-dotenv
+pip install -U lmnr "pydantic-ai-slim>=1.0"
 ```
 
-### 2. Set environment variables
+</Step>
+<Step title="Set environment variables">
 
 ```bash
-# .env or environment
-LMNR_PROJECT_API_KEY=your-laminar-project-api-key
-OPENAI_API_KEY=your-openai-api-key
+export LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+export OPENAI_API_KEY=your-openai-api-key
 ```
 
-### 3. Configure OpenTelemetry and enable instrumentation
+</Step>
+<Step title="Initialize Laminar">
 
-This example uses the OTLP/gRPC exporter, which Laminar recommends for reliability and performance.
+`Laminar.initialize()` auto-instruments Pydantic AI when `pydantic-ai-slim` or `pydantic-ai` is importable. No `Agent.instrument_all()` call is needed: Laminar installs itself as the default instrumentation for every `Agent` you construct afterwards.
 
-```python {title="pydantic_ai_laminar_otel.py" test="skip"}
-import os
-
-from dotenv import load_dotenv
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.trace import set_tracer_provider
+```python {4-6}
+import asyncio
 
 from pydantic_ai import Agent
+from lmnr import Laminar, observe
 
-load_dotenv()
-project_api_key = os.getenv("LMNR_PROJECT_API_KEY")
-if not project_api_key:
-    raise RuntimeError("LMNR_PROJECT_API_KEY is not set")
+Laminar.initialize()
 
-exporter = OTLPSpanExporter(
-    endpoint="https://api.lmnr.ai:8443/v1/traces",
-    headers={"authorization": f"Bearer {project_api_key}"},
+agent = Agent(
+    "openai:gpt-5-mini",
+    system_prompt="You are a concise assistant. Answer in one sentence.",
 )
-tracer_provider = TracerProvider()
-tracer_provider.add_span_processor(BatchSpanProcessor(exporter))
-set_tracer_provider(tracer_provider)
 
-Agent.instrument_all()
+@observe(name="capital-lookup")
+async def main():
+    result = await agent.run("What is the capital of France?")
+    print(result.output)
 
-agent = Agent("openai:gpt-4.1-mini")
-result = agent.run_sync("What is the capital of France?")
-print(result.output)
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
 
+<Note>
+Wrapping your entry point in `@observe()` is optional but recommended: it creates a root span that captures inputs and outputs and makes the trace easy to find in the UI.
+</Note>
+
+</Step>
+</Steps>
+
 <Warning>
-The `authorization` header must be lowercase when using the gRPC exporter.
+When Laminar auto-enables the Pydantic AI instrument, it auto-removes the overlapping raw-provider instrumentors (OpenAI, Anthropic, Google GenAI, Groq, Mistral, Cohere, Bedrock) from the default set. Pydantic AI already emits GenAI-semconv spans at the model abstraction layer, so running the provider instrumentors alongside would double-count every model call. If you call the provider SDK directly elsewhere in the same process and want both traced, pass an explicit `instruments` set to `Laminar.initialize(instruments={Instruments.PYDANTIC_AI, Instruments.OPENAI, ...})`.
 </Warning>
 
-Once instrumentation is enabled, Laminar will display traces for each agent run and underlying model/tool calls.
+## See what happened in a trace
+
+Open a multi-agent trace and switch to tree view to see how Pydantic AI nests sub-agents and tool calls. The example below is a concierge agent that delegates flight and hotel booking to two sub-agents, each running its own model turns and tool calls, so the full hierarchy is visible at a glance.
+
+<Frame caption="Tree view of a multi-agent Pydantic AI run.">
+<img src="/images/traces/pydantic-ai-tree.png" alt="Pydantic AI multi-agent trace in Laminar, tree view showing nested sub-agents" />
+</Frame>
+
+More on the trace UX: [Viewing traces](/platform/viewing-traces).
+
+## Multi-agent with tool delegation
+
+Register tools with `@agent.tool_plain` (no dependency state) or `@agent.tool` (with injected `RunContext`). A coordinator agent can delegate to specialist sub-agents by calling `Agent.run()` inside a tool. Pydantic AI emits an `execute_tool <name>` span for each invocation, and Laminar nests the sub-agent's run underneath it so the hierarchy mirrors the conversation.
+
+```python
+import asyncio
+
+from pydantic_ai import Agent, RunContext
+from lmnr import Laminar, observe
+
+Laminar.initialize()
+
+flight_agent = Agent(
+    "openai:gpt-5-mini",
+    system_prompt="You are a flight search specialist. Return one recommended flight.",
+)
+
+@flight_agent.tool_plain
+def search_flights(origin: str, destination: str, date: str) -> str:
+    return f"Options {origin}->{destination} on {date}: DL204 Delta $412, UA880 United $438."
+
+hotel_agent = Agent(
+    "openai:gpt-5-mini",
+    system_prompt="You are a hotel booking specialist. Return one recommended hotel.",
+)
+
+@hotel_agent.tool_plain
+def search_hotels(city: str, check_in: str, check_out: str) -> str:
+    return f"Hotels in {city}: Kimpton Gray $285/nt, Hyatt Place $199/nt."
+
+concierge = Agent(
+    "openai:gpt-5-mini",
+    system_prompt="You are a travel concierge. Use the tools to book a flight and a hotel.",
+)
+
+@concierge.tool
+async def book_flight(ctx: RunContext, origin: str, destination: str, date: str) -> str:
+    result = await flight_agent.run(f"Find a flight from {origin} to {destination} on {date}.")
+    return result.output
+
+@concierge.tool
+async def book_hotel(ctx: RunContext, city: str, check_in: str, check_out: str) -> str:
+    result = await hotel_agent.run(f"Find a hotel in {city} from {check_in} to {check_out}.")
+    return result.output
+
+@observe(name="plan-trip")
+async def main():
+    result = await concierge.run(
+        "Plan a trip from JFK to Chicago on 2026-05-12, returning 2026-05-15."
+    )
+    print(result.output)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+The transcript view reads as a conversation: the input prompt, each `book_flight` / `book_hotel` tool call with its sub-agent's input and output, and the final concierge summary.
+
+<Frame caption="Transcript view of the multi-agent run above. Each `book_flight` / `book_hotel` tool call expands inline with the sub-agent's input and output, and the final LLM turn shows the concierge's summary response.">
+<img src="/images/traces/pydantic-ai.png" alt="Pydantic AI multi-agent trace in Laminar, transcript view" />
+</Frame>
+
+## Track outcomes with Signals
+
+Traces tell you what happened on one run. [Signals](/signals/introduction) turn that into structured outcomes: describe a behavior or failure in natural language ("the agent called a tool with missing arguments", "the model hallucinated a booking code", "the agent exceeded three turns") and Laminar extracts matching events across your history and every new trace. Route them to alerts or datasets.
+
+## Query across traces
+
+- **[SQL editor](/platform/sql-editor)** for ad-hoc queries across traces, spans, signals, and evals.
+- **SQL API** for programmatic access from scripts and pipelines.
+- **[MCP server](/platform/mcp)** to query Laminar directly from Claude Code, Cursor, or Codex.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="I don't see any traces in Laminar">
+    - Confirm `LMNR_PROJECT_API_KEY` is set in the same process that runs the agent.
+    - `pydantic-ai-slim` (or `pydantic-ai`) must be importable when `Laminar.initialize()` runs. Install with `pip install "pydantic-ai-slim>=1.0"`.
+    - The integration requires `pydantic-ai-slim >= 1.0.0` and `lmnr >= 0.7.49`.
+  </Accordion>
+  <Accordion title="I'm getting duplicate spans for every model call">
+    Laminar auto-removes the raw provider instrumentors (OpenAI, Anthropic, Google GenAI, Groq, Mistral, Cohere, Bedrock) when Pydantic AI is auto-enabled, so this should not happen with a default setup. If you passed an explicit `instruments` set that includes both `Instruments.PYDANTIC_AI` and one of the overlapping providers, drop the provider entry or use `disabled_instruments={Instruments.PYDANTIC_AI}` to keep only the raw spans.
+  </Accordion>
+  <Accordion title="I want to disable the Pydantic AI integration">
+    Pass `disabled_instruments={Instruments.PYDANTIC_AI}` to `Laminar.initialize()`. The raw provider instrumentors will be auto-enabled again.
+
+    ```python
+    from lmnr import Laminar, Instruments
+
+    Laminar.initialize(disabled_instruments={Instruments.PYDANTIC_AI})
+    ```
+  </Accordion>
+  <Accordion title="Self-hosting Laminar">
+    Set `base_url` and the ports of your instance when initializing. For a local OSS deployment:
+
+    ```python
+    Laminar.initialize(
+        base_url="http://localhost",
+        http_port=8000,
+        grpc_port=8001,
+    )
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Viewing traces" href="/platform/viewing-traces">
+    Read the transcript view, filter, and search across traces.
+  </Card>
+  <Card title="Signals" href="/signals/introduction">
+    Extract structured outcomes and failures from your agent runs.
+  </Card>
+  <Card title="SQL editor and MCP server" href="/platform/sql-editor">
+    Query traces programmatically from the UI, API, or your IDE.
+  </Card>
+  <Card title="Tracing structure" href="/tracing/structure/overview">
+    Sessions, metadata, and tags for deeper control.
+  </Card>
+  <Card title="OpenAI SDK" href="/tracing/integrations/openai">
+    Using the OpenAI SDK directly without Pydantic AI? Trace it here.
+  </Card>
+</CardGroup>
