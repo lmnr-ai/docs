@@ -49,6 +49,7 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - `grep "[em-dash]" <file>` before committing. Em dashes should not appear in docs prose; they sneak in easily from copy-paste. `<Frame caption="...">` strings are a frequent source — prefer a colon over an em dash inside captions.
 - `grep -E "seamless|powerful|unleash|cutting-edge|best-in-class|revolutionary|supercharge"` returns banned marketing words.
 - Every integration page needs the three forward links in data-flow order: viewing traces, then Signals, then SQL access (editor/API/MCP).
+- The **Track outcomes with Signals** section on every tracing integration page must frame Signals as the *cross-trace* layer, not a "extract stuff from one trace" feature. The template: contrast traces (*what happened on this run*) with Signals (*how often / when / which runs* — the question that only makes sense across many traces), explain that a Signal pairs a plain-language prompt with a JSON output schema, mention Triggers (live) and Jobs (backfill), and finish with the `[query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts)` inline-bold triplet. Always include a `<Note>` about the Failure Detector Signal shipped with every new project. The "extracts matching events across your history and every new trace" wording from prior versions understates what Signals do — don't revert to it.
 
 ## Example code conventions
 

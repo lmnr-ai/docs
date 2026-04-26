@@ -231,7 +231,11 @@ The resulting trace renders each subagent as a branch under the turn that spawne
 
 ## Track outcomes with Signals
 
-Traces tell you what happened on one run. [Signals](/signals/introduction) turn that into structured outcomes: describe a behavior or failure in natural language ("the agent edited a file it wasn't asked to", "a subagent exceeded 5 tool calls", "the reviewer missed a null-check bug") and Laminar extracts matching events across your history and every new trace. Route them to alerts or datasets.
+Traces answer *what happened on this run*. **[Signals](/signals/introduction) answer the cross-trace question**: *how often does the agent edit a file it wasn't asked to, when does a subagent exceed five tool calls, which reviewers miss null-check bugs*. A Signal pairs a plain-language prompt with a JSON output schema. Laminar runs it live on new traces (Triggers) or backfills it across history (Jobs) and records a structured event every time it matches. From there you [query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on events across every trace.
+
+<Note>
+Every new project ships with a **Failure Detector** Signal that categorizes issues on any trace over 1000 tokens. Open it from the Signals sidebar to see events as soon as your Claude Agent SDK traces arrive.
+</Note>
 
 ## Query across traces
 
@@ -270,7 +274,7 @@ Traces tell you what happened on one run. [Signals](/signals/introduction) turn 
     Read the transcript view, filter, and search across traces.
   </Card>
   <Card title="Signals" href="/signals/introduction">
-    Extract structured outcomes and failures from your agent runs.
+    Detect behaviors and failures across every run, then query, cluster, and alert on them.
   </Card>
   <Card title="SQL editor and MCP server" href="/platform/sql-editor">
     Query traces programmatically from the UI, API, or your IDE.

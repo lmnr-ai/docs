@@ -268,7 +268,11 @@ Tool calls appear as nested spans with their arguments and return values capture
 
 ## Track outcomes with Signals
 
-Traces tell you what happened on one run. [Signals](/signals/introduction) turn traces into structured outcomes: describe a behavior or failure in natural language ("the agent recommended a product that wasn't in stock", "the tool call returned an empty result") and Laminar extracts matching events across your history and every new trace. Route them to alerts, dashboards, or datasets.
+Traces answer *what happened on this run*. **[Signals](/signals/introduction) answer the cross-trace question**: *how often does the agent recommend a product that wasn't in stock, when does a tool call return an empty result, which generateText calls fan out into more steps than expected*. A Signal pairs a plain-language prompt with a JSON output schema. Laminar runs it live on new traces (Triggers) or backfills it across history (Jobs) and records a structured event every time it matches. From there you [query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on events across every trace.
+
+<Note>
+Every new project ships with a **Failure Detector** Signal that categorizes issues on any trace over 1000 tokens. Open it from the Signals sidebar to see events as soon as your AI SDK traces arrive.
+</Note>
 
 ## Query across traces
 
@@ -383,7 +387,7 @@ export async function register() {
     Read the transcript view, filter, and search across traces.
   </Card>
   <Card title="Signals" href="/signals/introduction">
-    Extract structured outcomes and failures from your AI SDK traces.
+    Detect behaviors and failures across every run, then query, cluster, and alert on them.
   </Card>
   <Card title="SQL editor and MCP server" href="/platform/sql-editor">
     Query traces programmatically from the UI, API, or your IDE.

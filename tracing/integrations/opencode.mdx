@@ -157,7 +157,11 @@ The first run downloads the plugin. On startup you'll see a log line like `Lamin
 
 ## Track outcomes with Signals
 
-Traces tell you what happened on one turn. [Signals](/signals/introduction) turn that into structured outcomes: describe a behavior or failure in natural language ("the agent edited a file it wasn't asked to", "the bash tool ran a destructive command") and Laminar extracts matching events across your history and every new trace. Route them to alerts or datasets.
+Traces answer *what happened on this turn*. **[Signals](/signals/introduction) answer the cross-trace question**: *how often does the agent edit a file it wasn't asked to, when does the bash tool run a destructive command, which turns burn tokens without touching a file*. A Signal pairs a plain-language prompt with a JSON output schema. Laminar runs it live on new traces (Triggers) or backfills it across history (Jobs) and records a structured event every time it matches. From there you [query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on events across every trace.
+
+<Note>
+Every new project ships with a **Failure Detector** Signal that categorizes issues on any trace over 1000 tokens. Open it from the Signals sidebar to see events as soon as your OpenCode traces arrive.
+</Note>
 
 ## Query across traces
 
@@ -190,7 +194,7 @@ Traces tell you what happened on one turn. [Signals](/signals/introduction) turn
     Read the transcript view, filter, and search across traces.
   </Card>
   <Card title="Signals" href="/signals/introduction">
-    Extract structured outcomes and failures from your OpenCode traces.
+    Detect behaviors and failures across every OpenCode turn, then query, cluster, and alert on them.
   </Card>
   <Card title="SQL editor and MCP server" href="/platform/sql-editor">
     Query traces programmatically from the UI, API, or your IDE.
