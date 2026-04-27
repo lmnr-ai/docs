@@ -1,0 +1,101 @@
+---
+title: Compare evaluation runs
+sidebarTitle: Compare runs
+---
+
+An evaluation in isolation tells you your current score. What you actually want to know is whether the score moved. That's what groups, the progression chart, and side-by-side comparison are for.
+
+## Group runs to compare them
+
+Pass `groupName` / `group_name` to `evaluate()`. Every run with the same group name lands together on the evaluations page.
+
+<Tabs>
+<Tab title="TypeScript">
+```typescript
+evaluate({
+  data,
+  executor,
+  evaluators,
+  name: 'Capitals v2 (harder countries)',
+  groupName: 'capitals',
+});
+```
+</Tab>
+<Tab title="Python">
+```python
+evaluate(
+    data=data,
+    executor=executor,
+    evaluators=evaluators,
+    name="Capitals v2 (harder countries)",
+    group_name="capitals",
+)
+```
+</Tab>
+</Tabs>
+
+Pick one name per *thing you're testing*, not per *version*. The capitals eval stays in the `capitals` group whether you're swapping models, prompts, or datasets. Changing the group name means Laminar can't chart the runs together.
+
+## Read the progression chart
+
+The evaluations page shows every run in a group, newest first, with the group's average score for each dimension plotted across the top.
+
+<Frame caption="Three runs in the capitals group. accuracy holds at 1.0 across every run; length_ok drops to 0.0 on the most recent run">
+  <img src="/images/evaluations/eval-list.png" alt="Evaluations list for the capitals group with a progression chart showing accuracy flat at 1.0 and length_ok falling to 0.0" />
+</Frame>
+
+One line per score dimension. Each point is the average of that dimension for one run. A sudden drop on one line means a regression on that dimension.
+
+In the screenshot above, `length_ok` fell from 1.0 to 0.0 on the most recent run because the prompt was changed to ask for a one-sentence fun fact instead of a one-word answer. Every output now exceeds the 50-character limit the evaluator checks for.
+
+## Side-by-side comparison
+
+Click any run to open its detail page. Use the **Select compared evaluation** dropdown to pick a second run from the same group. Laminar renders both score distributions on top of each other and shows per-row deltas.
+
+<Frame caption="Comparing the regressed run (v3) against v1. The length_ok histogram shows the full population moved from 1 to 0; the table shows per-row deltas (0 → 1 on length_ok, 1 → 1 on accuracy)">
+  <img src="/images/evaluations/eval-compare.png" alt="Comparison view with the length_ok distribution chart and a datapoints table showing per-row score deltas from v3 to v1" />
+</Frame>
+
+The big-number summary at the top (`0.00 → 1.00`) tells you the direction. The per-row deltas below tell you exactly which datapoints moved.
+
+## Filter by group in the list
+
+The evaluations list at `/evaluations` groups runs by default. Click a group in the sidebar, or visit `/evaluations?groupId=<group-name>` directly. The progression chart and run list scope to the selected group.
+
+## Export comparisons
+
+Hit **Download** on the evaluation detail page to export the datapoints, scores, and executor outputs as CSV. Useful for external analysis or for building regression test suites out of the rows that failed.
+
+For anything beyond CSV, query the underlying table with SQL:
+
+```sql
+SELECT
+    e.name,
+    e.created_at,
+    AVG(ed.scores['accuracy']) AS avg_accuracy,
+    AVG(ed.scores['length_ok']) AS avg_length_ok
+FROM evaluation_datapoints ed
+JOIN evaluations e ON ed.evaluation_id = e.id
+WHERE e.group_name = 'capitals'
+GROUP BY e.id, e.name, e.created_at
+ORDER BY e.created_at DESC
+```
+
+See the [SQL editor](/platform/sql-editor) page for more.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Datasets" href="/evaluations/datasets" icon="database">
+    Keep the dataset constant across runs so comparisons are apples-to-apples.
+  </Card>
+  <Card title="Human evaluators" href="/evaluations/human-evaluators" icon="user-check">
+    Add human reference scores and calibrate LLM judges against them.
+  </Card>
+  <Card title="SQL editor" href="/platform/sql-editor" icon="code">
+    Query `evaluation_datapoints` for bespoke comparisons and dashboards.
+  </Card>
+  <Card title="Manual API" href="/evaluations/manual-evaluation" icon="wrench">
+    The lower-level API when `evaluate()` is too opinionated.
+  </Card>
+</CardGroup>

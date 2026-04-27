@@ -1,0 +1,127 @@
+---
+title: Evaluation concepts
+sidebarTitle: Concepts
+---
+
+An evaluation in Laminar is one call to `evaluate()`. That call has a shape: datapoints in, an executor, a set of evaluators, a group. This page explains each part, the trace they produce, and how the scores are stored.
+
+## Datapoints
+
+A datapoint is the unit of work.
+
+```python
+{
+    "data": { "country": "France" },
+    "target": "Paris",
+    "metadata": { "category": "europe" },
+}
+```
+
+- **`data`** is whatever the executor receives. It can be a primitive, a dict, or a deeply nested object. Whatever shape you put in, the executor's first parameter has to match.
+- **`target`** is optional. It's the reference value evaluators compare against. You can omit it entirely if your evaluators don't need it (for example if an evaluator only checks output format).
+- **`metadata`** is optional. Use it to filter or query datapoints later: model name, category, source dataset, anything you want on the row.
+
+An evaluation takes either a list of datapoints or a `LaminarDataset`. See [Datasets](/evaluations/datasets) for dataset-backed runs.
+
+## Executor
+
+The executor is the function under test. It takes `data` and returns anything.
+
+```python
+def capital_of_country(data: dict) -> str:
+    response = client.chat.completions.create(
+        model="gpt-5-mini",
+        messages=[{"role": "user", "content": f"Capital of {data['country']}?"}],
+    )
+    return response.choices[0].message.content or ""
+```
+
+It can be sync or async, can make LLM calls, can call your production agent, can fan out into subagents. Everything it does is traced.
+
+<Note>
+The executor is your system boundary. Score what it returns, not what it does internally. If you want to score a tool call or an intermediate step, return that value from the executor.
+</Note>
+
+## Evaluators
+
+An evaluator takes the executor's output and (optionally) the target, and returns a score.
+
+```python
+def accuracy(output: str, target: str) -> int:
+    return 1 if target.lower() in output.lower() else 0
+```
+
+An evaluator can return:
+
+- **A number**: one score dimension, named after the evaluator key.
+- **A dict of numbers**: many score dimensions from one function. Useful when one pass over the output produces multiple metrics (`{ "precision": 0.9, "recall": 0.8 }`).
+
+Evaluators run in parallel after the executor completes. Each evaluator gets a span (`span_type = 'EVALUATOR'`), so you can inspect the score alongside the input that produced it.
+
+### Three kinds of evaluator you'll actually write
+
+- **Code evaluators.** Pure functions. Exact match, regex, JSON schema check, string length. Fast, deterministic, free.
+- **LLM-as-a-judge evaluators.** A function that calls an LLM to score the output. Use when code can't capture the quality dimension (tone, helpfulness, faithfulness). Calibrate them against [human scores](/evaluations/human-evaluators) before you trust them.
+- **Human evaluators.** `HumanEvaluator()` from the SDK. The automated pass completes immediately; the human score is added later through the Laminar UI. See [Human evaluators](/evaluations/human-evaluators).
+
+## Groups
+
+A group is a name you give related runs. Laminar uses it for two things:
+
+- **The progression chart** on the evaluations page shows the average of each score dimension over time for the group. This is how you see regressions.
+- **Side-by-side comparison** between two runs is only enabled for runs in the same group.
+
+Pick one name for the thing under test and keep it stable across prompt, model, and code changes. For the capitals example, the group is `capitals` whether you're running `gpt-5-mini`, `gpt-5`, or a fine-tune.
+
+<Frame caption="Three runs in the capitals group. length_ok regressed on the most recent run; accuracy stayed flat">
+  <img src="/images/evaluations/eval-list.png" alt="Evaluations list filtered by the capitals group with a progression chart at the top" />
+</Frame>
+
+## The trace every datapoint produces
+
+Every datapoint becomes a single trace with a known shape:
+
+- **Root span**: `EVALUATION` span covering the entire datapoint.
+- **Executor child**: one `EXECUTOR` span with the executor's input and output.
+- **Any LLM / tool spans** your executor makes, auto-instrumented, nested under the executor.
+- **Evaluator children**: one `EVALUATOR` span per evaluator, each recording the score and the input it scored.
+
+These spans are queryable from the [SQL editor](/platform/sql-editor) just like any other traces. For example, to pull every output that failed the `accuracy` check:
+
+```sql
+SELECT trace_id, input, output
+FROM spans
+WHERE span_type = 'EXECUTOR'
+  AND evaluation_id = '<evaluation_id>'
+  AND trace_id IN (
+    SELECT trace_id FROM spans
+    WHERE span_type = 'EVALUATOR'
+      AND name = 'accuracy'
+      AND attributes['lmnr.span.output'] = '0'
+  )
+```
+
+## What gets stored where
+
+- **Postgres `evaluations`**: one row per run. Holds the name, group, and metadata.
+- **ClickHouse `evaluation_datapoints`**: one row per datapoint per run. Holds `data`, `target`, `metadata`, executor output, scores, `trace_id`, duration, cost.
+- **ClickHouse `spans`**: the EVALUATION / EXECUTOR / EVALUATOR spans and everything nested under them.
+
+Scores are just numbers on a row. You can build [dashboards](/custom-dashboards/overview) off them, alert on them, or export them to a dataset. Same substrate as anything else in Laminar.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Compare runs" href="/evaluations/comparing-runs" icon="chart-line">
+    How the progression chart and side-by-side comparison work.
+  </Card>
+  <Card title="Datasets" href="/evaluations/datasets" icon="database">
+    Point `evaluate()` at a Laminar dataset instead of a hardcoded list.
+  </Card>
+  <Card title="Human evaluators" href="/evaluations/human-evaluators" icon="user-check">
+    Add manual scoring for subjective tasks or LLM-judge calibration.
+  </Card>
+  <Card title="Manual API" href="/evaluations/manual-evaluation" icon="code">
+    When `evaluate()` is too opinionated: the lower-level `LaminarClient.evals` API.
+  </Card>
+</CardGroup>
