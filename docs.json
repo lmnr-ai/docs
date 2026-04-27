@@ -96,7 +96,6 @@
               "evaluations/concepts",
               "evaluations/comparing-runs",
               "evaluations/datasets",
-              "evaluations/human-evaluators",
               "evaluations/manual-evaluation",
               "evaluations/self-hosted"
             ]

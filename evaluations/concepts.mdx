@@ -58,11 +58,10 @@ An evaluator can return:
 
 Evaluators run in parallel after the executor completes. Each evaluator gets a span (`span_type = 'EVALUATOR'`), so you can inspect the score alongside the input that produced it.
 
-### Three kinds of evaluator you'll actually write
+### Two kinds of evaluator you'll actually write
 
 - **Code evaluators.** Pure functions. Exact match, regex, JSON schema check, string length. Fast, deterministic, free.
-- **LLM-as-a-judge evaluators.** A function that calls an LLM to score the output. Use when code can't capture the quality dimension (tone, helpfulness, faithfulness). Calibrate them against [human scores](/evaluations/human-evaluators) before you trust them.
-- **Human evaluators.** `HumanEvaluator()` from the SDK. The automated pass completes immediately; the human score is added later through the Laminar UI. See [Human evaluators](/evaluations/human-evaluators).
+- **LLM-as-a-judge evaluators.** A function that calls an LLM to score the output. Use when code can't capture the quality dimension (tone, helpfulness, faithfulness).
 
 ## Groups
 
@@ -117,9 +116,6 @@ Scores are just numbers on a row. You can build [dashboards](/custom-dashboards/
   </Card>
   <Card title="Datasets" href="/evaluations/datasets" icon="database">
     Point `evaluate()` at a Laminar dataset instead of a hardcoded list.
-  </Card>
-  <Card title="Human evaluators" href="/evaluations/human-evaluators" icon="user-check">
-    Add manual scoring for subjective tasks or LLM-judge calibration.
   </Card>
   <Card title="Manual API" href="/evaluations/manual-evaluation" icon="code">
     When `evaluate()` is too opinionated: the lower-level `LaminarClient.evals` API.

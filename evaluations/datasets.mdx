@@ -115,7 +115,7 @@ The class is modelled on PyTorch's `Dataset`. Laminar's evaluation runner calls 
 
 ## Export evaluator outputs back into a dataset
 
-After an evaluation completes, you can turn any subset of its rows into a new dataset. From the **SQL editor**, write a query against `evaluation_datapoints` or `spans`, then click **Export to Dataset**. This is the workflow for [calibrating LLM-as-a-judge against human scores](/evaluations/human-evaluators#validating-llm-as-a-judge-evaluators): query the human evaluator spans, export, then run an evaluation against the exported dataset using the human score as `target`.
+After an evaluation completes, you can turn any subset of its rows into a new dataset. From the **[SQL editor](/platform/sql-editor)**, write a query against `evaluation_datapoints` or `spans`, then click **Export to Dataset**. That dataset becomes your regression set for the next iteration of the prompt or model.
 
 ## Next steps
 
@@ -125,9 +125,6 @@ After an evaluation completes, you can turn any subset of its rows into a new da
   </Card>
   <Card title="Datasets overview" href="/datasets/introduction" icon="database">
     How datasets are modelled in Laminar and how to populate them.
-  </Card>
-  <Card title="Human evaluators" href="/evaluations/human-evaluators" icon="user-check">
-    Collect human scores into a dataset and use them to validate LLM judges.
   </Card>
   <Card title="SDK reference" href="/sdk/evaluations" icon="code">
     Full parameters for `evaluate`, `LaminarDataset`, and `EvaluationDataset`.

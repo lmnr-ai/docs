@@ -18,7 +18,6 @@ Evaluations are for questions you can answer with a score. Some of them are obvi
 - **Did the new prompt break anything?** Same dataset, new prompt, see if any scores regressed.
 - **Is the cheaper model good enough for this task?** Swap `gpt-5` for `gpt-5-mini`, run the same inputs, compare.
 - **Does this tool actually do what I think it does?** Score the tool's output against a target, not the agent's final answer.
-- **Is the LLM-as-a-judge prompt aligned with humans?** Run [human evaluators](/evaluations/human-evaluators) on the same datapoints and see where the judge disagrees.
 - **Did the last hundred production traces expose a case my evals don't cover?** Pull the failing traces into a [dataset](/datasets/introduction) and rerun the evaluation against them.
 
 If you've ever changed a prompt and hoped nothing broke, this is the answer to that hope.
@@ -59,7 +58,7 @@ Both paths talk to the same `evaluate()` function. The CLI is just a runner.
   <Card title="Compare runs" href="/evaluations/comparing-runs" icon="chart-line">
     Group runs, read the progression chart, and do side-by-side diffs.
   </Card>
-  <Card title="Human evaluators" href="/evaluations/human-evaluators" icon="user-check">
-    Add manual scoring for cases where code and LLM judges aren't enough.
+  <Card title="Datasets" href="/evaluations/datasets" icon="database">
+    Back evaluations with a Laminar dataset instead of hardcoded lists.
   </Card>
 </CardGroup>

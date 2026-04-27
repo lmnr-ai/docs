@@ -3,28 +3,28 @@ title: Manual evaluation API
 sidebarTitle: Manual API
 ---
 
-`evaluate()` is the right entry point for 95% of cases. For the other 5% (wiring evaluations into an existing pipeline, streaming datapoints from a long-running job, mixing evaluation bookkeeping with production traffic) use the lower-level `LaminarClient.evals` API.
+`evaluate()` is the right entry point for 95% of cases. For the other 5% (wiring evaluations into an existing pipeline, streaming datapoints from a long-running job, scoring production traffic after the fact) use the lower-level `LaminarClient.evals` API.
 
 ## When to use this
 
 Reach for the manual API when you need to:
 
-- Create an evaluation now and append datapoints to it over hours or days.
-- Run the executor and evaluators as part of an existing system rather than a dedicated eval script.
-- Produce Laminar datapoints from a production trace without re-running the call.
-- Attach custom span structure around the evaluation that `evaluate()` doesn't let you shape.
+- Create an evaluation now and append datapoints to it over hours or days, as work completes.
+- Register a datapoint in the UI *before* the executor runs, so a row is visible while the run is still in progress.
+- Run the executor in one process and write scores from another (for example, an async judge that posts results back later).
+- Score production traces without re-running the call: save the executor output and scores against a new datapoint.
 
 If none of those apply, use [`evaluate()`](/evaluations/quickstart).
 
-## How it works
+## The three-phase pattern
 
-Three calls, in order:
+The manual API is designed around three distinct moments in an evaluation's lifecycle. Call them in order:
 
-1. **`evals.create`** opens a new evaluation. Returns an `evalId`.
-2. **`evals.createDatapoint`** records one datapoint. Pass `traceId = Laminar.getTraceId()` from inside a span so the datapoint links to the trace Laminar is currently producing.
-3. **`evals.updateDatapoint`** writes scores and the executor output back once the executor and evaluators run.
+1. **Create the evaluation** with `create_evaluation` / `create`. Returns an `eval_id`. Do this once per run.
+2. **Pre-register each datapoint** with `create_datapoint`. Returns a `datapoint_id`. A row appears in the UI immediately, even though the executor hasn't run yet.
+3. **Update the datapoint** with `update_datapoint`: link it to a trace, then (once the executor and evaluators finish) write the executor output and scores.
 
-The same wrapping that `evaluate()` produces (`EVALUATION` root span, `EXECUTOR`, `EVALUATOR`) is yours to produce via `observe()` with the right `spanType`. Laminar joins the spans and the datapoint by `traceId`.
+Pre-registering is the pattern that matters. It's how a long-running evaluation stays observable while it runs, and how a separate scoring process can write results back to rows created by the executor.
 
 ## Setup
 
@@ -46,7 +46,7 @@ const openai = new OpenAI();
 ```
 
 ```python Python
-import asyncio
+import os
 from lmnr import Laminar, LaminarClient, observe
 from openai import AsyncOpenAI
 
@@ -59,11 +59,11 @@ openai_client = AsyncOpenAI()
 
 ## Build executor and evaluator spans
 
-Wrap your executor and each evaluator with `observe()`, passing the `EXECUTOR` and `EVALUATOR` span types. Without these span types, the trace still records, but the evaluation UI won't recognize the spans for drill-down.
+Wrap the executor and each evaluator in `observe()` with the matching `spanType`. The evaluation UI uses `EXECUTOR` and `EVALUATOR` to know which spans hold the input, output, and score for each row.
 
 <CodeGroup>
 ```typescript TypeScript
-const runExecutor = async (testCase: { data: { country: string } }) =>
+const runExecutor = async (testCase: { data: { country: string }; target: string }) =>
   observe(
     { name: 'executor', spanType: 'EXECUTOR', input: testCase.data },
     async () => {
@@ -85,7 +85,13 @@ const runExecutor = async (testCase: { data: { country: string } }) =>
 const accuracy = async (output: string, target: string) =>
   observe(
     { name: 'accuracy', spanType: 'EVALUATOR', input: { output, target } },
-    async () => (output.includes(target) ? 1 : 0),
+    async () => (output.toLowerCase().includes(target.toLowerCase()) ? 1 : 0),
+  );
+
+const lengthOk = async (output: string) =>
+  observe(
+    { name: 'length_ok', spanType: 'EVALUATOR', input: { output } },
+    async () => (output.length > 0 && output.length < 50 ? 1 : 0),
   );
 ```
 
@@ -109,25 +115,41 @@ async def run_executor(test_case):
 
 @observe(name="accuracy", span_type="EVALUATOR")
 async def accuracy(output, target):
-    return 1 if target in output else 0
+    return 1 if target.lower() in output.lower() else 0
+
+
+@observe(name="length_ok", span_type="EVALUATOR")
+async def length_ok(output, target=None):
+    return 1 if 0 < len(output) < 50 else 0
 ```
 </CodeGroup>
 
 ## Create the evaluation and datapoints
 
+Open the evaluation up front, then loop over the test data. For each row, pre-register the datapoint, run the executor inside an `EVALUATION` span, and write scores back once the evaluators finish.
+
 <CodeGroup>
 ```typescript TypeScript
-const evalId = await client.evals.create({
-  name: 'Manual capitals eval',
-  groupName: 'capitals-manual',
-});
+const testData = [
+  { data: { country: 'France' }, target: 'Paris' },
+  { data: { country: 'Germany' }, target: 'Berlin' },
+  { data: { country: 'Japan' }, target: 'Tokyo' },
+];
+
+const evalId = await client.evals.createEvaluation(
+  'Manual capitals eval',
+  'capitals-manual',
+  { model: 'gpt-5-mini', run_by: 'manual-api-demo' },
+);
 
 for (let i = 0; i < testData.length; i++) {
-  await observe(
-    { name: 'evaluation', spanType: 'EVALUATION', input: { testCase: testData[i] } },
-    async () => {
-      const testCase = testData[i];
+  const testCase = testData[i];
 
+  await observe(
+    { name: 'evaluation', spanType: 'EVALUATION', input: { testCase } },
+    async () => {
+      // Pre-register the datapoint with the current trace ID.
+      // The row shows up in the UI now, before the executor runs.
       const datapointId = await client.evals.createDatapoint({
         evalId,
         data: testCase.data,
@@ -138,11 +160,12 @@ for (let i = 0; i < testData.length; i++) {
 
       const output = await runExecutor(testCase);
       const accuracyScore = await accuracy(output, testCase.target);
+      const lengthOkScore = await lengthOk(output);
 
       await client.evals.updateDatapoint({
         evalId,
         datapointId,
-        scores: { accuracy: accuracyScore },
+        scores: { accuracy: accuracyScore, length_ok: lengthOkScore },
         executorOutput: { response: output, model: 'gpt-5-mini' },
       });
     },
@@ -153,97 +176,115 @@ await Laminar.flush();
 ```
 
 ```python Python
-eval_id = client.evals.create_evaluation(
-    name="Manual capitals eval",
-    group_name="capitals-manual",
-)
+test_data = [
+    {"data": {"country": "France"}, "target": "Paris"},
+    {"data": {"country": "Germany"}, "target": "Berlin"},
+    {"data": {"country": "Japan"}, "target": "Tokyo"},
+]
 
 
-@observe(name="evaluation", span_type="EVALUATION")
-async def run_one(eval_id, i, test_case):
+async def run_one(eval_id, index, test_case):
+    # Phase 2: pre-register the datapoint. A row appears in the UI now.
     datapoint_id = client.evals.create_datapoint(
         eval_id=eval_id,
         data=test_case["data"],
         target=test_case["target"],
-        index=i,
-        trace_id=Laminar.get_trace_id(),
+        index=index,
     )
 
-    output = await run_executor(test_case)
-    accuracy_score = await accuracy(output, test_case["target"])
+    @observe(name="evaluation", span_type="EVALUATION")
+    async def run_inside_span():
+        # Link the datapoint to the evaluation trace that is now active.
+        trace_id = Laminar.get_trace_id()
+        client.evals.update_datapoint(
+            eval_id=eval_id,
+            datapoint_id=datapoint_id,
+            scores={},
+            trace_id=trace_id,
+        )
 
+        output = await run_executor(test_case)
+        accuracy_score = await accuracy(output, test_case["target"])
+        length_ok_score = await length_ok(output, test_case["target"])
+        return output, {"accuracy": accuracy_score, "length_ok": length_ok_score}
+
+    output, scores = await run_inside_span()
+
+    # Phase 3: write the final executor output and scores.
     client.evals.update_datapoint(
         eval_id=eval_id,
         datapoint_id=datapoint_id,
-        scores={"accuracy": accuracy_score},
         executor_output={"response": output, "model": "gpt-5-mini"},
+        scores=scores,
     )
 
 
 async def main():
-    for i, test_case in enumerate(test_data):
-        await run_one(eval_id, i, test_case)
+    eval_id = client.evals.create_evaluation(
+        name="Manual capitals eval",
+        group_name="capitals-manual",
+        metadata={"model": "gpt-5-mini", "run_by": "manual-api-demo"},
+    )
+
+    for index, test_case in enumerate(test_data):
+        await run_one(eval_id, index, test_case)
+
     Laminar.flush()
 ```
 </CodeGroup>
 
 <Note>
-`createDatapoint` / `create_datapoint` must be called from *inside* the `EVALUATION` span context so `Laminar.getTraceId()` returns the trace this datapoint is being produced on. Call it before the executor runs so the resulting trace is labelled as evaluation-type up front.
+The two SDKs link traces to datapoints in slightly different places. TypeScript accepts `traceId` on `createDatapoint` only, so call it from inside the `EVALUATION` span and pass `Laminar.getTraceId()` there. Python's `update_datapoint` accepts `trace_id`, so you can register the datapoint *before* the span opens and link the trace once it's running. The Python pattern is what you want when the row needs to be visible before you know which trace will own it.
 </Note>
 
-## Saving datapoints in bulk
+## Decoupling the executor from the scorer
 
-If you already have outputs and scores and just want to register them as an evaluation (no live executor), use `saveDatapoints` / `save_datapoints`:
+Because `update_datapoint` can be called any time after `create_datapoint`, executor and scorer can live in different processes. A common shape:
 
-<CodeGroup>
-```typescript TypeScript
-const evalId = await client.evals.create({
-  name: 'Backfilled evaluation',
-  groupName: 'capitals',
-});
+1. A worker runs the agent, produces a trace, and calls `update_datapoint` with `executor_output` and an empty `scores={}` dict.
+2. A judge process reads `executor_output` from the dataset or from the agent's output store, scores it, and calls `update_datapoint` again with the filled-in `scores`.
 
-await client.evals.saveDatapoints({
-  evalId,
-  datapoints: rows.map((row, i) => ({
-    index: i,
-    data: row.data,
-    target: row.target,
-    executorOutput: row.output,
-    scores: row.scores,
-  })),
-});
-```
+Both writes target the same `datapoint_id`. The UI updates in place each time.
 
-```python Python
+## Backfilling without running the executor
+
+For pure backfills (rows you already have outputs and scores for, no live executor), loop `create_datapoint` + `update_datapoint` over the pre-scored rows:
+
+```python
 eval_id = client.evals.create_evaluation(
-    name="Backfilled evaluation",
+    name="Backfilled capitals",
     group_name="capitals",
 )
 
-client.evals.save_datapoints(
-    eval_id=eval_id,
-    datapoints=[
-        {
-            "index": i,
-            "data": row["data"],
-            "target": row["target"],
-            "executor_output": row["output"],
-            "scores": row["scores"],
-        }
-        for i, row in enumerate(rows)
-    ],
-)
+for i, row in enumerate(rows):
+    datapoint_id = client.evals.create_datapoint(
+        eval_id=eval_id,
+        data=row["data"],
+        target=row["target"],
+        index=i,
+    )
+    client.evals.update_datapoint(
+        eval_id=eval_id,
+        datapoint_id=datapoint_id,
+        executor_output=row["output"],
+        scores=row["scores"],
+    )
 ```
-</CodeGroup>
 
-`saveDatapoints` doesn't attach traces. Use it when you've already run the executor elsewhere (production traffic, offline batch, a different orchestrator) and just want the numbers in Laminar.
+No `EVALUATION` span is opened, so no trace is attached. The row shows `data`, `target`, `executor_output`, and `scores`, which is enough for the list view, progression chart, and side-by-side comparison. Use this when you want the numbers in Laminar but don't need per-row transcript drill-down.
 
 ## Result
 
-Manual evaluations show up in the same evaluations list and comparison UI as `evaluate()` runs. Groups, progression charts, and side-by-side comparison all work the same way.
+Manual evaluations show up in the same evaluations list, progression chart, and comparison UI as `evaluate()` runs. Groups, per-datapoint deltas, and CSV export all work the same way.
 
-<Frame caption="Manual evaluation with executor, evaluator, and evaluation spans nested under the trace for one datapoint">
-  <img src="/images/evaluations/manual-evaluation.png" alt="Manual evaluation trace with nested EVALUATION, EXECUTOR, and EVALUATOR spans and per-datapoint scores" />
+<Frame caption="Manual evaluation detail page. Progression chart and datapoint table match what evaluate() produces">
+  <img src="/images/evaluations/manual-evaluation-trace.png" alt="Evaluation detail page for Manual capitals eval with length_ok averaging 1.00 across six datapoints" />
+</Frame>
+
+Clicking a row opens the transcript for that datapoint's trace, with the full `EVALUATION` root, `EXECUTOR`, and `EVALUATOR` nesting you'd expect from `evaluate()`.
+
+<Frame caption="One datapoint's transcript: EVALUATION root, executor, the gpt-5-mini call, and accuracy / length_ok scores">
+  <img src="/images/evaluations/manual-evaluation.png" alt="Manual evaluation trace with EVALUATION, EXECUTOR, gpt-5-mini, accuracy, and length_ok spans" />
 </Frame>
 
 ## Next steps
@@ -255,10 +296,10 @@ Manual evaluations show up in the same evaluations list and comparison UI as `ev
   <Card title="Compare runs" href="/evaluations/comparing-runs" icon="chart-line">
     Group manual runs so you can compare them like any other evaluation.
   </Card>
-  <Card title="Client reference" href="/sdk/client" icon="code">
-    Full parameters for `LaminarClient.evals` methods.
+  <Card title="Concepts" href="/evaluations/concepts" icon="boxes">
+    The datapoint / executor / evaluator / group model the manual API maps onto.
   </Card>
-  <Card title="SDK reference" href="/sdk/evaluations" icon="book">
-    Reference for `evaluate`, `HumanEvaluator`, and related types.
+  <Card title="SDK reference" href="/sdk/client" icon="code">
+    Full parameters for `LaminarClient.evals` methods.
   </Card>
 </CardGroup>
