@@ -3,7 +3,7 @@ title: "Dashboards"
 sidebarTitle: "Dashboards"
 ---
 
-Dashboards are a grid of charts you build over your traces, spans, signal events, and tags. Mix line charts, bar charts, horizontal bars, and tables on one canvas, resize each card, and every chart shares the same time range so you read everything against the same window.
+Dashboards are a grid of charts you build over your traces, spans, and signal events. Mix line charts, bar charts, horizontal bars, and tables on one canvas, resize each card, and every chart shares the same time range so you read everything against the same window.
 
 <Frame>
   <img src="/images/custom-dashboard/dashboards-overview.png" alt="A Laminar dashboard showing a mix of line, bar, horizontal bar, and table charts" />
@@ -64,7 +64,7 @@ To create a chart from scratch, click **`+ Chart`** and choose **Custom**.
 The editor asks for:
 
 1. **Type**: line, bar, horizontal bar, or table (see above).
-2. **Table**: `traces`, `spans`, `signal_events`, or `tags`.
+2. **Table**: `traces`, `spans`, or `signal_events`.
 3. **Metric**: one of `count`, `sum`, `avg`, `min`, `max`, `p90`, `p95`, `p99` on a column, or **Custom SQL** for an arbitrary expression (covered below). Tables use a column picker instead of a metric.
 4. **Filters**: narrow rows before aggregation.
 5. **Group By**: break the metric down by a dimension (e.g. `model`, `provider`, `span_type`).
@@ -92,7 +92,7 @@ A few patterns that come up often:
 - **Custom percentiles**: `quantile(0.75)(duration)` when the built-in p90/p95/p99 aren't the cut you want.
 - **Expressions over multiple columns**: `sum(input_cost + output_cost)`.
 
-The schema autocomplete knows which columns exist on each table. For the full list of tables (`traces`, `spans`, `signal_events`, `tags`, `evaluation_results`, etc.) and their columns, see the [SQL editor table schemas reference](/platform/sql-editor#table-schemas).
+The schema autocomplete knows which columns exist on each table. For the full list of tables (`traces`, `spans`, `signal_events`, `evaluation_results`, etc.) and their columns, see the [SQL editor table schemas reference](/platform/sql-editor#table-schemas).
 
 ## Custom columns on tables
 
