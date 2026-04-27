@@ -1,423 +1,305 @@
 ---
-sidebarTitle: Manual Evaluation
-title: Laminar Manual Evaluation
+title: Manual evaluation API
+sidebarTitle: Manual API
 ---
 
-The Laminar Manual Evaluation SDK and API provide you with **granular control** over the evaluation process, allowing you to integrate Laminar directly into your existing evaluation pipeline or create flexible and complex evaluation workflows.
+`evaluate()` is the right entry point for 95% of cases. For the other 5% (wiring evaluations into an existing pipeline, streaming datapoints from a long-running job, scoring production traffic after the fact) use the lower-level `LaminarClient.evals` API.
 
-## Manual vs. SDK Evaluation
+## When to use this
 
-<Note>
-    Use manual evaluation when you need granular control over the evaluation lifecycle, custom tracing, or want to integrate evaluations with complex workflows.
-</Note>
+Reach for the manual API when you need to:
 
-The manual evaluation approach gives you fine-grained control over:
-- **Step-by-step execution** tracking
-- **Flexible evaluation logic** and scoring
-- **Integration** with existing systems and workflows
+- Create an evaluation now and append datapoints to it over hours or days, as work completes.
+- Register a datapoint in the UI *before* the executor runs, so a row is visible while the run is still in progress.
+- Run the executor in one process and write scores from another (for example, an async judge that posts results back later).
+- Score production traces without re-running the call: save the executor output and scores against a new datapoint.
 
-## How Manual Evaluation Works
+If none of those apply, use [`evaluate()`](/evaluations/quickstart).
 
-Manual evaluation follows a structured workflow with three core components:
+## The three-phase pattern
 
-1. **Create Evaluation** - Initialize a new evaluation
-2. **Execute and Evaluate** - Run your logic and evaluate it
-    - Run your core logic
-    - Run your evaluation logic
-3. **Save and Update** - Store datapoints and evaluation results
+The manual API is designed around three distinct moments in an evaluation's lifecycle. Call them in order:
 
-## Quickstart
+1. **Create the evaluation** with `create_evaluation` / `create`. Returns an `eval_id`. Do this once per run.
+2. **Pre-register each datapoint** with `create_datapoint`. Returns a `datapoint_id`. A row appears in the UI immediately, even though the executor hasn't run yet.
+3. **Update the datapoint** with `update_datapoint`: link it to a trace, then (once the executor and evaluators finish) write the executor output and scores.
 
-Let's walk through implementing manual evaluation with tracing, breaking down each component:
+Pre-registering is the pattern that matters. It's how a long-running evaluation stays observable while it runs, and how a separate scoring process can write results back to rows created by the executor.
 
-### Step 1: Setup and Initialization
-
-First, initialize Laminar and create your evaluation clients:
+## Setup
 
 <CodeGroup>
-```javascript JavaScript
-import { Laminar, LaminarClient, observe } from "@lmnr-ai/lmnr";
-import { OpenAI } from "openai";
+```typescript TypeScript
+import { Laminar, LaminarClient, observe } from '@lmnr-ai/lmnr';
+import { OpenAI } from 'openai';
 
 Laminar.initialize({
-    projectApiKey: 'your_project_api_key',
-    instrumentModules: {
-        OpenAI: OpenAI  // Automatically traces OpenAI calls
-    }
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+  instrumentModules: { OpenAI },
 });
 
 const client = new LaminarClient({
-    projectApiKey: 'your_project_api_key',
+  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
 });
 
-const openai = new OpenAI({ apiKey: 'your_openai_api_key' });
+const openai = new OpenAI();
 ```
 
 ```python Python
-import asyncio
+import os
 from lmnr import Laminar, LaminarClient, observe
 from openai import AsyncOpenAI
 
-Laminar.initialize(project_api_key='your_project_api_key')
-client = LaminarClient(project_api_key='your_project_api_key')
+Laminar.initialize(project_api_key=os.environ["LMNR_PROJECT_API_KEY"])
 
-openai_client = AsyncOpenAI(api_key='your_openai_api_key')
+client = LaminarClient(project_api_key=os.environ["LMNR_PROJECT_API_KEY"])
+openai_client = AsyncOpenAI()
 ```
 </CodeGroup>
 
-### Step 2: Create Your Executor and Evaluation logic
+## Build executor and evaluator spans
 
-- Our executor function makes a call to OpenAI and is wrapped with tracing:
+Wrap the executor and each evaluator in `observe()` with the matching `spanType`. The evaluation UI uses `EXECUTOR` and `EVALUATOR` to know which spans hold the input, output, and score for each row.
 
 <CodeGroup>
-```javascript JavaScript
-const executeTestCase = async (testCase) => {
-    return await observe(
-        { name: 'executor', spanType: 'EXECUTOR', input: testCase.data },
-        async () => {
-            const response = await openai.chat.completions.create({
-                model: 'gpt-4o-mini',
-                messages: [
-                    {
-                        role: 'user',
-                        content: `What is the capital of ${testCase.data.country}? ` +
-                          'Answer only with the capital, no other text.'
-                    }
-                ]
-            });
-            return response.choices[0].message.content || '';
-        }
-    );
-};
+```typescript TypeScript
+const runExecutor = async (testCase: { data: { country: string }; target: string }) =>
+  observe(
+    { name: 'executor', spanType: 'EXECUTOR', input: testCase.data },
+    async () => {
+      const response = await openai.chat.completions.create({
+        model: 'gpt-5-mini',
+        messages: [
+          {
+            role: 'user',
+            content:
+              `What is the capital of ${testCase.data.country}? ` +
+              'Answer only with the capital, no other text.',
+          },
+        ],
+      });
+      return response.choices[0].message.content ?? '';
+    },
+  );
+
+const accuracy = async (output: string, target: string) =>
+  observe(
+    { name: 'accuracy', spanType: 'EVALUATOR', input: { output, target } },
+    async () => (output.toLowerCase().includes(target.toLowerCase()) ? 1 : 0),
+  );
+
+const lengthOk = async (output: string) =>
+  observe(
+    { name: 'length_ok', spanType: 'EVALUATOR', input: { output } },
+    async () => (output.length > 0 && output.length < 50 ? 1 : 0),
+  );
 ```
 
 ```python Python
-@observe(name='executor', span_type='EXECUTOR')
-async def execute_test_case(test_case):
+@observe(name="executor", span_type="EXECUTOR")
+async def run_executor(test_case):
     response = await openai_client.chat.completions.create(
-        model='gpt-4o-mini',
+        model="gpt-5-mini",
         messages=[
             {
-                'role': 'user',
-                'content': f"What is the capital of {test_case['data']['country']}? " +
-                          'Answer only with the capital, no other text.'
+                "role": "user",
+                "content": (
+                    f"What is the capital of {test_case['data']['country']}? "
+                    "Answer only with the capital, no other text."
+                ),
             }
-        ]
+        ],
     )
-    return response.choices[0].message.content or ''
-```
-</CodeGroup>
+    return response.choices[0].message.content or ""
 
-- Then our evaluator function `accuracy` is going to measure accuracy of executor.
-<CodeGroup>
-```javascript JavaScript
-const accuracy = async (output, target) => {
-    return await observe(
-        { name: 'accuracy', spanType: 'EVALUATOR', input: { output, target } },
-        async () => {
-            if (!target) return 0;
-            return output.includes(target) ? 1 : 0;
-        }
-    );
-};
-```
-```python Python
-@observe(name='accuracy', span_type='EVALUATOR')
+
+@observe(name="accuracy", span_type="EVALUATOR")
 async def accuracy(output, target):
-    if not target:
-        return 0
-    return 1 if target in output else 0
+    return 1 if target.lower() in output.lower() else 0
 
-```
 
-</CodeGroup>
-
-### Step 3: Create Evaluation and Datapoints
-
-First, you need to create an evaluation session, then create datapoints with test data and update them with execution results and scores.
-
-**Create Evaluation**
-
-Before creating datapoints, you must initialize an evaluation session:
-
-<CodeGroup>
-```javascript JavaScript
-const evalId = await client.evals.create({
-    name: "Capital of Country Manual Eval", 
-    groupName: "Manual API - Capital Cities" 
-});
-```
-
-```python Python
-eval_id = client.evals.create_evaluation(
-    name="Capital of Country Manual Eval", 
-    group_name="Manual API - Capital Cities"
-)
+@observe(name="length_ok", span_type="EVALUATOR")
+async def length_ok(output, target=None):
+    return 1 if 0 < len(output) < 50 else 0
 ```
 </CodeGroup>
 
-**Create/Update Datapoints**
+## Create the evaluation and datapoints
 
-The most important aspect is connecting your evaluation datapoints to the current execution trace using `trace_id` / `traceId`.
-This makes it possible to attach the created spans to a trace, which can then be inspected later in trace view.
-
-<Note>
-    You need to call `Laminar.getTraceId()` / `Laminar.get_trace_id()` inside of context of span to get id of trace.
-</Note>
-
-<Note>
-    We strongly advise to call `createDatapoint` / `create_datapoint` before calling executor/evaluator so trace can be associated as evaluation trace type.
-</Note>
+Open the evaluation up front, then loop over the test data. For each row, pre-register the datapoint, run the executor inside an `EVALUATION` span, and write scores back once the evaluators finish.
 
 <CodeGroup>
-```javascript JavaScript highlight={7}
-const datapointId = await client.evals.createDatapoint({
-    evalId,
-    data: testCase.data,
-    target: testCase.target,
-    index: i,
-    // Must be called within span context
-    traceId: Laminar.getTraceId(),
-});
+```typescript TypeScript
+const testData = [
+  { data: { country: 'France' }, target: 'Paris' },
+  { data: { country: 'Germany' }, target: 'Berlin' },
+  { data: { country: 'Japan' }, target: 'Tokyo' },
+];
 
-await client.evals.updateDatapoint({
-    evalId,
-    datapointId,
-    scores: { accuracy: accuracyScore },
-    executorOutput: { 
-        response: output, 
-        model: 'gpt-4o-mini',
-        country: testCase.data.country
+const evalId = await client.evals.createEvaluation(
+  'Manual capitals eval',
+  'capitals-manual',
+  { model: 'gpt-5-mini', run_by: 'manual-api-demo' },
+);
+
+for (let i = 0; i < testData.length; i++) {
+  const testCase = testData[i];
+
+  await observe(
+    { name: 'evaluation', spanType: 'EVALUATION', input: { testCase } },
+    async () => {
+      // Pre-register the datapoint with the current trace ID.
+      // The row shows up in the UI now, before the executor runs.
+      const datapointId = await client.evals.createDatapoint({
+        evalId,
+        data: testCase.data,
+        target: testCase.target,
+        index: i,
+        traceId: Laminar.getTraceId(),
+      });
+
+      const output = await runExecutor(testCase);
+      const accuracyScore = await accuracy(output, testCase.target);
+      const lengthOkScore = await lengthOk(output);
+
+      await client.evals.updateDatapoint({
+        evalId,
+        datapointId,
+        scores: { accuracy: accuracyScore, length_ok: lengthOkScore },
+        executorOutput: { response: output, model: 'gpt-5-mini' },
+      });
     },
-});
-```
-
-```python Python highlight={7}
-datapoint_id = client.evals.create_datapoint(
-    eval_id=eval_id,
-    data=test_case['data'],
-    target=test_case['target'],
-    index=i,
-    # Must be called within span context
-    trace_id=Laminar.get_trace_id(),
-)
-
-client.evals.update_datapoint(
-    eval_id=eval_id,
-    datapoint_id=datapoint_id,
-    scores={'accuracy': accuracy_score},
-    executor_output={
-        'response': output,
-        'model': 'gpt-4o-mini',
-        'country': test_case['data']['country']
-    },
-)
-```
-</CodeGroup>
-
-## Complete Example
-
-<CodeGroup>
-
-```javascript JavaScript [expandable]
-import { Laminar, LaminarClient, observe } from "@lmnr-ai/lmnr";
-import { OpenAI } from "openai";
-
-Laminar.initialize({
-    projectApiKey: 'your_project_api_key',
-    instrumentModules: {
-    OpenAI: OpenAI
-    }
-});
-
-const client = new LaminarClient({
-    projectApiKey: 'your_project_api_key',
-});
-const openai = new OpenAI({ apiKey: 'your_openai_api_key' });
-
-const executeTestCase = async (testCase) => {
-    return await observe(
-        { name: 'executor', spanType: 'EXECUTOR', input: testCase.data },
-        async () => {
-            const response = await openai.chat.completions.create({
-                model: 'gpt-4o-mini',
-                messages: [
-                    {
-                        role: 'user',
-                        content: `What is the capital of ${testCase.data.country}? ` +
-                          'Answer only with the capital, no other text.'
-                    }
-                ]
-            });
-            return response.choices[0].message.content || '';
-        }
-    );
-};
-
-const accuracy = async (output, target) => {
-    return await observe(
-        { name: 'accuracy', spanType: 'EVALUATOR', input: { output, target } },
-        async () => {
-            if (!target) return 0;
-            return output.includes(target) ? 1 : 0;
-        }
-    );
-};
-
-async function runEvaluation() {
-    try {
-        const testData = [
-            {
-                data: { country: 'France' },
-                target: 'Paris',
-            },
-            {
-                data: { country: 'Germany' },
-                target: 'Berlin',
-            },
-        ];
-
-        const evalId = await client.evals.create({ 
-            name: "Capital of Country Manual Eval", 
-            groupName: "Manual API - Capital Cities" 
-        });
-        
-        for (let i = 0; i < testData.length; i++) {
-            await observe(
-                { name: 'evaluation', spanType: 'EVALUATION', input: { testCase: testData[i] } },
-                async () => {
-                    const testCase = testData[i];
-
-                    // Save datapoint first to associate trace as evaluation type
-                    const datapointId = await client.evals.createDatapoint({
-                        evalId,
-                        data: testCase.data,
-                        target: testCase.target,
-                        index: i,
-                        // Must be called within span context
-                        traceId: Laminar.getTraceId(),
-                    });
-
-                    const output = await executeTestCase(testCase);
-
-                    const accuracyScore = await accuracy(output, testCase.target)
-
-                    await client.evals.updateDatapoint({
-                        evalId,
-                        datapointId,
-                        scores: { accuracy: accuracyScore },
-                        executorOutput: { 
-                            response: output, 
-                            model: 'gpt-4o-mini',
-                            country: testCase.data.country
-                        },
-                    });
-                }
-            );
-        }
-
-        await Laminar.flush();
-    } catch (error) {
-        console.error("Error:", error.message);
-    }
+  );
 }
 
-runEvaluation();
+await Laminar.flush();
 ```
 
-```python Python [expandable]
-import asyncio
-from lmnr import Laminar, LaminarClient, observe
-from openai import AsyncOpenAI
+```python Python
+test_data = [
+    {"data": {"country": "France"}, "target": "Paris"},
+    {"data": {"country": "Germany"}, "target": "Berlin"},
+    {"data": {"country": "Japan"}, "target": "Tokyo"},
+]
 
-Laminar.initialize(project_api_key='your_project_api_key')
-client = LaminarClient(project_api_key='your_project_api_key')
 
-openai_client = AsyncOpenAI(api_key='your_openai_api_key')
-
-@observe(name='executor', span_type='EXECUTOR')
-async def execute_test_case(test_case):
-    response = await openai_client.chat.completions.create(
-        model='gpt-4o-mini',
-        messages=[
-            {
-                'role': 'user',
-                'content': f"What is the capital of {test_case['data']['country']}? " +
-                           'Answer only with the capital, no other text.'
-            }
-        ]
-    )
-    return response.choices[0].message.content or ''
-
-@observe(name='accuracy', span_type='EVALUATOR')
-async def accuracy(output, target):
-    if not target:
-        return 0
-    return 1 if target in output else 0
-
-@observe(name='evaluation', span_type='EVALUATION')
-async def run_evaluation_session(eval_id, i, test_case):
-    # Save datapoint first to associate trace as evaluation type
+async def run_one(eval_id, index, test_case):
+    # Phase 2: pre-register the datapoint. A row appears in the UI now.
     datapoint_id = client.evals.create_datapoint(
         eval_id=eval_id,
-        data=test_case['data'],
-        target=test_case['target'],
-        index=i,
-        # Must be called within span context
-        trace_id=Laminar.get_trace_id(),
+        data=test_case["data"],
+        target=test_case["target"],
+        index=index,
     )
 
-    output = await execute_test_case(test_case)
+    @observe(name="evaluation", span_type="EVALUATION")
+    async def run_inside_span():
+        # Link the datapoint to the evaluation trace that is now active.
+        trace_id = Laminar.get_trace_id()
+        client.evals.update_datapoint(
+            eval_id=eval_id,
+            datapoint_id=datapoint_id,
+            scores={},
+            trace_id=trace_id,
+        )
 
-    accuracy_score = await accuracy(output, test_case['target'])
+        output = await run_executor(test_case)
+        accuracy_score = await accuracy(output, test_case["target"])
+        length_ok_score = await length_ok(output, test_case["target"])
+        return output, {"accuracy": accuracy_score, "length_ok": length_ok_score}
 
+    output, scores = await run_inside_span()
+
+    # Phase 3: write the final executor output and scores.
     client.evals.update_datapoint(
         eval_id=eval_id,
         datapoint_id=datapoint_id,
-        scores={'accuracy': accuracy_score},
-        executor_output={
-            'response': output,
-            'model': 'gpt-4o-mini',
-            'country': test_case['data']['country']
-        },
+        executor_output={"response": output, "model": "gpt-5-mini"},
+        scores=scores,
     )
 
-async def run_evaluation():
-    try:
-        test_data = [
-            {
-                'data': {'country': 'France'},
-                'target': 'Paris',
-            },
-            {
-                'data': {'country': 'Germany'},
-                'target': 'Berlin',
-            },
-        ]
 
-        eval_id = client.evals.create_evaluation(
-            name="Capital of Country Manual Eval",
-            group_name="Manual API - Capital Cities"
-        )
+async def main():
+    eval_id = client.evals.create_evaluation(
+        name="Manual capitals eval",
+        group_name="capitals-manual",
+        metadata={"model": "gpt-5-mini", "run_by": "manual-api-demo"},
+    )
 
-        for i, test_case in enumerate(test_data):
-            await run_evaluation_session(eval_id, i, test_case)
+    for index, test_case in enumerate(test_data):
+        await run_one(eval_id, index, test_case)
 
-        Laminar.flush()
-
-    except Exception as error:
-        print(f"Error: {error}")
-
-if __name__ == "__main__":
-    asyncio.run(run_evaluation())
+    Laminar.flush()
 ```
-
 </CodeGroup>
 
-## Evaluation Results
+<Note>
+The two SDKs link traces to datapoints in slightly different places. TypeScript accepts `traceId` on `createDatapoint` only, so call it from inside the `EVALUATION` span and pass `Laminar.getTraceId()` there. Python's `update_datapoint` accepts `trace_id`, so you can register the datapoint *before* the span opens and link the trace once it's running. The Python pattern is what you want when the row needs to be visible before you know which trace will own it.
+</Note>
 
-When you run the following example of manual evaluation, you'll see detailed tracing and evaluation results in your Laminar dashboard:
+## Decoupling the executor from the scorer
 
-<Frame>
-  <img src="/images/evaluations/manual-evaluation.png" alt="Manual evaluation results showing tracing hierarchy with evaluation, executor, and evaluator spans, along with datapoint scores and metadata" />
+Because `update_datapoint` can be called any time after `create_datapoint`, executor and scorer can live in different processes. A common shape:
+
+1. A worker runs the agent, produces a trace, and calls `update_datapoint` with `executor_output` and an empty `scores={}` dict.
+2. A judge process reads `executor_output` from the dataset or from the agent's output store, scores it, and calls `update_datapoint` again with the filled-in `scores`.
+
+Both writes target the same `datapoint_id`. The UI updates in place each time.
+
+## Backfilling without running the executor
+
+For pure backfills (rows you already have outputs and scores for, no live executor), loop `create_datapoint` + `update_datapoint` over the pre-scored rows:
+
+```python
+eval_id = client.evals.create_evaluation(
+    name="Backfilled capitals",
+    group_name="capitals",
+)
+
+for i, row in enumerate(rows):
+    datapoint_id = client.evals.create_datapoint(
+        eval_id=eval_id,
+        data=row["data"],
+        target=row["target"],
+        index=i,
+    )
+    client.evals.update_datapoint(
+        eval_id=eval_id,
+        datapoint_id=datapoint_id,
+        executor_output=row["output"],
+        scores=row["scores"],
+    )
+```
+
+No `EVALUATION` span is opened, so no trace is attached. The row shows `data`, `target`, `executor_output`, and `scores`, which is enough for the list view, progression chart, and side-by-side comparison. Use this when you want the numbers in Laminar but don't need per-row transcript drill-down.
+
+## Result
+
+Manual evaluations show up in the same evaluations list, progression chart, and comparison UI as `evaluate()` runs. Groups, per-datapoint deltas, and CSV export all work the same way.
+
+<Frame caption="Manual evaluation detail page. Progression chart and datapoint table match what evaluate() produces">
+  <img src="/images/evaluations/manual-evaluation-trace.png" alt="Evaluation detail page for Manual capitals eval with length_ok averaging 1.00 across six datapoints" />
 </Frame>
+
+Clicking a row opens the transcript for that datapoint's trace, with the full `EVALUATION` root, `EXECUTOR`, and `EVALUATOR` nesting you'd expect from `evaluate()`.
+
+<Frame caption="One datapoint's transcript: EVALUATION root, executor, the gpt-5-mini call, and accuracy / length_ok scores">
+  <img src="/images/evaluations/manual-evaluation.png" alt="Manual evaluation trace with EVALUATION, EXECUTOR, gpt-5-mini, accuracy, and length_ok spans" />
+</Frame>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" href="/evaluations/quickstart" icon="play">
+    The high-level `evaluate()` API, which is the right starting point for most cases.
+  </Card>
+  <Card title="Compare runs" href="/evaluations/comparing-runs" icon="chart-line">
+    Group manual runs so you can compare them like any other evaluation.
+  </Card>
+  <Card title="Concepts" href="/evaluations/concepts" icon="boxes">
+    The datapoint / executor / evaluator / group model the manual API maps onto.
+  </Card>
+  <Card title="SDK reference" href="/sdk/client" icon="code">
+    Full parameters for `LaminarClient.evals` methods.
+  </Card>
+</CardGroup>

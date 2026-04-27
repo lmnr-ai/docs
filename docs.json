@@ -93,19 +93,11 @@
             "pages": [
               "evaluations/introduction",
               "evaluations/quickstart",
-              "evaluations/using-dataset",
-              "evaluations/human-evaluators",
-              "evaluations/configuration",
+              "evaluations/concepts",
+              "evaluations/comparing-runs",
+              "evaluations/datasets",
               "evaluations/manual-evaluation",
-              "evaluations/cookbook",
-              {
-                "group": "Online Evaluators",
-                "pages": [
-                  "evaluations/online-evaluators/introduction",
-                  "evaluations/online-evaluators/scoring-with-hosted-evaluators",
-                  "evaluations/online-evaluators/scoring-with-sdk"
-                ]
-              }
+              "evaluations/self-hosted"
             ]
           },
           {
