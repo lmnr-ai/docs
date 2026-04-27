@@ -1,302 +1,246 @@
 ---
-title: Get started with Laminar evaluations
+title: Evaluations quickstart
 sidebarTitle: Quickstart
 ---
 import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
 
-Laminar provides a structured approach to create, run, and track your AI system's performance through these key components:
+In this quickstart you'll write a tiny evaluation, run it, and read the results in Laminar. The example asks an LLM for the capital of a country and scores each answer on correctness and brevity.
 
-- **Executors** - Functions that process inputs and produce outputs, such as prompt templates, LLM calls, or production logic
-- **Evaluators** - Functions that assess outputs against targets or quality criteria, producing numeric scores
-- **Datasets** - Collections of datapoints (test cases) with 3 key elements:
-  - `data` - Required JSON input sent to the executor
-  - `target` - Optional reference data sent to the evaluator, typically containing expected outputs
-  - `metadata` - Optional metadata. This can be used to filter evaluation results in the UI after the evaluation is run.
-- **Visualization** - Tools to track performance trends and detect regressions over time
-- **Tracing** - Automatic recording of execution flow and model invocations
-
-Example datapoint:
-```json5
-{
-  "data": {
-    "question": "What is the capital of France? Respond in one word.",
-  },
-  "target": {
-    "answer": "Paris"
-  },
-  "metadata": {
-    "category": "geography"
-  }
-}
-```
-
-**Evaluation Groups** group related evaluations to assess one feature or component, with results aggregated for comparison.
-
-## Evaluation Lifecycle
-
-For each datapoint in a dataset:
-
-1. The executor receives the `data` as input
-2. The executor runs and its output is stored
-3. Both the executor output and `target` are passed to the evaluator
-4. The evaluator produces either a numeric score or a JSON object with multiple numeric scores
-5. Results are stored and can be visualized to track performance over time
-
-This approach helps you continuously measure your AI system's performance as you make changes, showing the impact of model updates, prompt revisions, and code changes.
-
-### Evaluation function types
-
-Each executor takes in the `data` as it is defined in the datapoints.
-Evaluator accepts the output of the executor as its first argument,
-and `target` as it's defined in the datapoints as the second argument.
-
-This means that the type of the `data` fields in your datapoints must
-match the type of the first parameter of the executor function. Similarly,
-the type of the `target` fields in your datapoints must match the type of
-the second parameter of the evaluator function(s).
-
-Python is a bit more permissive. If you see type errors in TypeScript,
-make sure the data types and the parameter types match.
-
-For a more precise description, here's the partial TypeScript type signature of the `evaluate` function:
-
-```javascript
-evaluate<D, T, O>(
-  data: {
-    data: D,
-    target?: T,
-  },
-  executor: (data: D, ...args: any[]) => O | Promise<O>;
-  evaluators: {
-    [key: string]: (output: O, target?: T, ...args: any[]) => 
-      number | { [key: string]: number }
-  },
-  // ... other parameters
-)
-```
-
-See full reference in the [SDK docs](/sdk/reference).
-
-## Create your first evaluation
-
-### Prerequisites
+## Prerequisites
 
 <GetProjectApiKey />
 
-### Create an evaluation file
+Install the SDK and set your API key:
 
 <Tabs>
-<Tab title = "TypeScript">
+<Tab title="TypeScript">
+```bash
+npm install @lmnr-ai/lmnr openai
+export LMNR_PROJECT_API_KEY=<YOUR_PROJECT_API_KEY>
+```
+</Tab>
+<Tab title="Python">
+```bash
+pip install lmnr openai
+export LMNR_PROJECT_API_KEY=<YOUR_PROJECT_API_KEY>
+```
+</Tab>
+</Tabs>
 
-Create a file named `my-first-evaluation.ts` and add the following code:
+## Write the evaluation
 
-```javascript my-first-evaluation.ts
+The file below has all four parts of an evaluation: a list of datapoints, an executor that calls the LLM, two evaluators (one for correctness, one for output length), and a name so you can find it later.
+
+<Tabs>
+<Tab title="TypeScript">
+```typescript capitals-eval.ts
 import { evaluate } from '@lmnr-ai/lmnr';
-import { OpenAI } from 'openai';  
+import { OpenAI } from 'openai';
 
-const client = new OpenAI();
+const openai = new OpenAI();
 
-const capitalOfCountry = async (data: {country: string}) => {
-  // replace this with your LLM call or custom logic
-  const response = await client.chat.completions.create({
-    model: 'gpt-4.1-nano',
+const capitalOfCountry = async (data: { country: string }) => {
+  const response = await openai.chat.completions.create({
+    model: 'gpt-5-mini',
     messages: [
       {
         role: 'user',
-        content: `What is the capital of ${data['country']}? ` +
-          'Answer only with the capital, no other text.'
-      }
-    ]
+        content:
+          `What is the capital of ${data.country}? ` +
+          'Answer only with the capital, no other text.',
+      },
+    ],
   });
-  return response.choices[0].message.content || '';
-}
+  return response.choices[0].message.content ?? '';
+};
+
+const accuracy = (output: string, target: string) =>
+  output.toLowerCase().includes(target.toLowerCase()) ? 1 : 0;
+
+const lengthOk = (output: string) =>
+  output.length > 0 && output.length < 50 ? 1 : 0;
 
 evaluate({
   data: [
-    {
-      data: { country: 'France' },
-      target: 'Paris',
-    },
-    {
-      data: { country: 'Germany' },
-      target: 'Berlin',
-    },
+    { data: { country: 'France' }, target: 'Paris' },
+    { data: { country: 'Germany' }, target: 'Berlin' },
+    { data: { country: 'Japan' }, target: 'Tokyo' },
+    { data: { country: 'Brazil' }, target: 'Brasília' },
+    { data: { country: 'Australia' }, target: 'Canberra' },
+    { data: { country: 'Canada' }, target: 'Ottawa' },
   ],
   executor: capitalOfCountry,
-  evaluators: {
-    accuracy: (output: string, target: string | undefined): number => {
-      if (!target) return 0;
-      return output.includes(target) ? 1 : 0;
-    } 
+  evaluators: { accuracy, lengthOk },
+  name: 'Capitals v1 (gpt-5-mini)',
+  groupName: 'capitals',
+  config: {
+    instrumentModules: { OpenAI },
   },
-  config: { 
-    instrumentModules: {
-      OpenAI: OpenAI
-    }
-  }
-})
+});
 ```
 
 <Note>
-It is important to pass the `config` object with `instrumentModules` to `evaluate` to ensure that the OpenAI client and any other instrumented modules are instrumented.
+Pass `instrumentModules` so Laminar instruments the OpenAI client. Without it, LLM calls still run but they won't appear as spans on the executor trace.
 </Note>
 </Tab>
-<Tab title = "Python">
-
-Create a file named `my-first-evaluation.py` and add the following code:
-
-```python my-first-evaluation.py
+<Tab title="Python">
+```python capitals_eval.py
 from lmnr import evaluate
 from openai import OpenAI
 
 client = OpenAI()
 
+
 def capital_of_country(data: dict) -> str:
-    # replace this with your LLM call or custom logic
-    return client.chat.completions.create(
-        model="gpt-4.1-nano",
+    response = client.chat.completions.create(
+        model="gpt-5-mini",
         messages=[
             {
                 "role": "user",
-                "content": f"What is the capital of {data['country']}? " +
+                "content": (
+                    f"What is the capital of {data['country']}? "
                     "Answer only with the capital, no other text."
+                ),
             }
-        ]
-    ).choices[0].message.content
+        ],
+    )
+    return response.choices[0].message.content or ""
+
 
 def accuracy(output: str, target: str) -> int:
-    return 1 if target in output else 0
+    return 1 if target.lower() in output.lower() else 0
+
+
+def length_ok(output: str, *_args, **_kwargs) -> int:
+    return 1 if 0 < len(output) < 50 else 0
+
 
 evaluate(
     data=[
-        {
-            "data": {"country": "France"},
-            "target": "Paris"
-        },
-        {
-            "data": {"country": "Germany"},
-            "target": "Berlin"
-        },
+        {"data": {"country": "France"}, "target": "Paris"},
+        {"data": {"country": "Germany"}, "target": "Berlin"},
+        {"data": {"country": "Japan"}, "target": "Tokyo"},
+        {"data": {"country": "Brazil"}, "target": "Brasília"},
+        {"data": {"country": "Australia"}, "target": "Canberra"},
+        {"data": {"country": "Canada"}, "target": "Ottawa"},
     ],
     executor=capital_of_country,
-    evaluators={"accuracy": accuracy}
+    evaluators={
+        "accuracy": accuracy,
+        "length_ok": length_ok,
+    },
+    name="Capitals v1 (gpt-5-mini)",
+    group_name="capitals",
 )
 ```
 </Tab>
 </Tabs>
 
-### Run the evaluation
+A few things worth pointing out:
 
-You can run evaluations in two ways: using the `lmnr eval` CLI or directly executing the evaluation file.
+- The executor's type on `data` matches the shape of each datapoint's `data` field. Evaluators take the executor's return as their first argument and `target` as their second.
+- Evaluators return a number. You can also return a dict if one evaluator produces multiple score dimensions (for example `{ "precision": 0.9, "recall": 0.8 }`).
+- `groupName` / `group_name` ties related runs together. Keep it stable across prompt and model changes so Laminar can [compare runs](/evaluations/comparing-runs) and draw a progression chart.
+- No `Laminar.initialize()` needed. `evaluate()` initializes Laminar on first call.
 
-#### Using the CLI
+## Run it
 
-The Laminar CLI automatically detects top-level `evaluate` function calls in your files - you don't need to wrap them in a `main` function or any special structure.
+You have two options. Pick whichever fits your workflow.
 
-<Tabs>
-<Tab title = "TypeScript">
-```sh
-export LMNR_PROJECT_API_KEY=<YOUR_PROJECT_API_KEY>
-npx lmnr eval my-first-evaluation.ts
-```
-
-To run multiple evaluations, place them in an `evals` directory with the naming pattern `*.eval.{ts,js}`:
-
-```
-├─ src/
-├─ evals/
-│  ├── my-first-evaluation.eval.ts
-│  ├── my-second-evaluation.eval.ts
-│  ├── ...
-```
-
-Then run all evaluations with a single command:
-```sh
-npx lmnr eval
-```
-
-CLI options:
-- First positional argument: path to the evaluation file (optional).
-- Without a path, `lmnr eval` runs all files matching `*.eval.{ts,js}` in `evals/`.
-- `--fail-on-error`: fail on non-critical errors (e.g., missing `evaluate` call). Default `false`.
-</Tab>
-<Tab title = "Python">
-```sh
-# 1. Make sure `lmnr` is installed in a virtual environment
-# lmnr --help
-# 2. Run the evaluation
-export LMNR_PROJECT_API_KEY=<YOUR_PROJECT_API_KEY>
-lmnr eval my-first-evaluation.py
-```
-
-To run multiple evaluations, place them in an `evals` directory with the naming pattern `eval_*.py` or `*_eval.py`:
-
-```
-├─ src/
-├─ evals/
-│  ├── eval_first.py
-│  ├── second_eval.py
-│  ├── ...
-```
-
-Then run all evaluations with a single command:
-```sh
-lmnr eval
-```
-
-CLI options:
-- First positional argument: path to the evaluation file (optional).
-- Without a path, `lmnr eval` runs all files matching `eval_*.py` or `*_eval.py` in `evals/`.
-- `--fail-on-error`: fail on non-critical errors (e.g., missing `evaluate` call). Default `false`.
-</Tab>
-</Tabs>
-
-#### Running as a standalone script
-
-You can also import and call `evaluate` directly from your application code:
+### As a script
 
 <Tabs>
-<Tab title = "TypeScript">
+<Tab title="TypeScript">
 ```bash
-tsx my-first-evaluation.ts
-# or
-npx tsx my-first-evaluation.ts
+npx tsx capitals-eval.ts
 ```
 </Tab>
-<Tab title = "Python">
+<Tab title="Python">
 ```bash
-python my-first-evaluation.py
+python capitals_eval.py
 ```
 </Tab>
 </Tabs>
 
-The `evaluate` function is flexible and can be used both in standalone scripts processed by the CLI and integrated directly into your application code.
+### Via the CLI
 
-<Tip>
-Evaluator functions must return either a single numeric score or a JSON object where each key is a score name and the value is a numeric score.
-</Tip>
+The CLI discovers evaluation files in an `evals/` directory and runs them all in one pass. Use this in CI or when you want to run a suite.
 
-<Note>
-No need to initialize Laminar - `evaluate` automatically initializes Laminar behind the scenes. All instrumented function calls and model invocations are traced without any additional setup.
-</Note>
+<Tabs>
+<Tab title="TypeScript">
+Files named `*.eval.ts` or `*.eval.js` under `evals/` are picked up automatically:
 
-### View evaluation results
+```
+project/
+├─ src/
+└─ evals/
+   ├─ capitals.eval.ts
+   └─ tone.eval.ts
+```
 
-When you run an evaluation from the CLI, Laminar will output the link to the dashboard where you can view the evaluation results.
+```bash
+npx lmnr eval              # runs every *.eval.{ts,js} under evals/
+npx lmnr eval capitals-eval.ts   # runs a single file
+```
+</Tab>
+<Tab title="Python">
+Files named `eval_*.py` or `*_eval.py` under `evals/` are picked up automatically:
 
-Laminar stores every evaluation result. A run for every datapoint is represented as a trace. You can view the results and corresponding traces in the evaluations page.
+```
+project/
+├─ src/
+└─ evals/
+   ├─ capitals_eval.py
+   └─ tone_eval.py
+```
 
-<Frame>
-  <img
-    height="300"
-    src="/images/evaluations/simple-eval-example.png"
-    alt="Example evaluation"
-  />
+```bash
+lmnr eval                  # runs every eval_*.py or *_eval.py under evals/
+lmnr eval capitals_eval.py # runs a single file
+```
+</Tab>
+</Tabs>
+
+When the run finishes, the SDK prints a link to the evaluation page in Laminar.
+
+## Read the results
+
+Every datapoint becomes one trace. Every trace gets one score per evaluator.
+
+<Frame caption="Single evaluation run: average score at the top, per-datapoint table below">
+  <img src="/images/evaluations/eval-detail.png" alt="Evaluation detail page showing 1.00 average on length_ok and six datapoints, each with accuracy and length_ok columns set to 1" />
 </Frame>
 
-### Add custom columns
+Click any datapoint row to open the trace in a side panel. The trace shows the extracted input, the executor span, the LLM call nested under it, and the evaluator spans with their scores.
 
-In the evaluation results table, click `Columns` → `Add column` to create a computed column from SQL. This is useful for pulling fields out of `metadata`, `data`, `target`, or `scores` without changing your evaluation code.
+<Frame caption="Drill-down into a single datapoint: the executor span, nested model span, and evaluator scores">
+  <img src="/images/evaluations/eval-transcript.png" alt="Transcript view of a single evaluation datapoint with the Input block, executor span, model span, and accuracy and length_ok evaluator scores" />
+</Frame>
+
+## Change something and run it again
+
+Keep `groupName` the same and change the thing you want to test. The second run lands in the same group, and Laminar charts the average of every score dimension over time.
+
+For example, change the prompt so the model returns a full explanatory sentence:
+
+```python
+"content": (
+    f"What is the capital of {data['country']}? "
+    "Answer in ONE sentence explaining a fun fact."
+),
+```
+
+Rerun. Because the output is now longer than 50 characters, `length_ok` drops from 1.0 to 0.0 for every datapoint while `accuracy` stays at 1.0. That's a regression you caught before production.
+
+<Frame caption="The capitals group after three runs. length_ok goes from 1.0 on v1 and v2 to 0.0 on v3 (gpt-3.5 with a chatty prompt); accuracy stays flat">
+  <img src="/images/evaluations/eval-list.png" alt="Evaluations list filtered by capitals group with a progression chart at the top showing length_ok dropping to zero on the most recent run" />
+</Frame>
+
+See [Compare runs](/evaluations/comparing-runs) for side-by-side diffs and per-datapoint deltas.
+
+## Add custom columns
+
+In the evaluation results table, click **Columns → Add column** to create a computed column from SQL. This is useful for pulling fields out of `metadata`, `data`, `target`, or `scores` without changing your evaluation code.
 
 Example: extract a model name from JSON metadata:
 
@@ -304,46 +248,21 @@ Example: extract a model name from JSON metadata:
 simpleJSONExtractString(simpleJSONExtractRaw(metadata, 'llm'), 'model')
 ```
 
-Pick a data type (usually `String` or `Float64`) and save. The expression is evaluated per row on `evaluation_datapoints`. For more JSON parsing functions, see the SQL Editor guide at `/platform/sql-editor`.
+Pick a data type (usually `String` or `Float64`) and save. The expression runs per row on `evaluation_datapoints`. For more JSON parsing functions, see the [SQL editor](/platform/sql-editor).
 
-## Tracking evaluation progress
+## Next steps
 
-To track the score progression over time or compare evaluations side-by-side, you need to group them together. This can be achieved by passing the `groupName` parameter to the `evaluate` function.
-
-<Tabs>
-<Tab title="TypeScript">
-```javascript {7}
-import { evaluate, LaminarDataset } from '@lmnr-ai/lmnr';
-
-evaluate({
-    data: new LaminarDataset("name_of_your_dataset"),
-    executor: yourExecutorFunction,
-    evaluators: {evaluatorName: yourEvaluator},
-    groupName: "evals_group_1",
-});
-```
-</Tab>
-<Tab title="Python">
-```python {9}
-from lmnr import evaluate, LaminarDataset
-import os
-
-evaluate(
-    data=LaminarDataset("name_of_your_dataset"),
-    executor=your_executor_function,
-    evaluators={"evaluator_name": your_evaluator},
-    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
-    group_name="evals_group_1",
-    # ... other optional parameters
-)
-```
-</Tab>
-</Tabs>
-
-<Frame>
-  <img
-    height="300"
-    src="/images/evaluations/eval-progress.png"
-    alt="Example evaluation progression"
-  />
-</Frame>
+<CardGroup cols={2}>
+  <Card title="Concepts" href="/evaluations/concepts" icon="boxes">
+    The executor, evaluator, datapoint, and group model in detail.
+  </Card>
+  <Card title="Compare runs" href="/evaluations/comparing-runs" icon="chart-line">
+    Group runs, read the progression chart, diff side-by-side.
+  </Card>
+  <Card title="Datasets" href="/evaluations/datasets" icon="database">
+    Point `evaluate()` at a Laminar dataset instead of a hardcoded list.
+  </Card>
+  <Card title="Manual API" href="/evaluations/manual-evaluation" icon="wrench">
+    Lower-level control for pipelines where `evaluate()` is too opinionated.
+  </Card>
+</CardGroup>

@@ -2,21 +2,30 @@
 title: Evaluations
 ---
 
-Evaluations score traces so you can quantify improvements and catch regressions as models, prompts, and code change.
+Evaluations are the offline testing layer for your agents and LLM pipelines. Define inputs, run them through the version you want to test, score the outputs, and compare across runs to see if anything regressed.
 
 <CardGroup cols={2}>
-  <Card title="Introduction" href="/evaluations/introduction">
-    What evals are and when to use them.
+  <Card title="Introduction" href="/evaluations/introduction" icon="sparkles">
+    What evaluations are and when to use them.
   </Card>
-  <Card title="Quickstart" href="/evaluations/quickstart">
-    Run your first evaluation.
+  <Card title="Quickstart" href="/evaluations/quickstart" icon="play">
+    Write and run your first evaluation in five minutes.
   </Card>
-  <Card title="Using a Dataset" href="/evaluations/using-dataset">
-    Evaluate against curated data.
+  <Card title="Concepts" href="/evaluations/concepts" icon="boxes">
+    Datapoints, executors, evaluators, and how they map to traces.
   </Card>
-  <Card title="Online Evaluators" href="/evaluations/online-evaluators/introduction">
-    Score production traffic continuously.
+  <Card title="Compare runs" href="/evaluations/comparing-runs" icon="chart-line">
+    Groups, the progression chart, and side-by-side comparison.
+  </Card>
+  <Card title="Datasets" href="/evaluations/datasets" icon="database">
+    Back your evaluation with a Laminar dataset instead of hardcoded data.
+  </Card>
+  <Card title="Manual API" href="/evaluations/manual-evaluation" icon="wrench">
+    Lower-level control for pipelines where `evaluate()` is too opinionated.
+  </Card>
+  <Card title="Self-hosted" href="/evaluations/self-hosted" icon="server">
+    Point the SDK at a self-hosted Laminar instance.
   </Card>
 </CardGroup>
 
-Next: turn failures into reusable test data with [Datasets](/datasets) and [Queues](/queues/quickstart).
+Next: turn failing traces into reusable evaluation data with [Datasets](/datasets/introduction), or catch regressions in production with [Signals](/signals/introduction).
