@@ -1,67 +1,113 @@
 ---
-title: "Custom Dashboards"
-sidebarTitle: "Custom Dashboards"
+title: "Dashboards"
+sidebarTitle: "Dashboards"
 ---
 
-<Frame>
-    <img src="/images/custom-dashboard/introduction.gif" alt="Laminar Custom Dashboard Introduction" />
-</Frame>
-
-## What You Can Track
-
-Custom Dashboards are built on top of our powerful query engine, working across all your observability data - `traces`, `spans`, `events`, and `tags`. You can track any metric that matters to your application.
-
-For detailed information on available entities, fields, and how to select the right data for your charts, see the [SQL Editor Reference](/sql-editor/reference). 
-## How to Build Charts
-
-To create a chart, navigate to **dashboard** menu and click the **`+ Chart`** button in the upper right corner.
+Dashboards are a grid of charts you build over your traces, spans, signal events, and tags. Mix line charts, bar charts, horizontal bars, and tables on one canvas, resize each card, and every chart shares the same time range so you read everything against the same window.
 
 <Frame>
-    <img src="/images/custom-dashboard/chart-builder-flow.gif" alt="Chart Builder flow" />
+  <img src="/images/custom-dashboard/dashboards-overview.png" alt="A Laminar dashboard showing a mix of line, bar, horizontal bar, and table charts" />
 </Frame>
 
-**The process:**
+## Start from a preset
 
-1. **Pick visualization**: 
-   - **Line Chart**: For time series visualization. We automatically prefill and group data by time range, perfect for tracking trends over time.
-   - **Bar Chart**: Another alternative to visualize time series data, useful when you want to emphasize individual time periods.
-   - **Horizontal Bar Chart**: For visualizations that need to be ranked, similar to a sortable table. Use this to compare and rank items (e.g., top users, models by cost).
+The **`+ Chart`** button opens a preset picker grouped by data source: **Traces**, **Spans**, **Signals**, plus **Custom** for the blank chart builder. Pick one and you land in the chart editor with the query already shaped; tweak filters, group-bys, or the name before saving.
 
-2. **Select data source**: Traces, Spans, Events, and Tags
+<Frame>
+  <img src="/images/custom-dashboard/chart-presets.png" alt="Chart presets popover with Custom option and Traces/Spans/Signals tabs" />
+</Frame>
 
-3. **Define metrics**: What to measure (count, sum, avg, min, max, p90, p95, p99)
+Presets that ship today:
 
-4. **Add context**: Filters to narrow scope, grouping to break down by dimensions, order by fields, limits for top N results
+- **Traces**: Trace p90 cost, Trace p90 duration, New traces, Total duration, Expensive traces, Longest traces.
+- **Spans**: Total cost, Total tokens, Tokens by model, Top span names, Expensive spans, Longest spans.
+- **Signals**: Signal events, Signal events table.
 
-5. **Save and customize**: Add to dashboard, resize as needed
+## Chart types
+
+<Frame>
+  <img src="/images/custom-dashboard/chart-types.png" alt="Chart type dropdown showing Line Chart, Bar Chart, Horizontal Bar, and Table" />
+</Frame>
+
+- **Line Chart**: time series. Data is grouped by an interval that auto-adjusts to the selected time range.
+- **Bar Chart**: time series as vertical bars. Useful when you want to emphasize individual buckets.
+- **Horizontal Bar**: ranked comparisons. Clicking a bar opens the underlying trace or span in a side panel.
+- **Table**: a SQL-backed data dump with sortable columns, infinite scroll, and column order, width, and visibility that persist on the chart. Rows render an inline link in the `trace_id` or `id` column that opens the trace.
+
+## Click and drag to narrow a time range
+
+Drag across any time-series chart to highlight a range. The same range overlays every other chart on the dashboard via a shared sync, so you can see the selection land across every panel at once.
+
+<Frame>
+  <img src="/images/custom-dashboard/drag-to-select.png" alt="Drag selection across dashboard charts with a Zoom to selection and Open in traces toolbar" />
+</Frame>
+
+When you release the drag, a floating toolbar shows the selected window and its duration, plus two actions:
+
+- **Zoom to selection** rewrites the dashboard's `startDate` and `endDate` so every chart re-queries against the narrower window.
+- **Open in traces** opens the Traces page in a new tab, pre-filtered to the same window.
+
+## Open a trace from a chart
+
+Horizontal bar rows and table rows are clickable. Clicking a bar or an `id` or `trace_id` cell opens the trace in a side panel so you can jump from a metric straight to the run that produced it, with no need to copy an ID into the Traces page.
+
+This works because the chart editor auto-injects the relevant id column into the query when you pick a table that has one (`traces`, `spans`, `signal_events`). The injected column is hidden from the chart's visual output but carries through to the click handler.
+
+## Building a chart
+
+To create a chart from scratch, click **`+ Chart`** and choose **Custom**.
+
+<Frame>
+  <img src="/images/custom-dashboard/chart-builder-flow.gif" alt="Building a chart in the editor" />
+</Frame>
+
+The editor asks for:
+
+1. **Type**: line, bar, horizontal bar, or table (see above).
+2. **Table**: `traces`, `spans`, `signal_events`, or `tags`.
+3. **Metric**: one of `count`, `sum`, `avg`, `min`, `max`, `p90`, `p95`, `p99` on a column. Tables use a column picker instead of a metric.
+4. **Filters**: narrow rows before aggregation.
+5. **Group By**: break the metric down by a dimension (e.g. `model`, `provider`, `span_type`).
+6. **Order By** and **Limit**: relevant to horizontal bar and table.
+7. **Display Value**: covered below.
+
+For the full reference on tables, columns, and SQL semantics, see the [SQL Editor reference](/platform/sql-editor#table-schemas).
+
+## Display Value
+
+Line and bar charts can render a headline number above the plot: the total across the visible window, the average across buckets, or nothing.
+
+<Frame>
+  <img src="/images/custom-dashboard/display-value.png" alt="Display Value dropdown with None, Total, Average" />
+</Frame>
+
+The displayed value uses smart unit formatting: cost columns render with a `$` prefix, duration columns render with a seconds suffix, everything else renders as a plain number.
 
 ## Examples
 
-### Total Tokens by Model
+### Total tokens by model
 
-See which models consume the most tokens to identify where your LLM costs are going. Use this to decide if you're using the right model for each use case.
-
-<Frame>
-    <img src="/images/custom-dashboard/total-tokens-by-model.png" alt="Total tokens by model chart" />
-</Frame>
-
-**How to build:**
-- Chart type: Line Chart
-- Table: `spans`
-- Metric: `total_tokens` with `sum` aggregation
-- Group by: `model`
-- Filter: `span_type` = `LLM` (to include only LLM calls)
-
-### p90 Cost by Provider
-
-Track cost trends across different LLM providers over time. The p90 metric shows what most of your expensive requests cost, helping you compare provider pricing and spot cost increases.
+See which models consume the most tokens, and how that breakdown shifts over time.
 
 <Frame>
-    <img src="/images/custom-dashboard/p90-cost-by-provider.png" alt="p90 cost by provider chart" />
+  <img src="/images/custom-dashboard/total-tokens-by-model.png" alt="Total tokens by model chart" />
 </Frame>
 
-**How to build:**
-- Chart type: Line Chart
+- Type: Line Chart
 - Table: `spans`
-- Metric: `cost` with `p90` aggregation
-- Group by: `provider`
+- Metric: `total_tokens` with `sum`
+- Group By: `model`
+- Filter: `span_type = LLM`
+
+### p90 cost by provider
+
+Track what your p90 (the cost of your more expensive requests) looks like across providers, so you can spot cost regressions early.
+
+<Frame>
+  <img src="/images/custom-dashboard/p90-cost-by-provider.png" alt="p90 cost by provider chart" />
+</Frame>
+
+- Type: Line Chart
+- Table: `spans`
+- Metric: `cost` with `p90`
+- Group By: `provider`

@@ -67,6 +67,15 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - **Concrete speech, not abstract definitions**: "If you've written a Slack message that starts with 'can you look through today's runs...'" beats "Signals are for open-ended investigations".
 - Keep one or two `<Note>` callouts per page for side information that would otherwise break flow (e.g. "these are queryable via `signal_events`"). Don't inline the detail into prose.
 
+## Dashboards
+
+- The Dashboards page (`/custom-dashboards/overview`) lives under the **Platform** sidebar group, not its own tab — the file path is legacy (`custom-dashboards/`), but the product is simply "Dashboards" now. Use that label in prose; the sidebar label in the Laminar app reads `dashboards` (lowercase).
+- Chart types in the UI are `LineChart`, `BarChart`, `HorizontalBarChart`, and `Table` (defined in `frontend/components/chart-builder/types.ts`). The `feat: Dashboards Enhancement` commit (eedbf77) briefly referenced a Metric type in its message, but it was not kept in the shipped enum — do not document Metric as a chart type.
+- Chart presets are defined in `frontend/components/dashboards/chart-presets.ts` and grouped by table (`traces` / `spans` / `signals`). When listing them in docs, keep the order the array uses so the tabs in screenshots match the text. The **Custom** entry in the `+ Chart` popover is the blank chart builder, not a preset category.
+- Click-to-trace on horizontal bar and table charts depends on `injectIdMetrics` adding a hidden `__hidden_trace_id` / `__hidden_span_id` / `__hidden_id` column. Only tables that actually have that id column (`traces`, `spans`, `signal_events`) get clickable rows; others render as plain charts. Don't promise clickable rows for chart types other than Horizontal Bar and Table.
+- Drag-to-select fires `SelectionToolbar` (`frontend/components/dashboards/selection-toolbar.tsx`). "Zoom to selection" rewrites `startDate` / `endDate` on the dashboard URL and deletes `pastHours`; "Open in traces" opens `/project/<pid>/traces?startDate=...&endDate=...` in a **new tab** via `window.open`. Describe it as a new-tab action in docs — readers lose their dashboard selection otherwise.
+- The `Display Value` selector only applies to Line and Bar charts (Horizontal Bar and Table hide it). Values are `none` / `total` / `average`; the legacy `total: true` flag still resolves to `"total"` via `resolveDisplayMode` for backward compatibility. Don't document an "average by bucket" or "latest value" mode — those don't exist in the current enum.
+
 ## Alerts and reports coupling
 
 - Alerts are **project-level** (`/repos/lmnr/app-server` writes to `alerts` / `alert_targets`); reports are **workspace-level** (`reports` / `report_targets`). Both live under the Signals sidebar group in `docs.json` (`/signals/alerts` and `/signals/reports`), since they're the two notification-channel primitives for Signals.
