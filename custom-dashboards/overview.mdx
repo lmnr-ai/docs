@@ -65,13 +65,49 @@ The editor asks for:
 
 1. **Type**: line, bar, horizontal bar, or table (see above).
 2. **Table**: `traces`, `spans`, `signal_events`, or `tags`.
-3. **Metric**: one of `count`, `sum`, `avg`, `min`, `max`, `p90`, `p95`, `p99` on a column. Tables use a column picker instead of a metric.
+3. **Metric**: one of `count`, `sum`, `avg`, `min`, `max`, `p90`, `p95`, `p99` on a column, or **Custom SQL** for an arbitrary expression (covered below). Tables use a column picker instead of a metric.
 4. **Filters**: narrow rows before aggregation.
 5. **Group By**: break the metric down by a dimension (e.g. `model`, `provider`, `span_type`).
 6. **Order By** and **Limit**: relevant to horizontal bar and table.
 7. **Display Value**: covered below.
 
 For the full reference on tables, columns, and SQL semantics, see the [SQL Editor reference](/platform/sql-editor#table-schemas).
+
+## Custom SQL metrics
+
+If the built-in aggregations don't cover what you need, pick **Custom SQL** from the metric dropdown. The column picker is replaced by a small SQL editor with schema-aware autocomplete for the selected table.
+
+Whatever you type is inserted as the `<expr>` in:
+
+```sql
+SELECT <expr> FROM <table>
+```
+
+So write it as a single projection: either a bare aggregation (`countIf(status = 'ERROR')`, `avg(total_tokens)`, `quantile(0.95)(duration)`) or any ClickHouse expression that returns one value per group. Group-by dimensions and filters are applied by the rest of the chart builder around your expression, so you don't need a `GROUP BY` or `WHERE` clause inside it.
+
+A few patterns that come up often:
+
+- **Conditional counts**: `countIf(span_type = 'LLM' AND status = 'ERROR')` to count only error LLM spans.
+- **Ratios**: `countIf(status = 'ERROR') / count() * 100` to chart an error rate as a percentage.
+- **Custom percentiles**: `quantile(0.75)(duration)` when the built-in p90/p95/p99 aren't the cut you want.
+- **Expressions over multiple columns**: `sum(input_cost + output_cost)`.
+
+The schema autocomplete knows which columns exist on each table. For the full list of tables (`traces`, `spans`, `signal_events`, `tags`, `evaluation_results`, etc.) and their columns, see the [SQL editor table schemas reference](/platform/sql-editor#table-schemas).
+
+## Custom columns on tables
+
+Tables don't aggregate, so instead of a metric they take a list of columns. Each row is either a column from the table or, via the **Custom SQL** option in the same dropdown, an arbitrary SQL expression evaluated per row.
+
+Custom columns are useful when the column you want doesn't exist as-is on the table:
+
+- Combine fields: `concat(name, ' (', model, ')')`.
+- Pull a value out of a JSON attribute: `JSONExtractString(attributes, 'gen_ai.request.model')`.
+- Compute a derived value: `total_tokens / duration` for tokens per second per span.
+- Format a value: `formatReadableSize(input_tokens)`.
+
+Custom columns render as a regular column in the output table; the header is a stable auto-generated alias (e.g. `column_ab12cd`) so reordering or removing other columns doesn't rename it. Rename it by editing the chart's column list.
+
+The same schema autocomplete and table reference apply: see the [SQL editor table schemas reference](/platform/sql-editor#table-schemas) for what's queryable on each table.
 
 ## Display Value
 
