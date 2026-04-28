@@ -49,7 +49,7 @@ OPENAI_API_KEY=your-openai-api-key
 
 Call `Laminar.initialize()` at the entry point of your app, then hand `MastraExporter` to Mastra's `Observability` config. The exporter has no transport or batching config of its own: it sends spans through Laminar's tracer provider.
 
-```typescript
+```typescript {5,19-22}
 import { openai } from '@ai-sdk/openai';
 import { Agent } from '@mastra/core/agent';
 import { Mastra } from '@mastra/core/mastra';
@@ -96,7 +96,7 @@ await Laminar.shutdown();
 
 A common Mastra pattern: a coordinator agent exposes sub-agents as tools. The coordinator decides who should handle what, calls the tool, and the tool runs `subAgent.generate(...)` internally. Laminar nests the sub-agent's full run (its own model steps and tool calls) directly underneath the parent tool span, so one trace tells the whole story.
 
-```typescript
+```typescript {6,62-65, 70}
 import { openai } from '@ai-sdk/openai';
 import { Agent } from '@mastra/core/agent';
 import { Mastra } from '@mastra/core/mastra';
@@ -228,7 +228,7 @@ See the full [observe reference](/tracing/structure/observe-decorator) for sessi
 
 ```typescript
 new MastraExporter({
-  realtime: true,           // Force-flush after each span end. Use in short-lived processes.
+  realtime: true,            // Force-flush after each span end. Use in short-lived processes.
   linkToActiveContext: true, // Default. Rewrite Mastra spans onto the active OTel trace.
 });
 ```
