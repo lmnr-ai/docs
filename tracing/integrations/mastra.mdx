@@ -14,11 +14,11 @@ Mastra's agents run `Agent.generate` and `Agent.stream` through a multi-step loo
 What Laminar captures:
 
 - The root agent run and each model step with system prompt, prompt messages, response, tool calls, token counts, latency, and cost.
-- Every tool invocation, with arguments and return value, including `@mastra/mcp` tools.
+- Every tool invocation, with arguments and return value.
 - Sub-agents invoked from a parent agent's tools, nested under their parent span.
-- Reasoning tokens per step, rendered as `Thinking` blocks in the transcript.
+- Thinking tokens per step.
 
-<Frame caption="Mastra multi-agent trip-planner trace in Laminar's transcript view: the concierge agent delegates to flight and hotel specialists via tool calls, each sub-agent's full run expands in place, and the selected child LLM span on the right shows the model's input messages including the tool-result history.">
+<Frame caption="Mastra multi-agent trip-planner trace in Laminar's transcript view.">
 <img src="/images/traces/mastra.png" alt="Mastra trace in Laminar, transcript view" />
 </Frame>
 
@@ -27,7 +27,7 @@ What Laminar captures:
 <Steps>
 <Step title="Install">
 
-Requires `@lmnr-ai/lmnr >= 0.8.21`, `@mastra/core >= 1.28.0`, and `@mastra/observability >= 1.10.0`.
+Requires `@lmnr-ai/lmnr >= 0.8.21`, `@mastra/core >= 1.0.0`, and `@mastra/observability >= 1.0.0`.
 
 ```bash
 npm install @lmnr-ai/lmnr @mastra/core @mastra/observability @ai-sdk/openai zod
