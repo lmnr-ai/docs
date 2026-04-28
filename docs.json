@@ -30,10 +30,10 @@
                 "pages": [
                   "tracing/integrations/overview",
                   "tracing/integrations/anthropic",
-                  "tracing/integrations/gemini",
                   "tracing/integrations/openai",
-                  "tracing/integrations/openai-agents-sdk",
+                  "tracing/integrations/gemini",
                   "tracing/integrations/claude-agent-sdk",
+                  "tracing/integrations/openai-agents-sdk",
                   "tracing/integrations/opencode",
                   "tracing/integrations/vercel-ai-sdk",
                   "tracing/integrations/langchain",
