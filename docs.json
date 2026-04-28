@@ -57,6 +57,7 @@
                   "tracing/structure/overview",
                   "tracing/structure/observe-decorator",
                   "tracing/structure/manual-span-creation",
+                  "tracing/structure/span-types",
                   "tracing/structure/sessions",
                   "tracing/structure/user-id",
                   "tracing/structure/metadata",
