@@ -37,6 +37,7 @@
                   "tracing/integrations/pydantic-ai",
                   "tracing/integrations/cohere",
                   "tracing/integrations/vercel-ai-sdk",
+                  "tracing/integrations/mastra",
                   "tracing/integrations/litellm",
                   "tracing/integrations/kernel",
                   "tracing/integrations/openai-agents-sdk",

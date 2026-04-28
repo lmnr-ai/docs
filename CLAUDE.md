@@ -109,6 +109,17 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - When running CAS demos inside another claude-agent sandbox, the parent agent already owns port 45667 for its own proxy. Override before `Laminar.initialize()` via module-level monkey-patch: `from lmnr.opentelemetry_lib.opentelemetry.instrumentation.claude_agent import proxy as _p; _p._DEFAULT_PORT = 55667; _p._NEXT_PORT = 55667`. No public env var exists for this today.
 - Traces from the running background agent land in the same project as the demo you're running, so transcript screenshots can be polluted by the agent's own Bash/Read spans. Filter the trace list by root-span name (e.g. `multi-agent-code-review`) before screenshotting, or run the demo in a project separate from `LMNR_PROJECT_API_KEY`.
 
+## Mastra integration
+
+- `MastraExporter` is Mastra-specific and plugs into Mastra's own `Observability` config — it is NOT a standalone initializer like Vercel AI SDK's `getTracer()`. Shape: `new Observability({ default: { enabled: false }, configs: { <name>: { serviceName, exporters: [new MastraExporter()] } } })`. Requires `@lmnr-ai/lmnr >= 0.8.21`, `@mastra/core >= 1.28.0`, `@mastra/observability >= 1.10.0`.
+- `default: { enabled: false }` is load-bearing. Omitting it double-emits spans via Mastra's built-in default exporters alongside Laminar. Always call it out in docs.
+- Mastra's `Observability` has NO `.flush()` method — `await observability.shutdown()` IS the flush path. Document `observability.shutdown()` before `Laminar.shutdown()` on every end-of-script example.
+- `MastraExporter({ linkToActiveContext: true })` is the default. When a Mastra agent runs inside an active OTel span (e.g. `observe()` or `@vercel/otel`), the exporter rewrites Mastra trace ids onto the caller's trace so `observe()` root + Mastra subtree render as one trace. Readers hitting "two separate traces" have overridden this to `false` or called `Laminar.initialize()` after `new Mastra(...)`.
+- `MastraExporter({ realtime: true })` force-flushes on every span end; use for scripts/serverless. Leave default for long-running services.
+- Mastra AI SDK v6 tool `execute` takes `(inputData)` whose fields are under `inputData.context` — NOT destructured at top level. `execute: ({ from, to }) => ...` silently receives `undefined`. Write `execute: (inputData) => { const { from, to } = inputData.context; ... }`.
+- Mastra v1.28 removed `maxSteps`; use `stopWhen: ({ steps }) => (steps?.length ?? 0) >= N` (or the `stepCountIs` helper from the AI SDK equivalent). Older docs showing `maxSteps` are wrong.
+- Multi-subagent demo shape: wrap each sub-agent in a `createTool({ execute: async (inputData) => { const res = await subAgent.generate(...); return {...}; } })`. Laminar nests the sub-agent's full run (its own turns and tool calls) under the parent tool span. Rich tree-view screenshots come from this pattern (concierge → bookFlight tool → flight-agent run → gpt-5-mini LLM → lookup_flights tool). Flat-single-agent demos look thin by comparison.
+
 ## OpenAI Agents SDK integration
 
 - Python integration is auto-instrumented by `Laminar.initialize()` when `openai-agents` is importable. No wrapping call like `wrapClaudeAgentQuery` exists. Install is `pip install lmnr openai-agents`; there is no `[openai-agents]` extra.
