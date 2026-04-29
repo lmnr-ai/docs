@@ -30,8 +30,10 @@ What Laminar captures:
 Requires `@lmnr-ai/lmnr >= 0.8.21`, `@mastra/core >= 1.28.0`, and `@mastra/observability >= 1.10.0`.
 
 ```bash
-npm install @lmnr-ai/lmnr @mastra/core @mastra/observability @ai-sdk/openai zod
+npm install @lmnr-ai/lmnr @mastra/core @mastra/observability @ai-sdk/openai
 ```
+
+Swap `@ai-sdk/openai` for any provider adapter you use ([full list](https://ai-sdk.dev/providers/ai-sdk-providers)). The multi-subagent example below also uses `zod` for tool input schemas.
 
 </Step>
 <Step title="Set environment variables">
