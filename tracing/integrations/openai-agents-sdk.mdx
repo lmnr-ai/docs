@@ -5,23 +5,27 @@ sidebarTitle: OpenAI Agents SDK
 
 ## Overview
 
-Laminar is an open-source, OpenTelemetry-native observability platform for the [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/). Trace, debug, and monitor every agent turn, tool call, handoff, and sub-agent with a single `Laminar.initialize()` call. Self-host via Helm or use managed cloud.
+Laminar is an open-source, OpenTelemetry-native observability platform for the OpenAI Agents SDK ([Python](https://openai.github.io/openai-agents-python/), [TypeScript](https://openai.github.io/openai-agents-js/)). Trace, debug, and monitor every agent turn, tool call, handoff, and sub-agent with a single `Laminar.initialize()` call. Self-host via Helm or use managed cloud.
 
-The OpenAI Agents SDK lets you build agent workflows in Python with `Agent`, `Runner.run`, tool functions, and handoffs between specialists. Laminar hooks into the SDK's built-in `TracingProcessor` to mirror every agent workflow span into Laminar, plus adds the system instructions so the full prompt is visible in the trace.
+The OpenAI Agents SDK lets you build agent workflows with `Agent`, `Runner.run` / `run`, function tools, and handoffs between specialists. Laminar hooks into the SDK's built-in trace processor to mirror every agent span into Laminar, plus adds the system instructions so the full prompt is visible in the trace.
 
 What Laminar captures:
 
 - The root agent workflow, each `agents.task`, and every `agents.turn` with the model, prompt, response, token counts, latency, and cost.
 - Every `function_tool` invocation, with arguments and return value.
 - Handoffs between agents, with the destination agent's turns nested under the handoff span.
+- Agents invoked as tools (`Agent.as_tool` / `Agent.asTool`), with the sub-agent's full run nested under the tool call.
+- Sandbox sessions (Python only) started via `SandboxRunConfig`, including manifest materialization and shell/file tool calls.
 - Agent instructions prepended to the input messages on every LLM span.
 
 ## Getting started
 
+<Tabs items={['Python', 'TypeScript']}>
+<Tab title="Python">
 <Steps>
 <Step title="Install">
 
-Ensure you have `lmnr` version `0.7.48` or higher:
+Ensure you have `lmnr` version `0.7.49` or higher:
 
 ```bash
 pip install -U lmnr openai-agents
@@ -68,6 +72,64 @@ Wrapping your entry point in `@observe()` is optional but recommended: it create
 
 </Step>
 </Steps>
+</Tab>
+<Tab title="TypeScript">
+<Steps>
+<Step title="Install">
+
+Ensure you are using `@lmnr-ai/lmnr` version `0.8.21` or higher:
+
+```bash
+npm install @lmnr-ai/lmnr@latest @openai/agents@latest
+# or
+pnpm add @lmnr-ai/lmnr@latest @openai/agents@latest
+```
+
+</Step>
+<Step title="Set environment variables">
+
+```bash
+export LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+export OPENAI_API_KEY=your-openai-api-key
+```
+
+</Step>
+<Step title="Initialize Laminar">
+
+`Laminar.initialize()` auto-instruments `@openai/agents` when it is installed. No wrapping call is needed.
+
+```typescript {2,4}
+import { Agent, run } from '@openai/agents';
+import { Laminar, observe } from '@lmnr-ai/lmnr';
+
+Laminar.initialize();
+
+await observe({ name: 'math-homework' }, async () => {
+  const agent = new Agent({
+    name: 'MathHelper',
+    instructions: 'You are a patient math tutor. Explain each step clearly.',
+    model: 'gpt-5-mini',
+  });
+  const result = await run(agent, 'A train leaves Boston at 9am at 60 mph...');
+  console.log(result.finalOutput);
+});
+```
+
+<Note>
+If `@openai/agents` is imported before `Laminar.initialize()` in ESM (or if you set `"type": "module"` in `package.json`), pass the module explicitly so the models get patched:
+
+```typescript
+import * as agents from '@openai/agents';
+import { Laminar } from '@lmnr-ai/lmnr';
+
+Laminar.initialize({ instrumentModules: { openAIAgents: agents } });
+```
+</Note>
+
+</Step>
+</Steps>
+</Tab>
+</Tabs>
 
 ## See what happened in a trace
 
@@ -81,8 +143,10 @@ More on the trace UX: [Viewing traces](/platform/viewing-traces).
 
 ## Multi-agent runs with handoffs
 
-The OpenAI Agents SDK models specialization through handoffs: a triage agent routes the user to a specialist via `handoff(other_agent)`, and the SDK exposes each handoff as a `transfer_to_<agent>` tool call. In Laminar, the destination agent's turns and tool calls nest under the handoff, so you can follow the full multi-agent conversation in one trace.
+The OpenAI Agents SDK models specialization through handoffs: a triage agent routes the user to a specialist via `handoff(other_agent)` / `handoff(otherAgent)`, and the SDK exposes each handoff as a `transfer_to_<agent>` tool call. In Laminar, the destination agent's turns and tool calls nest under the handoff span, so you can follow the full multi-agent conversation in one trace.
 
+<Tabs items={['Python', 'TypeScript']}>
+<Tab title="Python">
 ```python
 import asyncio
 
@@ -136,6 +200,59 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 ```
+</Tab>
+<Tab title="TypeScript">
+```typescript
+import { Agent, handoff, run, tool } from '@openai/agents';
+import { Laminar, observe } from '@lmnr-ai/lmnr';
+import { z } from 'zod';
+
+Laminar.initialize();
+
+const cancelBooking = tool({
+  name: 'cancel_booking',
+  description: 'Cancel a booking by confirmation code.',
+  parameters: z.object({ confirmation_code: z.string() }),
+  execute: async ({ confirmation_code }) =>
+    `Booking ${confirmation_code} cancelled. Refund in 5-7 business days.`,
+});
+
+const lookupLoyaltyBalance = tool({
+  name: 'lookup_loyalty_balance',
+  description: 'Look up a loyalty member balance and tier.',
+  parameters: z.object({ member_id: z.string() }),
+  execute: async ({ member_id }) => `Member ${member_id}: 48,200 points, Gold tier.`,
+});
+
+const bookingAgent = new Agent({
+  name: 'BookingAgent',
+  handoffDescription: 'Handles cancellations and loyalty balance lookups.',
+  instructions:
+    'You handle cancellations and loyalty questions. Use cancel_booking for ' +
+    'cancellations and lookup_loyalty_balance for points and tier.',
+  tools: [cancelBooking, lookupLoyaltyBalance],
+  model: 'gpt-5-mini',
+});
+
+const triageAgent = new Agent({
+  name: 'TriageAgent',
+  instructions:
+    'Route the user to the correct specialist. For cancellations or loyalty, ' +
+    'hand off to BookingAgent. Do not answer specialist topics yourself.',
+  handoffs: [handoff(bookingAgent)],
+  model: 'gpt-5-mini',
+});
+
+await observe({ name: 'airline-support' }, async () => {
+  const result = await run(
+    triageAgent,
+    'Cancel my booking Z9X7K2 and look up loyalty for member M-88421.',
+  );
+  console.log(result.finalOutput);
+});
+```
+</Tab>
+</Tabs>
 
 The resulting trace shows the triage turn, the handoff, and the booking agent's tool calls in a single conversation:
 
@@ -148,6 +265,239 @@ Switch to tree view when you want the full hierarchy at a glance:
 <Frame caption="Tree view of the same run: TriageAgent's LLM turn, the agents.handoff span, then BookingAgent with its own turns, cancel_booking, and lookup_loyalty_balance tool spans nested underneath.">
 <img src="/images/traces/openai-agents-sdk-multi-agent-tree.png" alt="OpenAI Agents SDK multi-agent trace in Laminar, tree view" />
 </Frame>
+
+## Sub-agents as tools
+
+Handoffs transfer the conversation to another agent. **Sub-agents as tools** keep the orchestrator in control: `Agent.as_tool` (Python) and `Agent.asTool` (TypeScript) wrap a specialist as a `FunctionTool` that the parent agent can call like any other tool, then synthesize the sub-agent's output back into the parent's turn. Laminar nests the sub-agent's full run (its own turns and tool calls) directly under the parent's tool-call span, so you can read the orchestrator-plus-specialist flow in a single trace.
+
+<Tabs items={['Python', 'TypeScript']}>
+<Tab title="Python">
+```python
+import asyncio
+
+from agents import Agent, Runner, function_tool
+from lmnr import Laminar, observe
+
+Laminar.initialize()
+
+
+@function_tool
+def search_flights(origin: str, destination: str) -> str:
+    return f"Flights from {origin} to {destination}: UA123 08:00, DL456 14:30."
+
+
+flight_agent = Agent(
+    name="FlightAgent",
+    instructions="Find flights matching the user's origin and destination.",
+    tools=[search_flights],
+    model="gpt-5-mini",
+)
+
+summary_agent = Agent(
+    name="SummaryAgent",
+    instructions="Summarize the user's itinerary in a single short paragraph.",
+    model="gpt-5-mini",
+)
+
+concierge = Agent(
+    name="Concierge",
+    instructions=(
+        "You are a travel concierge. Call book_flight to look up flights, "
+        "then call write_summary to draft a one-paragraph itinerary."
+    ),
+    tools=[
+        flight_agent.as_tool(
+            tool_name="book_flight",
+            tool_description="Search for flights between two cities.",
+        ),
+        summary_agent.as_tool(
+            tool_name="write_summary",
+            tool_description="Write a one-paragraph summary of an itinerary.",
+        ),
+    ],
+    model="gpt-5-mini",
+)
+
+
+@observe(name="travel-concierge")
+async def main():
+    result = await Runner.run(
+        concierge,
+        "I'm flying SFO to JFK next Tuesday. Book something in the morning and summarize it.",
+    )
+    print(result.final_output)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+</Tab>
+<Tab title="TypeScript">
+```typescript
+import { Agent, run, tool } from '@openai/agents';
+import { Laminar, observe } from '@lmnr-ai/lmnr';
+import { z } from 'zod';
+
+Laminar.initialize();
+
+const searchFlights = tool({
+  name: 'search_flights',
+  description: 'Search for flights between two cities.',
+  parameters: z.object({ origin: z.string(), destination: z.string() }),
+  execute: async ({ origin, destination }) =>
+    `Flights from ${origin} to ${destination}: UA123 08:00, DL456 14:30.`,
+});
+
+const flightAgent = new Agent({
+  name: 'FlightAgent',
+  instructions: "Find flights matching the user's origin and destination.",
+  tools: [searchFlights],
+  model: 'gpt-5-mini',
+});
+
+const summaryAgent = new Agent({
+  name: 'SummaryAgent',
+  instructions: "Summarize the user's itinerary in a single short paragraph.",
+  model: 'gpt-5-mini',
+});
+
+const concierge = new Agent({
+  name: 'Concierge',
+  instructions:
+    'You are a travel concierge. Call book_flight to look up flights, ' +
+    'then call write_summary to draft a one-paragraph itinerary.',
+  tools: [
+    flightAgent.asTool({
+      toolName: 'book_flight',
+      toolDescription: 'Search for flights between two cities.',
+    }),
+    summaryAgent.asTool({
+      toolName: 'write_summary',
+      toolDescription: 'Write a one-paragraph summary of an itinerary.',
+    }),
+  ],
+  model: 'gpt-5-mini',
+});
+
+await observe({ name: 'travel-concierge' }, async () => {
+  const result = await run(
+    concierge,
+    "I'm flying SFO to JFK next Tuesday. Book something in the morning and summarize it.",
+  );
+  console.log(result.finalOutput);
+});
+```
+</Tab>
+</Tabs>
+
+In tree view, the Concierge turn calls `book_flight` and `write_summary`; each call expands into the sub-agent's own turns, tool calls, and LLM spans, rather than being flattened to a single tool-return value.
+
+<Note>
+Choose between handoffs and sub-agents-as-tools based on who owns the reply: handoffs hand the conversation to the specialist and its answer is returned to the user; sub-agents-as-tools return a structured result back to the orchestrator, which then keeps writing the user-facing response.
+</Note>
+
+## Running agents in sandboxes (Python)
+
+The Python SDK can execute an agent against a sandboxed workspace (locally on your machine or on a remote provider like E2B, Modal, Daytona, Runloop, Cloudflare, Vercel, or Blaxel) via `SandboxAgent` and `SandboxRunConfig`. Laminar instruments sandbox sessions and surfaces each manifest materialization step, shell exec, and file read as a span, so you can see exactly what the agent did inside the sandbox alongside the LLM turns that drove it.
+
+<Note>
+Sandboxes are Python-only. The TypeScript SDK does not expose `SandboxAgent` / `SandboxRunConfig` at the time of writing.
+</Note>
+
+### Local sandbox (UnixLocal)
+
+`UnixLocalSandboxClient` runs the agent against your host filesystem with no extra infrastructure: a good starting point for development and tests.
+
+```python
+import asyncio
+
+from agents import Runner
+from agents.run_config import RunConfig
+from agents.sandbox import Manifest, SandboxAgent, SandboxRunConfig
+from agents.sandbox.entries import GitRepo
+from agents.sandbox.sandboxes import UnixLocalSandboxClient
+from lmnr import Laminar, observe
+
+Laminar.initialize()
+
+
+@observe(name="sandbox-repo-summary")
+async def main():
+    agent = SandboxAgent(
+        name="WorkspaceAssistant",
+        instructions="Inspect the sandbox workspace before answering.",
+        default_manifest=Manifest(
+            entries={
+                "repo": GitRepo(repo="openai/openai-agents-python", ref="main"),
+            }
+        ),
+        model="gpt-5-mini",
+    )
+
+    result = await Runner.run(
+        agent,
+        "Inspect the repo README and summarize what this project does.",
+        run_config=RunConfig(
+            sandbox=SandboxRunConfig(client=UnixLocalSandboxClient()),
+        ),
+    )
+    print(result.final_output)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+### Remote sandbox (E2B)
+
+Swap the client for any remote provider to run the same agent on managed infrastructure. The example below uses [E2B](https://e2b.dev); the pattern is identical for `ModalSandboxClient`, `DaytonaSandboxClient`, `RunloopSandboxClient`, `CloudflareSandboxClient`, `VercelSandboxClient`, and `BlaxelSandboxClient` under `agents.extensions.sandbox.<provider>`.
+
+```bash
+pip install -U 'openai-agents[e2b]'
+export E2B_API_KEY=your-e2b-api-key
+```
+
+```python
+import asyncio
+
+from agents import Runner
+from agents.extensions.sandbox.e2b import E2BSandboxClient
+from agents.run_config import RunConfig
+from agents.sandbox import Manifest, SandboxAgent, SandboxRunConfig
+from agents.sandbox.entries import GitRepo
+from lmnr import Laminar, observe
+
+Laminar.initialize()
+
+
+@observe(name="sandbox-repo-summary-e2b")
+async def main():
+    agent = SandboxAgent(
+        name="WorkspaceAssistant",
+        instructions="Inspect the sandbox workspace before answering.",
+        default_manifest=Manifest(
+            entries={
+                "repo": GitRepo(repo="openai/openai-agents-python", ref="main"),
+            }
+        ),
+        model="gpt-5-mini",
+    )
+
+    result = await Runner.run(
+        agent,
+        "Inspect the repo README and summarize what this project does.",
+        run_config=RunConfig(
+            sandbox=SandboxRunConfig(client=E2BSandboxClient()),
+        ),
+    )
+    print(result.final_output)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+In either case the trace includes a `sandbox.start` / `sandbox.cleanup` span pair around the agent's work, the manifest materialization spans that pulled `repo` into the workspace, and every shell or file operation the agent ran via its sandbox tools.
 
 ## Track outcomes with Signals
 
@@ -168,11 +518,14 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
 <AccordionGroup>
   <Accordion title="I don't see any traces in Laminar">
     - Confirm `LMNR_PROJECT_API_KEY` is set in the same process that runs the SDK.
-    - `openai-agents` must be importable when `Laminar.initialize()` runs. Install with `pip install openai-agents`.
-    - The integration requires `openai-agents >= 0.7.0` and `lmnr >= 0.7.48`.
+    - Python: `openai-agents` must be importable when `Laminar.initialize()` runs. Install with `pip install openai-agents`. The integration requires `openai-agents >= 0.7.0` and `lmnr >= 0.7.49`.
+    - TypeScript: `@openai/agents` must be installed in the same workspace. The integration requires `@lmnr-ai/lmnr >= 0.8.21`. If you import `@openai/agents` before `Laminar.initialize()` in ESM, pass the module via `instrumentModules: { openAIAgents: agents }`.
   </Accordion>
   <Accordion title="Handoffs aren't nested under the source agent">
     The SDK emits a `transfer_to_<agent>` tool call followed by an `agents.handoff` span, and the destination agent's work lands as a sibling under the same parent task. Open the trace in tree view to see the full structure.
+  </Accordion>
+  <Accordion title="Sub-agents invoked via as_tool / asTool look flat">
+    Make sure the sub-agent is registered in the orchestrator's `tools` array via `.as_tool(...)` / `.asTool(...)`, not re-exported as a plain function. Each `as_tool` call produces a `FunctionTool` whose `execute` spins up a nested `Runner` run; Laminar nests the inner run under the parent tool-call span only when the wrapper is the one invoked.
   </Accordion>
   <Accordion title="Self-hosting Laminar">
     Set `base_url` and the ports of your instance when initializing. For a local OSS deployment:
@@ -183,6 +536,14 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
         http_port=8000,
         grpc_port=8001,
     )
+    ```
+
+    ```typescript
+    Laminar.initialize({
+      baseUrl: 'http://localhost',
+      httpPort: 8000,
+      port: 8001,
+    });
     ```
   </Accordion>
 </AccordionGroup>
@@ -201,8 +562,5 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
   </Card>
   <Card title="Tracing structure" href="/tracing/structure/overview">
     Sessions, metadata, and tags for deeper control.
-  </Card>
-  <Card title="OpenAI SDK" href="/tracing/integrations/openai">
-    Using the OpenAI Python SDK directly without Agents? Trace it here.
   </Card>
 </CardGroup>
