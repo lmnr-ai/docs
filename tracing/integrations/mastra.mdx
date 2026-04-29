@@ -33,7 +33,7 @@ Requires `@lmnr-ai/lmnr >= 0.8.21`, `@mastra/core >= 1.0.0`, and `@mastra/observ
 npm install @lmnr-ai/lmnr @mastra/core @mastra/observability @ai-sdk/openai
 ```
 
-Swap `@ai-sdk/openai` for any provider adapter you use ([full list](https://ai-sdk.dev/providers/ai-sdk-providers)). The multi-subagent example below also uses `zod` for tool input schemas.
+Swap `@ai-sdk/openai` for any provider adapter you use.
 
 </Step>
 <Step title="Set environment variables">
@@ -51,7 +51,7 @@ OPENAI_API_KEY=your-openai-api-key
 
 Call `Laminar.initialize()` at the entry point of your app, then hand `MastraExporter` to Mastra's `Observability` config. The exporter has no transport or batching config of its own: it sends spans through Laminar's tracer provider.
 
-```typescript {5,8,19-22}
+```typescript {5,8,20-23}
 import { openai } from '@ai-sdk/openai';
 import { Agent } from '@mastra/core/agent';
 import { Mastra } from '@mastra/core/mastra';
@@ -99,7 +99,7 @@ await Laminar.shutdown();
 
 A common Mastra pattern: a coordinator agent exposes sub-agents as tools. The coordinator decides who should handle what, calls the tool, and the tool runs `subAgent.generate(...)` internally. Laminar nests the sub-agent's full run (its own model steps and tool calls) directly underneath the parent tool span, so one trace tells the whole story.
 
-```typescript {6,9,62-65, 70}
+```typescript {6,9,64-67,72}
 import { openai } from '@ai-sdk/openai';
 import { Agent } from '@mastra/core/agent';
 import { Mastra } from '@mastra/core/mastra';
