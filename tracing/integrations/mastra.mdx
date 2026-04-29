@@ -1,0 +1,287 @@
+---
+title: Observability and Tracing for Mastra in TypeScript
+sidebarTitle: Mastra
+---
+
+import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
+
+## Overview
+
+Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. Trace, debug, and monitor every [Mastra](https://mastra.ai/) agent run, model step, tool call, and sub-agent with a single `MastraExporter` wired into your `Observability` config. Self-host via Helm or use managed cloud.
+
+Mastra's agents run `Agent.generate` and `Agent.stream` through a multi-step loop: the model calls a tool, Mastra runs it, feeds the result back, and repeats until the stop condition trips. Laminar plugs in through Mastra's `ObservabilityExporter` contract and ingests every span Mastra produces. When an agent exposes sub-agents as tools (coordinator calls specialist), the full sub-agent run nests under the parent tool call in one unified trace.
+
+What Laminar captures:
+
+- The root agent run and each model step with system prompt, prompt messages, response, tool calls, token counts, latency, and cost.
+- Every tool invocation, with arguments and return value.
+- Sub-agents invoked from a parent agent's tools, nested under their parent span.
+- Thinking tokens per step.
+
+<Frame caption="Mastra multi-agent trip-planner trace in Laminar's transcript view.">
+<img src="/images/traces/mastra.png" alt="Mastra trace in Laminar, transcript view" />
+</Frame>
+
+## Getting started
+
+<Steps>
+<Step title="Install">
+
+Requires `@lmnr-ai/lmnr >= 0.8.21`, `@mastra/core >= 1.0.0`, and `@mastra/observability >= 1.0.0`.
+
+```bash
+npm install @lmnr-ai/lmnr @mastra/core @mastra/observability @ai-sdk/openai zod
+```
+
+</Step>
+<Step title="Set environment variables">
+
+```bash
+# .env
+LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+OPENAI_API_KEY=your-openai-api-key
+```
+
+<GetProjectApiKey />
+
+</Step>
+<Step title="Initialize Laminar and wire the exporter">
+
+Call `Laminar.initialize()` at the entry point of your app, then hand `MastraExporter` to Mastra's `Observability` config. The exporter has no transport or batching config of its own: it sends spans through Laminar's tracer provider.
+
+```typescript {5,8,19-22}
+import { openai } from '@ai-sdk/openai';
+import { Agent } from '@mastra/core/agent';
+import { Mastra } from '@mastra/core/mastra';
+import { Observability } from '@mastra/observability';
+import { Laminar, MastraExporter } from '@lmnr-ai/lmnr';
+import 'dotenv/config';
+
+Laminar.initialize();
+
+const agent = new Agent({
+  name: 'assistant',
+  instructions: 'You are a concise, friendly assistant.',
+  model: openai('gpt-5-mini'),
+});
+
+const observability = new Observability({
+  default: { enabled: false },
+  configs: {
+    laminar: {
+      serviceName: 'my-mastra-app',
+      exporters: [new MastraExporter()],
+    },
+  },
+});
+
+new Mastra({
+  agents: { assistant: agent },
+  observability,
+});
+
+const result = await agent.generate('Write a two-line haiku about tracing.');
+console.log(result.text);
+
+await observability.shutdown();
+await Laminar.shutdown();
+```
+
+`default: { enabled: false }` turns off Mastra's built-in default exporters so you don't double-emit. Flush through `observability.shutdown()` before process exit: Mastra's `Observability` has no synchronous `flush()` method.
+
+</Step>
+</Steps>
+
+## Multi-agent runs with sub-agents
+
+A common Mastra pattern: a coordinator agent exposes sub-agents as tools. The coordinator decides who should handle what, calls the tool, and the tool runs `subAgent.generate(...)` internally. Laminar nests the sub-agent's full run (its own model steps and tool calls) directly underneath the parent tool span, so one trace tells the whole story.
+
+```typescript {6,9,62-65, 70}
+import { openai } from '@ai-sdk/openai';
+import { Agent } from '@mastra/core/agent';
+import { Mastra } from '@mastra/core/mastra';
+import { createTool } from '@mastra/core/tools';
+import { Observability } from '@mastra/observability';
+import { Laminar, MastraExporter, observe } from '@lmnr-ai/lmnr';
+import { z } from 'zod';
+
+Laminar.initialize();
+
+const lookupFlights = createTool({
+  id: 'lookup_flights',
+  description: 'Return candidate flights between two cities on a date.',
+  inputSchema: z.object({ from: z.string(), to: z.string(), date: z.string() }),
+  execute: async (inputData) => {
+    const { from, to, date } = inputData.context;
+    return {
+      flights: [
+        { carrier: 'Delta', number: 'DL123', priceUsd: 342 },
+        { carrier: 'United', number: 'UA456', priceUsd: 298 },
+      ],
+      route: `${from} -> ${to}`,
+      date,
+    };
+  },
+});
+
+const flightAgent = new Agent({
+  name: 'flight-agent',
+  instructions:
+    'You are a flight specialist. Call lookup_flights and recommend one option.',
+  model: openai('gpt-5-mini'),
+  tools: { lookupFlights },
+});
+
+const bookFlight = createTool({
+  id: 'book_flight',
+  description: 'Delegate to the flight specialist.',
+  inputSchema: z.object({ from: z.string(), to: z.string(), date: z.string() }),
+  execute: async (inputData) => {
+    const { from, to, date } = inputData.context;
+    const res = await flightAgent.generate(
+      `Find a flight from ${from} to ${to} on ${date}. Recommend one option.`,
+    );
+    return { recommendation: res.text };
+  },
+});
+
+const conciergeAgent = new Agent({
+  name: 'concierge',
+  instructions:
+    'You are a travel concierge. Use book_flight to delegate, then summarize the plan.',
+  model: openai('gpt-5'),
+  tools: { bookFlight },
+});
+
+new Mastra({
+  agents: { conciergeAgent, flightAgent },
+  observability: new Observability({
+    default: { enabled: false },
+    configs: {
+      laminar: {
+        serviceName: 'trip-planner',
+        exporters: [new MastraExporter()],
+      },
+    },
+  }),
+});
+
+await observe({ name: 'plan-trip' }, async () => {
+  const { text } = await conciergeAgent.generate(
+    'Plan a flight from San Francisco to New York on 2026-06-15.',
+    { stopWhen: ({ steps }) => (steps?.length ?? 0) >= 6 },
+  );
+  console.log(text);
+});
+```
+
+Wrapping the coordinator call in `observe()` gives you a single root span for the whole request. `MastraExporter` detects the active OpenTelemetry context and rewrites every Mastra span onto that trace, so your `plan-trip` root and the full Mastra subtree render together.
+
+Tree view shows the full hierarchy when you want to see how the sub-agent nests:
+
+<Frame caption="Tree view of the same run. The concierge's gpt-5 turn calls bookFlight and bookHotel, each tool spawns a full sub-agent run (flight-agent and hotel-agent) with its own model steps and lookup tools underneath.">
+<img src="/images/traces/mastra-tree.png" alt="Mastra multi-agent trace in Laminar, tree view" />
+</Frame>
+
+## Nest Mastra spans inside your own code
+
+Wrap any Mastra call with `observe()` to group multiple agent runs under one trace, add metadata, or pin the trace to a session or user.
+
+```typescript
+import { observe } from '@lmnr-ai/lmnr';
+
+await observe(
+  { name: 'user-request', sessionId: req.sessionId, userId: req.userId },
+  async () => {
+    const plan = await conciergeAgent.generate(req.prompt);
+    const followUp = await conciergeAgent.generate(
+      `Given the plan, suggest two dinner options near the hotel. Plan: ${plan.text}`,
+    );
+    return { plan: plan.text, followUp: followUp.text };
+  },
+);
+```
+
+See the full [observe reference](/tracing/structure/observe-decorator) for session IDs, user IDs, metadata, and tags.
+
+## MastraExporter options
+
+```typescript
+new MastraExporter({
+  realtime: true,            // Force-flush after each span end. Use in short-lived processes.
+  linkToActiveContext: true, // Default. Rewrite Mastra spans onto the active OTel trace.
+});
+```
+
+- `realtime`: forces a flush on every span end. Useful for scripts and serverless handlers that exit before the batch processor drains on its own. Leave off for long-running services.
+- `linkToActiveContext`: default `true`. When a Mastra agent runs inside an active OpenTelemetry span (an `observe()` wrapper, a Next.js route instrumented with `@vercel/otel`, any other OTel-aware library), the exporter rewrites Mastra's trace id onto the caller's trace so the whole thing renders as one. Set to `false` to keep Mastra's original trace id.
+
+## See what happened in a trace
+
+Open the trace in Laminar and the default view is the transcript: each agent renders as a card with its auto-extracted input and final output, sub-agents collapse to the same card shape so you can see the delegation at a glance and expand the ones you care about, and every LLM turn has a one-line preview of the response. Switch to tree view when you want span-by-span structure.
+
+More on the trace UX: [Viewing traces](/platform/viewing-traces).
+
+## Track outcomes with Signals
+
+Traces answer *what happened on this run*. **[Signals](/signals/introduction) answer the cross-trace question**: *how often does the concierge skip delegation and answer a booking itself, when do sub-agent tool calls return errors, which runs exceed five model steps without a final answer*. A Signal pairs a plain-language prompt with a JSON output schema. Laminar runs it live on new traces (Triggers) or backfills it across history (Jobs) and records a structured event every time it matches. From there you [query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on events across every trace.
+
+<Note>
+Every new project ships with a **Failure Detector** Signal that categorizes issues on any trace over 1000 tokens. Open it from the Signals sidebar to see events as soon as your Mastra traces arrive.
+</Note>
+
+## Query across traces
+
+- **[SQL editor](/platform/sql-editor)** for ad-hoc queries across traces, spans, signals, and evals.
+- **SQL API** for programmatic access from scripts and pipelines.
+- **[MCP server](/platform/mcp)** to query Laminar from Claude Code, Cursor, or Codex.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="I don't see any traces in Laminar">
+    - Confirm `LMNR_PROJECT_API_KEY` is set in the same process that runs Mastra.
+    - `Laminar.initialize()` must run before `new Mastra({ ... })` so the exporter can hook into Laminar's tracer provider.
+    - Call `await observability.shutdown()` before your process exits. There is no `.flush()` on `Observability`; shutdown is the flush path.
+    - If you pass `default: { enabled: true }` you'll get Mastra's default in-memory exporters alongside Laminar; turn it off unless you want both.
+  </Accordion>
+  <Accordion title="Mastra span appears as a separate trace from my observe() wrapper">
+    By default, `MastraExporter` reparents Mastra spans onto the active OTel trace so they nest under your `observe()` span. If you see two traces instead of one:
+    - Make sure `Laminar.initialize()` runs before the `observe()` call.
+    - Check that you did not pass `linkToActiveContext: false` to `MastraExporter`.
+  </Accordion>
+  <Accordion title="Self-hosting Laminar">
+    Set `baseUrl` and the ports of your instance when initializing. For a local OSS deployment:
+
+    ```typescript
+    Laminar.initialize({
+      baseUrl: 'http://localhost',
+      httpPort: 8000,
+      grpcPort: 8001,
+    });
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Viewing traces" href="/platform/viewing-traces">
+    Read the transcript view, filter, and search across traces.
+  </Card>
+  <Card title="Signals" href="/signals/introduction">
+    Detect behaviors and failures across every run, then query, cluster, and alert on them.
+  </Card>
+  <Card title="SQL editor and MCP server" href="/platform/sql-editor">
+    Query traces programmatically from the UI, API, or your IDE.
+  </Card>
+  <Card title="Tracing structure" href="/tracing/structure/overview">
+    Sessions, user IDs, metadata, and tags.
+  </Card>
+  <Card title="Vercel AI SDK" href="/tracing/integrations/vercel-ai-sdk">
+    Mastra uses the AI SDK under the hood. Using it directly? Trace it here.
+  </Card>
+  <Card title="OpenAI Agents SDK" href="/tracing/integrations/openai-agents-sdk">
+    Python-first agent framework with similar multi-agent shape.
+  </Card>
+</CardGroup>
