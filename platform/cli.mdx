@@ -1,0 +1,141 @@
+---
+title: CLI
+---
+
+The `lmnr-cli` is a command-line tool for querying Laminar data, managing datasets, and running the interactive agent debugger from your terminal. It is the fastest way to pull traces into a shell pipeline, script dataset maintenance, or connect an AI coding agent that can shell out, all without leaving the command line.
+
+<Note>
+The CLI is a standalone npm package (`lmnr-cli`) and ships independently from the `@lmnr-ai/lmnr` SDK. You do not need the SDK installed to query data or manage datasets.
+</Note>
+
+## Install
+
+```bash
+# Run directly with npx (no install)
+npx lmnr-cli@latest <command>
+
+# Or install globally
+npm install -g lmnr-cli
+```
+
+## Authenticate
+
+Every command talks to your Laminar project with a project API key. Grab one from **Settings → Project API Keys** in the dashboard, then set it once:
+
+```bash
+export LMNR_PROJECT_API_KEY=<your-key>
+```
+
+Alternatively, pass `--project-api-key <key>` on any command.
+
+For self-hosted deployments, override the API URL and port:
+
+```bash
+lmnr-cli --base-url http://localhost --port 8000 sql schema
+```
+
+## Query data with SQL
+
+Run ClickHouse SQL against your project's spans, traces, signal events, and more:
+
+```bash
+lmnr-cli sql query "SELECT name, duration FROM spans WHERE start_time > now() - INTERVAL 1 HOUR LIMIT 20"
+```
+
+Add `--json` to emit structured JSON on stdout (messages and errors go to stderr), which makes it trivial to pipe into `jq`, a local script, or an AI coding agent:
+
+```bash
+lmnr-cli sql query "SELECT trace_id, total_cost FROM spans WHERE span_type = 'LLM' LIMIT 10" --json \
+  | jq '.[] | select(.total_cost > 0.01)'
+```
+
+List the available tables and columns:
+
+```bash
+lmnr-cli sql schema
+```
+
+For the full schema and query guide, see [SQL Editor](/platform/sql-editor).
+
+<Note>
+Only `SELECT` queries are allowed. The query runs scoped to your project automatically; no tenant filter is needed in your WHERE clause.
+</Note>
+
+## Manage datasets
+
+List, push, pull, and create datasets from files on disk. Supported formats: `.jsonl`, `.json`, `.csv`.
+
+```bash
+# List all datasets in the project
+lmnr-cli dataset list --json
+
+# Push new datapoints into an existing dataset
+lmnr-cli dataset push data.jsonl -n my-dataset
+
+# Pull a dataset down to a local file
+lmnr-cli dataset pull output.jsonl -n my-dataset
+
+# Create a new dataset from a file, writing a local copy with dataset IDs
+lmnr-cli dataset create my-dataset data.jsonl -o my-dataset.jsonl
+```
+
+See [Datasets CLI](/datasets/cli) for the full dataset workflow including versioning semantics.
+
+## Run the agent debugger
+
+`lmnr-cli dev` spins up an interactive debugging session for a function in your codebase and connects it to the Laminar debugger UI so you can rerun, inspect, and edit inputs live.
+
+```bash
+# TypeScript
+lmnr-cli dev agent.ts
+
+# Python (script mode)
+lmnr-cli dev agent.py
+
+# Python (module mode)
+lmnr-cli dev -m src.agent
+
+# Pick a specific entrypoint when multiple are present
+lmnr-cli dev agent.ts --function myAgent
+```
+
+See [Debugger](/platform/debugger) for the full workflow.
+
+## Piping and agent-friendly output
+
+The CLI is designed to be scriptable and to plug cleanly into AI coding agents:
+
+- **Structured output on stdout, logs on stderr.** Every command that supports it takes `--json` and prints machine-readable output to stdout, while human-friendly progress messages are written to stderr. This keeps pipes clean.
+- **Non-zero exit codes on failure.** Scripts and agents can branch on success/failure without parsing output.
+- **Stable noun-verb command surface** (`sql query`, `dataset push`, `dataset pull`, `dataset list`, `dataset create`, `dev`), so commands are easy for an agent to compose.
+
+Combined with `sql query --json`, this makes the CLI a drop-in SQL layer for any agent that can run shell commands, with no SDK install required.
+
+## Help
+
+Every command accepts `-h` / `--help`:
+
+```bash
+lmnr-cli --help
+lmnr-cli sql --help
+lmnr-cli sql query --help
+lmnr-cli dataset --help
+lmnr-cli dev --help
+```
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="SQL Editor" href="/platform/sql-editor">
+    The UI counterpart for ad-hoc SQL queries, with schema reference and examples.
+  </Card>
+  <Card title="MCP Server" href="/platform/mcp">
+    Connect Claude Code, Cursor, or any MCP client to Laminar directly.
+  </Card>
+  <Card title="Datasets CLI workflow" href="/datasets/cli">
+    End-to-end example of pulling, editing, and pushing a dataset.
+  </Card>
+  <Card title="Debugger" href="/platform/debugger">
+    Rerun long-running agents from a checkpoint without leaving the page.
+  </Card>
+</CardGroup>
