@@ -31,7 +31,11 @@ WHERE start_time > now() - INTERVAL 3 DAY
 
 Results appear in a table or raw JSON view. Export results to a dataset or labeling queue for further use.
 
-You can also query via API at `/v1/sql/query`—authenticate with your project API key and pass `{ "query": "..." }`.
+You can also query from outside the UI:
+
+- **API**: `POST /v1/sql/query` — authenticate with your project API key and pass `{ "query": "..." }`.
+- **CLI**: `lmnr-cli sql query "<query>" --json` — see [CLI](/platform/cli).
+- **MCP**: connect an MCP client (Claude Code, Cursor, Codex) and call `query_laminar_sql` — see [MCP Server](/platform/mcp).
 
 ## Writing Queries
 
