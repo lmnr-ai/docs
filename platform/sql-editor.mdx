@@ -349,9 +349,25 @@ LIMIT 100
 | `top_span_type` | `String` | `"DEFAULT"` |
 | `trace_type` | `String` | `"DEFAULT"` |
 | `tags` | `Array(String)` | `["needs-review", "production"]` |
+| `trace_tags` | `Array(String)` | `["reviewed", "flagged"]` |
+| `span_names` | `Array(String)` | `["run", "openai.chat", "tool.search"]` |
+| `root_span_input` | `String` | `"[{\"role\": \"user\", \"content\": \"Hello\"}]"` |
+| `root_span_output` | `String` | `"[{\"role\": \"assistant\", \"content\": \"Hi\"}]"` |
 | `has_browser_session` | `Bool` | `true` |
 
 `id` is the trace ID; join to spans with `spans.trace_id = traces.id`.
+
+#### Tags and trace_tags
+
+`tags` is the union of all tags attached to any span inside the trace (inherited from span-level tagging). `trace_tags` is a separate set of tags applied directly to the trace itself (for example, from the trace-view UI or via `updateTraceTags`). The two columns are independent: a trace can have `trace_tags` without any span-level `tags`, and vice versa.
+
+#### Span names
+
+`span_names` is the de-duplicated list of span names produced anywhere in the trace. Useful for filtering traces that contain (or don't contain) a specific operation: `has(span_names, 'tool.search')`.
+
+#### Root span input and output
+
+`root_span_input` and `root_span_output` mirror the `input` and `output` of the trace's top span. Same parsing rules apply as [span input/output](#input-and-output): try to parse as JSON, fall back to raw string.
 
 #### Trace type
 
@@ -386,10 +402,25 @@ Metadata is stored as a string in JSON format. That is, you can safely `JSON.par
 | `name` | `String` | `"error.clustered"` |
 | `payload` | `String` | `"{\"error_type\": \"timeout\", \"count\": 3}"` |
 | `timestamp` | `DateTime64(9, 'UTC')` | `"2021-01-01 00:00:00"` |
+| `severity` | `UInt8` | `2` |
+| `summary` | `String` | `"Checkout request timed out after 3 retries"` |
+| `clusters` | `Array(UUID)` | `["aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"]` |
 
 #### Payload
 
 The `payload` column is stored as a string in JSON format. That is, you can safely `JSON.parse` / `json.loads` it. In addition, you can use JSON* and simpleJSON* functions on it right in the queries. Payload is guaranteed to be a valid JSON object.
+
+#### Severity
+
+`severity` is a numeric level matching the alert thresholds: `0` (INFO), `1` (WARNING), `2` (CRITICAL).
+
+#### Summary
+
+`summary` is a short, human-readable description of the event produced by the Signal. It may be empty for older events.
+
+#### Clusters
+
+`clusters` is the list of cluster IDs this event belongs to (see [Clusters](/signals/clusters)). Only non-L0 clusters are included. To list events that belong to an L0 cluster, query the `signal_events_all` table, which has the same schema but exposes L0-cluster membership as well.
 
 
 ### signal_runs
@@ -402,12 +433,18 @@ The `payload` column is stored as a string in JSON format. That is, you can safe
 | `run_id` | `UUID` | `"22222222-3333-4444-b555-666666666666"` |
 | `trace_id` | `UUID` | `"01234567-1234-4def-8234-426614174000"` |
 | `status` | `String` | `"COMPLETED"` |
+| `mode` | `String` | `"REALTIME"` |
 | `event_id` | `UUID` | `"55555555-6666-4777-8888-999999999999"` |
+| `error_message` | `String` | `"Timed out waiting for model response"` |
 | `updated_at` | `DateTime64(9, 'UTC')` | `"2021-01-01 00:00:00"` |
 
 #### Status
 
 `status` is one of `"PENDING"`, `"COMPLETED"`, `"FAILED"`, or `"UNKNOWN"`.
+
+#### Mode
+
+`mode` is one of `"BATCH"` (historical backfill job) or `"REALTIME"` (live trigger against a new trace).
 
 
 ### logs
@@ -461,12 +498,14 @@ The `attributes` column is stored as a string in JSON format. That is, you can s
 | `trace_metadata` | `String` | `"{\"key\": \"value\"}"` |
 | `trace_tags` | `Array(String)` | `["production", "experiment-a"]` |
 | `trace_spans` | `Array(Tuple(name String, duration Float64, type String))` | `[Tuple('openai.chat', 1.23, 'LLM'), ...]` |
+| `top_span_id` | `UUID` | `"00000000-0000-0000-1234-426614174000"` |
+| `updated_at` | `DateTime64(9, 'UTC')` | `"2021-01-01 00:00:00"` |
 
 `data`, `target`, `metadata`, `executor_output`, `scores`, and `trace_metadata` are JSON stored as strings. `scores` is a JSON object of string keys to numeric values.
 
 When the datapoint is not sourced from a dataset, `dataset_id` and `dataset_datapoint_id` are a nil UUID (all zeroes) and `dataset_datapoint_created_at` is the Unix epoch.
 
-The trace-related columns (`duration`, `input_cost`, `output_cost`, `total_cost`, `start_time`, `end_time`, `input_tokens`, `output_tokens`, `total_tokens`, `trace_status`, `trace_metadata`, `trace_tags`, `trace_spans`) are joined from the associated trace. If no trace exists for the datapoint, these columns will be nil/empty/zero.
+The trace-related columns (`duration`, `input_cost`, `output_cost`, `total_cost`, `start_time`, `end_time`, `input_tokens`, `output_tokens`, `total_tokens`, `trace_status`, `trace_metadata`, `trace_tags`, `trace_spans`, `top_span_id`) are joined from the associated trace. If no trace exists for the datapoint, these columns will be nil/empty/zero.
 
 
 ### dataset_datapoints
