@@ -121,6 +121,7 @@
               "platform/debugger",
               "platform/mcp",
               "platform/sql-editor",
+              "platform/sql-api",
               "platform/cli",
               "platform/search",
               "custom-dashboards/overview",
