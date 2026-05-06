@@ -122,6 +122,23 @@ Wrapping your entry point in `@observe()` is optional but recommended: it create
 </Tab>
 </Tabs>
 
+## Running on Amazon Bedrock
+
+The Claude Agent SDK supports Claude models hosted on Amazon Bedrock. Laminar traces work out of the box: follow Anthropic's [Amazon Bedrock guide](https://code.claude.com/docs/en/amazon-bedrock) to configure your AWS credentials and the SDK environment variables, and additionally set `AWS_REGION` to the region you're targeting.
+
+```bash
+export CLAUDE_CODE_USE_BEDROCK=1
+export AWS_REGION=us-west-2
+# plus the AWS credentials from the Anthropic Bedrock guide
+# (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY, AWS_PROFILE, SSO, etc.)
+```
+
+<Note>
+`AWS_REGION` is required for Laminar tracing to work correctly on Bedrock, even if your AWS credentials already specify a region via another mechanism.
+</Note>
+
+Initialize Laminar exactly as shown in [Getting started](#getting-started); no other code changes are needed.
+
 ## See what happened in a trace
 
 Open the trace in Laminar and you land on the transcript view: each turn reads as a conversation, with the prompt, the model's response, tool calls inline with their inputs and outputs, and any subagents collapsed to their final output. A tree of span names tells you the shape of the run; the transcript tells you what actually happened.
