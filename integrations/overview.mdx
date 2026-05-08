@@ -1,0 +1,130 @@
+---
+title: Integrations
+sidebarTitle: Overview
+---
+
+Laminar is OpenTelemetry-native. Every integration on this page plugs into the same pipeline: `Laminar.initialize()` (or a framework-specific exporter) wires your app into Laminar, and every LLM call, tool call, and sub-agent turn lands in the [transcript view](/platform/viewing-traces), is queryable from [SQL](/platform/sql-editor), and can be matched against [Signals](/signals/introduction).
+
+Most integrations are auto-instrumented. Install the Laminar SDK, set `LMNR_PROJECT_API_KEY`, and call `Laminar.initialize()` once at the top of your app. Your existing code keeps working.
+
+## Agent frameworks
+
+Multi-step agents with tools, handoffs, and sub-agents. Laminar renders the conversation instead of a span tree: auto-extracted agent inputs, LLM turns, tool-call rows, and collapsed sub-agent cards.
+
+<CardGroup cols={3}>
+  <Card title="Vercel AI SDK" href="/integrations/vercel-ai-sdk">
+    TypeScript. `generateText`, `streamText`, `generateObject`, tool calls, and Next.js setup.
+  </Card>
+  <Card title="Claude Agent SDK" href="/integrations/claude-agent-sdk">
+    TypeScript and Python. Sub-agents, tools, and the `wrapClaudeAgentQuery` helper.
+  </Card>
+  <Card title="OpenAI Agents SDK" href="/integrations/openai-agents-sdk">
+    TypeScript and Python. Agents, handoffs, `Agent.as_tool`, and sandboxes.
+  </Card>
+  <Card title="Pydantic AI" href="/integrations/pydantic-ai">
+    Python. `Agent`, `@agent.tool`, and multi-agent delegation traced via GenAI semconv.
+  </Card>
+  <Card title="LangChain / LangGraph" href="/integrations/langchain">
+    Python and TypeScript. Chains, graphs, agents, and tools.
+  </Card>
+  <Card title="deepagents" href="/integrations/deepagents">
+    Python. `create_deep_agent`, sub-agents, and the virtual filesystem.
+  </Card>
+  <Card title="Mastra" href="/integrations/mastra">
+    TypeScript. `MastraExporter` wired through Mastra's `Observability` config.
+  </Card>
+  <Card title="OpenHands SDK" href="/integrations/openhands-sdk">
+    Python. Software agents with file, shell, and MCP tools.
+  </Card>
+  <Card title="OpenCode" href="/integrations/opencode">
+    Coding-agent runs traced via the Laminar CLI wrapper.
+  </Card>
+</CardGroup>
+
+## LLM providers
+
+Raw provider SDKs for model calls. Laminar captures prompts, responses, tokens, latency, and cost for every call.
+
+<CardGroup cols={3}>
+  <Card title="OpenAI" href="/integrations/openai">
+    Python and TypeScript. Chat, Responses, and tool calls.
+  </Card>
+  <Card title="Anthropic" href="/integrations/anthropic">
+    Python and TypeScript. Messages, tool use, and streaming.
+  </Card>
+  <Card title="Gemini" href="/integrations/gemini">
+    Python and TypeScript. Google's generative AI SDK.
+  </Card>
+  <Card title="Cohere" href="/integrations/cohere">
+    Python and TypeScript. Chat, embed, and rerank.
+  </Card>
+  <Card title="OpenRouter" href="/integrations/openrouter">
+    Any model behind OpenRouter's OpenAI-compatible API.
+  </Card>
+  <Card title="LiteLLM" href="/integrations/litellm">
+    Python. Unified interface across 100+ providers.
+  </Card>
+</CardGroup>
+
+## Browser agents
+
+Web-automation agents. Laminar records the full browser session alongside the trace, so you can scrub the video and watch the span timeline move with it.
+
+<CardGroup cols={3}>
+  <Card title="Browser Use" href="/integrations/browser-use">
+    Python. Agent runs, DOM actions, and session recordings.
+  </Card>
+  <Card title="Stagehand" href="/integrations/stagehand">
+    TypeScript. `act`, `extract`, and `observe` calls.
+  </Card>
+  <Card title="Playwright" href="/integrations/playwright">
+    Python and TypeScript. Raw browser automation with session recordings.
+  </Card>
+  <Card title="Puppeteer" href="/integrations/puppeteer">
+    TypeScript. Chromium automation with session recordings.
+  </Card>
+  <Card title="Skyvern" href="/integrations/skyvern">
+    Python. End-to-end web workflows.
+  </Card>
+  <Card title="Kernel" href="/integrations/kernel">
+    Hosted browser infra. Run computer-using agents on Kernel with Laminar traces.
+  </Card>
+</CardGroup>
+
+## OpenTelemetry
+
+Send spans from any OTel-emitting code, in any language. Use this when your framework is not on the list above, or when you already have an OTel pipeline and want to point it at Laminar.
+
+<CardGroup cols={2}>
+  <Card title="OpenTelemetry" href="/tracing/otel">
+    OTLP endpoint, authorization, and exporter setup for any language.
+  </Card>
+  <Card title="Roll your own" href="/tracing/structure/overview">
+    `observe`, manual spans, sessions, and metadata for code we don't auto-instrument.
+  </Card>
+</CardGroup>
+
+## Don't see your framework?
+
+Anything that emits OpenTelemetry spans works with Laminar. Trace your own functions with [`observe`](/tracing/structure/observe-decorator), create [manual spans](/tracing/structure/manual-span-creation), or point an existing OTel exporter at the [Laminar OTLP endpoint](/tracing/otel).
+
+If you'd like us to auto-instrument a framework we don't cover yet, [open an issue on GitHub](https://github.com/lmnr-ai/lmnr/issues) or ping us on [Discord](https://discord.gg/nNFUUDAKub).
+
+## What to do with traces
+
+Once data is flowing in, the rest of the platform takes over.
+
+<CardGroup cols={2}>
+  <Card title="Viewing traces" href="/platform/viewing-traces">
+    Laminar extracts agent inputs, LLM outputs, and tool calls into a transcript view, so you read the conversation instead of a span tree.
+  </Card>
+  <Card title="Signals" href="/signals/introduction">
+    Define natural-language signals to track outcomes and failures across every run.
+  </Card>
+  <Card title="SQL and MCP" href="/platform/sql-editor">
+    Query traces from the SQL editor, the SQL API, the CLI, or an [MCP server](/platform/mcp) in Claude Code and Cursor.
+  </Card>
+  <Card title="Tracing Structure" href="/tracing/structure/overview">
+    Sessions, user IDs, metadata, and tags for deeper control over what lands in each trace.
+  </Card>
+</CardGroup>
