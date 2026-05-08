@@ -26,34 +26,6 @@
             "pages": [
               "tracing/introduction",
               {
-                "group": "Integrations",
-                "pages": [
-                  "tracing/integrations/overview",
-                  "tracing/integrations/anthropic",
-                  "tracing/integrations/openai",
-                  "tracing/integrations/gemini",
-                  "tracing/integrations/claude-agent-sdk",
-                  "tracing/integrations/openai-agents-sdk",
-                  "tracing/integrations/opencode",
-                  "tracing/integrations/vercel-ai-sdk",
-                  "tracing/integrations/langchain",
-                  "tracing/integrations/deepagents",
-                  "tracing/integrations/litellm",
-                  "tracing/integrations/mastra",
-                  "tracing/integrations/pydantic-ai",
-                  "tracing/integrations/openrouter",
-                  "tracing/integrations/browser-use",
-                  "tracing/integrations/cohere",
-                  "tracing/integrations/kernel",
-                  "tracing/integrations/openhands-sdk",
-                  "tracing/integrations/playwright",
-                  "tracing/integrations/puppeteer",
-                  "tracing/integrations/stagehand",
-                  "tracing/integrations/skyvern",
-                  "tracing/otel"
-                ]
-              },
-              {
                 "group": "Tracing Structure",
                 "pages": [
                   "tracing/structure/overview",
@@ -126,6 +98,59 @@
               "custom-dashboards/overview",
               "queues/quickstart",
               "playground"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Integrations",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "integrations/overview"
+            ]
+          },
+          {
+            "group": "Agent frameworks",
+            "pages": [
+              "integrations/vercel-ai-sdk",
+              "integrations/claude-agent-sdk",
+              "integrations/openai-agents-sdk",
+              "integrations/pydantic-ai",
+              "integrations/langchain",
+              "integrations/deepagents",
+              "integrations/mastra",
+              "integrations/openhands-sdk",
+              "integrations/opencode"
+            ]
+          },
+          {
+            "group": "LLM providers",
+            "pages": [
+              "integrations/openai",
+              "integrations/anthropic",
+              "integrations/gemini",
+              "integrations/cohere",
+              "integrations/openrouter",
+              "integrations/litellm"
+            ]
+          },
+          {
+            "group": "Browser agents",
+            "pages": [
+              "integrations/browser-use",
+              "integrations/stagehand",
+              "integrations/playwright",
+              "integrations/puppeteer",
+              "integrations/skyvern",
+              "integrations/kernel"
+            ]
+          },
+          {
+            "group": "OpenTelemetry",
+            "pages": [
+              "tracing/otel"
             ]
           }
         ]

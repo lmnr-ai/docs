@@ -14,15 +14,19 @@ Tracing is also the entry point into Laminar: it’s how production runs become 
 ## Where to Start
 
 <CardGroup cols={2}>
-  <Card title="Integrations" href="/tracing/integrations/overview">
-    You’re already using supported libraries. Learn what’s captured and how to configure instrumentation (including Browser Use and Stagehand).
+  <Card title="Integrations" href="/integrations/overview">
+    You're already using supported libraries. Find setup instructions and what's captured for each agent framework, LLM provider, and browser agent.
   </Card>
 
   <Card title="Tracing Structure" href="/tracing/structure/overview">
-    You want deeper visibility into your own code. Trace your functions, create manual spans, add context, and control what’s captured.
+    You want deeper visibility into your own code. Trace your functions, create manual spans, add context, and control what's captured.
+  </Card>
+
+  <Card title="OpenTelemetry" href="/tracing/otel">
+    You already have an OTel pipeline. Point your existing exporter at Laminar's OTLP endpoint.
   </Card>
 
   <Card title="Troubleshooting" href="/tracing/troubleshooting">
-    You’re not seeing what you expect. Debug missing spans, auto-instrumentation issues, and common setup pitfalls.
+    You're not seeing what you expect. Debug missing spans, auto-instrumentation issues, and common setup pitfalls.
   </Card>
 </CardGroup>

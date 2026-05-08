@@ -14,7 +14,9 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 ## Navigation and linking
 
 - Every new page MUST be added to `docs.json`. Pages not listed there are unreachable from the sidebar even if they exist on disk.
-- When deleting or moving a page, also `grep -r "tracing/integrations/<slug>"` across the repo to find inbound links. Common offenders: sibling integration pages often cross-link via a `<Note>` block and those must be updated in lockstep.
+- When deleting or moving a page, also `grep -r "integrations/<slug>"` across the repo to find inbound links. Common offenders: sibling integration pages often cross-link via a `<Note>` block and those must be updated in lockstep.
+- **Integrations live at `/integrations/*` (top-level tab), not `/tracing/integrations/*`.** LAM-1567 promoted integrations to their own tab in `docs.json` alongside Documentation / Guides / SDK / Changelog, with groups `Overview`, `Agent frameworks`, `LLM providers`, `Browser agents`, `OpenTelemetry`. `/tracing/otel` is referenced from the OpenTelemetry group but its file still physically lives under `tracing/` — don't move it, just keep the `docs.json` entry pointing there.
+- When a page (like `tracing/otel`) is surfaced under multiple tabs, list it in only ONE place in `docs.json`. Listing the same slug in two tabs silently breaks the sidebar in the second tab (Mintlify picks one and drops the other).
 - Internal links use absolute paths from the docs root with no `.mdx` extension: `[Signals](/signals/introduction)`.
 - Mintlify auto-redirects `/<group-slug>` to the first page in the group when you add a sidebar group whose slug matches an existing single-page URL (verified: `/signals` → 307 → `/signals/introduction` after converting `signals.mdx` into a `signals/` group). No explicit redirect entry is needed in `docs.json` when splitting a page into a group, but inbound links should still be updated to the canonical first-page URL.
 - Run `npx mintlify broken-links` from `/repos/docs` after any restructuring that moves or renames pages; it catches intra-docs link regressions in seconds and is more reliable than grepping for old paths.
