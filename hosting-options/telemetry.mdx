@@ -1,0 +1,53 @@
+---
+title: Self-hosted telemetry
+---
+
+Laminar's self-hosted installs send an anonymous `instance:launched` event on container start and a daily `instance:heartbeat` event so we can see how many instances are running and on which versions. This is independent of the in-product analytics flag `POSTHOG_TELEMETRY` — disabling one does not affect the other.
+
+Self-hosted telemetry is **opt-out** and fails silently if the network call cannot be made (air-gapped installs are fine).
+
+## What is collected
+
+Each event carries only:
+
+- `version` — the Laminar release tag (e.g. `v0.1.45`) or `unknown` for non-release builds.
+- `node_version` — the Node.js version running the frontend.
+- `platform` — e.g. `linux`, `darwin`.
+- `arch` — e.g. `x64`, `arm64`.
+- `deployment_type` — always `self_hosted`.
+- A random instance UUID (generated once per install and stored locally) used as the event's `distinctId`.
+
+## What is NOT collected
+
+- No trace, span, prompt, or completion data.
+- No workspace, project, or user names.
+- No user emails or IDs.
+- No API keys or environment variables.
+
+## Disable
+
+Set the environment variable on the frontend container:
+
+```bash
+SELF_HOSTED_TELEMETRY=false
+```
+
+On startup the frontend logs one of:
+
+```
+[laminar] Anonymous self-hosted telemetry is enabled. Set SELF_HOSTED_TELEMETRY=false to opt out. See https://laminar.sh/docs/hosting-options/telemetry.
+[laminar] Self-hosted telemetry disabled.
+```
+
+## Two independent flags
+
+| Flag | What it controls | Default |
+| --- | --- | --- |
+| `SELF_HOSTED_TELEMETRY` | Install-level `instance:launched` / `instance:heartbeat` events — this page. | on |
+| `POSTHOG_TELEMETRY` | In-product analytics (page views, feature usage) sent from the frontend. | off unless explicitly set to `true` |
+
+Set either independently. They are decoupled on purpose: they answer different questions.
+
+## Source
+
+The implementation lives in [`frontend/lib/telemetry/self-hosted.ts`](https://github.com/lmnr-ai/lmnr/blob/main/frontend/lib/telemetry/self-hosted.ts).
