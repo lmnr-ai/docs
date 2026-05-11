@@ -1,0 +1,63 @@
+---
+title: Telemetry
+---
+
+Laminar's self-hosted frontend reports two anonymous install-level events to our PostHog instance so we can see how many people are running Laminar and on which versions. This is completely separate from product analytics (`POSTHOG_TELEMETRY`) and can be turned off independently.
+
+## Two independent flags
+
+Laminar has two telemetry flags, and they control different things:
+
+| Flag | What it controls |
+|------|------------------|
+| `POSTHOG_TELEMETRY` | Product analytics for the Laminar web app (page views, feature-level events). Opt-in. |
+| `SELF_HOSTED_TELEMETRY` | Install-level reporting covered on this page: instance launched, daily heartbeat. Defaults on in self-hosted mode. |
+
+Setting `POSTHOG_TELEMETRY=false` has no effect on install reporting, and setting `SELF_HOSTED_TELEMETRY=false` has no effect on product analytics. Flip the one you want.
+
+## What we collect
+
+Each event carries a fixed, minimal payload:
+
+- `version` — the Laminar release tag (e.g. `v0.1.45`), or `unknown` for non-release builds.
+- `node_version` — the Node.js version running the frontend container.
+- `platform` — the host OS (`linux`, `darwin`, etc.).
+- `arch` — the host CPU architecture (`x64`, `arm64`, etc.).
+- `deployment_type` — always `self_hosted`.
+- An anonymous `instance_id` (a random UUID stored once in your Postgres database in the `self_hosted_instance` table).
+
+## What we do NOT collect
+
+- Trace data, span data, or LLM prompts/completions.
+- Workspace names, project names, or user identities.
+- User emails, API keys, tokens, or secrets.
+- Any environment variable values.
+
+## Events
+
+Two events are sent:
+
+- `instance:launched` — fired once on container boot. With multiple replicas, a single Postgres UPDATE with a 1-hour cooldown ensures only one replica wins and fires the event, so rolling deploys do not re-trigger it.
+- `instance:heartbeat` — fired roughly once per day per install. Every replica ticks hourly but only one wins the 23-hour cooldown UPDATE and fires.
+
+Both events are gated on the `self_hosted_instance` row existing; if it is missing (e.g. the migration has not been applied yet), no event is sent and startup proceeds normally. If PostHog is unreachable, failures are swallowed silently — the app starts up the same.
+
+## Disable
+
+Set:
+
+```bash
+SELF_HOSTED_TELEMETRY=false
+```
+
+on the frontend container. The startup log will read:
+
+```
+[laminar] Self-hosted telemetry disabled.
+```
+
+You can also inspect the implementation at [`frontend/lib/telemetry/self-hosted.ts`](https://github.com/lmnr-ai/lmnr/blob/main/frontend/lib/telemetry/self-hosted.ts).
+
+## Cloud
+
+On Laminar Cloud, `LAMINAR_CLOUD=true` is set and this entire path is gated out — no events are captured, no startup log is printed.

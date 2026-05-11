@@ -18,7 +18,8 @@
             "pages": [
               "overview",
               "getting-started",
-              "hosting-options"
+              "hosting-options",
+              "self-hosting/telemetry"
             ]
           },
           {
