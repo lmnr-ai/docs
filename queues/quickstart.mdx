@@ -3,83 +3,186 @@ title: Labeling Queues
 sidebarTitle: Labeling Queues
 ---
 
-## What is a Labeling Queue?
+Labeling queues turn raw agent traces, dataset rows, or SQL query results into datasets of labeled examples. Humans review each item, edit the target, approve what looks right, discard what doesn't, and push the approved batch into a dataset when they're ready.
 
-- A labeling queue is a collection of items that need to be labeled.
-- Labeling queue is an actual queue with FIFO (first in, first out) order.
-- Items in the queue have exactly the same shape as datapoints in a dataset.
-- Labeling operation in this context means writing a data to the target field of a datapoint.
+<Frame caption="A labeling queue with the navigator bar on top and the data / target split view below.">
+  <img src="/images/queues/lq-view.png" alt="Labeling queue overview" />
+</Frame>
 
-<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
-<img src="/images/queues/lq-view.png" alt="Screenshot of a trace visualization" style={{ margin: '0px' }}/>
-</div>
+## How the queue works
 
-## How to Use the Labeling Interface
+A queue holds items that share the shape of a dataset datapoint: a `data` object, a `target`, and optional `metadata`. You move through items one at a time; each item lives in one of three states:
 
-When you open a labeling queue, you'll see a split-screen interface designed for efficient labeling:
+- **New**: seeded from the source and not yet touched.
+- **Modified**: the target has been edited. Edits save automatically; no approval yet.
+- **Approved**: explicitly signed off. Approved items are what you push to a dataset by default.
 
-### Payload view
-The left panel shows you the full JSON payload of the current item you're labeling.
-Payload is a JSON object with the same shape as a datapoint in a dataset. It has `data` and `target` fields.
+Pushing to a dataset is a separate action. Edits and approvals persist in the queue until you push or discard, so multiple people can label in parallel and a single session can span days.
 
+## The interface
 
-### Target Editor
-This is where you do the actual labeling work:
-- **Edit the JSON in the target editor** to correct, improve, or write new data to the target field.
-- **Use proper JSON formatting** - the editor will help you with syntax highlighting
+### The navigator bar
 
-<Tip>
-As you type in the target editor on the right, watch how the `"target"` section in the left payload updates in real-time. This helps you see exactly what will be saved to your dataset.
-</Tip>
+The colored bar at the top of the page is both a progress overview and the primary way to jump around the queue. Each item gets one segment: muted for new, amber for modified, green for approved. The counters on the right show the totals. Click or drag anywhere on the bar to jump to that item, which is useful for coming back to the first modified item or spot-checking your approvals before a push.
 
+### Data panel
 
-### Save Preferences  
-- **Select your target dataset** from the dropdown to choose where completed items should go
-- **Click "Complete"** to save the current item to the dataset and move to the next item in the queue.
+The left panel shows the current item's full payload (`data`, `target`, `metadata`). It's read-only: the ground truth you're labeling against.
 
-### Navigation
-- **Check the item counter** ("Item 5 of 11") to see how many items you've completed and how many remain
-- **Use the navigation buttons** to move through your queue:
-  - Click **"Skip"** if you want to pass on the current item without making changes
-  - Use **"Prev"** and **"Next"** to move between items (helpful for comparing similar cases)
-  - Click **"Complete"** when you're satisfied with your labeling
+### Target panel
 
-## Push items to the queue
+The right panel is where you write the label. Two tabs:
 
-### From Span View
-You can push individual spans directly to a labeling queue for labeling.
-This is particularly useful when you want to label specific model outputs for evaluation.
-Span input will be added to the `data` field of the datapoint, and span output will be added to the `target` field.
+- **JSON**: the raw JSON written to the `target` field. Syntax-highlighted; invalid JSON disables the Approve button.
+- **Fields**: if you've defined an annotation schema, the queue renders a structured form (string, number, boolean, enum) with `1`–`9` hotkeys. Tab moves between fields, arrow keys adjust sliders, `a` focuses the first field.
 
-<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
-<img src="/images/queues/push-from-span.png" alt="Screenshot of a trace visualization" style={{ margin: '0px' }}/>
-</div>
+The two tabs are different views of the same target. Edit in either and the other updates in place. If the stored target doesn't fit the schema (extra keys, wrong type), a banner appears on the Fields tab and a dot on the JSON tab so you can jump to the raw view.
 
-### From Dataset View  
-You can also push existing datapoints from datasets into a labeling queue.
-You can either push individual datapoint or select a subset of datapoints in the dataset view.
+### Approval status and revert
 
-<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
-<img src="/images/queues/push-from-datapoint.png" alt="Screenshot of a trace visualization" style={{ margin: '0px' }}/>
-</div>
+Once you edit an item, a **Modified** badge appears next to the Target header with an undo button that drops your edits back to the original target. Approving clears the modified state; unapproving returns the item to modified so you can edit again.
+
+## Labeling an item
+
+<Steps>
+  <Step title="Review the data">
+    Read the payload on the left. If the queue was seeded from a span, `data` holds the span input and `target` holds the span output.
+  </Step>
+  <Step title="Edit the target">
+    Fix the JSON on the right, or fill out the structured fields if a schema is defined. Edits save automatically after a short debounce.
+  </Step>
+  <Step title="Approve, discard, or move on">
+    - **Approve** (`⌘⏎`) signs the item off and advances to the next one.
+    - **Discard** (`⌘⌫`) removes the item from the queue entirely.
+    - **Prev / Next** (`⌘←` / `⌘→`) navigates without committing, which is useful for comparing similar items.
+  </Step>
+  <Step title="Push to a dataset">
+    When you're done labeling (or want to checkpoint progress), click **Push to dataset** in the top right.
+  </Step>
+</Steps>
+
+### Keyboard shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `⌘⏎` | Approve current / unapprove if already approved |
+| `⌘⌫` | Discard current |
+| `⌘←` / `⌘→` | Previous / next item |
+| `Tab` / `Shift+Tab` | Move between fields (Fields tab) |
+| `1`–`9` | Select option in focused field |
+| `a` | Focus the first field |
+
+`⌘⏎` also fires inside the JSON editor and text inputs, so you can approve without blurring first.
+
+## Push to a dataset
+
+Push is always an explicit action. Open the **Push to dataset** dialog, pick a target dataset, then choose the scope:
+
+- **All approved items**: the default. Pushes every item currently in the `Approved` state.
+- **All items in queue**: pushes everything regardless of approval. Unapproved items carry whatever target they currently hold.
+- **Just the current item**: pushes only the item you're viewing.
+
+Pushed items are removed from the queue in the same operation. Each item becomes a datapoint in the target dataset with the same `data` / `target` / `metadata` shape.
+
+<Frame caption="The Push to dataset dialog with the three scope options.">
+  <img src="/images/queues/push-to-dataset.png" alt="Push to dataset dialog" />
+</Frame>
+
+## Add items to a queue
+
+### From a span
+
+Open a span in the trace view and use **Add to labeling queue**. The span's input becomes the item's `data`, its output becomes the `target`. Good for capturing real agent behavior you want a human to correct.
+
+<Frame caption="Push a single span into a labeling queue from the trace view.">
+  <img src="/images/queues/push-from-span.png" alt="Push from span" />
+</Frame>
+
+### From a dataset
+
+Select one or more datapoints in a dataset and push them into a queue. The datapoint's `data` / `target` / `metadata` map directly onto the queue item.
+
+<Frame caption="Push datapoints from a dataset into a labeling queue for re-labeling.">
+  <img src="/images/queues/push-from-datapoint.png" alt="Push from dataset" />
+</Frame>
+
+### From the SQL editor
+
+Run any query in the [SQL editor](/platform/sql-editor), then open **Export → Export to Labeling Queue**. Drag each result column into **Data**, **Target**, or **Metadata** and push. This is the fastest way to turn a slice of real traces into a labeling batch: filter to the failures you care about in SQL, ship them to a queue, label them.
+
+<Frame caption="Export SQL query results directly into a labeling queue.">
+  <img src="/images/queues/export-sql-to-queue.png" alt="Export SQL results to a labeling queue" />
+</Frame>
 
 ### Via API
-You can add items programmatically with the labeling queue items endpoint.
 
-`POST https://api.lmnr.ai/v1/labeling_queues/<queue_id>/items`
+`POST https://api.lmnr.ai/v1/labeling_queues/{queue_id}/items` adds items programmatically. See [API reference](#api-reference) below.
 
-- Auth: `Authorization: Bearer <PROJECT_API_KEY>`
-- Body: `items` array with required `data` and `target` (arbitrary JSON), plus optional `metadata` (JSON object)
+## Annotation schemas
 
-```bash
-export QUEUE_ID="<insert your queue_id>"
-export LMNR_PROJECT_API_KEY="<insert your Laminar project API key>"
+An annotation schema turns the Target tab into a structured form so labelers can work at keyboard speed. Define fields in the queue settings; each field has a `key`, a `type` (`string`, `number`, `boolean`, `enum`), a description, and type-specific options (number `min`/`max`, enum `values`).
+
+<Tip>
+Schemas are a UI convenience. The target is still stored as JSON, and items without a schema are labeled via the JSON tab. You can define a schema on an existing queue and the Fields tab starts rendering immediately; items whose target drifts from the schema surface a banner in the form view.
+</Tip>
+
+## API reference
+
+### Push items to a labeling queue
+
+`POST https://api.lmnr.ai/v1/labeling_queues/{queue_id}/items`
+
+Adds one or more items to an existing labeling queue. `queue_id` is the queue's UUID; find it in the URL of the queue page.
+
+**Headers**
+
+| Header | Value |
+|--------|-------|
+| `Authorization` | `Bearer <PROJECT_API_KEY>` |
+| `Content-Type` | `application/json` |
+
+**Body**
+
+```json
+{
+  "items": [
+    {
+      "data": { ... },
+      "target": { ... },
+      "metadata": { ... },
+      "idempotencyKey": "optional-unique-string"
+    }
+  ]
+}
 ```
 
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `items` | array | yes | One or more items to add. |
+| `items[].data` | any JSON | yes | The input shown to the labeler. |
+| `items[].target` | any JSON | yes | The initial target. Labelers edit this. |
+| `items[].metadata` | object | no | Arbitrary JSON object carried alongside the item. |
+| `items[].idempotencyKey` | string | no | A stable id for the item. Retrying with the same `(queue_id, idempotencyKey)` is a no-op. |
+
+**Response**
+
+`201 Created` with an array of the inserted items:
+
+```json
+[
+  { "id": "018f...-uuid", "createdAt": "2026-05-14T12:34:56.789Z" }
+]
+```
+
+**Example**
+
 ```bash
+export QUEUE_ID="<your queue id>"
+export LMNR_PROJECT_API_KEY="<your project API key>"
+
 curl --location "https://api.lmnr.ai/v1/labeling_queues/${QUEUE_ID}/items" \
   --header "Authorization: Bearer ${LMNR_PROJECT_API_KEY}" \
-  --header 'Content-Type: application/json' \
+  --header "Content-Type: application/json" \
   --data-raw '{
     "items": [
       {
@@ -88,14 +191,24 @@ curl --location "https://api.lmnr.ai/v1/labeling_queues/${QUEUE_ID}/items" \
           "context": "Geography question"
         },
         "target": "Paris",
-        "metadata": {
-          "model": "gpt-5.1"
-        }
+        "metadata": { "model": "gpt-5.1" },
+        "idempotencyKey": "geo-capital-france-001"
       }
     ]
   }'
 ```
 
 <Tip>
-When pushing items to a queue, they maintain the same JSON structure as datapoints in datasets, ensuring consistency between your labeling workflow and final datasets.
+Use `idempotencyKey` when you're backfilling from a pipeline that might retry. Without it, a retry will insert a duplicate row; with it, the second write collapses onto the first.
 </Tip>
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Add items to a dataset" href="/datasets/adding-data" icon="database">
+    Push approved queue items into a dataset for evals or fine-tuning.
+  </Card>
+  <Card title="Query traces with SQL" href="/platform/sql-editor" icon="terminal">
+    Filter to the traces you want labeled, then export them to a queue.
+  </Card>
+</CardGroup>
