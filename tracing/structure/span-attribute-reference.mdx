@@ -7,13 +7,21 @@ This page is the reference for setting Laminar-recognized OpenTelemetry attribut
 
 ## How attributes flow into Laminar
 
-Spans arrive at Laminar as standard OTLP. Laminar reads three layers:
+Spans arrive at Laminar as standard OTLP. Laminar reads two layers:
 
-- **Resource attributes** on the tracer provider (`service.name`, `service.version`, `deployment.environment`).
 - **Span attributes** on each span: span shape, LLM telemetry, GenAI semconv content.
-- **Trace-association attributes**, which Laminar lifts off any span in the trace and stores once on the trace record (session, user, metadata, tags, trace type).
+- **Trace-association attributes**, which Laminar lifts off the spans in the trace and stores on the trace record (session, user, metadata, tags, trace type).
 
-Trace-association attributes use an "any-span wins" merge: the first non-empty value Laminar sees during ingest is what the trace gets. The most predictable place to set them is the root span, set them once.
+OTLP **Resource attributes** on the tracer provider (`service.name`, `service.version`, `deployment.environment`) are accepted on the wire but are NOT stored on spans or traces today. If you need a value to show up in queries or filters, set it as a span attribute (or as trace metadata via `lmnr.association.properties.metadata.<key>`).
+
+Trace-association attributes are merged across spans at ingest, but the merge rule differs per field:
+
+- `session_id`, `user_id`: first non-empty value wins per ingest batch; persisted with `COALESCE` across batches, so the first batch's value sticks.
+- `metadata`: within one batch, the first span's whole metadata map wins. Across batches, metadata maps are shallow-merged (per-key last-write-wins). Spreading metadata keys across spans in one batch silently drops everything except the first span's keys.
+- `tags`: unioned across every span in the trace.
+- `trace_type`: last span processed wins. An `EVALUATION`-type span anywhere in the trace forces the trace type to `EVALUATION`.
+
+The reliable way to set association attributes is to put the full set on the root span, once. This avoids both the within-batch first-wins surprise and the cross-batch ordering ambiguity.
 
 ## Span-shape attributes
 
@@ -22,16 +30,16 @@ Set on the span you want to control. All keys are namespaced under `lmnr.span.*`
 | Key | Type | What it does |
 | --- | --- | --- |
 | `lmnr.span.type` | string | Span type: `DEFAULT`, `LLM`, or `TOOL`. Drives [transcript rendering and cost rollups](/tracing/structure/span-types). `EXECUTOR`, `EVALUATOR`, `HUMAN_EVALUATOR`, `EVALUATION`, `CACHED` are reserved for the [evaluations framework](/evaluations/introduction); do not set them on application spans. |
-| `lmnr.span.input` | string (JSON-stringified) | Populates the Input panel and the transcript-view inline preview. Stringify non-primitive values before setting. |
-| `lmnr.span.output` | string (JSON-stringified) | Populates the Output panel and inline preview. Stringify non-primitive values. |
+| `lmnr.span.input` | string | Populates the Input panel and the transcript-view inline preview. The ingest expects a string attribute; non-string values are ignored. The string is parsed as JSON when possible (a JSON object / array round-trips as structured data); a plain non-JSON string is stored verbatim. Always `JSON.stringify` complex values before setting. |
+| `lmnr.span.output` | string | Populates the Output panel and inline preview. Same parsing rule as `lmnr.span.input`: must be a string attribute, parsed as JSON when valid, kept as a plain string otherwise. |
 | `lmnr.span.path` | string array | Ordered span-name path from the trace root to this span (inclusive). Drives transcript rendering: subagent grouping, parent-chain reconstruction for partial traces, and the path-based clustering that powers the conversation view. The Laminar SDKs auto-fill this. Custom exporters either leave it unset (Laminar falls back to the OTel `parent_span_id` chain, which gives a less rich transcript) or fill it themselves to mirror what the SDK would emit. |
 | `lmnr.span.ids_path` | string array | Span-id path from the trace root to this span (inclusive), aligned 1:1 with `lmnr.span.path`. Same load-bearing role as `lmnr.span.path`: set both or neither. |
 | `lmnr.span.parent_path` | string array | Path of the parent span (`lmnr.span.path` minus the last element). Optional; only useful if you set the path yourself. |
 | `lmnr.span.parent_ids_path` | string array | Span-id form of `lmnr.span.parent_path`. Optional; pair with `lmnr.span.parent_path`. |
-| `lmnr.span.instrumentation_source` | string | Free-form label identifying the emitter (e.g. `"javascript"`, `"my-internal-adapter"`). Surfaces in span metadata. |
-| `lmnr.span.sdk_version` | string | Version of the emitter. Optional. |
-| `lmnr.span.language_version` | string | Runtime version of the emitter. Optional. |
-| `lmnr.span.human_evaluator_options` | string (JSON) | Used by `HumanEvaluator()`. See [evaluations](/evaluations/introduction). |
+| `lmnr.span.instrumentation_source` | string | Free-form label identifying the emitter (e.g. `"javascript"`, `"my-internal-adapter"`). Stored as a span attribute; not load-bearing. |
+| `lmnr.span.sdk_version` | string | Version of the emitter. Optional. Stored as a span attribute. |
+| `lmnr.span.language_version` | string | Runtime version of the emitter. Optional. Stored as a span attribute. |
+| `lmnr.span.human_evaluator_options` | string (JSON) | Used by the [evaluations](/evaluations/introduction) framework's `HumanEvaluator()`. Not for application code. |
 
 Setting `lmnr.span.type = "LLM"` is required for LLM-specific UI and cost rollups to render at all. A span with `LLM` type but no `gen_ai.*` content shows up in the LLM section but with an empty conversation panel. See [LLM attributes](#llm-attributes) below.
 
@@ -43,10 +51,10 @@ These describe the trace, not the individual span. Set them once on the root spa
 | --- | --- | --- |
 | `lmnr.association.properties.session_id` | string | Groups traces into a [session](/tracing/structure/sessions). |
 | `lmnr.association.properties.user_id` | string | Attaches a [user id](/tracing/structure/user-id) to the trace. |
-| `lmnr.association.properties.rollout_session_id` | string | Used by the agent debugger for rollout grouping. |
-| `lmnr.association.properties.trace_type` | string | Trace classification (`"DEFAULT"` / `"EVALUATION"`). Most callers leave this alone. |
-| `lmnr.association.properties.tags` | string array | Span-level [tags](/tracing/structure/tags). Tags are unioned across every span in the trace (not root-only) and the union becomes the trace tag set. |
-| `lmnr.association.properties.metadata.<key>` | primitive or JSON-stringified | Trace [metadata](/tracing/structure/metadata): one attribute per key. Primitives (string, number, boolean, arrays of those) pass through; complex values must be `JSON.stringify`d before set. |
+| `lmnr.rollout.session_id` | string | Groups spans into an agent-debugger rollout session. Note this attribute lives at the top level (`lmnr.rollout.*`), not under `lmnr.association.properties.*`. |
+| `lmnr.association.properties.trace_type` | string | Trace classification. Accepted values: `"DEFAULT"` (default), `"EVENT"`, `"EVALUATION"`, `"PLAYGROUND"`. Case-sensitive; unknown values silently fall back to `"DEFAULT"`. Most callers leave this unset. |
+| `lmnr.association.properties.tags` | string array | [Tags](/tracing/structure/tags). Set on any span; the trace's tag set is the union across every span. |
+| `lmnr.association.properties.metadata.<key>` | primitive or JSON-stringified | Trace [metadata](/tracing/structure/metadata): one attribute per key. Primitives (string, number, boolean, arrays of those) pass through; complex values must be `JSON.stringify`d before set. **Set the full metadata map on the root span** to avoid order-sensitive merges. |
 
 The metadata key shape mirrors what the Laminar SDK emits. To attach `{environment: "prod", featureFlag: "new-algo", abVariant: {bucket: 3}}` to a trace, set three attributes on the root span:
 
@@ -74,7 +82,7 @@ Set these on a span where `lmnr.span.type = "LLM"`.
 | Output cost | `gen_ai.usage.output_cost` | `0.0024` |
 | Total cost | `gen_ai.usage.cost` | `0.0043` |
 
-Cost is calculated from `gen_ai.system` + `gen_ai.request.model` + token counts. Without all three, cost stays at zero. Setting the explicit `gen_ai.usage.*_cost` keys overrides the calculated values. See [LLM cost tracking](/tracing/structure/llm-cost-tracking) for the supported provider names.
+Cost is calculated from the provider (`gen_ai.system`), a model name (`gen_ai.response.model` if set, else `gen_ai.request.model`), and token counts. If the model name is missing, cost stays at zero. Setting any explicit `gen_ai.usage.*_cost` value overrides the calculated cost for that span and skips the pricing lookup entirely. See [LLM cost tracking](/tracing/structure/llm-cost-tracking) for the supported provider names.
 
 ### Prompts and completions
 
@@ -107,12 +115,13 @@ You can ship either form. The indexed form is simpler when you're emitting per-m
 
 | Scope | OTel placement | Use for |
 | --- | --- | --- |
-| Process-wide | Resource on the tracer provider | `service.name`, `service.version`, `deployment.environment`, app-wide constants |
 | Trace-wide | Root span, via `lmnr.association.properties.*` | session, user, tags, metadata |
 | Per-span, known at creation | `tracer.startSpan(name, { attributes })` | `lmnr.span.type`, `lmnr.span.input`, `gen_ai.system`, `gen_ai.request.model` |
 | Per-span, known after work runs | `span.setAttributes({...})` | `lmnr.span.output`, `gen_ai.response.model`, token counts |
 
-Resource-level attributes are sent once per batch and apply to every span in that batch; putting `service.name` on each span instead is wasteful and harder to filter. For trace-association attributes, root-span placement is simpler than every-span placement and produces the same result.
+Trace-association attributes are easiest to read and reason about when set once on the root span; spreading them across spans relies on per-field merge rules (see [How attributes flow into Laminar](#how-attributes-flow-into-laminar)) and can drop values silently.
+
+OTLP `Resource` attributes (`service.name`, `service.version`, `deployment.environment`) are still worth setting on your tracer provider for non-Laminar consumers and OpenTelemetry-compliant tooling, but Laminar itself does not currently read them. If you need them queryable in Laminar, also set them on each span (or as trace metadata).
 
 ## Worked example: a minimal correct trace without the SDK
 
@@ -311,7 +320,7 @@ GenAI keys (`gen_ai.*`) are part of the OpenTelemetry GenAI semantic conventions
 ## Anti-patterns
 
 - **Setting `lmnr.association.properties.session_id` on every span.** Set it once on the root; Laminar lifts it onto the trace at ingest. Repeating it everywhere wastes attribute bytes.
-- **Putting `service.name` or app version on each span.** These are Resource attributes. Set them on the tracer provider's `Resource` so they're emitted once per batch.
+- **Spreading metadata across multiple spans.** First-non-empty whole-map wins, so spans that come after the first one with metadata are silently dropped. Set the full `lmnr.association.properties.metadata.*` set on the root span.
 - **Setting `lmnr.span.type = "EXECUTOR"` on application code.** `EXECUTOR` is reserved for auto-instrumentation and the [evaluations](/evaluations/introduction) framework. Use `DEFAULT` or `TOOL`.
 - **Setting LLM token counts without `gen_ai.system` + `gen_ai.request.model`.** Cost stays at zero. The provider name and request model are required to look up pricing.
 - **Setting `lmnr.span.type = "LLM"` but omitting prompt and completion attributes.** The span renders as an LLM call but the conversation panel is empty. Emit either the indexed (`gen_ai.prompt.{i}.*` / `gen_ai.completion.{i}.*`) form or the semconv (`gen_ai.input.messages` / `gen_ai.output.messages`) form.
