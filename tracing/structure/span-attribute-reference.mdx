@@ -78,20 +78,7 @@ Cost is calculated from `gen_ai.system` + `gen_ai.request.model` + token counts.
 
 ### Prompts and completions
 
-Laminar reads two encodings for LLM message content. Use whichever your instrumentation already emits.
-
-**Indexed form** (older OpenLLMetry / OpenInference convention):
-
-| Key | Description |
-| --- | --- |
-| `gen_ai.prompt.{i}.role` | Role of input message `i`, starting at 0 (`"system"`, `"user"`, `"assistant"`, `"tool"`). |
-| `gen_ai.prompt.{i}.content` | Content of input message `i`. String or JSON-stringified parts array. |
-| `gen_ai.completion.{i}.role` | Role of output message `i`. |
-| `gen_ai.completion.{i}.content` | Content of output message `i`. |
-
-Tool calls inside a prompt or completion follow the OpenLLMetry `gen_ai.prompt.{i}.tool_calls.{j}.{id,name,arguments}` shape; Laminar's frontend renders these inline with the message.
-
-**OTel GenAI semconv form** (the newer message-array convention):
+Use the OTel GenAI semconv message-array form. This is the convention Laminar recommends for new exporters.
 
 | Key | Description |
 | --- | --- |
@@ -99,9 +86,21 @@ Tool calls inside a prompt or completion follow the OpenLLMetry `gen_ai.prompt.{
 | `gen_ai.output.messages` | JSON-stringified `[{role, parts: [...]}]` array. |
 | `gen_ai.system_instructions` | System prompt, prepended to the input messages as a synthetic `system` entry. |
 
-Each `parts` entry is one of `{type: "text", content}`, `{type: "thinking", content}`, `{type: "tool_call", id, name, arguments}`, `{type: "tool_call_response", id, response}`, `{type: "uri", uri}`, `{type: "blob", blob, mimeType}`. Laminar preserves the message shape end-to-end and the frontend parser maps it into the same renderer used for the indexed form.
+Each `parts` entry is one of `{type: "text", content}`, `{type: "thinking", content}`, `{type: "tool_call", id, name, arguments}`, `{type: "tool_call_response", id, response}`, `{type: "uri", uri}`, `{type: "blob", blob, mimeType}`. Laminar preserves the message shape end-to-end and the frontend renders each part inline.
 
-You can ship either form. The indexed form is simpler when you're emitting per-message attributes; the semconv form is simpler when you already have a structured message array.
+<Note>
+The indexed `gen_ai.prompt.{i}.*` / `gen_ai.completion.{i}.*` shape (older OpenLLMetry / OpenInference convention) is still ingested for backwards compatibility but is deprecated. New exporters should emit the semconv form above.
+</Note>
+
+### Tool definitions
+
+| Key | Description |
+| --- | --- |
+| `gen_ai.tool.definitions` | JSON-stringified array of the tools the model was given for this call. Each entry is `{type, function: {name, description, parameters}}` (OpenAI shape) or the provider-equivalent shape with `name` / `description` / `input_schema`. Renders as the **tools** dropdown on the LLM span. |
+
+<Note>
+The older `llm.request.functions.{i}.{name,description,parameters}` indexed form is still ingested for backwards compatibility but is deprecated. New exporters should emit `gen_ai.tool.definitions`.
+</Note>
 
 ## Where to put each attribute
 
@@ -172,8 +171,12 @@ The example below uses only `@opentelemetry/api` and `@opentelemetry/sdk-trace-*
           // GenAI semconv (OTel-defined keys)
           "gen_ai.system": "openai",
           "gen_ai.request.model": "gpt-5-mini",
-          "gen_ai.prompt.0.role": "user",
-          "gen_ai.prompt.0.content": "Find me a flight to NYC tomorrow.",
+          "gen_ai.input.messages": JSON.stringify([
+            {
+              role: "user",
+              parts: [{ type: "text", content: "Find me a flight to NYC tomorrow." }],
+            },
+          ]),
         },
       });
       // ... call your provider, capture the response ...
@@ -181,8 +184,12 @@ The example below uses only `@opentelemetry/api` and `@opentelemetry/sdk-trace-*
         "gen_ai.response.model": "gpt-5-mini-2025-04-01",
         "gen_ai.usage.input_tokens": 18,
         "gen_ai.usage.output_tokens": 42,
-        "gen_ai.completion.0.role": "assistant",
-        "gen_ai.completion.0.content": "I found 3 flights...",
+        "gen_ai.output.messages": JSON.stringify([
+          {
+            role: "assistant",
+            parts: [{ type: "text", content: "I found 3 flights..." }],
+          },
+        ]),
         "lmnr.span.output": JSON.stringify({
           flights: [{ id: "AA101" }, { id: "DL202" }, { id: "UA303" }],
         }),
@@ -264,8 +271,14 @@ The example below uses only `@opentelemetry/api` and `@opentelemetry/sdk-trace-*
                 "lmnr.span.type": "LLM",
                 "gen_ai.system": "openai",
                 "gen_ai.request.model": "gpt-5-mini",
-                "gen_ai.prompt.0.role": "user",
-                "gen_ai.prompt.0.content": "Find me a flight to NYC tomorrow.",
+                "gen_ai.input.messages": json.dumps([
+                    {
+                        "role": "user",
+                        "parts": [
+                            {"type": "text", "content": "Find me a flight to NYC tomorrow."},
+                        ],
+                    },
+                ]),
             },
         ) as llm:
             # ... call your provider, capture the response ...
@@ -273,8 +286,12 @@ The example below uses only `@opentelemetry/api` and `@opentelemetry/sdk-trace-*
                 "gen_ai.response.model": "gpt-5-mini-2025-04-01",
                 "gen_ai.usage.input_tokens": 18,
                 "gen_ai.usage.output_tokens": 42,
-                "gen_ai.completion.0.role": "assistant",
-                "gen_ai.completion.0.content": "I found 3 flights...",
+                "gen_ai.output.messages": json.dumps([
+                    {
+                        "role": "assistant",
+                        "parts": [{"type": "text", "content": "I found 3 flights..."}],
+                    },
+                ]),
                 "lmnr.span.output": json.dumps(
                     {"flights": [{"id": "AA101"}, {"id": "DL202"}]},
                 ),
@@ -314,7 +331,7 @@ GenAI keys (`gen_ai.*`) are part of the OpenTelemetry GenAI semantic conventions
 - **Putting `service.name` or app version on each span.** These are Resource attributes. Set them on the tracer provider's `Resource` so they're emitted once per batch.
 - **Setting `lmnr.span.type = "EXECUTOR"` on application code.** `EXECUTOR` is reserved for auto-instrumentation and the [evaluations](/evaluations/introduction) framework. Use `DEFAULT` or `TOOL`.
 - **Setting LLM token counts without `gen_ai.system` + `gen_ai.request.model`.** Cost stays at zero. The provider name and request model are required to look up pricing.
-- **Setting `lmnr.span.type = "LLM"` but omitting prompt and completion attributes.** The span renders as an LLM call but the conversation panel is empty. Emit either the indexed (`gen_ai.prompt.{i}.*` / `gen_ai.completion.{i}.*`) form or the semconv (`gen_ai.input.messages` / `gen_ai.output.messages`) form.
+- **Setting `lmnr.span.type = "LLM"` but omitting prompt and completion attributes.** The span renders as an LLM call but the conversation panel is empty. Emit `gen_ai.input.messages` and `gen_ai.output.messages`.
 - **Passing non-primitive attribute values directly.** OTel attribute values are limited to `string | number | boolean | string[] | number[] | boolean[]`. For `lmnr.span.input`, `lmnr.span.output`, per-message content, or non-primitive metadata values, `JSON.stringify` first.
 
 ## Transports for `/v1/traces`
