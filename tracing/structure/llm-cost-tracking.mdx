@@ -114,6 +114,60 @@ Set `spanType: 'LLM'` when creating the span. Without this, the span appears as 
   </Tab>
 </Tabs>
 
+## Without the SDK
+
+If you ship OTLP directly to Laminar (no `@lmnr-ai/lmnr` / `lmnr` import), set the same fields as raw attribute keys on a span you mark as `LLM`:
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    const span = tracer.startSpan("custom_llm_call", {
+      attributes: {
+        "lmnr.span.type": "LLM",
+        "gen_ai.system": "openai",
+        "gen_ai.request.model": "gpt-5-mini",
+      },
+    });
+    // ... call the model ...
+    span.setAttributes({
+      "gen_ai.response.model": "gpt-5-mini-2025-04-01",
+      "gen_ai.usage.input_tokens": 1284,
+      "gen_ai.usage.output_tokens": 162,
+      // Optional explicit costs (override calculated pricing)
+      "gen_ai.usage.input_cost": 0.0019,
+      "gen_ai.usage.output_cost": 0.0024,
+      "gen_ai.usage.cost": 0.0043,
+    });
+    span.end();
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    span = tracer.start_span(
+        "custom_llm_call",
+        attributes={
+            "lmnr.span.type": "LLM",
+            "gen_ai.system": "openai",
+            "gen_ai.request.model": "gpt-5-mini",
+        },
+    )
+    # ... call the model ...
+    span.set_attributes({
+        "gen_ai.response.model": "gpt-5-mini-2025-04-01",
+        "gen_ai.usage.input_tokens": 1284,
+        "gen_ai.usage.output_tokens": 162,
+        # Optional explicit costs (override calculated pricing)
+        "gen_ai.usage.input_cost": 0.0019,
+        "gen_ai.usage.output_cost": 0.0024,
+        "gen_ai.usage.cost": 0.0043,
+    })
+    span.end()
+    ```
+  </Tab>
+</Tabs>
+
+For prompt and completion content, plus the rest of the attribute keys Laminar reads, see [Span attribute reference](/tracing/structure/span-attribute-reference).
+
 ## Model Name Formats
 
 Use the exact model string as returned by the provider API.

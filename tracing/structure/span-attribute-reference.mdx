@@ -1,0 +1,345 @@
+---
+title: Span Attribute Reference
+sidebarTitle: Span Attribute Reference
+---
+
+This page is the reference for setting Laminar-recognized OpenTelemetry attributes from a non-SDK exporter: foreign-language SDKs, browser code, custom instrumentations, internal trace adapters. If you are using `@lmnr-ai/lmnr` or `lmnr` (Python), the SDK already sets these attributes for you. Use this page when you ship OTLP directly to Laminar without the SDK and need the literal wire keys.
+
+## How attributes flow into Laminar
+
+Spans arrive at Laminar as standard OTLP. Laminar reads three layers:
+
+- **Resource attributes** on the tracer provider (`service.name`, `service.version`, `deployment.environment`).
+- **Span attributes** on each span: span shape, LLM telemetry, GenAI semconv content.
+- **Trace-association attributes**, which Laminar lifts off any span in the trace and stores once on the trace record (session, user, metadata, tags, trace type).
+
+Trace-association attributes use an "any-span wins" merge: the first non-empty value Laminar sees during ingest is what the trace gets. The most predictable place to set them is the root span, set them once.
+
+## Span-shape attributes
+
+Set on the span you want to control. All keys are namespaced under `lmnr.span.*`.
+
+| Key | Type | What it does |
+| --- | --- | --- |
+| `lmnr.span.type` | string | Span type: `DEFAULT`, `LLM`, or `TOOL`. Drives [transcript rendering and cost rollups](/tracing/structure/span-types). `EXECUTOR`, `EVALUATOR`, `HUMAN_EVALUATOR`, `EVALUATION`, `CACHED` are reserved for the [evaluations framework](/evaluations/introduction); do not set them on application spans. |
+| `lmnr.span.input` | string (JSON-stringified) | Populates the Input panel and the transcript-view inline preview. Stringify non-primitive values before setting. |
+| `lmnr.span.output` | string (JSON-stringified) | Populates the Output panel and inline preview. Stringify non-primitive values. |
+| `lmnr.span.path` | string array | Span name path from the root. The Laminar SDKs auto-fill this; custom exporters should leave it unset unless they need explicit path control (rare). |
+| `lmnr.span.ids_path` | string array | Span-id path from the root, in the same order as `lmnr.span.path`. SDK-managed; usually leave unset. |
+| `lmnr.span.parent_path` | string array | Parent's `lmnr.span.path`. SDK-managed. |
+| `lmnr.span.parent_ids_path` | string array | Parent's `lmnr.span.ids_path`. SDK-managed. |
+| `lmnr.span.instrumentation_source` | string | Free-form label identifying the emitter (e.g. `"javascript"`, `"my-internal-adapter"`). Surfaces in span metadata. |
+| `lmnr.span.sdk_version` | string | Version of the emitter. Optional. |
+| `lmnr.span.language_version` | string | Runtime version of the emitter. Optional. |
+| `lmnr.span.human_evaluator_options` | string (JSON) | Used by `HumanEvaluator()`. See [evaluations](/evaluations/introduction). |
+
+Setting `lmnr.span.type = "LLM"` is required for LLM-specific UI and cost rollups to render at all. A span with `LLM` type but no `gen_ai.*` content shows up in the LLM section but with an empty conversation panel. See [LLM attributes](#llm-attributes) below.
+
+## Trace-association attributes
+
+These describe the trace, not the individual span. Set them once on the root span: Laminar lifts them onto the trace record at ingest time. Setting them on every span works but is wasteful.
+
+| Key | Type | What it does |
+| --- | --- | --- |
+| `lmnr.association.properties.session_id` | string | Groups traces into a [session](/tracing/structure/sessions). |
+| `lmnr.association.properties.user_id` | string | Attaches a [user id](/tracing/structure/user-id) to the trace. |
+| `lmnr.association.properties.rollout_session_id` | string | Used by the agent debugger for rollout grouping. |
+| `lmnr.association.properties.trace_type` | string | Trace classification (`"DEFAULT"` / `"EVALUATION"`). Most callers leave this alone. |
+| `lmnr.association.properties.tags` | string array | Span-level [tags](/tracing/structure/tags). Tags are unioned across every span in the trace (not root-only) and the union becomes the trace tag set. |
+| `lmnr.association.properties.metadata.<key>` | primitive or JSON-stringified | Trace [metadata](/tracing/structure/metadata): one attribute per key. Primitives (string, number, boolean, arrays of those) pass through; complex values must be `JSON.stringify`d before set. |
+
+The metadata key shape mirrors what the Laminar SDK emits. To attach `{environment: "prod", featureFlag: "new-algo", abVariant: {bucket: 3}}` to a trace, set three attributes on the root span:
+
+```text
+lmnr.association.properties.metadata.environment   = "prod"
+lmnr.association.properties.metadata.featureFlag   = "new-algo"
+lmnr.association.properties.metadata.abVariant     = "{\"bucket\":3}"
+```
+
+## LLM attributes
+
+Set these on a span where `lmnr.span.type = "LLM"`.
+
+### Provider, model, tokens, cost
+
+| Concept | Wire key | Example |
+| --- | --- | --- |
+| Provider | `gen_ai.system` | `"openai"` |
+| Request model | `gen_ai.request.model` | `"gpt-5-mini"` |
+| Response model | `gen_ai.response.model` | `"gpt-5-mini-2025-04-01"` |
+| Input tokens | `gen_ai.usage.input_tokens` | `1284` |
+| Output tokens | `gen_ai.usage.output_tokens` | `162` |
+| Total tokens | `llm.usage.total_tokens` | `1446` |
+| Input cost | `gen_ai.usage.input_cost` | `0.0019` |
+| Output cost | `gen_ai.usage.output_cost` | `0.0024` |
+| Total cost | `gen_ai.usage.cost` | `0.0043` |
+
+Cost is calculated from `gen_ai.system` + `gen_ai.request.model` + token counts. Without all three, cost stays at zero. Setting the explicit `gen_ai.usage.*_cost` keys overrides the calculated values. See [LLM cost tracking](/tracing/structure/llm-cost-tracking) for the supported provider names.
+
+### Prompts and completions
+
+Laminar reads two encodings for LLM message content. Use whichever your instrumentation already emits.
+
+**Indexed form** (older OpenLLMetry / OpenInference convention):
+
+| Key | Description |
+| --- | --- |
+| `gen_ai.prompt.{i}.role` | Role of input message `i`, starting at 0 (`"system"`, `"user"`, `"assistant"`, `"tool"`). |
+| `gen_ai.prompt.{i}.content` | Content of input message `i`. String or JSON-stringified parts array. |
+| `gen_ai.completion.{i}.role` | Role of output message `i`. |
+| `gen_ai.completion.{i}.content` | Content of output message `i`. |
+
+Tool calls inside a prompt or completion follow the OpenLLMetry `gen_ai.prompt.{i}.tool_calls.{j}.{id,name,arguments}` shape; Laminar's frontend renders these inline with the message.
+
+**OTel GenAI semconv form** (the newer message-array convention):
+
+| Key | Description |
+| --- | --- |
+| `gen_ai.input.messages` | JSON-stringified `[{role, parts: [...]}]` array. |
+| `gen_ai.output.messages` | JSON-stringified `[{role, parts: [...]}]` array. |
+| `gen_ai.system_instructions` | System prompt, prepended to the input messages as a synthetic `system` entry. |
+
+Each `parts` entry is one of `{type: "text", content}`, `{type: "thinking", content}`, `{type: "tool_call", id, name, arguments}`, `{type: "tool_call_response", id, response}`, `{type: "uri", uri}`, `{type: "blob", blob, mimeType}`. Laminar preserves the message shape end-to-end and the frontend parser maps it into the same renderer used for the indexed form.
+
+You can ship either form. The indexed form is simpler when you're emitting per-message attributes; the semconv form is simpler when you already have a structured message array.
+
+## Where to put each attribute
+
+| Scope | OTel placement | Use for |
+| --- | --- | --- |
+| Process-wide | Resource on the tracer provider | `service.name`, `service.version`, `deployment.environment`, app-wide constants |
+| Trace-wide | Root span, via `lmnr.association.properties.*` | session, user, tags, metadata |
+| Per-span, known at creation | `tracer.startSpan(name, { attributes })` | `lmnr.span.type`, `lmnr.span.input`, `gen_ai.system`, `gen_ai.request.model` |
+| Per-span, known after work runs | `span.setAttributes({...})` | `lmnr.span.output`, `gen_ai.response.model`, token counts |
+
+Resource-level attributes are sent once per batch and apply to every span in that batch; putting `service.name` on each span instead is wasteful and harder to filter. For trace-association attributes, root-span placement is simpler than every-span placement and produces the same result.
+
+## Worked example: a minimal correct trace without the SDK
+
+The example below uses only `@opentelemetry/api` and `@opentelemetry/sdk-trace-*`, no `@lmnr-ai/lmnr` import. The Python snippet uses the same plain OTel APIs. Both build the same trace shape: an outer `agent.run` span with session metadata, a child `llm.chat` LLM span with full GenAI attributes, and a child `tool.execute` TOOL span.
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { trace, context, SpanStatusCode } from "@opentelemetry/api";
+    import { resourceFromAttributes } from "@opentelemetry/resources";
+    import {
+      NodeTracerProvider,
+      BatchSpanProcessor,
+    } from "@opentelemetry/sdk-trace-node";
+    import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
+    import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions";
+
+    const provider = new NodeTracerProvider({
+      resource: resourceFromAttributes({
+        [ATTR_SERVICE_NAME]: "my-agent",
+      }),
+      spanProcessors: [
+        new BatchSpanProcessor(
+          new OTLPTraceExporter({
+            url: "https://api.lmnr.ai:443/v1/traces",
+            headers: {
+              Authorization: `Bearer ${process.env.LMNR_PROJECT_API_KEY}`,
+            },
+          }),
+        ),
+      ],
+    });
+    provider.register();
+
+    const tracer = trace.getTracer("my-agent", "0.1.0");
+
+    const root = tracer.startSpan("agent.run", {
+      attributes: {
+        // Laminar-specific
+        "lmnr.span.type": "DEFAULT",
+        "lmnr.span.input": JSON.stringify({ goal: "book a flight to NYC" }),
+
+        // Trace-association: set ONCE on the root span
+        "lmnr.association.properties.session_id": "sess-9f21",
+        "lmnr.association.properties.user_id": "u_42",
+        "lmnr.association.properties.tags": ["beta", "internal"],
+        "lmnr.association.properties.metadata.environment": "production",
+        "lmnr.association.properties.metadata.region": "us-west",
+      },
+    });
+
+    await context.with(trace.setSpan(context.active(), root), async () => {
+      // Child LLM span with the full required GenAI set.
+      const llm = tracer.startSpan("llm.chat", {
+        attributes: {
+          "lmnr.span.type": "LLM",
+          // GenAI semconv (OTel-defined keys)
+          "gen_ai.system": "openai",
+          "gen_ai.request.model": "gpt-5-mini",
+          "gen_ai.prompt.0.role": "user",
+          "gen_ai.prompt.0.content": "Find me a flight to NYC tomorrow.",
+        },
+      });
+      // ... call your provider, capture the response ...
+      llm.setAttributes({
+        "gen_ai.response.model": "gpt-5-mini-2025-04-01",
+        "gen_ai.usage.input_tokens": 18,
+        "gen_ai.usage.output_tokens": 42,
+        "gen_ai.completion.0.role": "assistant",
+        "gen_ai.completion.0.content": "I found 3 flights...",
+        "lmnr.span.output": JSON.stringify({
+          flights: [{ id: "AA101" }, { id: "DL202" }, { id: "UA303" }],
+        }),
+      });
+      llm.setStatus({ code: SpanStatusCode.OK });
+      llm.end();
+
+      // Child TOOL span: arguments and return value go on input/output.
+      const tool = tracer.startSpan("search_flights", {
+        attributes: {
+          "lmnr.span.type": "TOOL",
+          "lmnr.span.input": JSON.stringify({
+            origin: "SFO",
+            destination: "JFK",
+            date: "2026-05-19",
+          }),
+        },
+      });
+      // ... call your tool ...
+      tool.setAttribute(
+        "lmnr.span.output",
+        JSON.stringify([{ id: "AA101", price: 412.5 }]),
+      );
+      tool.setStatus({ code: SpanStatusCode.OK });
+      tool.end();
+    });
+
+    root.setStatus({ code: SpanStatusCode.OK });
+    root.end();
+    await provider.forceFlush();
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    import json
+    import os
+
+    from opentelemetry import trace
+    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
+        OTLPSpanExporter,
+    )
+    from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor
+    from opentelemetry.semconv.attributes.service_attributes import SERVICE_NAME
+    from opentelemetry.trace.status import Status, StatusCode
+
+    provider = TracerProvider(
+        resource=Resource.create({SERVICE_NAME: "my-agent"}),
+    )
+    provider.add_span_processor(
+        BatchSpanProcessor(
+            OTLPSpanExporter(
+                endpoint="https://api.lmnr.ai:8443/v1/traces",
+                headers={
+                    "authorization": f"Bearer {os.environ['LMNR_PROJECT_API_KEY']}",
+                },
+            ),
+        ),
+    )
+    trace.set_tracer_provider(provider)
+    tracer = trace.get_tracer("my-agent", "0.1.0")
+
+    with tracer.start_as_current_span(
+        "agent.run",
+        attributes={
+            "lmnr.span.type": "DEFAULT",
+            "lmnr.span.input": json.dumps({"goal": "book a flight to NYC"}),
+            "lmnr.association.properties.session_id": "sess-9f21",
+            "lmnr.association.properties.user_id": "u_42",
+            "lmnr.association.properties.tags": ["beta", "internal"],
+            "lmnr.association.properties.metadata.environment": "production",
+            "lmnr.association.properties.metadata.region": "us-west",
+        },
+    ) as root:
+        with tracer.start_as_current_span(
+            "llm.chat",
+            attributes={
+                "lmnr.span.type": "LLM",
+                "gen_ai.system": "openai",
+                "gen_ai.request.model": "gpt-5-mini",
+                "gen_ai.prompt.0.role": "user",
+                "gen_ai.prompt.0.content": "Find me a flight to NYC tomorrow.",
+            },
+        ) as llm:
+            # ... call your provider, capture the response ...
+            llm.set_attributes({
+                "gen_ai.response.model": "gpt-5-mini-2025-04-01",
+                "gen_ai.usage.input_tokens": 18,
+                "gen_ai.usage.output_tokens": 42,
+                "gen_ai.completion.0.role": "assistant",
+                "gen_ai.completion.0.content": "I found 3 flights...",
+                "lmnr.span.output": json.dumps(
+                    {"flights": [{"id": "AA101"}, {"id": "DL202"}]},
+                ),
+            })
+            llm.set_status(Status(StatusCode.OK))
+
+        with tracer.start_as_current_span(
+            "search_flights",
+            attributes={
+                "lmnr.span.type": "TOOL",
+                "lmnr.span.input": json.dumps({
+                    "origin": "SFO",
+                    "destination": "JFK",
+                    "date": "2026-05-19",
+                }),
+            },
+        ) as tool:
+            # ... call your tool ...
+            tool.set_attribute(
+                "lmnr.span.output",
+                json.dumps([{"id": "AA101", "price": 412.5}]),
+            )
+            tool.set_status(Status(StatusCode.OK))
+
+        root.set_status(Status(StatusCode.OK))
+
+    provider.force_flush()
+    ```
+  </Tab>
+</Tabs>
+
+GenAI keys (`gen_ai.*`) are part of the OpenTelemetry GenAI semantic conventions; everything under `lmnr.*` is Laminar-specific.
+
+## Anti-patterns
+
+- **Setting `lmnr.association.properties.session_id` on every span.** Set it once on the root; Laminar lifts it onto the trace at ingest. Repeating it everywhere wastes attribute bytes.
+- **Putting `service.name` or app version on each span.** These are Resource attributes. Set them on the tracer provider's `Resource` so they're emitted once per batch.
+- **Setting `lmnr.span.type = "EXECUTOR"` on application code.** `EXECUTOR` is reserved for auto-instrumentation and the [evaluations](/evaluations/introduction) framework. Use `DEFAULT` or `TOOL`.
+- **Setting LLM token counts without `gen_ai.system` + `gen_ai.request.model`.** Cost stays at zero. The provider name and request model are required to look up pricing.
+- **Setting `lmnr.span.type = "LLM"` but omitting prompt and completion attributes.** The span renders as an LLM call but the conversation panel is empty. Emit either the indexed (`gen_ai.prompt.{i}.*` / `gen_ai.completion.{i}.*`) form or the semconv (`gen_ai.input.messages` / `gen_ai.output.messages`) form.
+- **Passing non-primitive attribute values directly.** OTel attribute values are limited to `string | number | boolean | string[] | number[] | boolean[]`. For `lmnr.span.input`, `lmnr.span.output`, per-message content, or non-primitive metadata values, `JSON.stringify` first.
+
+## Transports for `/v1/traces`
+
+The Laminar cloud (`api.lmnr.ai`) and self-hosted backends accept three OTLP transports:
+
+- OTLP/gRPC on `:8443` (cloud) / `:8001` (self-hosted): the recommended path.
+- OTLP/HTTP+protobuf on `:443` (cloud) / `:8000` (self-hosted): `Content-Type: application/x-protobuf`.
+- OTLP/HTTP+JSON on `:443` (cloud) / `:8000` (self-hosted): `Content-Type: application/json`. Useful for browser SDKs and other runtimes that don't have a protobuf encoder available; spec quirks (hex or base64 IDs, decimal-stringified `fixed64`, enum-name strings) are accepted.
+
+Pick whichever your runtime supports best. Attribute semantics on the wire are identical across transports.
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="OpenTelemetry transport setup" icon="plug" href="/tracing/otel">
+    Endpoints, ports, headers, and the gRPC vs HTTP comparison.
+  </Card>
+  <Card title="Span types" icon="tags" href="/tracing/structure/span-types">
+    What `DEFAULT`, `LLM`, and `TOOL` render to in the transcript view.
+  </Card>
+  <Card title="LLM cost tracking" icon="dollar-sign" href="/tracing/structure/llm-cost-tracking">
+    Required `gen_ai.*` attributes and supported provider names.
+  </Card>
+  <Card title="Metadata" icon="layer-group" href="/tracing/structure/metadata">
+    Trace-level metadata, including the wire key for non-SDK exporters.
+  </Card>
+</CardGroup>

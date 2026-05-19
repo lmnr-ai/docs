@@ -4,6 +4,11 @@ title: Changelog
 
 New releases and improvements.
 
+## May 2026
+
+- **OTLP/HTTP+JSON ingest** - `/v1/traces` now accepts JSON-encoded OTLP in addition to gRPC and HTTP+protobuf. Useful for browser SDKs and other runtimes without a protobuf encoder. See [OpenTelemetry](/tracing/otel).
+- **Span attribute reference** - New [Span attribute reference](/tracing/structure/span-attribute-reference) page documents every Laminar-recognized OTel attribute key (span shape, trace-association, LLM telemetry, GenAI semconv) for users shipping OTLP without the Laminar SDK.
+
 ## April 2026
 
 - **Evaluations docs rewrite** - [Evaluations](/evaluations/introduction) is restructured end to end. New [Concepts](/evaluations/concepts) page covers the datapoint / executor / evaluator / group model; new [Compare runs](/evaluations/comparing-runs) page documents the progression chart and side-by-side diff; [Datasets](/evaluations/datasets) replaces the old using-dataset page; [Self-hosted](/evaluations/self-hosted) consolidates SDK config for self-hosted instances. Online evaluators are removed.

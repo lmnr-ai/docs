@@ -29,31 +29,27 @@ Exporter is the client-side component that sends spans (and thus traces) to an O
 
 It is responsible for the payload format and the transport protocol.
 The default protocol is [OTLP](https://opentelemetry.io/docs/specs/otel/protocol/),
-which underneath uses protobuf in one of the following formats:
+which has three on-the-wire variants:
 
-- Protobuf in gRPC (commonly known as OTLP/gRPC)
-- Protobuf over HTTP with binary encoding (commonly known as OTLP/HTTP/proto)
-- Protobuf over HTTP with JSON encoding (commonly known as OTLP/HTTP/json, is used rarely).
+- Protobuf over gRPC (commonly known as OTLP/gRPC)
+- Protobuf over HTTP (commonly known as OTLP/HTTP/proto)
+- JSON over HTTP (commonly known as OTLP/HTTP/json)
 
-Laminar's backend (both cloud and self-hosted) supports OTLP/gRPC and OTLP/HTTP/proto formats.
-OTLP/gRPC is recommended for performance and reliability reasons.
+Laminar's backend (both cloud and self-hosted) supports all three. OTLP/gRPC is recommended for performance and reliability; OTLP/HTTP/json is useful for runtimes that can't ship a protobuf encoder, such as browser code.
 
-<Warning>
-Laminar's backend does not support OTLP/HTTP/json.
-</Warning>
+Here's a quick comparison of the formats that Laminar supports:
 
-Here's a quick comparison of formats that Laminar supports:
-
-|  | OTLP/gRPC | OTLP/HTTP/proto |
-| --- | --- | --- |
-| Supported | ✅ | ✅ |
-| Recommended | ✅ | ❌ |
-| Underlying protocol | gRPC over HTTP/2 | HTTP/1.1 |
-| Encoding format | protobuf | protobuf |
-| Base URL for Laminar cloud | `https://api.lmnr.ai` | `https://api.lmnr.ai` |
-| Port at Laminar cloud | `8443` | `443` |
-| Default port for self-hosted backend | `8001` | `8000` |
-| Path | `/v1/traces` [1] | `/v1/traces` [1] |
+|  | OTLP/gRPC | OTLP/HTTP/proto | OTLP/HTTP/json |
+| --- | --- | --- | --- |
+| Supported | ✅ | ✅ | ✅ |
+| Recommended | ✅ | ❌ | only when proto isn't an option |
+| Underlying protocol | gRPC over HTTP/2 | HTTP/1.1 | HTTP/1.1 |
+| Encoding format | protobuf | protobuf | JSON |
+| `Content-Type` | n/a | `application/x-protobuf` | `application/json` |
+| Base URL for Laminar cloud | `https://api.lmnr.ai` | `https://api.lmnr.ai` | `https://api.lmnr.ai` |
+| Port at Laminar cloud | `8443` | `443` | `443` |
+| Default port for self-hosted backend | `8001` | `8000` | `8000` |
+| Path | `/v1/traces` [1] | `/v1/traces` [1] | `/v1/traces` [1] |
 
 [1] In OpenTelemetry Node and Python SDKs,
 this path is appended (unless specified explicitly) in gRPC exporter, but not in the HTTP exporter.
@@ -160,6 +156,8 @@ If you are facing issues, please refer to the [Troubleshooting OpenTelemetry](/t
 
 This section is solely for information purposes.
 As a user of Laminar, you don't have to deal with the internals of OpenTelemetry.
+
+For the full list of attribute keys Laminar reads (span shape, trace-association, LLM telemetry, GenAI semconv), see [Span attribute reference](/tracing/structure/span-attribute-reference).
 
 ### Span object
 

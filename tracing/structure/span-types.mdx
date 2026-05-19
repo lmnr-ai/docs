@@ -119,6 +119,16 @@ For code that isn't a function (a block inside a larger handler, a dispatcher th
 
 This is the pattern most OpenAI-style agent loops want: a single dispatcher that looks up the tool by name and wraps every invocation in a `TOOL` span, so every tool call in the run shows up in the transcript with the right label and payload.
 
+## Setting type without the SDK
+
+If you ship OTLP directly (no `@lmnr-ai/lmnr` / `lmnr` import), set the type as a span attribute at creation time:
+
+```text
+attributes: { "lmnr.span.type": "TOOL" }
+```
+
+See the [Span attribute reference](/tracing/structure/span-attribute-reference) for the full set of Laminar-recognized attribute keys.
+
 ## When to leave a span as `DEFAULT`
 
 `DEFAULT` is the right call for:

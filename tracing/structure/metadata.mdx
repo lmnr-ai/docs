@@ -48,6 +48,16 @@ Set metadata inside an active span context (for example, inside `observe()` or a
   </Tab>
 </Tabs>
 
+## Wire format
+
+Without the SDK, set one OTel attribute per metadata key on the root span:
+
+```text
+lmnr.association.properties.metadata.<key> = <primitive or JSON-stringified value>
+```
+
+Primitives (string, number, boolean, arrays of those) pass through; complex values must be `JSON.stringify`d. See the full [Span attribute reference](/tracing/structure/span-attribute-reference) for the rest of the keys Laminar reads.
+
 ## Notes
 
 - Trace metadata is merged as spans arrive. If multiple spans set the same key, the **last span processed wins** (order is not guaranteed), so values can change while a trace is still ingesting.

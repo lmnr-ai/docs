@@ -67,6 +67,7 @@
                   "tracing/structure/images",
                   "tracing/structure/continuing-traces",
                   "tracing/structure/llm-cost-tracking",
+                  "tracing/structure/span-attribute-reference",
                   "tracing/structure/flushing-and-shutdown"
                 ]
               },
