@@ -24,10 +24,10 @@ Set on the span you want to control. All keys are namespaced under `lmnr.span.*`
 | `lmnr.span.type` | string | Span type: `DEFAULT`, `LLM`, or `TOOL`. Drives [transcript rendering and cost rollups](/tracing/structure/span-types). `EXECUTOR`, `EVALUATOR`, `HUMAN_EVALUATOR`, `EVALUATION`, `CACHED` are reserved for the [evaluations framework](/evaluations/introduction); do not set them on application spans. |
 | `lmnr.span.input` | string (JSON-stringified) | Populates the Input panel and the transcript-view inline preview. Stringify non-primitive values before setting. |
 | `lmnr.span.output` | string (JSON-stringified) | Populates the Output panel and inline preview. Stringify non-primitive values. |
-| `lmnr.span.path` | string array | Span name path from the root. The Laminar SDKs auto-fill this; custom exporters should leave it unset unless they need explicit path control (rare). |
-| `lmnr.span.ids_path` | string array | Span-id path from the root, in the same order as `lmnr.span.path`. SDK-managed; usually leave unset. |
-| `lmnr.span.parent_path` | string array | Parent's `lmnr.span.path`. SDK-managed. |
-| `lmnr.span.parent_ids_path` | string array | Parent's `lmnr.span.ids_path`. SDK-managed. |
+| `lmnr.span.path` | string array | Ordered span-name path from the trace root to this span (inclusive). Drives transcript rendering: subagent grouping, parent-chain reconstruction for partial traces, and the path-based clustering that powers the conversation view. The Laminar SDKs auto-fill this. Custom exporters either leave it unset (Laminar falls back to the OTel `parent_span_id` chain, which gives a less rich transcript) or fill it themselves to mirror what the SDK would emit. |
+| `lmnr.span.ids_path` | string array | Span-id path from the trace root to this span (inclusive), aligned 1:1 with `lmnr.span.path`. Same load-bearing role as `lmnr.span.path`: set both or neither. |
+| `lmnr.span.parent_path` | string array | Path of the parent span (`lmnr.span.path` minus the last element). Optional; only useful if you set the path yourself. |
+| `lmnr.span.parent_ids_path` | string array | Span-id form of `lmnr.span.parent_path`. Optional; pair with `lmnr.span.parent_path`. |
 | `lmnr.span.instrumentation_source` | string | Free-form label identifying the emitter (e.g. `"javascript"`, `"my-internal-adapter"`). Surfaces in span metadata. |
 | `lmnr.span.sdk_version` | string | Version of the emitter. Optional. |
 | `lmnr.span.language_version` | string | Runtime version of the emitter. Optional. |
