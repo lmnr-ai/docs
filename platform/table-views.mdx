@@ -3,15 +3,13 @@ title: Table views
 sidebarTitle: Table views
 ---
 
-**Table views** save a table's filters, search, sort, and column layout as a named preset you can reopen with one click and share with the rest of the project.
+**Table views** save a table's filters, search, sort, and column layout as a named preset you can reopen with one click. Views are stored per project, so any member of the project can pick the same preset from the dropdown.
 
 <Frame caption="The view picker on the traces table, with three saved views.">
   <img src="/images/platform/table-views/picker.png" alt="Table views picker open above the traces table" />
 </Frame>
 
-A typical use: filter Traces to `status = error` in the last hour, save it as **Errors in last hour**, and any teammate hitting the Traces tab can pick the same preset from the dropdown instead of rebuilding the filter chain.
-
-Each view is scoped to one project and one table (Traces, Spans, Sessions, Evaluations, Datasets, and the others), so saving a view on Traces never clutters the dropdown on Spans.
+Each view is scoped to one table (Traces, Spans, Sessions, Evaluations, and the others), so saving a view on Traces never clutters the dropdown on Spans.
 
 ## Save a view
 
@@ -25,9 +23,13 @@ Set up the table the way you want it. The picker shows an amber dot when the cur
   <img src="/images/platform/table-views/unsaved.png" alt="Unsaved changes section in the views dropdown" />
 </Frame>
 
-## Switch, rename, delete
+## Example: Most expensive traces
 
-Picking a view from the dropdown applies its filters, search, sort, and columns and writes `?v=<view-id>` to the URL, so you can paste the link into Slack and your teammate lands on the same table state. Hover any row in the dropdown for inline rename and delete.
+Sort the Traces table by Cost descending, hide the columns you don't need (root output, tags, metadata, session/user id), and save it as **High-cost traces**. Anyone in the project opening the Traces tab can pick that view from the dropdown to land on the same focused table.
+
+<Frame caption="The Traces table with the High-cost traces view applied: sorted by cost desc, with low-signal columns hidden.">
+  <img src="/images/platform/table-views/example.png" alt="Traces table with the High-cost traces view applied" />
+</Frame>
 
 ## What's next
 
