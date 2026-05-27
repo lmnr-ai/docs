@@ -1,0 +1,99 @@
+---
+title: Render Templates for Custom Data Views
+sidebarTitle: Render templates
+---
+
+Render templates let you write a small JSX component that takes a span's input or output as `data` and renders it however you want. Use them when the default messages, JSON, YAML, and text views do not show the shape of your data the way you actually want to read it: a specific tool's call shape, a custom agent state object, a vendor payload that buries the interesting field three levels deep.
+
+## Where render templates show up
+
+Every input/output viewer in Laminar (span Input, span Output, span Overview, queue items, dataset rows, playground messages, evaluation outputs) has a mode picker in the top-left corner. The default modes are **LLM Messages**, **JSON**, **YAML**, and **TEXT**. The same picker also lists every render template in the project under a **Custom** group; selecting one switches the pane to **CUSTOM** mode and renders the underlying value through your template.
+
+The picker remembers your selection per pane: pick a template on a specific span's Input, come back later, and that pane reopens in CUSTOM mode with the same template applied. Other panes keep using whatever default mode they had.
+
+When CUSTOM mode is active, an **Edit template** button appears next to the picker so you can jump straight to the editor without leaving the trace.
+
+## Generate a template with your AI tool
+
+The fastest way to write a template is to copy Laminar's prompt into Claude, ChatGPT, Cursor, or any other LLM, paste in a sample of your data, describe the view you want, and paste the result back. The prompt already contains:
+
+- Laminar's design-token style guide (semantic Tailwind classes like `bg-background`, `text-foreground`, `text-llm`, `text-tool`, `text-subagent`) so generated templates look like the rest of the platform.
+- The output contract: a single `function({ data })` JSX block, no imports, no network calls, defensive against `null`/`undefined`/primitive/array shapes.
+- A slot for your test data, prefilled with whatever you have entered in the **Data** tab.
+
+To use it:
+
+1. Open any I/O view, pick the mode dropdown, and click **+ New template** at the bottom (or open **Settings → Render Templates → New template**).
+2. Paste a representative JSON payload into the **Data** tab on the left. The preview will show your in-progress template against this data, and the prompt will embed it for the LLM.
+3. Click **Copy prompt** in the header above the code editor.
+4. Paste the prompt into your AI chat, add one line describing the view you want (e.g. "Render the `messages` array as a chat conversation with role-coloured headers"), and hit send.
+5. Copy the JSX function the model returns and paste it into the code editor. The preview updates live.
+6. Name the template and click **Create**. It now appears in the **Custom** group of every mode picker in the project.
+
+You do not have to use the prompt. Hand-written JSX works too; the editor accepts any valid template shape.
+
+## Edit a template
+
+Open the dialog from any of these places:
+
+- The mode picker in any I/O view (**+ New template**, or **Edit template** when a template is already selected).
+- **Settings → Render Templates** in the project settings sidebar (pencil icon on the row).
+
+The dialog has two columns:
+
+- **Left: Preview / Data tabs.** Preview renders the current template against the current Data. Data is a JSON editor; it pretty-prints when you open the dialog and again on blur, so paste-and-go works without a Format button.
+- **Right: name, Copy prompt, code editor.** The code editor is JavaScript with JSX enabled. The save button sits next to the name input.
+
+Saving updates the template everywhere it is selected: every pane that previously rendered with this template picks up the new code on next open.
+
+## Manage templates from Settings
+
+Open **Project Settings → Render Templates** for the project-level view: every template in the project, ordered by creation time, with **Edit** and **Delete** affordances. Use this when you want to clean up old templates or audit what is in the project without hunting for the panes they are bound to.
+
+Deleting a template here removes it from every pane that referenced it. Those panes fall back to JSON in CUSTOM mode (or you can pick a different template / a different default mode).
+
+## What a template looks like
+
+The contract is a single function that takes a destructured `{ data }` and returns one JSX element:
+
+```jsx
+function({ data }) {
+  return (
+    <div className="w-full min-h-full p-4 text-sm text-foreground bg-background">
+      {Array.isArray(data?.messages)
+        ? data.messages.map((m, i) => (
+            <div key={i} className="mb-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {m.role}
+              </span>
+              <div className="text-sm">{m.content}</div>
+            </div>
+          ))
+        : <div className="text-muted-foreground italic">No messages</div>}
+    </div>
+  );
+}
+```
+
+Notes:
+
+- `data` is the raw value of the I/O pane, parsed from JSON when possible. Be defensive: it can be `undefined`, `null`, a primitive, an array, or an object.
+- Tailwind classes use Laminar's design tokens. Prefer `bg-background`, `text-foreground`, `text-card-foreground`, `text-muted-foreground`, `text-primary`, `text-success`, `text-destructive` over raw palette classes; they follow the current Laminar theme. The domain colors `text-user`, `text-llm`, `text-tool`, `text-subagent` are reserved for chat-message and span-role content.
+- `useState` is in scope when you need a small interactive toggle (expand/collapse, tab switcher). `useEffect`, `useMemo`, and friends are not: templates are small and re-render cheaply.
+
+## Sandbox limits
+
+Templates run inside a sandboxed iframe with the network surface blocked. `fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource`, and `navigator.sendBeacon` are replaced with stubs that throw, so a template cannot exfiltrate trace data, ping a third-party service, or pull external code at runtime. The iframe also blocks `<script>` / `<iframe>` / `<style>` / `<link>` injection, `import` / `require` / `eval`, and `dangerouslySetInnerHTML`.
+
+If you need a capability that is not in the sandbox, the answer is to extend `data` so the template renders something the sandbox already supports, not to bypass the iframe.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Viewing traces" icon="eye" href="/platform/viewing-traces">
+    Transcript view, tree view, timeline, and the I/O panes where render templates apply.
+  </Card>
+  <Card title="Query across traces" icon="database" href="/platform/sql-editor">
+    Use the SQL editor, SQL API, [CLI](/platform/cli), or [MCP server](/platform/mcp) to slice every span and signal across your traces.
+  </Card>
+</CardGroup>
