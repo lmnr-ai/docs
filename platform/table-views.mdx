@@ -3,58 +3,37 @@ title: Table views
 sidebarTitle: Table views
 ---
 
-Every list in Laminar (traces, spans, sessions, evaluations, datasets, queues, debugger sessions, playgrounds, signal events) is a table you can configure: filters, full-text search, sort, column order, column visibility, column widths, and custom SQL columns. **Table views** save that whole configuration as a named preset you can reopen with one click and share with your teammates.
+**Table views** save a table's filters, search, sort, and column layout as a named preset you can reopen with one click and share with the rest of the project.
 
-<Frame caption="Saving the current filters, sort, and column layout as a named view from the traces table.">
+<Frame caption="The view picker on the traces table, with three saved views.">
   <img src="/images/platform/table-views/picker.png" alt="Table views picker open above the traces table" />
 </Frame>
 
-## What's saved
+A typical use: filter Traces to `status = error` in the last hour, save it as **Errors in last hour**, and any teammate hitting the Traces tab can pick the same preset from the dropdown instead of rebuilding the filter chain.
 
-A view captures the full state of the table:
-
-- **Filters** applied through the filter bar.
-- **Search** entered in the advanced search input.
-- **Sort** column and direction.
-- **Column order, visibility, and widths.**
-- **Custom SQL columns** you added to the table.
-
-A view is scoped to one **project** and one **resource** (the table it was created on). Switching to the Spans table will not show views you saved on Traces, and a view saved in one project never appears in another.
-
-## Open the picker
-
-Every table that supports views has a **view picker** (the layered-squares icon) sitting next to the filter bar. The button label is the active view's name, or `Default view` when nothing is loaded.
-
-Click it to open the dropdown:
-
-- The list of saved views, with the current one checked.
-- A search box to filter the list by name.
-- Hover any view for inline **rename** (pencil) and **delete** (trash) actions.
-- `Default view` resets the table to its built-in defaults.
+Each view is scoped to one project and one table (Traces, Spans, Sessions, Evaluations, Datasets, and the others), so saving a view on Traces never clutters the dropdown on Spans.
 
 ## Save a view
 
-Configure the table the way you want it, then open the picker. When the table state has drifted from any saved view, an amber dot appears on the trigger and the dropdown shows an **Unsaved changes** section:
+Set up the table the way you want it. The picker shows an amber dot when the current state has drifted from any saved view; open it and the **Unsaved changes** section appears:
 
-- **Save changes** writes back to the active view (only shown when a saved view is loaded).
-- **Save as new view** prompts for a name and creates a new one.
-- **Discard changes** reverts the table to the active view's saved state, or to `Default view` if none is loaded.
+- **Save changes** writes back to the active view.
+- **Save as new view** prompts for a name.
+- **Discard changes** reverts to the active view (or to `Default view` if none is loaded).
 
-Saved views are visible to every member of the project: anyone opening the same table sees the same dropdown.
-
-<Frame caption="The Unsaved changes section appears when the current table state has drifted from the active view.">
+<Frame caption="The Unsaved changes section appears when the table state has drifted from the active view.">
   <img src="/images/platform/table-views/unsaved.png" alt="Unsaved changes section in the views dropdown" />
 </Frame>
 
-## Switching views
+## Switch, rename, delete
 
-Picking a view from the dropdown applies its filters, search, sort, and column layout in one go and writes `?v=<view-id>` to the URL so you can copy-paste the link. Laminar also remembers the last view you opened on each table, so revisiting the page lands you back where you were.
+Picking a view from the dropdown applies its filters, search, sort, and columns and writes `?v=<view-id>` to the URL, so you can paste the link into Slack and your teammate lands on the same table state. Hover any row in the dropdown for inline rename and delete.
 
 ## What's next
 
 <CardGroup cols={2}>
   <Card title="Full text search" icon="search" href="/platform/search">
-    Search across span input, output, and attributes with the same toolbar that feeds into a view.
+    Search across span input, output, and attributes; saved into a view alongside your filters.
   </Card>
   <Card title="SQL Editor" icon="database" href="/platform/sql-editor">
     When a view's filters are not enough, drop into raw SQL across traces, spans, signals, and evals.
