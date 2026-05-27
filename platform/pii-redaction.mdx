@@ -1,0 +1,94 @@
+---
+title: PII Redaction for AI Agent Traces
+sidebarTitle: PII redaction
+---
+
+Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. PII redaction is a project-level switch that **runs every span through Laminar's PII redactor before storage**, replacing names, emails, phone numbers, and other detected entities with `[REDACTED_<LABEL>]` placeholders. Once it's on, *raw user data never lands in your trace store, your search index, or anyone else's eyeballs*.
+
+<Frame caption="Project Settings → Security: one toggle, project-wide, on Pro plans.">
+  <img src="/images/platform/pii-redaction-pro-required.png" alt="Security tab in project settings showing the Redact PII from spans toggle, a Pro plan required badge, and an Upgrade plan button" />
+</Frame>
+
+The redactor is Laminar's own service running a token-classification model on CPU. It sits inside the same trace-ingest pipeline as everything else, so PII is replaced before any write hits ClickHouse, the search index, or the deduplicated message store. Every storage tier holds the redacted content from the first byte.
+
+## Enabling it
+
+Go to **Project Settings → Security**, flip **Redact PII from spans** on. The change applies to every new span ingested for that project. Existing traces are not rewritten retroactively.
+
+<Frame caption="Toggle enabled. Every span ingested for this project is now redacted before storage.">
+  <img src="/images/platform/pii-redaction-enabled.png" alt="Security tab with the Redact PII from spans toggle in the on position" />
+</Frame>
+
+The toggle is per-project, not per-workspace. A workspace can mix redacted and non-redacted projects (for example, a production project with redaction on and a staging project without).
+
+## What gets redacted
+
+The redactor runs over the **input** and **output** fields of every span: LLM messages, tool-call arguments and results, function inputs and outputs. It detects and replaces:
+
+- Personal names
+- Email addresses
+- Phone numbers
+- Account numbers, card numbers, and similar identifiers
+- Other entities the model classifies as PII
+
+Each detected entity is replaced with a labelled placeholder, e.g. `[REDACTED_PRIVATE_EMAIL]`, `[REDACTED_PRIVATE_PERSON]`, `[REDACTED_ACCOUNT_NUMBER]`. The structure of your span input/output (JSON shape, message role fields, tool-call IDs) is preserved: only the offending substrings are rewritten.
+
+## What is never redacted
+
+Some fields are structurally meaningful and pass through untouched even with redaction enabled:
+
+- **Object keys** in JSON inputs and outputs. A key called `email` stays; the email *value* gets redacted.
+- **Span attributes** that are not input/output content: span name, type, status, duration, token counts, cost, model name, and the full attribute table.
+- **Trace and span IDs**, parent IDs, and session/user IDs.
+- **Structural metadata fields** like `role`, `tool_use_id`, `tool_call_id`, `id`, `type`, `name`, `model`, `stop_reason`. These are content boundaries the redactor needs to skip so it can find PII in the actual payload.
+
+If you've passed a user identifier through `setTraceUserId` / `set_trace_user_id` (see [User ID](/tracing/structure/user-id)), that value is span metadata, not span input, and is not affected by the toggle. Strip user IDs upstream if your compliance posture requires it.
+
+## What you'll see in traces
+
+Traces ingested with redaction on look the same in the [transcript view](/platform/viewing-traces): same structure, same nesting, same tool calls. The difference is in the content cells. A user message that was previously:
+
+```json
+"Hi, my name is Sarah Chen and my email is sarah.chen@example.com"
+```
+
+is stored and rendered as:
+
+```json
+"Hi, my name is [REDACTED_PRIVATE_PERSON] and my email is [REDACTED_PRIVATE_EMAIL]"
+```
+
+The same applies to LLM outputs, tool-call arguments, and tool-call results. Token counts and timing are unchanged. Full-text [search](/platform/search) hits the redacted text, so a search for the original email returns nothing. That is the point.
+
+<Note>
+  Redaction runs at ingest, so flipping the toggle does not retroactively redact existing traces. New traces from the moment the toggle flips are redacted; older traces stay as they were stored.
+</Note>
+
+## Availability
+
+PII redaction is available on **Pro** and **Enterprise** plans on Laminar Cloud. The toggle is greyed out on Hobby and Free workspaces; an inline upgrade link points at the workspace billing tab.
+
+For self-hosted deployments, the [PII redactor service](https://github.com/lmnr-ai/lmnr/tree/main/pii-redactor) ships as a separate gRPC server in the same repo. Run it next to your app-server, set `PII_REDACTOR_URL=http://<host>:8910`, and the per-project toggle becomes available in the UI. The redactor bakes in the OpenAI privacy-filter ONNX model by default; the README documents how to swap to a Piiranha checkpoint or an in-house model.
+
+## Performance
+
+The redactor is a token-classification model running on CPU. There is real overhead per span, but it sits inside the trace ingest pipeline and runs after producer-side deduplication, so messages your project has already seen and redacted in this trace are not re-scored. Tail-latency budget is generous because trace ingest is asynchronous: the SDK never waits on the redactor.
+
+If you observe queueing under sustained traffic, the service supports horizontal scaling (multiple replicas behind a load balancer) and dynamic batching tunables.
+
+## Where to go next
+
+<CardGroup cols={2}>
+  <Card title="Viewing traces" href="/platform/viewing-traces">
+    See how redacted spans render in transcript view.
+  </Card>
+  <Card title="Signals" href="/signals/introduction">
+    Define outcome and failure detectors that work over redacted traces.
+  </Card>
+  <Card title="SQL editor" href="/platform/sql-editor">
+    Query across redacted traces with SQL. Placeholder strings are searchable.
+  </Card>
+  <Card title="Self-hosting" href="/hosting-options">
+    Run Laminar in your own cluster, including the PII redactor service.
+  </Card>
+</CardGroup>
