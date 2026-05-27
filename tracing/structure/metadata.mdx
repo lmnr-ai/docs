@@ -4,16 +4,15 @@ title: Metadata
 
 Trace metadata applies to the entire trace. Use it for information that's constant across spans:
 
-- **Environment** — production, staging, development
-- **Region** — us-west, eu-central
-- **Deployment** — version numbers, feature flags, A/B test variants
-- **Request context** — correlation IDs, upstream service info
+- **Environment**: production, staging, development
+- **Region**: us-west, eu-central
+- **Deployment**: version numbers, feature flags, A/B test variants
+- **Request context**: correlation IDs, upstream service info
+- **Post-hoc signals**: quality scores, reviewer notes, edit counts you compute after the trace ends
 
-Set metadata early—ideally where the trace begins—so all spans share the same context.
+## Adding metadata while the trace is running
 
-## Adding Metadata
-
-Set metadata inside an active span context (for example, inside `observe()` or an `@observe`d function). If you call it outside any span context, it won’t attach to anything.
+Set metadata inside an active span context (for example, inside `observe()` or an `@observe`d function). If you call it outside any span context, it won't attach to anything.
 
 <Tabs items={['TypeScript', 'Python']}>
   <Tab title="TypeScript">
@@ -48,6 +47,87 @@ Set metadata inside an active span context (for example, inside `observe()` or a
   </Tab>
 </Tabs>
 
+## Adding metadata after the trace ends
+
+Some metadata only exists once the trace is over: the user accepted or edited the model's suggestion, an offline scorer ran, a human reviewer triaged the run. Use `LaminarClient.traces.pushMetadata` to attach those signals to a finished trace by trace id.
+
+Capture the trace id while the trace is running, store it alongside whatever produces the signal (a database row, a queue message, a session id), then push the metadata once you have it. No need to copy a trace id out of the Laminar UI.
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { Laminar, LaminarClient, observe } from '@lmnr-ai/lmnr';
+
+    const client = new LaminarClient();
+
+    // 1. Capture the traceId while the trace is running.
+    const traceId = await observe({ name: 'chat_completion' }, async () => {
+      // ... your work: LLM calls, tool calls, etc. ...
+      return Laminar.getTraceId();
+    });
+
+    // Make sure the trace has finished before pushing metadata to it.
+    await Laminar.flush();
+
+    // 2. Push metadata. Possibly seconds, minutes, or days later.
+    if (traceId) {
+      await client.traces.pushMetadata(traceId, {
+        score: 0.85,
+        reviewer: 'alice',
+        editsMade: 2,
+        needsReview: false,
+      });
+    }
+    ```
+
+    See also: [`client.traces.pushMetadata(traceId, metadata)`](/sdk/client#ts-client-traces-push-metadata).
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import Laminar, LaminarClient, observe
+
+    client = LaminarClient()
+
+    # 1. Capture the trace_id while the trace is running.
+    @observe(name="chat_completion")
+    def chat_completion():
+        # ... your work: LLM calls, tool calls, etc. ...
+        return Laminar.get_trace_id()
+
+    trace_id = chat_completion()
+
+    # Make sure the trace has finished before pushing metadata to it.
+    Laminar.flush()
+
+    # 2. Push metadata. Possibly seconds, minutes, or days later.
+    if trace_id:
+        client.traces.push_metadata(
+            trace_id,
+            {
+                "score": 0.85,
+                "reviewer": "alice",
+                "edits_made": 2,
+                "needs_review": False,
+            },
+        )
+    ```
+
+    See also: [`client.traces.push_metadata(trace_id, metadata)`](/sdk/client#py-client-traces-push-metadata).
+  </Tab>
+</Tabs>
+
+A typical flow: a user submits feedback through your app long after the original request ran, a backend job scores responses overnight, an evaluator pipeline grades a batch of runs and writes results back per trace. In each case you stored the trace id when the trace ran, and you push the score back when you have it.
+
+`pushMetadata` shallow-merges the patch into the trace's existing metadata: top-level keys you pass overwrite existing ones, keys you don't pass are left alone. Call it again later to add or replace more fields.
+
+<Note>
+Call `Laminar.getTraceId()` / `Laminar.get_trace_id()` *inside* a span context. Outside, it returns `null` / `None`. Reading the trace id at the very top of an `observe(...)` block is the canonical place: the trace exists by then and you can return it from the block.
+</Note>
+
+<Note>
+The trace must already exist in your project before the patch is applied. For short-lived scripts, call `await Laminar.flush()` (TypeScript) or `Laminar.flush()` (Python) before pushing metadata. If the trace can't be found at the time the patch is processed (typically because it hasn't been flushed yet), the call logs a warning and returns without raising.
+</Note>
+
 ## Wire format
 
 Without the SDK, set one OTel attribute per metadata key on the root span:
@@ -58,18 +138,21 @@ lmnr.association.properties.metadata.<key> = <primitive or JSON-stringified valu
 
 Primitives (string, number, boolean, arrays of those) pass through; complex values must be `JSON.stringify`d. See the full [Span attribute reference](/tracing/structure/span-attribute-reference) for the rest of the keys Laminar reads.
 
+To attach metadata to a finished trace without the SDK, `POST /v1/traces/metadata` with `{ "traceId": "<uuid>", "metadata": { ... } }` and your project API key as a Bearer token. The server shallow-merges the patch into the trace's existing metadata.
+
 ## Notes
 
-- Trace metadata is merged as spans arrive. If multiple spans set the same key, the **last span processed wins** (order is not guaranteed), so values can change while a trace is still ingesting.
+- Metadata set during the trace is merged as spans arrive. If multiple spans set the same key, the **last span processed wins** (order is not guaranteed), so values can change while a trace is still ingesting.
 - Set each metadata key in one place per trace (ideally the root span) and avoid duplicate keys in nested `observe(...)` calls or AI SDK telemetry.
+- `pushMetadata` only runs after the trace has ended and merges deterministically with whatever metadata the trace already has.
 - Keep metadata JSON-serializable and avoid sensitive data.
 
-## Filtering by Metadata
+## Filtering by metadata
 
 In the Laminar UI, metadata filters currently match **exact key-value pairs** (for example, `region=us-west`).
 
 <Note>
-If a trace seems to appear in results while it’s running and then disappears after it finishes, check whether
+If a trace seems to appear in results while it's running and then disappears after it finishes, check whether
 the same metadata key is being set by multiple spans. Because metadata is merged on ingestion, the final value
 can change as more spans arrive, which can flip whether a trace matches a filter.
 </Note>
@@ -80,11 +163,13 @@ can change as more spans arrive, which can flip whether a trace matches a filter
 |---|---|---|
 | Scope | Entire trace | Individual spans |
 | Format | Key-value pairs | String labels |
-| Best for | Environment, cohort, request context | Categorization, review labels |
+| Best for | Environment, cohort, request context, post-hoc scores | Categorization, review labels |
+| Add after the fact | `client.traces.pushMetadata` | [`client.tags.tag`](/tracing/structure/tags) |
 
 ## Best Practices
 
 - Use consistent keys (`environment`, `region`, `feature_flag`).
 - Use `environment` for prod/staging/dev; add a low-cardinality key like `developer` or `source` to separate dev traces in a shared project.
+- Store the trace id alongside the work that will produce post-hoc signals, so the data and the trace stay linked without manual lookups.
 - Keep it lightweight and JSON-serializable.
 - Avoid sensitive data (no PII).

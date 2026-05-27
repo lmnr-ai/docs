@@ -70,6 +70,45 @@ title: Client
 
     ---
 
+    <Heading level={3} id="ts-client-traces-push-metadata">client.traces.pushMetadata(traceId, metadata)</Heading>
+
+    Push a metadata patch to a finished trace. The patch is shallow-merged into the trace's existing metadata server-side. Use it for post-hoc signals (quality scores, reviewer notes, edit counts) you compute after the trace ends.
+
+    ```typescript
+    import { Laminar, LaminarClient, observe } from '@lmnr-ai/lmnr';
+
+    Laminar.initialize();
+    const client = new LaminarClient();
+
+    const traceId = await observe({ name: 'chat_completion' }, async () => {
+      // ... your work ...
+      return Laminar.getTraceId();
+    });
+
+    await Laminar.flush();
+
+    if (traceId) {
+      await client.traces.pushMetadata(traceId, {
+        score: 0.85,
+        reviewer: 'alice',
+        editsMade: 2,
+      });
+    }
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `traceId` | `string` | — | Trace UUID, or a 32-char OTel hex trace id |
+    | `metadata` | `Record<string, unknown>` | — | Patch merged into existing trace metadata. Must be non-empty |
+
+    **Returns:** `Promise<void>`
+
+    **Note:** Call after `Laminar.flush()` to ensure the trace exists. If the trace can't be found at processing time, the call logs a warning and returns without raising. The patch increments the trace's `numSpans` by 1 (the virtual span that carried the patch) but does not change `endTime`, tokens, cost, top span, tags, or span names.
+
+    ---
+
     <Heading level={3} id="ts-client-rollout-sessions">client.rolloutSessions</Heading>
 
     Rollout session management and SSE connections for rollout debugging.
@@ -397,6 +436,44 @@ title: Client
     **Returns:** `list[dict]` (returns `[]` on 404)
 
     **Note:** Call after the trace has ended (use `Laminar.flush()` for short-lived scripts).
+
+    ---
+
+    <Heading level={3} id="py-client-traces-push-metadata">client.traces.push_metadata(trace_id, metadata)</Heading>
+
+    Push a metadata patch to a finished trace. The patch is shallow-merged into the trace's existing metadata server-side. Use it for post-hoc signals (quality scores, reviewer notes, edit counts) you compute after the trace ends.
+
+    ```python
+    from lmnr import Laminar, LaminarClient, observe
+
+    Laminar.initialize()
+    client = LaminarClient()
+
+    @observe(name="chat_completion")
+    def chat_completion():
+        # ... your work ...
+        return Laminar.get_trace_id()
+
+    trace_id = chat_completion()
+    Laminar.flush()
+
+    if trace_id:
+        client.traces.push_metadata(
+            trace_id,
+            {"score": 0.85, "reviewer": "alice", "edits_made": 2},
+        )
+    ```
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `trace_id` | `str` &#124; `int` &#124; `uuid.UUID` | — | Trace identifier |
+    | `metadata` | `dict[str, Any]` | — | Patch merged into existing trace metadata. Must be non-empty |
+
+    **Returns:** `None`
+
+    **Note:** Call after the trace has ended (use `Laminar.flush()` for short-lived scripts). If the trace can't be found at processing time, the call logs a warning and returns without raising. The patch increments the trace's `num_spans` by 1 (the virtual span that carried the patch) but does not change `end_time`, tokens, cost, top span, tags, or span names. The async client exposes the same method as `await client.traces.push_metadata(...)`.
 
     ---
 
