@@ -3,58 +3,33 @@ title: Render Templates for Custom Data Views
 sidebarTitle: Render templates
 ---
 
-Render templates let you write a small JSX component that takes a span's input or output as `data` and renders it however you want. Use them when the default messages, JSON, YAML, and text views do not show the shape of your data the way you actually want to read it: a specific tool's call shape, a custom agent state object, a vendor payload that buries the interesting field three levels deep.
+Render templates let you write a small JSX component that takes a span's input or output as `data` and renders it however you want. Use them when the default messages, JSON, YAML, and text views don't show your data the way you want to read it.
 
-## Where render templates show up
+## Where to find them
 
-Every input/output viewer in Laminar (span Input, span Output, span Overview, queue items, dataset rows, playground messages, evaluation outputs) has a mode picker in the top-left corner. The default modes are **LLM Messages**, **JSON**, **YAML**, and **TEXT**. The same picker also lists every render template in the project under a **Custom** group; selecting one switches the pane to **CUSTOM** mode and renders the underlying value through your template.
+Every input/output viewer in Laminar has a mode picker in the top-left corner. Alongside the default **LLM Messages**, **JSON**, **YAML**, and **TEXT** modes, the picker lists every render template in the project under **Custom**. Pick one and the pane renders through that template.
 
-The picker remembers your selection per pane: pick a template on a specific span's Input, come back later, and that pane reopens in CUSTOM mode with the same template applied. Other panes keep using whatever default mode they had.
+## Write a template with AI
 
-When CUSTOM mode is active, an **Edit template** button appears next to the picker so you can jump straight to the editor without leaving the trace.
+Open any I/O view, pick the mode dropdown, and click **+ New template**. In the dialog:
 
-## Generate a template with your AI tool
+1. Paste a sample payload into the **Data** tab on the left.
+2. Click **Copy prompt**.
+3. Paste it into Claude, ChatGPT, or any other LLM, add a line describing the view you want, and send.
+4. Paste the returned JSX into the code editor. The preview updates live.
+5. Name the template and click **Create**.
 
-The fastest way to write a template is to copy Laminar's prompt into Claude, ChatGPT, Cursor, or any other LLM, paste in a sample of your data, describe the view you want, and paste the result back. The prompt already contains:
+The prompt already covers Laminar's style guide and the output shape, so you only need to describe the view.
 
-- Laminar's design-token style guide (semantic Tailwind classes like `bg-background`, `text-foreground`, `text-llm`, `text-tool`, `text-subagent`) so generated templates look like the rest of the platform.
-- The output contract: a single `function({ data })` JSX block, no imports, no network calls, defensive against `null`/`undefined`/primitive/array shapes.
-- A slot for your test data, prefilled with whatever you have entered in the **Data** tab.
+You can also write JSX by hand if you prefer.
 
-To use it:
+## Manage templates
 
-1. Open any I/O view, pick the mode dropdown, and click **+ New template** at the bottom (or open **Settings → Render Templates → New template**).
-2. Paste a representative JSON payload into the **Data** tab on the left. The preview will show your in-progress template against this data, and the prompt will embed it for the LLM.
-3. Click **Copy prompt** in the header above the code editor.
-4. Paste the prompt into your AI chat, add one line describing the view you want (e.g. "Render the `messages` array as a chat conversation with role-coloured headers"), and hit send.
-5. Copy the JSX function the model returns and paste it into the code editor. The preview updates live.
-6. Name the template and click **Create**. It now appears in the **Custom** group of every mode picker in the project.
-
-You do not have to use the prompt. Hand-written JSX works too; the editor accepts any valid template shape.
-
-## Edit a template
-
-Open the dialog from any of these places:
-
-- The mode picker in any I/O view (**+ New template**, or **Edit template** when a template is already selected).
-- **Settings → Render Templates** in the project settings sidebar (pencil icon on the row).
-
-The dialog has two columns:
-
-- **Left: Preview / Data tabs.** Preview renders the current template against the current Data. Data is a JSON editor; it pretty-prints when you open the dialog and again on blur, so paste-and-go works without a Format button.
-- **Right: name, Copy prompt, code editor.** The code editor is JavaScript with JSX enabled. The save button sits next to the name input.
-
-Saving updates the template everywhere it is selected: every pane that previously rendered with this template picks up the new code on next open.
-
-## Manage templates from Settings
-
-Open **Project Settings → Render Templates** for the project-level view: every template in the project, ordered by creation time, with **Edit** and **Delete** affordances. Use this when you want to clean up old templates or audit what is in the project without hunting for the panes they are bound to.
-
-Deleting a template here removes it from every pane that referenced it. Those panes fall back to JSON in CUSTOM mode (or you can pick a different template / a different default mode).
+Open **Project Settings → Render Templates** to edit or delete any template in the project.
 
 ## What a template looks like
 
-The contract is a single function that takes a destructured `{ data }` and returns one JSX element:
+A template is one function that takes `{ data }` and returns JSX:
 
 ```jsx
 function({ data }) {
@@ -75,9 +50,7 @@ function({ data }) {
 }
 ```
 
-`data` is the raw value of the I/O pane, parsed from JSON when possible. Be defensive: it can be `undefined`, `null`, a primitive, an array, or an object.
-
-`useState` is in scope when you need a small interactive toggle (expand/collapse, tab switcher). `useEffect`, `useMemo`, and friends are not: templates are small and re-render cheaply.
+`data` can be anything the pane shows: an object, array, primitive, `null`, or `undefined`. Guard your accesses.
 
 ## Next steps
 
