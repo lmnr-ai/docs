@@ -9,6 +9,14 @@ Render templates let you write a small JSX component that takes a span's input o
 
 Every input/output viewer in Laminar has a mode picker in the top-left corner. Alongside the default **LLM Messages**, **JSON**, **YAML**, and **TEXT** modes, the picker lists every render template in the project under **Custom**. Pick one and the pane renders through that template.
 
+<Frame caption="The mode picker on a span's Span Output, with the default modes on top and the project's render templates under Custom.">
+  <img src="/images/render-templates/mode-picker-dropdown.png" alt="Mode picker dropdown showing Custom group with a Flights list template" />
+</Frame>
+
+<Frame caption="Same span, rendered through a Flights list template instead of raw JSON. The Edit template button next to the picker opens the editor without leaving the trace.">
+  <img src="/images/render-templates/custom-mode-rendered.png" alt="Span Output rendered through a custom Flights list template" />
+</Frame>
+
 ## Write a template with AI
 
 Open any I/O view, pick the mode dropdown, and click **+ New template**. In the dialog:
@@ -18,6 +26,10 @@ Open any I/O view, pick the mode dropdown, and click **+ New template**. In the 
 3. Paste it into Claude, ChatGPT, or any other LLM, add a line describing the view you want, and send.
 4. Paste the returned JSX into the code editor. The preview updates live.
 5. Name the template and click **Create**.
+
+<Frame caption="The template editor: Preview/Data tabs on the left, name input and Save on the right, Copy prompt above the JSX code editor.">
+  <img src="/images/render-templates/edit-dialog.png" alt="Render template edit dialog with live preview and JSX editor" />
+</Frame>
 
 The prompt already covers Laminar's style guide and the output shape, so you only need to describe the view.
 
