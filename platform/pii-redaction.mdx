@@ -9,7 +9,7 @@ Laminar is an open-source, OpenTelemetry-native observability platform for AI ag
   <img src="/images/platform/pii-redaction-pro-required.png" alt="Security tab in project settings showing the Redact PII from spans toggle, a Pro plan required badge, and an Upgrade plan button" />
 </Frame>
 
-The redactor is Laminar's own service running a token-classification model on CPU. It sits inside the same trace-ingest pipeline as everything else, so PII is replaced before any write hits ClickHouse, the search index, or the deduplicated message store. Every storage tier holds the redacted content from the first byte.
+Redaction runs at ingest, in line with the rest of trace processing. The model is Laminar's own and runs on CPU. By the time a span is searchable, in the trace view, or queryable from SQL, it has already been redacted: the original text is never persisted.
 
 ## Enabling it
 
@@ -38,11 +38,10 @@ Each detected entity is replaced with a labelled placeholder, e.g. `[REDACTED_PR
 Some fields are structurally meaningful and pass through untouched even with redaction enabled:
 
 - **Object keys** in JSON inputs and outputs. A key called `email` stays; the email *value* gets redacted.
-- **Span attributes** that are not input/output content: span name, type, status, duration, token counts, cost, model name, and the full attribute table.
-- **Trace and span IDs**, parent IDs, and session/user IDs.
-- **Structural metadata fields** like `role`, `tool_use_id`, `tool_call_id`, `id`, `type`, `name`, `model`, `stop_reason`. These are content boundaries the redactor needs to skip so it can find PII in the actual payload.
+- **Span attributes** other than input and output: span name, type, status, duration, token counts, cost, model name.
+- **Trace and span IDs**, parent IDs, and the message-role / tool-call-id fields the model needs to follow conversation structure.
 
-If you've passed a user identifier through `setTraceUserId` / `set_trace_user_id` (see [User ID](/tracing/structure/user-id)), that value is span metadata, not span input, and is not affected by the toggle. Strip user IDs upstream if your compliance posture requires it.
+If you've passed a user identifier through `setTraceUserId` / `set_trace_user_id` (see [User ID](/tracing/structure/user-id)), that value is span metadata and is not affected by this toggle. Strip user IDs upstream if your compliance posture requires it.
 
 ## What you'll see in traces
 
@@ -68,13 +67,7 @@ The same applies to LLM outputs, tool-call arguments, and tool-call results. Tok
 
 PII redaction is available on **Pro** and **Enterprise** plans on Laminar Cloud. The toggle is greyed out on Hobby and Free workspaces; an inline upgrade link points at the workspace billing tab.
 
-For self-hosted deployments, the [PII redactor service](https://github.com/lmnr-ai/lmnr/tree/main/pii-redactor) ships as a separate gRPC server in the same repo. Run it next to your app-server, set `PII_REDACTOR_URL=http://<host>:8910`, and the per-project toggle becomes available in the UI. The redactor bakes in the OpenAI privacy-filter ONNX model by default; the README documents how to swap to a Piiranha checkpoint or an in-house model.
-
-## Performance
-
-The redactor is a token-classification model running on CPU. There is real overhead per span, but it sits inside the trace ingest pipeline and runs after producer-side deduplication, so messages your project has already seen and redacted in this trace are not re-scored. Tail-latency budget is generous because trace ingest is asynchronous: the SDK never waits on the redactor.
-
-If you observe queueing under sustained traffic, the service supports horizontal scaling (multiple replicas behind a load balancer) and dynamic batching tunables.
+[Self-hosted](/hosting-options) deployments can enable the same toggle by running the redactor alongside the rest of the stack. See the [Hosting Options](/hosting-options) page for setup.
 
 ## Where to go next
 
