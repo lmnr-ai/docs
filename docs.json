@@ -117,6 +117,7 @@
             "pages": [
               "platform",
               "platform/viewing-traces",
+              "platform/table-views",
               "platform/integrations",
               "platform/live-tracing",
               "platform/debugger",
