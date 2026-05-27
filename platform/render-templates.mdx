@@ -75,17 +75,9 @@ function({ data }) {
 }
 ```
 
-Notes:
+`data` is the raw value of the I/O pane, parsed from JSON when possible. Be defensive: it can be `undefined`, `null`, a primitive, an array, or an object.
 
-- `data` is the raw value of the I/O pane, parsed from JSON when possible. Be defensive: it can be `undefined`, `null`, a primitive, an array, or an object.
-- Tailwind classes use Laminar's design tokens. Prefer `bg-background`, `text-foreground`, `text-card-foreground`, `text-muted-foreground`, `text-primary`, `text-success`, `text-destructive` over raw palette classes; they follow the current Laminar theme. The domain colors `text-user`, `text-llm`, `text-tool`, `text-subagent` are reserved for chat-message and span-role content.
-- `useState` is in scope when you need a small interactive toggle (expand/collapse, tab switcher). `useEffect`, `useMemo`, and friends are not: templates are small and re-render cheaply.
-
-## Sandbox limits
-
-Templates run inside a sandboxed iframe with the network surface blocked. `fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource`, and `navigator.sendBeacon` are replaced with stubs that throw, so a template cannot exfiltrate trace data, ping a third-party service, or pull external code at runtime. The iframe also blocks `<script>` / `<iframe>` / `<style>` / `<link>` injection, `import` / `require` / `eval`, and `dangerouslySetInnerHTML`.
-
-If you need a capability that is not in the sandbox, the answer is to extend `data` so the template renders something the sandbox already supports, not to bypass the iframe.
+`useState` is in scope when you need a small interactive toggle (expand/collapse, tab switcher). `useEffect`, `useMemo`, and friends are not: templates are small and re-render cheaply.
 
 ## Next steps
 
