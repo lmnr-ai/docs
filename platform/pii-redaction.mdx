@@ -3,13 +3,9 @@ title: PII Redaction for AI Agent Traces
 sidebarTitle: PII redaction
 ---
 
-Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. PII redaction is a project-level switch that **runs every span through Laminar's PII redactor before storage**, replacing names, emails, phone numbers, and other detected entities with `[REDACTED_<LABEL>]` placeholders. Once it's on, *raw user data never lands in your trace store, your search index, or anyone else's eyeballs*.
+Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. PII redaction is a project-level switch that **runs every span through PII redactor model hosted on Laminar's infrastructure before storage**, replacing names, emails, secrets, phone numbers, and other detected entities with `[REDACTED_<LABEL>]` placeholders. Once it's on, *raw user data never lands in your trace store, your search index, or anyone else's eyeballs*.
 
-<Frame caption="Project Settings → Security: one toggle, project-wide, on Pro plans.">
-  <img src="/images/platform/pii-redaction-pro-required.png" alt="Security tab in project settings showing the Redact PII from spans toggle, a Pro plan required badge, and an Upgrade plan button" />
-</Frame>
-
-Redaction runs at ingest, in line with the rest of trace processing. The model is Laminar's own and runs on CPU. By the time a span is searchable, in the trace view, or queryable from SQL, it has already been redacted: the original text is never persisted.
+Redaction runs at ingest, in line with the rest of trace processing. By the time a span is searchable, in the trace view, or queryable from SQL, it has already been redacted: the original text is never persisted.
 
 ## Enabling it
 
@@ -65,7 +61,7 @@ The same applies to LLM outputs, tool-call arguments, and tool-call results. Tok
 
 ## Availability
 
-PII redaction is available on **Pro** and **Enterprise** plans on Laminar Cloud. The toggle is greyed out on Hobby and Free workspaces; an inline upgrade link points at the workspace billing tab.
+PII redaction is available on **Pro** and **Enterprise** plans on Laminar Cloud.
 
 [Self-hosted](/hosting-options) deployments can enable the same toggle by running the redactor alongside the rest of the stack. See the [Hosting Options](/hosting-options) page for setup.
 
