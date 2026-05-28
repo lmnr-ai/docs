@@ -125,6 +125,7 @@
               "platform/sql-editor",
               "platform/cli",
               "platform/search",
+              "platform/pii-redaction",
               "custom-dashboards/overview",
               "queues/quickstart",
               "playground"
