@@ -1,0 +1,78 @@
+---
+title: Render Templates for Custom Data Views
+sidebarTitle: Render templates
+---
+
+Render templates let you write a small JSX component that takes a span's input or output as `data` and renders it however you want. Use them when the default messages, JSON, YAML, and text views don't show your data the way you want to read it.
+
+## Where to find them
+
+Every input/output viewer in Laminar has a mode picker in the top-left corner. Alongside the default **LLM Messages**, **JSON**, **YAML**, and **TEXT** modes, the picker lists every render template in the project under **Custom**. Pick one and the pane renders through that template.
+
+<Frame caption="The mode picker on a span's output, with the default modes on top and the project's render templates under Custom.">
+  <img src="/images/render-templates/mode-picker-dropdown.png" alt="Mode picker dropdown showing Custom group with a Flights list template" />
+</Frame>
+
+<br/>
+
+<Frame caption="Same span, rendered through a Flights list template instead of raw JSON. The Edit template button next to the picker opens the editor without leaving the trace.">
+  <img src="/images/render-templates/custom-mode-rendered.png" alt="Span Output rendered through a custom Flights list template" />
+</Frame>
+
+## Write a template with AI
+
+Open any I/O view, pick the mode dropdown, and click **+ New template**. In the dialog:
+
+1. Paste a sample payload into the **Data** tab on the left.
+2. Click **Copy prompt**.
+3. Paste it into Claude, ChatGPT, or any other LLM, add a line describing the view you want, and send.
+4. Paste the returned JSX into the code editor. The preview updates live.
+5. Name the template and click **Create**.
+
+<Frame caption="The template editor: Preview/Data tabs on the left, name input and Save on the right, Copy prompt above the JSX code editor.">
+  <img src="/images/render-templates/edit-dialog.png" alt="Render template edit dialog with live preview and JSX editor" />
+</Frame>
+
+The prompt already covers Laminar's style guide and the output shape, so you only need to describe the view.
+
+You can also write JSX by hand if you prefer.
+
+## Manage templates
+
+Open **Project Settings → Render Templates** to edit or delete any template in the project.
+
+## What a template looks like
+
+A template is one function that takes `{ data }` and returns JSX:
+
+```jsx
+function({ data }) {
+  return (
+    <div className="w-full min-h-full p-4 text-sm text-foreground bg-background">
+      {Array.isArray(data?.messages)
+        ? data.messages.map((m, i) => (
+            <div key={i} className="mb-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {m.role}
+              </span>
+              <div className="text-sm">{m.content}</div>
+            </div>
+          ))
+        : <div className="text-muted-foreground italic">No messages</div>}
+    </div>
+  );
+}
+```
+
+`data` can be anything the pane shows: an object, array, primitive, `null`, or `undefined`.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Viewing traces" icon="eye" href="/platform/viewing-traces">
+    Transcript view, tree view, timeline, and the I/O panes where render templates apply.
+  </Card>
+  <Card title="Query across traces" icon="database" href="/platform/sql-editor">
+    Use the SQL editor, SQL API, [CLI](/platform/cli), or [MCP server](/platform/mcp) to slice every span and signal across your traces.
+  </Card>
+</CardGroup>
