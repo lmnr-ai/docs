@@ -9,9 +9,11 @@ Render templates let you write a small JSX component that takes a span's input o
 
 Every input/output viewer in Laminar has a mode picker in the top-left corner. Alongside the default **LLM Messages**, **JSON**, **YAML**, and **TEXT** modes, the picker lists every render template in the project under **Custom**. Pick one and the pane renders through that template.
 
-<Frame caption="The mode picker on a span's Span Output, with the default modes on top and the project's render templates under Custom.">
+<Frame caption="The mode picker on a span's output, with the default modes on top and the project's render templates under Custom.">
   <img src="/images/render-templates/mode-picker-dropdown.png" alt="Mode picker dropdown showing Custom group with a Flights list template" />
 </Frame>
+
+<br/>
 
 <Frame caption="Same span, rendered through a Flights list template instead of raw JSON. The Edit template button next to the picker opens the editor without leaving the trace.">
   <img src="/images/render-templates/custom-mode-rendered.png" alt="Span Output rendered through a custom Flights list template" />
@@ -62,7 +64,7 @@ function({ data }) {
 }
 ```
 
-`data` can be anything the pane shows: an object, array, primitive, `null`, or `undefined`. Guard your accesses.
+`data` can be anything the pane shows: an object, array, primitive, `null`, or `undefined`.
 
 ## Next steps
 
