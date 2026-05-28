@@ -124,6 +124,7 @@
               "platform/sql-editor",
               "platform/cli",
               "platform/search",
+              "platform/render-templates",
               "platform/pii-redaction",
               "custom-dashboards/overview",
               "queues/quickstart",
