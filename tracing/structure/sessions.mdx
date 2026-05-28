@@ -2,7 +2,7 @@
 title: Sessions
 ---
 
-Sessions group related traces (multiple requests / turns) under a shared identifier—useful for conversational AI and multi-step workflows.
+Sessions group related traces (multiple requests / turns) under a shared identifier, useful for conversational AI and multi-step workflows.
 
 - Set a session ID at the trace level so all spans in a trace share it.
 - Use the Sessions view in the Laminar UI to review all traces in the same session.
@@ -52,15 +52,20 @@ A **trace** usually represents one request / one conversational turn. A **sessio
 
 ## Viewing Sessions in Laminar
 
-1. Navigate to the **Traces** page
-2. Select the **Sessions** tab
-3. Click a session to expand and see all traces within it
+1. Navigate to the **Traces** page and select the **Sessions** tab. The table lists every session in the selected time range, with columns for duration, total cost, total tokens, trace count, and user ID.
 
-<img className="block" src="/images/sessions.png" alt="Sessions tab showing traces grouped by session" />
+<Frame caption="Sessions tab: one row per session with aggregate metrics for the whole conversation.">
+  <img className="block" src="/images/sessions.png" alt="Sessions table in the Traces page" />
+</Frame>
 
-Each trace within a session contains the same information as a standalone trace:
+2. Click a row to open the full-page session view. The breadcrumb confirms which session you are looking at, and the header shows the session's duration, token count, and cost. Toggle **Timeline** to see when each trace ran, or use the search box to filter by text, span name, ID, or tags.
+3. Each trace appears as a numbered card (`1/5`, `2/5`, ...) with an auto-extracted **Input** block and the final LLM output, so you can scan the conversation end to end without opening individual traces.
 
-<img className="block" src="/images/trace-session.png" alt="Trace detail view for a trace within a session" />
+<Frame caption="Session page: every trace in the conversation with Input and Output previews.">
+  <img className="block" src="/images/trace-session.png" alt="Session detail page showing traces with Input and Output previews" />
+</Frame>
+
+From any trace card, use the dropdown to copy the trace ID or jump into the standalone trace view for span-level debugging.
 
 ## Common Patterns
 

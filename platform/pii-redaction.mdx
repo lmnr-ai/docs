@@ -1,0 +1,83 @@
+---
+title: PII Redaction for AI Agent Traces
+sidebarTitle: PII redaction
+---
+
+Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. PII redaction is a project-level switch that **runs every span through PII redactor model hosted on Laminar's infrastructure before storage**, replacing names, emails, secrets, phone numbers, and other detected entities with `[REDACTED_<LABEL>]` placeholders. Once it's on, *raw user data never lands in your trace store, your search index, or anyone else's eyeballs*.
+
+Redaction runs at ingest, in line with the rest of trace processing. By the time a span is searchable, in the trace view, or queryable from SQL, it has already been redacted: the original text is never persisted.
+
+## Enabling it
+
+Go to **Project Settings → Security**, flip **Redact PII from spans** on. The change applies to every new span ingested for that project. Existing traces are not rewritten retroactively.
+
+<Frame caption="Toggle enabled. Every span ingested for this project is now redacted before storage.">
+  <img src="/images/platform/pii-redaction-enabled.png" alt="Security tab with the Redact PII from spans toggle in the on position" />
+</Frame>
+
+The toggle is per-project, not per-workspace. A workspace can mix redacted and non-redacted projects (for example, a production project with redaction on and a staging project without).
+
+## What gets redacted
+
+The redactor runs over the **input** and **output** fields of every span: LLM messages, tool-call arguments and results, function inputs and outputs. It detects and replaces:
+
+- Personal names
+- Email addresses
+- Phone numbers
+- Account numbers, card numbers, and similar identifiers
+- Other entities the model classifies as PII
+
+Each detected entity is replaced with a labelled placeholder, e.g. `[REDACTED_PRIVATE_EMAIL]`, `[REDACTED_PRIVATE_PERSON]`, `[REDACTED_ACCOUNT_NUMBER]`. The structure of your span input/output (JSON shape, message role fields, tool-call IDs) is preserved: only the offending substrings are rewritten.
+
+## What is never redacted
+
+Some fields are structurally meaningful and pass through untouched even with redaction enabled:
+
+- **Object keys** in JSON inputs and outputs. A key called `email` stays; the email *value* gets redacted.
+- **Span attributes** other than input and output: span name, type, status, duration, token counts, cost, model name.
+- **Trace and span IDs**, parent IDs, and the message-role / tool-call-id fields the model needs to follow conversation structure.
+
+If you've passed a user identifier through `setTraceUserId` / `set_trace_user_id` (see [User ID](/tracing/structure/user-id)), that value is span metadata and is not affected by this toggle. Strip user IDs upstream if your compliance posture requires it.
+
+## What you'll see in traces
+
+Traces ingested with redaction on look the same in the [transcript view](/platform/viewing-traces): same structure, same nesting, same tool calls. The difference is in the content cells. A user message that was previously:
+
+```json
+"Hi, my name is Sarah Chen and my email is sarah.chen@example.com"
+```
+
+is stored and rendered as:
+
+```json
+"Hi, my name is [REDACTED_PRIVATE_PERSON] and my email is [REDACTED_PRIVATE_EMAIL]"
+```
+
+The same applies to LLM outputs, tool-call arguments, and tool-call results. Token counts and timing are unchanged. Full-text [search](/platform/search) hits the redacted text, so a search for the original email returns nothing. That is the point.
+
+<Note>
+  Redaction runs at ingest, so flipping the toggle does not retroactively redact existing traces. New traces from the moment the toggle flips are redacted; older traces stay as they were stored.
+</Note>
+
+## Availability
+
+PII redaction is available on **Pro** and **Enterprise** plans on Laminar Cloud.
+
+[Self-hosted](/hosting-options) deployments can enable the same toggle by running the redactor alongside the rest of the stack. See the [Hosting Options](/hosting-options) page for setup.
+
+## Where to go next
+
+<CardGroup cols={2}>
+  <Card title="Viewing traces" href="/platform/viewing-traces">
+    See how redacted spans render in transcript view.
+  </Card>
+  <Card title="Signals" href="/signals/introduction">
+    Define outcome and failure detectors that work over redacted traces.
+  </Card>
+  <Card title="SQL editor" href="/platform/sql-editor">
+    Query across redacted traces with SQL. Placeholder strings are searchable.
+  </Card>
+  <Card title="Self-hosting" href="/hosting-options">
+    Run Laminar in your own cluster, including the PII redactor service.
+  </Card>
+</CardGroup>

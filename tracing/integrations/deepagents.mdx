@@ -1,0 +1,356 @@
+---
+title: Observability for LangChain deepagents
+sidebarTitle: deepagents
+---
+
+## Overview
+
+Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. Trace, debug, and monitor every [LangChain deepagents](https://github.com/langchain-ai/deepagents) run, subagent spawn, tool call, and model turn with a single `Laminar.initialize()` call. Self-host via Helm or use managed cloud.
+
+`deepagents` is LangChain's reference implementation of the Claude-Code-style "deep agent" loop: a main agent with a planner, a virtual filesystem (`write_todos`, `read_file`, `write_file`, `edit_file`), and a built-in `task` tool that spawns specialist subagents. Laminar injects middleware into every agent you build with `create_deep_agent`, wraps the compiled LangGraph at the entrypoint, and produces a clean flat trace: one root span per invocation, one TOOL span per tool call, with every subagent's LLM and tool spans nested under the `task` call that spawned it.
+
+What Laminar captures:
+
+- The root `deep_agent` span per top-level `invoke` / `ainvoke` / `stream` / `astream` call with the user prompt and the final assistant message.
+- One TOOL span per tool call: built-in filesystem tools (`write_todos`, `read_file`, `write_file`, `edit_file`), the `task` subagent tool, and any custom tools you pass in.
+- LLM turns (Anthropic, OpenAI, etc.) as children of the agent or subagent that made the call, with prompts, responses, token counts, latency, and cost.
+- Subagents as collapsible cards in transcript view, grouped automatically from the spans nested under each `task` call.
+
+## Getting started
+
+<Steps>
+<Step title="Install">
+
+Ensure you have `lmnr` version `0.7.50` or higher and `deepagents` version `0.5.0` or higher. Install a LangChain provider package for the model you want to drive the agent with:
+
+```bash
+pip install -U lmnr "deepagents>=0.5.0" langchain-anthropic
+```
+
+</Step>
+<Step title="Set environment variables">
+
+```bash
+export LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+export ANTHROPIC_API_KEY=your-anthropic-api-key
+```
+
+</Step>
+<Step title="Initialize Laminar">
+
+`Laminar.initialize()` auto-instruments `deepagents` when the package is importable. No wrapping call or middleware registration is needed: Laminar injects its own `AgentMiddleware` into every agent built via `create_deep_agent` and wraps the compiled graph.
+
+```python {4-6}
+from deepagents import create_deep_agent
+from langchain_anthropic import ChatAnthropic
+
+from lmnr import Laminar
+
+Laminar.initialize()
+
+
+def internet_search(query: str) -> str:
+    """Search the internet for `query` and return a short snippet."""
+    # Replace with a real search (Tavily, Exa, SerpAPI, etc.).
+    return f"Top result for '{query}': deepagents is a LangChain reference agent..."
+
+
+agent = create_deep_agent(
+    model=ChatAnthropic(model="claude-sonnet-4-5"),
+    tools=[internet_search],
+    system_prompt="You are an expert researcher. Answer concisely and cite sources.",
+)
+
+result = agent.invoke(
+    {"messages": [{"role": "user", "content": "What is deepagents?"}]}
+)
+print(result["messages"][-1].content)
+```
+
+<Note>
+Tool functions passed to `deepagents` must have a docstring. LangChain uses it as the tool description sent to the model.
+</Note>
+
+</Step>
+</Steps>
+
+<Warning>
+When Laminar auto-enables the deepagents instrument, it auto-removes the overlapping LangChain and LangGraph instrumentors from the default set. Those emit LangSmith-style node-level spans on top of what `LaminarMiddleware` already captures, which clutters the transcript without adding signal. If you need the raw LangChain / LangGraph spans alongside the `deep_agent` trace, pass an explicit `instruments` set to `Laminar.initialize(instruments={Instruments.DEEPAGENTS, Instruments.LANGCHAIN, Instruments.LANGGRAPH, ...})`.
+</Warning>
+
+## See what happened in a trace
+
+Open a deepagents trace in Laminar and you land on the transcript view: the user prompt at the top, each model turn as a conversation line, every tool call inline with its arguments and result, and every subagent collapsed into a card showing its own input and output. The span tree tells you the shape of the run; the transcript tells you what actually happened.
+
+<Frame caption="Transcript view of a deepagents run: the Style Editor subagent card with its input and output, and the main agent's interleaved `claude-sonnet-4-5`, `write_todos`, and `read_file` calls.">
+<img src="/images/traces/deepagents-transcript.png" alt="deepagents trace in Laminar, transcript view with a subagent card" />
+</Frame>
+
+More on the trace UX: [Viewing traces](/platform/viewing-traces).
+
+## Subagents: the interesting part
+
+The reason you reach for `deepagents` over plain LangChain is the built-in `task` tool and the subagent system. Subagents are specialist agents defined as a `SubAgent` spec with a name, a description, a system prompt, and optionally a scoped tool list or a different model. The main agent decides when to delegate based on the description and calls `task(subagent_type="...", description="...")` with its own prompt.
+
+Laminar traces each `task` invocation as a TOOL span. The subagent's own LLM turns and tool calls nest underneath automatically via OpenTelemetry context propagation, so the hierarchy reads top-down: *main agent → task → subagent's LLM → subagent's tools → task returns → main agent continues*.
+
+### Parallel subagents
+
+A common deepagents pattern: the main agent farms out independent research jobs to several subagent instances in parallel, then synthesizes the results. Here, a coordinator compares three agent frameworks by dispatching two `research-scout` subagents (one covering LangGraph and CrewAI, the other covering OpenAI Agents SDK) and finishes with a dedicated `editor` subagent that tightens the draft.
+
+```python
+from deepagents import create_deep_agent, SubAgent
+from langchain_anthropic import ChatAnthropic
+
+from lmnr import Laminar
+
+Laminar.initialize()
+
+
+def internet_search(query: str) -> str:
+    """Search the internet for `query` and return a short snippet."""
+    # Replace with a real search (Tavily, Exa, SerpAPI, etc.).
+    return f"Top result for '{query}': ..."
+
+
+research_scout: SubAgent = {
+    "name": "research-scout",
+    "description": (
+        "Researches one or more agent frameworks and returns a concise bulleted "
+        "summary covering programming model, strengths, and a typical use case. "
+        "Call multiple scouts in parallel when the user asks about several frameworks."
+    ),
+    "system_prompt": (
+        "You are a research-scout. Research the frameworks the parent agent gives "
+        "you and return a bulleted summary covering: (1) programming model "
+        "(graph, role-play, orchestrator), (2) key strengths, (3) a typical use case."
+    ),
+    "tools": [internet_search],
+}
+
+editor: SubAgent = {
+    "name": "editor",
+    "description": (
+        "Polishes a markdown file in the virtual filesystem. Call once the draft "
+        "is written, not during research."
+    ),
+    "system_prompt": (
+        "You are a style editor. Read the markdown file the parent agent gives "
+        "you and tighten it under any word limit specified. Preserve all facts; "
+        "cut marketing prose. Keep headings and tables intact. The built-in "
+        "`read_file` and `edit_file` tools are available from the filesystem "
+        "middleware."
+    ),
+    # Built-in filesystem tools (`read_file`, `edit_file`) are injected by the
+    # `FilesystemMiddleware` stack; an empty `tools` list is sufficient.
+    "tools": [],
+}
+
+agent = create_deep_agent(
+    model=ChatAnthropic(model="claude-sonnet-4-5"),
+    tools=[internet_search],
+    subagents=[research_scout, editor],
+    system_prompt=(
+        "You are a senior research lead. For comparative questions, dispatch "
+        "`research-scout` subagents in parallel via the `task` tool, write the "
+        "draft into /final_report.md, then call the `editor` subagent to polish. "
+        "Use `write_todos` to plan before you start."
+    ),
+)
+
+result = agent.invoke({
+    "messages": [{
+        "role": "user",
+        "content": (
+            "Write a short briefing comparing LangGraph, CrewAI, and OpenAI Agents "
+            "SDK as agent harnesses. For each, cover: programming model "
+            "(graph vs. role-play vs. orchestrator), key strengths, and a typical "
+            "use case. Use two parallel research-scout subagent calls to gather "
+            "material, then synthesize and edit. Keep the final report under 400 "
+            "words."
+        ),
+    }]
+})
+print(result["messages"][-1].content)
+```
+
+<Note>
+Each entry in `subagents[].tools` must be a Python callable (with a docstring) or a `BaseTool`, not a string name. Subagents inherit the built-in filesystem tools (`read_file`, `edit_file`, `write_file`, `write_todos`) from the middleware stack automatically, so an empty `"tools": []` still gives them the virtual filesystem.
+</Note>
+
+<Frame caption="Transcript view: two parallel `task` calls each dispatch a Framework Researcher subagent, whose cards sit side-by-side showing the scoped research prompt and the scout's returned summary.">
+<img src="/images/traces/deepagents-editor.png" alt="deepagents trace with two parallel Framework Researcher subagent cards in transcript view" />
+</Frame>
+
+<Note>
+Subagents surface in transcript view as collapsible cards because Laminar's frontend groups the LLM and tool spans under each `task` TOOL span into a single subagent boundary. You do not need to add any subagent-specific instrumentation or span types; nesting the subagent run under the `task` tool span is enough.
+</Note>
+
+### Later in the same run
+
+After the research phase, the coordinator delegates a final `task` call to the `editor` subagent to polish the draft. The subagent appears as a second collapsible card with its own input (the style instructions) and output (the critique), and the main agent keeps control of the run for the final summary.
+
+<Frame caption="Transcript view: the final `task` call delegates to the Style Editor subagent, whose card shows the polish instructions and the edited draft, after which the main agent's last turn reads `/final_report.md` and summarizes.">
+<img src="/images/traces/deepagents-final.png" alt="deepagents trace, Style Editor subagent card in transcript view" />
+</Frame>
+
+## Streaming
+
+`deepagents` returns a compiled LangGraph, so you can stream the agent's intermediate steps with `.stream()` / `.astream()`. Laminar wraps both. The root span is opened inside the returned generator, survives as long as you iterate, and ends when the generator closes (including on early break or exception).
+
+```python
+for chunk in agent.stream(
+    {"messages": [{"role": "user", "content": "Research deepagents and summarize."}]},
+    stream_mode="values",
+):
+    # Each `chunk` is a state snapshot. Print the newest message as it arrives.
+    messages = chunk.get("messages", [])
+    if messages:
+        print(messages[-1].content[:200])
+```
+
+<Note>
+A single top-level call produces a single `deep_agent` root span even though `Pregel.invoke` delegates to `self.stream` internally. The instrumentation uses a `ContextVar` sentinel to collapse the nested call into one root.
+</Note>
+
+## Async
+
+`agent.ainvoke` / `agent.astream` are traced identically to the sync paths.
+
+```python
+import asyncio
+
+async def main():
+    result = await agent.ainvoke(
+        {"messages": [{"role": "user", "content": "Research deepagents and summarize."}]}
+    )
+    print(result["messages"][-1].content)
+
+asyncio.run(main())
+```
+
+## Custom tools
+
+Any callable you pass to `tools=` is wrapped in a TOOL span with its arguments as input and its return value as output. Give the tool a clear docstring: `deepagents` uses it as the tool's description to the model, and the function name shows up as the span name in Laminar.
+
+```python
+def fetch_ticket(ticket_id: str) -> dict:
+    """Fetch a support ticket by id from the internal database."""
+    return {"id": ticket_id, "status": "open", "title": "Timeout on /v1/run"}
+
+agent = create_deep_agent(
+    model=ChatAnthropic(model="claude-sonnet-4-5"),
+    tools=[fetch_ticket],
+    system_prompt="You are a support triage agent. Read the ticket and suggest next steps.",
+)
+```
+
+Custom tools called from inside a subagent nest under that subagent's `task` span automatically, so the full delegation graph is visible end-to-end.
+
+## Track outcomes with Signals
+
+Traces answer *what happened on this run*. **[Signals](/signals/introduction) answer the cross-trace question**: *how often does a subagent exceed its scoped tool list, when does the main agent forget to call `write_todos` before delegating, which runs loop through more than five `task` calls*. A Signal pairs a plain-language prompt with a JSON output schema. Laminar runs it live on new traces (Triggers) or backfills it across history (Jobs) and records a structured event every time it matches. From there you [query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on events across every trace.
+
+<Note>
+Every new project ships with a **Failure Detector** Signal that categorizes issues on any trace over 1000 tokens. Open it from the Signals sidebar to see events as soon as your deepagents traces arrive.
+</Note>
+
+## Query across traces
+
+- **[SQL editor](/platform/sql-editor)** for ad-hoc queries across traces, spans, signals, and evals.
+- **SQL API** for programmatic access from scripts and pipelines.
+- **[CLI](/platform/cli)** (`lmnr-cli sql query`) for terminal-driven queries and piping JSON into shell tools or coding agents.
+- **[MCP server](/platform/mcp)** to query Laminar directly from Claude Code, Cursor, or Codex.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="I don't see any traces in Laminar">
+    - Confirm `LMNR_PROJECT_API_KEY` is set in the same process that runs the agent.
+    - `deepagents` and `langchain` must both be importable when `Laminar.initialize()` runs. If only one is installed, the deepagents instrumentor is a silent no-op.
+    - The integration requires `lmnr >= 0.7.50` and `deepagents >= 0.5.0`.
+  </Accordion>
+  <Accordion title="Traces show `anthropic.chat` (or similar) as the root instead of `deep_agent`">
+    Call `Laminar.initialize()` **before** `from deepagents import create_deep_agent`. The instrumentor patches the `deepagents.create_deep_agent` module attribute; a prior `from deepagents import ...` binds the local name to the unwrapped function, so the patch never takes effect in that script.
+
+    ```python
+    from lmnr import Laminar
+    Laminar.initialize()
+
+    # Import deepagents AFTER initialize() so the wrap is picked up.
+    from deepagents import create_deep_agent
+    from langchain_anthropic import ChatAnthropic
+    ```
+  </Accordion>
+  <Accordion title="Subagents aren't nested under the task call">
+    - Make sure subagents are declared via the `subagents=[...]` argument to `create_deep_agent`. Without that list, the `task` tool has nothing to delegate to.
+    - If you build the agent by hand (without `create_deep_agent`), attach `LaminarMiddleware` yourself:
+
+    ```python
+    from deepagents import create_deep_agent
+    from lmnr.opentelemetry_lib.opentelemetry.instrumentation.deepagents import (
+        LaminarMiddleware,
+    )
+
+    agent = create_deep_agent(
+        # ...
+        middleware=[LaminarMiddleware(), *your_middleware],
+    )
+    ```
+
+    `LaminarMiddleware` is idempotent: `create_deep_agent` already injects one, so duplicates are deduplicated.
+  </Accordion>
+  <Accordion title="I want LangChain / LangGraph spans alongside the `deep_agent` trace">
+    Pass an explicit `instruments` set that includes all three:
+
+    ```python
+    from lmnr import Laminar, Instruments
+
+    Laminar.initialize(instruments={
+        Instruments.DEEPAGENTS,
+        Instruments.LANGCHAIN,
+        Instruments.LANGGRAPH,
+        Instruments.ANTHROPIC,
+    })
+    ```
+
+    Note that LangChain / LangGraph auto-instrumentors emit a LangSmith-style node-level span per graph step, which overlaps with what Laminar already captures at the agent boundary.
+  </Accordion>
+  <Accordion title="I want to disable the deepagents integration">
+    Pass `disabled_instruments={Instruments.DEEPAGENTS}` to `Laminar.initialize()`. The LangChain and LangGraph instrumentors will then auto-enable in its place.
+
+    ```python
+    from lmnr import Laminar, Instruments
+
+    Laminar.initialize(disabled_instruments={Instruments.DEEPAGENTS})
+    ```
+  </Accordion>
+  <Accordion title="Self-hosting Laminar">
+    Set `base_url` and the ports of your instance when initializing. For a local OSS deployment:
+
+    ```python
+    Laminar.initialize(
+        base_url="http://localhost",
+        http_port=8000,
+        grpc_port=8001,
+    )
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Viewing traces" href="/platform/viewing-traces">
+    Read the transcript view, filter, and search across traces.
+  </Card>
+  <Card title="Signals" href="/signals/introduction">
+    Detect behaviors and failures across every run, then query, cluster, and alert on them.
+  </Card>
+  <Card title="SQL editor and MCP server" href="/platform/sql-editor">
+    Query traces programmatically from the UI, API, or your IDE.
+  </Card>
+  <Card title="LangChain / LangGraph" href="/tracing/integrations/langchain">
+    Tracing raw LangChain chains or LangGraph without deepagents on top.
+  </Card>
+</CardGroup>

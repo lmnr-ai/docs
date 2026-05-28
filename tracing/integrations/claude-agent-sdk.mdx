@@ -122,6 +122,22 @@ Wrapping your entry point in `@observe()` is optional but recommended: it create
 </Tab>
 </Tabs>
 
+## Running on Amazon Bedrock
+
+The Claude Agent SDK supports Claude models hosted on Amazon Bedrock. Laminar traces work out of the box: follow Anthropic's [Amazon Bedrock guide](https://code.claude.com/docs/en/amazon-bedrock) to configure your AWS credentials and the SDK environment variables, and additionally set `AWS_REGION` to the region you're targeting.
+
+```bash
+export CLAUDE_CODE_USE_BEDROCK=1
+export AWS_REGION=us-west-2
+# plus the AWS credentials from the Anthropic Bedrock guide
+```
+
+<Note>
+`AWS_REGION` is required for Laminar tracing to work correctly on Bedrock.
+</Note>
+
+Initialize Laminar exactly as shown in [Getting started](#getting-started); no other code changes are needed.
+
 ## See what happened in a trace
 
 Open the trace in Laminar and you land on the transcript view: each turn reads as a conversation, with the prompt, the model's response, tool calls inline with their inputs and outputs, and any subagents collapsed to their final output. A tree of span names tells you the shape of the run; the transcript tells you what actually happened.
@@ -231,12 +247,17 @@ The resulting trace renders each subagent as a branch under the turn that spawne
 
 ## Track outcomes with Signals
 
-Traces tell you what happened on one run. [Signals](/signals/introduction) turn that into structured outcomes: describe a behavior or failure in natural language ("the agent edited a file it wasn't asked to", "a subagent exceeded 5 tool calls", "the reviewer missed a null-check bug") and Laminar extracts matching events across your history and every new trace. Route them to alerts or datasets.
+Traces answer *what happened on this run*. **[Signals](/signals/introduction) answer the cross-trace question**: *how often does the agent edit a file it wasn't asked to, when does a subagent exceed five tool calls, which reviewers miss null-check bugs*. A Signal pairs a plain-language prompt with a JSON output schema. Laminar runs it live on new traces (Triggers) or backfills it across history (Jobs) and records a structured event every time it matches. From there you [query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on events across every trace.
+
+<Note>
+Every new project ships with a **Failure Detector** Signal that categorizes issues on any trace over 1000 tokens. Open it from the Signals sidebar to see events as soon as your Claude Agent SDK traces arrive.
+</Note>
 
 ## Query across traces
 
 - **[SQL editor](/platform/sql-editor)** for ad-hoc queries across traces, spans, signals, and evals.
 - **SQL API** for programmatic access from scripts and pipelines.
+- **[CLI](/platform/cli)** (`lmnr-cli sql query`) for terminal-driven queries and piping JSON into shell tools or coding agents.
 - **[MCP server](/platform/mcp)** to query Laminar directly from Claude Code, Cursor, Codex, or any MCP-aware client.
 
 ## Troubleshooting
@@ -265,8 +286,20 @@ Traces tell you what happened on one run. [Signals](/signals/introduction) turn 
 
 ## What's next
 
-- [Viewing traces](/platform/viewing-traces): read the transcript view, filter, and search across traces.
-- [Signals](/signals/introduction): extract structured outcomes and failures from your agent runs.
-- [SQL editor](/platform/sql-editor) and [MCP server](/platform/mcp): query traces programmatically.
-- [Tracing structure](/tracing/structure/overview): sessions, metadata, and tags for deeper control.
-- Running Claude Agent SDK alongside OpenCode? See the [OpenCode](/tracing/integrations/opencode) integration page.
+<CardGroup cols={2}>
+  <Card title="Viewing traces" href="/platform/viewing-traces">
+    Read the transcript view, filter, and search across traces.
+  </Card>
+  <Card title="Signals" href="/signals/introduction">
+    Detect behaviors and failures across every run, then query, cluster, and alert on them.
+  </Card>
+  <Card title="SQL editor and MCP server" href="/platform/sql-editor">
+    Query traces programmatically from the UI, API, or your IDE.
+  </Card>
+  <Card title="Tracing structure" href="/tracing/structure/overview">
+    Sessions, metadata, and tags for deeper control.
+  </Card>
+  <Card title="OpenCode" href="/tracing/integrations/opencode">
+    Running Claude Agent SDK alongside OpenCode? Trace both here.
+  </Card>
+</CardGroup>

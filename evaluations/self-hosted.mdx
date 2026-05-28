@@ -1,0 +1,94 @@
+---
+title: Self-hosted evaluations
+sidebarTitle: Self-hosted
+---
+
+If you're running a self-hosted Laminar instance, point the SDK at it by passing `baseUrl`, `httpPort`, and `grpcPort` to `evaluate()`. Evaluations talk to Laminar over two channels: HTTP for evaluation metadata, datapoints, and scores; gRPC for the OpenTelemetry traces.
+
+## Configuration
+
+<Tabs>
+<Tab title="TypeScript">
+```typescript
+import { evaluate } from '@lmnr-ai/lmnr';
+
+evaluate({
+  data: evaluationData,
+  executor: runExecutor,
+  evaluators: { accuracy },
+  config: {
+    projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+    baseUrl: 'http://localhost',
+    httpPort: 8000,
+    grpcPort: 8001,
+  },
+});
+```
+</Tab>
+<Tab title="Python">
+```python
+from lmnr import evaluate
+
+evaluate(
+    data=data,
+    executor=run_executor,
+    evaluators={"accuracy": accuracy},
+    project_api_key=os.environ["LMNR_PROJECT_API_KEY"],
+    base_url="http://localhost",
+    http_port=8000,
+    grpc_port=8001,
+)
+```
+</Tab>
+</Tabs>
+
+<Note>
+`baseUrl` / `base_url` is the scheme + host only. Do not include a port in it; the ports go in `httpPort` / `grpcPort`.
+</Note>
+
+## `evaluate` parameters
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `data` | List of datapoints or a `LaminarDataset` instance. | required |
+| `executor` | (Optionally async) function that takes `data` and returns the output to score. | required |
+| `evaluators` | Map of name → scoring function. Each function returns a number or map of numbers. | required |
+| `name` | Evaluation name shown in the UI. | random |
+| `groupName` / `group_name` | Group identifier. Only runs sharing a group name can be compared. | `default` |
+| `metadata` | Arbitrary JSON on the evaluation row for filtering. | none |
+| `projectApiKey` / `project_api_key` | Overrides `LMNR_PROJECT_API_KEY`. | env |
+| `baseUrl` / `base_url` | Laminar host (no port). | `https://api.lmnr.ai` |
+| `httpPort` / `http_port` | HTTP port for evaluation metadata and datapoints. | `443` |
+| `grpcPort` / `grpc_port` | gRPC port for OTel traces. | `8443` |
+| `concurrencyLimit` / `batch_size` | Parallel executor invocations. | `5` |
+| `instrumentModules` / `instrument_modules` | Client modules to instrument (e.g. `OpenAI`, `Anthropic`). | none |
+
+See the [SDK reference](/sdk/evaluations) for the full TypeScript and Python signatures.
+
+## Why both HTTP and gRPC
+
+- **HTTP (`httpPort`)** carries the bookkeeping: evaluation name, group, datapoints, scores, executor outputs.
+- **gRPC (`grpcPort`)** carries the OpenTelemetry spans: every LLM call, tool call, evaluator, and the wrapping `EVALUATION` / `EXECUTOR` / `EVALUATOR` spans.
+
+Both have to be reachable from the machine running the evaluation. If only HTTP is open, the evaluation run appears with datapoints and scores but no traces.
+
+## Hosting options
+
+For how to actually run a self-hosted Laminar (Docker Compose for single-node, Helm for Kubernetes, and the hybrid data-plane variant) see [Hosting options](/hosting-options).
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" href="/evaluations/quickstart" icon="play">
+    Write your first evaluation against your self-hosted instance.
+  </Card>
+  <Card title="Hosting options" href="/hosting-options" icon="server">
+    Docker Compose, Helm, and hybrid data-plane deployment options.
+  </Card>
+  <Card title="Manual API" href="/evaluations/manual-evaluation" icon="wrench">
+    Use `LaminarClient.evals` for finer control; the same base-URL + port config applies.
+  </Card>
+  <Card title="SDK reference" href="/sdk/evaluations" icon="code">
+    Full parameters for `evaluate` and related SDK types.
+  </Card>
+</CardGroup>

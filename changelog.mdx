@@ -4,10 +4,21 @@ title: Changelog
 
 New releases and improvements.
 
+## May 2026
+
+- **Push metadata to finished traces** - New `client.traces.pushMetadata(traceId, metadata)` (TypeScript) and `client.traces.push_metadata(trace_id, metadata)` (Python, sync and async) attach metadata to a trace that has already ended. Capture the trace id while the trace is running, store it alongside whatever produces the signal (a database row, a queue message, a session id), then push scores, reviewer notes, or edit counts back to the trace once you have them. See [Metadata](/tracing/structure/metadata#adding-metadata-after-the-trace-ends).
+- **PII redaction** - New project-level toggle in **Settings → Security**. When on, every span's input and output is run through Laminar's PII redactor before storage; names, emails, phone numbers, and other detected entities are replaced with labelled placeholders. Available on Pro and Enterprise plans, and as a self-hostable gRPC service. See [PII redaction](/platform/pii-redaction).
+- **OTLP/HTTP+JSON ingest** - `/v1/traces` now accepts JSON-encoded OTLP in addition to gRPC and HTTP+protobuf. Useful for browser SDKs and other runtimes without a protobuf encoder. See [OpenTelemetry](/tracing/otel).
+
 ## April 2026
 
+- **Evaluations docs rewrite** - [Evaluations](/evaluations/introduction) is restructured end to end. New [Concepts](/evaluations/concepts) page covers the datapoint / executor / evaluator / group model; new [Compare runs](/evaluations/comparing-runs) page documents the progression chart and side-by-side diff; [Datasets](/evaluations/datasets) replaces the old using-dataset page; [Self-hosted](/evaluations/self-hosted) consolidates SDK config for self-hosted instances. Online evaluators are removed.
+- **Transcript view docs** - New [Viewing traces](/platform/viewing-traces) page covers transcript view: auto-extracted agent inputs, LLM turns, tool-call previews, and collapsible subagent cards. Tree view is still one click away when you want raw span structure.
 - **Alerts and reports overhaul** — Alerts now support multi-severity filtering (Info, Warning, Critical), a *skip similar events* option, and a second trigger type for new clusters. Every new Signal ships with a critical-severity event alert and a cluster alert by default. Workspaces get weekday and weekly signal summary reports out of the box. Alerts and reports post to an in-app notification center; Slack and email are configurable per alert or report. See [Alerts](/signals/alerts) and [Reports](/signals/reports).
 - **Claude Agent SDK integration refresh** — Updated the [Claude Agent SDK](/tracing/integrations/claude-agent-sdk) page with end-to-end setup for TypeScript and Python, a multi-subagent example, and real transcript and tree-view screenshots.
+- **OpenAI Agents SDK integration** — `Laminar.initialize()` now auto-instruments the [OpenAI Agents SDK](/tracing/integrations/openai-agents-sdk) in Python. Agent workflows, turns, tool calls, and handoffs land in Laminar as nested spans with system instructions preserved on every LLM call.
+- **Pydantic AI integration** - `Laminar.initialize()` now auto-instruments [Pydantic AI](/tracing/integrations/pydantic-ai) in Python when `pydantic-ai-slim` is importable. No `Agent.instrument_all()` call or manual OTLP exporter setup is needed; raw provider instrumentors (OpenAI, Anthropic, Google GenAI, Groq, Mistral, Cohere, Bedrock) are auto-removed to avoid duplicate spans on every model call.
+- **Mastra integration** — Native [Mastra](/tracing/integrations/mastra) support via `MastraExporter` wired through Mastra's `Observability` config. Captures every agent run, model step, tool call, and sub-agent. When a coordinator agent delegates to sub-agents exposed as tools, the sub-agent's full run nests under the parent tool span in one unified trace.
 
 ## February 2026
 

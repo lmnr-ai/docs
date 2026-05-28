@@ -268,12 +268,17 @@ Tool calls appear as nested spans with their arguments and return values capture
 
 ## Track outcomes with Signals
 
-Traces tell you what happened on one run. [Signals](/signals/introduction) turn traces into structured outcomes: describe a behavior or failure in natural language ("the agent recommended a product that wasn't in stock", "the tool call returned an empty result") and Laminar extracts matching events across your history and every new trace. Route them to alerts, dashboards, or datasets.
+Traces answer *what happened on this run*. **[Signals](/signals/introduction) answer the cross-trace question**: *how often does the agent recommend a product that wasn't in stock, when does a tool call return an empty result, which generateText calls fan out into more steps than expected*. A Signal pairs a plain-language prompt with a JSON output schema. Laminar runs it live on new traces (Triggers) or backfills it across history (Jobs) and records a structured event every time it matches. From there you [query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on events across every trace.
+
+<Note>
+Every new project ships with a **Failure Detector** Signal that categorizes issues on any trace over 1000 tokens. Open it from the Signals sidebar to see events as soon as your AI SDK traces arrive.
+</Note>
 
 ## Query across traces
 
 - **[SQL editor](/platform/sql-editor)** for ad-hoc queries across traces, spans, signals, and evals.
 - **SQL API** for programmatic access from scripts and pipelines.
+- **[CLI](/platform/cli)** (`lmnr-cli sql query`) for terminal-driven queries and piping JSON into shell tools or coding agents.
 - **[MCP server](/platform/mcp)** to query Laminar from Claude Code, Cursor, or Codex.
 
 ## Grouping calls inside one route
@@ -378,8 +383,23 @@ export async function register() {
 
 ## What's next
 
-- [Viewing traces](/platform/viewing-traces): read the transcript view, filter, and search across traces.
-- [Signals](/signals/introduction): extract structured outcomes and failures from your AI SDK traces.
-- [SQL editor](/platform/sql-editor) and [MCP server](/platform/mcp): query traces programmatically.
-- [Tracing structure](/tracing/structure/overview): sessions, user IDs, metadata, and tags.
-- Mixing AI SDK with direct providers? See the [OpenAI](/tracing/integrations/openai) and [Anthropic](/tracing/integrations/anthropic) integration pages.
+<CardGroup cols={2}>
+  <Card title="Viewing traces" href="/platform/viewing-traces">
+    Read the transcript view, filter, and search across traces.
+  </Card>
+  <Card title="Signals" href="/signals/introduction">
+    Detect behaviors and failures across every run, then query, cluster, and alert on them.
+  </Card>
+  <Card title="SQL editor and MCP server" href="/platform/sql-editor">
+    Query traces programmatically from the UI, API, or your IDE.
+  </Card>
+  <Card title="Tracing structure" href="/tracing/structure/overview">
+    Sessions, user IDs, metadata, and tags.
+  </Card>
+  <Card title="OpenAI" href="/tracing/integrations/openai">
+    Mixing AI SDK with the OpenAI SDK directly? Trace it here.
+  </Card>
+  <Card title="Anthropic" href="/tracing/integrations/anthropic">
+    Mixing AI SDK with the Anthropic SDK directly? Trace it here.
+  </Card>
+</CardGroup>

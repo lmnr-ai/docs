@@ -1,48 +1,64 @@
 ---
+title: Evaluations
 sidebarTitle: Introduction
-title: Introduction to Laminar evaluations
 ---
-import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
 
-Evaluation is the process of validating and testing the outputs that your AI applications are producing. Having strong evaluations ("evals") means a more stable, reliable application that is resilient to code and model changes. An eval is a task used to measure the quality of the output of an LLM or LLM system.
+Evaluations are how you answer one question before shipping a prompt, model, or agent change: *is this version better than the one in production*. You answer it by running the new version against a fixed set of inputs, scoring every output, and comparing the scores to the previous run.
 
-<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
-<img src="/images/evaluations/evals.png" alt="Screenshot of a trace visualization" style={{ margin: '0px' }}/>
-</div>
+**Laminar evaluations are the offline testing layer for your agents and LLM pipelines.** You define a list of inputs, a function that produces an output, and one or more functions that score it. Laminar runs them in parallel, traces every call, stores the scores, and **[compares them](/evaluations/comparing-runs) across [runs](/evaluations/concepts) and [groups](/evaluations/comparing-runs#group-runs-to-compare-them)**.
 
-### Why do we need evals?
+<Frame caption="Three runs of the same evaluation, grouped: the progression chart shows length_ok dropping from 1.0 to 0.0 on the third run">
+  <img src="/images/evaluations/eval-list.png" alt="Evaluation list for the capitals group with a trend chart at the top showing accuracy flat at 1.0 and length_ok falling to 0.0" />
+</Frame>
 
-In short, evaluations bring rigor to AI development process.
+## What an evaluation can help you answer
 
-When you are building with foundation models, creating high-quality evals is one of the most impactful things you can do. Developing AI solutions involves an iterative design process. Without evals, it can be difficult and time-intensive to understand how different model versions and prompts affect your use case.
+Evaluations are for questions you can answer with a score. Some of them are obvious, some are not:
 
-With continuous model upgrades from providers, evals allow you to efficiently test model performance for your specific uses in a standardized way. Developing a suite of evals customized to your objectives will help you quickly understand how new models perform for your applications. You can also make evals part of your CI/CD pipeline to ensure desired accuracy before deployment.
+- **Did the new prompt break anything?** Same dataset, new prompt, see if any scores regressed.
+- **Is the cheaper model good enough for this task?** Swap `gpt-5` for `gpt-5-mini`, run the same inputs, compare.
+- **Does this tool actually do what I think it does?** Score the tool's output against a target, not the agent's final answer.
+- **Did the last hundred production traces expose a case my evals don't cover?** Pull the failing traces into a [dataset](/datasets/introduction) and rerun the evaluation against them.
 
-### Types of evals
+If you've ever changed a prompt and hoped nothing broke, this is the answer to that hope.
 
-There are two main approaches to evaluating outputs:
+## Anatomy of an evaluation
 
-**1. Logic-based evaluation**: The simplest and most common type uses code to check outputs against expected answers. For example:
-- String matching to check if the completion includes an expected phrase
-- Parsing to validate proper JSON output
-- Custom logic to verify domain-specific requirements
+An evaluation has four parts:
 
-**2. Model-based evaluation**: A two-stage process where:
-- First, the model generates a response to the input
-- Then, another model (ideally more powerful) evaluates the quality of that response
+- **Datapoints**: a list of `{ data, target?, metadata? }` objects. `data` is what the executor receives, `target` is what the evaluators compare against, `metadata` is anything extra you want to filter or query on.
+- **Executor**: a function that takes `data` and returns whatever you want to score: the agent's output, a tool call, a parsed field.
+- **Evaluators**: one or more functions that take the executor's output (and optionally `target`) and return a number or a map of numbers. Each number is a score dimension.
+- **Group name**: a string that ties related runs together so Laminar can chart them over time.
 
-Model-based evaluation works best with powerful models when the desired output has significant variation, such as open-ended questions or creative tasks.
+When you call `evaluate()`, Laminar runs the executor on every datapoint in parallel, runs each evaluator against the output, records every call as a trace, and stores the scores on the datapoint.
 
-## How evals differ from traditional unit tests
+<Note>
+Every datapoint becomes one trace with an `EVALUATION` root span, an `EXECUTOR` child, and one `EVALUATOR` child per scoring function. You can query those spans in the [SQL editor](/platform/sql-editor) the same way you query any other trace.
+</Note>
 
-Unlike traditional unit tests that focus on binary pass/fail outcomes, evaluations for AI systems require continuous tracking and visualization of performance metrics over time. As models evolve and prompts are refined, being able to compare performance across different versions becomes critical.
+## Run an evaluation from code or from the CLI
 
-What makes evals unique is their ability to:
-- Track nuanced quality metrics beyond simple correctness
-- Visualize performance trends across model versions and prompt iterations
-- Compare multiple implementations side-by-side
-- Detect subtle regressions that might not be obvious in isolated tests
+Evaluations are SDK-first. You write the file once, then run it whichever way fits your workflow:
 
-Laminar provides the best developer experience and visualization capabilities for AI evaluations, making it easy to understand how your models are performing and where improvements can be made. With comprehensive dashboards and detailed tracing, you can get deep insights into every aspect of your AI system's behavior.
+- **As a script**: `python my_eval.py` or `tsx my-eval.ts`. The script runs the evaluation and exits.
+- **Via the CLI**: `lmnr eval` (Python) or `npx lmnr eval` (TypeScript) picks up every file matching the eval convention in your `evals/` directory and runs them. Use this in CI or when you want to run many evals at once.
 
-Check out our [Quickstart Guide](/evaluations/quickstart) to run your first evaluation.
+Both paths talk to the same `evaluate()` function. The CLI is just a runner.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" href="/evaluations/quickstart" icon="play">
+    Write your first evaluation, run it, and read the results.
+  </Card>
+  <Card title="Concepts" href="/evaluations/concepts" icon="boxes">
+    Datapoints, executors, evaluators, groups, and how they map to traces.
+  </Card>
+  <Card title="Compare runs" href="/evaluations/comparing-runs" icon="chart-line">
+    Group runs, read the progression chart, and do side-by-side diffs.
+  </Card>
+  <Card title="Datasets" href="/evaluations/datasets" icon="database">
+    Back evaluations with a Laminar dataset instead of hardcoded lists.
+  </Card>
+</CardGroup>

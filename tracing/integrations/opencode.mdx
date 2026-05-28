@@ -157,12 +157,17 @@ The first run downloads the plugin. On startup you'll see a log line like `Lamin
 
 ## Track outcomes with Signals
 
-Traces tell you what happened on one turn. [Signals](/signals/introduction) turn that into structured outcomes: describe a behavior or failure in natural language ("the agent edited a file it wasn't asked to", "the bash tool ran a destructive command") and Laminar extracts matching events across your history and every new trace. Route them to alerts or datasets.
+Traces answer *what happened on this turn*. **[Signals](/signals/introduction) answer the cross-trace question**: *how often does the agent edit a file it wasn't asked to, when does the bash tool run a destructive command, which turns burn tokens without touching a file*. A Signal pairs a plain-language prompt with a JSON output schema. Laminar runs it live on new traces (Triggers) or backfills it across history (Jobs) and records a structured event every time it matches. From there you [query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on events across every trace.
+
+<Note>
+Every new project ships with a **Failure Detector** Signal that categorizes issues on any trace over 1000 tokens. Open it from the Signals sidebar to see events as soon as your OpenCode traces arrive.
+</Note>
 
 ## Query across traces
 
 - **[SQL editor](/platform/sql-editor)** for ad-hoc queries across traces, spans, signals, and evals.
 - **SQL API** for programmatic access from scripts and pipelines.
+- **[CLI](/platform/cli)** (`lmnr-cli sql query`) for terminal-driven queries and piping JSON into shell tools or coding agents.
 - **[MCP server](/platform/mcp)** to query Laminar directly from OpenCode, Claude Code, Cursor, or Codex.
 
 ## Troubleshooting
@@ -185,8 +190,20 @@ Traces tell you what happened on one turn. [Signals](/signals/introduction) turn
 
 ## What's next
 
-- [Viewing traces](/platform/viewing-traces): read the transcript view, filter, and search across traces.
-- [Signals](/signals/introduction): extract structured outcomes and failures from your OpenCode traces.
-- [SQL editor](/platform/sql-editor) and [MCP server](/platform/mcp): query traces programmatically.
-- [Tracing structure](/tracing/structure/overview): sessions, metadata, and tags for deeper control.
-- Running OpenCode alongside Claude Agent SDK? See the [Claude Agent SDK](/tracing/integrations/claude-agent-sdk) integration page.
+<CardGroup cols={2}>
+  <Card title="Viewing traces" href="/platform/viewing-traces">
+    Read the transcript view, filter, and search across traces.
+  </Card>
+  <Card title="Signals" href="/signals/introduction">
+    Detect behaviors and failures across every OpenCode turn, then query, cluster, and alert on them.
+  </Card>
+  <Card title="SQL editor and MCP server" href="/platform/sql-editor">
+    Query traces programmatically from the UI, API, or your IDE.
+  </Card>
+  <Card title="Tracing structure" href="/tracing/structure/overview">
+    Sessions, metadata, and tags for deeper control.
+  </Card>
+  <Card title="Claude Agent SDK" href="/tracing/integrations/claude-agent-sdk">
+    Running OpenCode alongside Claude Agent SDK? Trace both here.
+  </Card>
+</CardGroup>

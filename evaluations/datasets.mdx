@@ -1,0 +1,132 @@
+---
+title: Datasets for evaluations
+sidebarTitle: Datasets
+---
+
+Hardcoding datapoints in the evaluation file is fine for a quickstart. Once you're actually iterating, the dataset lives in Laminar and the eval file just points at it. That way anyone on the team can edit the dataset without touching code, new datapoints added from production traces flow in automatically, and the dataset versioning lives with the data instead of with the script.
+
+## Point `evaluate()` at a Laminar dataset
+
+Wrap the dataset name in `LaminarDataset` and pass that as `data`.
+
+<Tabs>
+<Tab title="TypeScript">
+```typescript
+import { evaluate, LaminarDataset } from '@lmnr-ai/lmnr';
+
+evaluate({
+  data: new LaminarDataset('capitals-of-the-world'),
+  executor: capitalOfCountry,
+  evaluators: { accuracy, lengthOk },
+  groupName: 'capitals',
+});
+```
+</Tab>
+<Tab title="Python">
+```python
+from lmnr import evaluate, LaminarDataset
+
+evaluate(
+    data=LaminarDataset("capitals-of-the-world"),
+    executor=capital_of_country,
+    evaluators={"accuracy": accuracy, "length_ok": length_ok},
+    group_name="capitals",
+)
+```
+</Tab>
+</Tabs>
+
+The dataset name matches what you see in the [Datasets](/datasets/introduction) section of Laminar. Each dataset row's `data`, `target`, and `metadata` fields become the datapoint's `data`, `target`, `metadata`.
+
+<Note>
+`LaminarDataset` takes an optional `fetchSize` / `fetch_size` parameter controlling how many datapoints are fetched per network round-trip (default `25`). For performance, set it to a multiple of the evaluation concurrency / batch size (default `5`).
+</Note>
+
+## Getting datapoints into the dataset
+
+Three paths, in rough order of how often they get used:
+
+- **Add from a trace**. On any trace in Laminar, click **Add to dataset**. This is how you turn production failures into regression fixtures. See [Adding data](/datasets/adding-data).
+- **Upload a CSV or JSONL**. Useful for bootstrapping with external data.
+- **Push via the SDK**. See the [client reference](/sdk/client) for `LaminarClient.datasets`.
+
+## Custom dataset sources
+
+If the data lives somewhere Laminar doesn't own (a production database, an S3 bucket, a remote API), extend `EvaluationDataset` and implement two methods: `size` and `get`.
+
+<Tabs>
+<Tab title="TypeScript">
+```typescript
+import { EvaluationDataset, evaluate } from '@lmnr-ai/lmnr';
+
+class DatabaseDataset extends EvaluationDataset {
+  constructor(private rows: Array<{ country: string; capital: string }>) {
+    super();
+  }
+
+  async size() {
+    return this.rows.length;
+  }
+
+  async get(index: number) {
+    const row = this.rows[index];
+    return { data: { country: row.country }, target: row.capital };
+  }
+}
+
+evaluate({
+  data: new DatabaseDataset(await loadFromDb()),
+  executor: capitalOfCountry,
+  evaluators: { accuracy },
+});
+```
+</Tab>
+<Tab title="Python">
+```python
+from lmnr import EvaluationDataset, Datapoint, evaluate
+
+
+class DatabaseDataset(EvaluationDataset):
+    def __init__(self, rows: list[dict]):
+        super().__init__()
+        self.rows = rows
+
+    def __len__(self):
+        return len(self.rows)
+
+    def __getitem__(self, index: int) -> Datapoint:
+        row = self.rows[index]
+        return Datapoint(
+            data={"country": row["country"]},
+            target=row["capital"],
+        )
+
+
+evaluate(
+    data=DatabaseDataset(load_from_db()),
+    executor=capital_of_country,
+    evaluators={"accuracy": accuracy},
+)
+```
+</Tab>
+</Tabs>
+
+The class is modelled on PyTorch's `Dataset`. Laminar's evaluation runner calls `size()` once, then `get(i)` for every index, and fans execution out in parallel.
+
+## Export evaluator outputs back into a dataset
+
+After an evaluation completes, you can turn any subset of its rows into a new dataset. From the **[SQL editor](/platform/sql-editor)**, write a query against `evaluation_datapoints` or `spans`, then click **Export to Dataset**. That dataset becomes your regression set for the next iteration of the prompt or model.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Compare runs" href="/evaluations/comparing-runs" icon="chart-line">
+    Keep the dataset constant so comparisons across runs are apples-to-apples.
+  </Card>
+  <Card title="Datasets overview" href="/datasets/introduction" icon="database">
+    How datasets are modelled in Laminar and how to populate them.
+  </Card>
+  <Card title="SDK reference" href="/sdk/evaluations" icon="code">
+    Full parameters for `evaluate`, `LaminarDataset`, and `EvaluationDataset`.
+  </Card>
+</CardGroup>

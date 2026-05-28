@@ -29,24 +29,27 @@
                 "group": "Integrations",
                 "pages": [
                   "tracing/integrations/overview",
-                  "tracing/integrations/openai",
-                  "tracing/integrations/openrouter",
                   "tracing/integrations/anthropic",
+                  "tracing/integrations/openai",
                   "tracing/integrations/gemini",
-                  "tracing/integrations/langchain",
-                  "tracing/integrations/pydantic-ai",
-                  "tracing/integrations/cohere",
-                  "tracing/integrations/vercel-ai-sdk",
-                  "tracing/integrations/litellm",
-                  "tracing/integrations/kernel",
                   "tracing/integrations/claude-agent-sdk",
+                  "tracing/integrations/openai-agents-sdk",
                   "tracing/integrations/opencode",
-                  "tracing/integrations/openhands-sdk",
+                  "tracing/integrations/vercel-ai-sdk",
+                  "tracing/integrations/langchain",
+                  "tracing/integrations/deepagents",
+                  "tracing/integrations/litellm",
+                  "tracing/integrations/mastra",
+                  "tracing/integrations/pydantic-ai",
+                  "tracing/integrations/openrouter",
                   "tracing/integrations/browser-use",
-                  "tracing/integrations/stagehand",
-                  "tracing/integrations/skyvern",
+                  "tracing/integrations/cohere",
+                  "tracing/integrations/kernel",
+                  "tracing/integrations/openhands-sdk",
                   "tracing/integrations/playwright",
                   "tracing/integrations/puppeteer",
+                  "tracing/integrations/stagehand",
+                  "tracing/integrations/skyvern",
                   "tracing/otel"
                 ]
               },
@@ -56,6 +59,7 @@
                   "tracing/structure/overview",
                   "tracing/structure/observe-decorator",
                   "tracing/structure/manual-span-creation",
+                  "tracing/structure/span-types",
                   "tracing/structure/sessions",
                   "tracing/structure/user-id",
                   "tracing/structure/metadata",
@@ -63,6 +67,7 @@
                   "tracing/structure/images",
                   "tracing/structure/continuing-traces",
                   "tracing/structure/llm-cost-tracking",
+                  "tracing/structure/span-attribute-reference",
                   "tracing/structure/flushing-and-shutdown"
                 ]
               },
@@ -92,19 +97,11 @@
             "pages": [
               "evaluations/introduction",
               "evaluations/quickstart",
-              "evaluations/using-dataset",
-              "evaluations/human-evaluators",
-              "evaluations/configuration",
+              "evaluations/concepts",
+              "evaluations/comparing-runs",
+              "evaluations/datasets",
               "evaluations/manual-evaluation",
-              "evaluations/cookbook",
-              {
-                "group": "Online Evaluators",
-                "pages": [
-                  "evaluations/online-evaluators/introduction",
-                  "evaluations/online-evaluators/scoring-with-hosted-evaluators",
-                  "evaluations/online-evaluators/scoring-with-sdk"
-                ]
-              }
+              "evaluations/self-hosted"
             ]
           },
           {
@@ -125,7 +122,9 @@
               "platform/debugger",
               "platform/mcp",
               "platform/sql-editor",
+              "platform/cli",
               "platform/search",
+              "platform/pii-redaction",
               "custom-dashboards/overview",
               "queues/quickstart",
               "playground"
