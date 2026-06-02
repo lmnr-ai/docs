@@ -50,6 +50,7 @@
                   "tracing/integrations/puppeteer",
                   "tracing/integrations/stagehand",
                   "tracing/integrations/skyvern",
+                  "tracing/integrations/truefoundry",
                   "tracing/otel"
                 ]
               },
