@@ -10,8 +10,11 @@ Query all your Laminar data directly with SQL. Find patterns, debug issues, and 
 |-------|----------|
 | spans | Individual spans (LLM/tool/custom/eval spans) with events and tags |
 | traces | Trace-level aggregates derived from spans |
-| signal_events | Signal-triggered events and payloads |
+| signal_events | Signal-triggered events and payloads (excludes L0-cluster membership) |
+| signal_events_all | Same as signal_events but with L0-cluster membership included |
 | signal_runs | Signal execution runs and statuses |
+| clusters | Clusters of similar signal events (excludes L0 clusters) |
+| event_clusters_all | Mapping of signal events to clusters, including L0 clusters |
 | logs | Streaming logs (for example, sandbox command output) |
 | dataset_datapoints | Dataset datapoints (latest version per datapoint) |
 | dataset_datapoint_versions | Dataset datapoints (all versions/history) |
@@ -223,6 +226,7 @@ These are the logical tables exposed in the SQL Editor. The schemas below reflec
 | `attributes` | `String` | `"{\"gen_ai.system\": \"openai\", \"gen_ai.model\": \"gpt-4o\"}"` |
 | `tags` | `Array(String)` | `["needs-review", "tool-call"]` |
 | `events` | `Array(Tuple(timestamp Int64, name String, attributes String))` | `[Tuple(1735689600000000000, 'cache_hit', '{}'), ...]` |
+| `tool_definitions` | `String` | `"[{\"name\": \"search\", \"description\": \"Search the web\"}]"` |
 
 #### Path
 
@@ -269,6 +273,10 @@ The `attributes` column is stored as a string in JSON format. That is, you can s
 #### Model
 
 The `model` column is set to the response model if present, otherwise it is set to the request model.
+
+#### Tool definitions
+
+`tool_definitions` holds the tool/function definitions made available to an LLM span, stored as stringified JSON. It is empty for spans without tools. Parse it as JSON, same rules as [attributes](#attributes).
 
 #### Total tokens and total cost
 
@@ -427,6 +435,24 @@ The `payload` column is stored as a string in JSON format. That is, you can safe
 `clusters` is the list of cluster IDs this event belongs to (see [Clusters](/signals/clusters)). Only non-L0 clusters are included. To list events that belong to an L0 cluster, query the `signal_events_all` table, which has the same schema but exposes L0-cluster membership as well.
 
 
+### signal_events_all
+
+Same schema as `signal_events`, but the `clusters` column includes L0-cluster membership as well. Use this when you need to resolve or list events that belong to an L0 cluster; use `signal_events` for everything else.
+
+| Column | Type | Example value |
+|--------|------|---------------|
+| `id` | `UUID` | `"01234567-89ab-4def-8234-426614174000"` |
+| `signal_id` | `UUID` | `"11111111-2222-4333-9444-555555555555"` |
+| `trace_id` | `UUID` | `"01234567-1234-4def-a234-426614174000"` |
+| `run_id` | `UUID` | `"22222222-3333-4444-b555-666666666666"` |
+| `name` | `String` | `"error.clustered"` |
+| `payload` | `String` | `"{\"error_type\": \"timeout\", \"count\": 3}"` |
+| `timestamp` | `DateTime64(9, 'UTC')` | `"2021-01-01 00:00:00"` |
+| `severity` | `UInt8` | `2` |
+| `summary` | `String` | `"Checkout request timed out after 3 retries"` |
+| `clusters` | `Array(UUID)` | `["aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"]` |
+
+
 ### signal_runs
 
 | Column | Type | Example value |
@@ -449,6 +475,45 @@ The `payload` column is stored as a string in JSON format. That is, you can safe
 #### Mode
 
 `mode` is one of `"BATCH"` (historical backfill job) or `"REALTIME"` (live trigger against a new trace).
+
+
+### clusters
+
+Clusters group similar signal events together (see [Clusters](/signals/clusters)). Only non-L0 clusters are exposed here.
+
+| Column | Type | Example value |
+|--------|------|---------------|
+| `id` | `UUID` | `"aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"` |
+| `signal_id` | `UUID` | `"11111111-2222-4333-9444-555555555555"` |
+| `name` | `String` | `"Checkout timeouts"` |
+| `level` | `UInt8` | `1` |
+| `parent_id` | `UUID` | `"ffffffff-0000-4111-8222-333333333333"` |
+| `num_signal_events` | `UInt32` | `42` |
+| `num_children_clusters` | `UInt16` | `3` |
+| `created_at` | `DateTime64(9, 'UTC')` | `"2021-01-01 00:00:00"` |
+| `updated_at` | `DateTime64(9, 'UTC')` | `"2021-01-01 00:00:00"` |
+
+#### Level
+
+`level` is the cluster's position in the hierarchy. Leaf-level (L0) clusters are excluded from this table; `level` is always greater than `0`.
+
+
+### event_clusters_all
+
+Maps individual signal events to the clusters they belong to, including L0 clusters. One row per (event, cluster) pair.
+
+| Column | Type | Example value |
+|--------|------|---------------|
+| `event_id` | `UUID` | `"01234567-89ab-4def-8234-426614174000"` |
+| `cluster_id` | `UUID` | `"aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"` |
+| `signal_id` | `UUID` | `"11111111-2222-4333-9444-555555555555"` |
+| `level` | `UInt8` | `0` |
+| `cluster_name` | `String` | `"Checkout timeouts"` |
+| `parent_id` | `UUID` | `"ffffffff-0000-4111-8222-333333333333"` |
+| `num_signal_events` | `UInt32` | `42` |
+| `num_children_clusters` | `UInt16` | `3` |
+| `created_at` | `DateTime64(9, 'UTC')` | `"2021-01-01 00:00:00"` |
+| `updated_at` | `DateTime64(9, 'UTC')` | `"2021-01-01 00:00:00"` |
 
 
 ### logs
