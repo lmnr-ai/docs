@@ -6,7 +6,7 @@ sidebarTitle: Debugger
 The Laminar debugger lets you record an agent run, inspect every LLM call and tool use in a transcript, and replay from any point with your fix applied. You only pay for the calls that actually changed.
 
 <Note>
-The debugger is designed to be driven by an AI coding agent — use the [Laminar skill](https://github.com/lmnr-ai/lmnr-skills) in Claude Code, Cursor, or Codex to run the record/replay loop automatically. All the steps are also documented below if you want to run them manually.
+**The recommended way to use the debugger is with an AI coding agent.** Add the [Laminar skill](https://github.com/lmnr-ai/lmnr-skills) to Claude Code, Cursor, or Codex and the agent will run the full record/inspect/replay loop for you. The rest of this page documents the steps for those who want to drive it manually.
 </Note>
 
 ## Why the debugger
@@ -26,7 +26,7 @@ Install and instrument the agent first:
 - **Install the CLI**: `npm install -g lmnr-cli` or run with `npx lmnr-cli@latest`
 - **Set your project API key**: `export LMNR_PROJECT_API_KEY=<your-key>`
 
-## The core loop
+## How your agent uses Debugger
 
 ### 1. Record a run
 
@@ -196,18 +196,6 @@ Output is one block per trace, oldest first: the markdown note followed by a `<t
 | `LMNR_DEBUG_CACHE_UNTIL` | For replay | How many LLM calls to replay (count N) or through which call (span id). |
 | `LMNR_DEBUG_FROM_LAST_RUN` | Optional | Seed replay config from `.lmnr/last-run.json` instead of env vars. |
 | `LMNR_TRACE_METADATA` | Optional | JSON object attached to the trace. Use key `rollout.note` for the pre-run annotation. |
-
-## Things to keep in mind
-
-**Replay is best-effort.** If the source trace has no clear sequential loop (wildly parallel fan-out, overlapping LLM calls), the run falls back to fully live. You still get a normal debug trace with no speedup, but no crash either.
-
-**A zero cache window means no replay.** A fresh record run has `cache_until: 0`. Always set `LMNR_DEBUG_CACHE_UNTIL` explicitly on replay runs.
-
-**Replayed traces can be replay sources.** `CACHED` spans count as loop positions just like live ones. The next replay can build on top of any prior replay.
-
-**Restart long-lived processes after each edit.** If your stack has a component that loads code at startup (a Temporal worker, a module-level import), restart it after every edit, or replay exercises stale code.
-
-**Turn it off for production.** `LMNR_DEBUG` is opt-in. Every primitive is inert when the variable is unset.
 
 ## What's next
 
