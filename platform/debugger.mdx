@@ -3,148 +3,221 @@ title: Debugger
 sidebarTitle: Debugger
 ---
 
-Debugger lets you rerun long-running agents from the exact point you care about, without leaving Laminar.
+The Laminar debugger lets you record an agent run, inspect every LLM call and tool use in a transcript, and replay from any point with your fix applied. You only pay for the calls that actually changed.
 
 ## Why the debugger
 
-When you are debugging long-running agents, three things slow you down:
+Long-running agents fail slowly. You wait for the full run, find the bad call three-quarters of the way through, fix it, and wait again. Repeat.
 
-- You constantly context-switch between windows to edit code, run it, and inspect execution.
-- You wait a long time for the agent to reach the event you care about.
-- The agent can take a different path and never hit that event at all.
+The debugger breaks that cycle with two primitives:
 
-Debugger solves this by letting you set a checkpoint on a span, tweak configuration (like the system prompt) in the UI, rerun from there, and inspect the new trace in the same page. Once the CLI is connected, you never have to leave the page.
+- **Sessions**: a named group that collects every debug run you do during an investigation. All traces appear together in the Laminar UI so you can compare attempts side by side.
+- **Replay**: on a re-run, the debugger serves cached LLM responses from the source trace up to a boundary you choose. Only the calls past the boundary go live, so you pay only for what changed.
 
-## Setup
+## Prerequisites
 
-### 1) Build a looped agent entrypoint
+Install and instrument the agent first:
 
-Debugger sessions work best when your entrypoint makes repeated LLM/tool calls so Laminar can cache earlier steps and rerun from a later point.
+- **Instrument your agent**: [TypeScript](/tracing/integrations/overview) or [Python](/tracing/integrations/overview) SDK
+- **Install the CLI**: `npm install -g lmnr-cli` or run with `npx lmnr-cli@latest`
+- **Set your project API key**: `export LMNR_PROJECT_API_KEY=<your-key>`
 
-For AI SDK, this is often a single `generateText` / `streamText` call with `stopWhen: stepCountIs(N)`.
+## The core loop
 
-For browser-use, use a `browser-use` `Agent` loop as your entrypoint. For a full walkthrough, see the [Browser Use debugger guide](/guides/browser-use-debugger).
+### 1. Record a run
 
-For general Python, write your own loop that calls LLM + tools repeatedly.
+Add `LMNR_DEBUG=true` to your agent's run command:
 
-### 2) Mark the entrypoint for debugger sessions
-
-Wrap your entrypoint with `observe` and mark it as a debugger entrypoint.
-
-<Tabs items={['TypeScript', 'Python']}>
-  <Tab title="TypeScript">
-    ```typescript
-    import { observe } from '@lmnr-ai/lmnr';
-
-    export const callAgent = observe(
-      { name: 'callAgent', rolloutEntrypoint: true },
-      async (messages, model, modelId, reasoningEffort) => {
-        // Your agent code here.
-      }
-    );
-    ```
-  </Tab>
-  <Tab title="Python">
-    ```python
-    from lmnr import observe
-
-    @observe(rollout_entrypoint=True)
-    async def call_agent(messages, model, model_id, reasoning_effort):
-        # Your agent code here.
-        ...
-    ```
-  </Tab>
-</Tabs>
-
-Export the observed function from the entry file so the CLI can discover it.
-
-### 3) AI SDK setup (if you use Vercel AI SDK)
-
-Make sure the latest `@lmnr-ai/lmnr` is installed in the same workspace where you run debugger sessions.
-
-Make sure general Laminar observability is configured first. See the [AI SDK integration](/tracing/integrations/vercel-ai-sdk#node-js).
-
-Then wrap the model you pass to `generateText` / `streamText` so debugger sessions can cache and rerun steps.
-
-```typescript
-import { observe, Laminar, wrapLanguageModel } from '@lmnr-ai/lmnr';
-import { generateText, stepCountIs } from 'ai';
-import { openai } from '@ai-sdk/openai';
-
-Laminar.initialize({ projectApiKey: process.env.LMNR_PROJECT_API_KEY });
-
-export const callAgent = observe({ rolloutEntrypoint: true }, async () => {
-  const result = await generateText({
-    model: wrapLanguageModel(openai('gpt-4.1-nano')),
-    prompt: 'Find pricing tiers on example.com.',
-    stopWhen: stepCountIs(6),
-  });
-  return result.text;
-});
+```bash
+LMNR_DEBUG=true node my_agent.js 2>&1 | tee run.log
+grep 'LMNR_DEBUG_RUN' run.log
 ```
 
-If you pass a provider/model string instead of a model object:
-
-```typescript
-import { wrapLanguageModel } from '@lmnr-ai/lmnr';
-import { gateway } from 'ai';
-
-const model = wrapLanguageModel(gateway('openai/gpt-4.1-nano'));
+```bash
+LMNR_DEBUG=true python my_agent.py 2>&1 | tee run.log
+grep 'LMNR_DEBUG_RUN' run.log
 ```
 
-### 4) Start a debugger session
+On startup the SDK registers a new debug session with Laminar and prints a `LMNR_DEBUG_RUN` line. Always pipe stdout/stderr and grep for it explicitly, since other output will drown it.
 
-Run the CLI from the root of your project.
+The JSON on that line looks like:
 
-<Tabs items={['TypeScript', 'Python']}>
-  <Tab title="TypeScript">
-    ```bash
-    npx lmnr-cli@latest dev path/to/entrypoint.ts
-    ```
-  </Tab>
-  <Tab title="Python">
-    ```bash
-    npx lmnr-cli@latest dev path/to/entrypoint.py
-    ```
+```json
+{
+  "trace_id": "…",
+  "session_id": "…",
+  "replay_trace_id": null,
+  "cache_until": 0,
+  "debugger_url": "https://laminar.run/project/<projectId>/debugger-sessions/<sessionId>",
+  "started_at": "…"
+}
+```
 
-    For Python modules, you can also run:
+Save the `session_id`. Every subsequent run in this investigation must set `LMNR_DEBUG_SESSION_ID` to it, or each run silently mints a new orphaned session and your traces stop appearing together.
 
-    ```bash
-    npx lmnr-cli@latest dev -m path.to.entry.file
-    ```
-  </Tab>
-</Tabs>
+### 2. Open the session in Laminar
 
-### 5) Open the session
+Click the `debugger_url` from the `LMNR_DEBUG_RUN` line, or open **Debugger** in your project and select the session.
 
-Open the session from **Debugger** in your project, or click the link printed by the CLI.
+The session view shows every debug run as an expandable trace segment. Each segment renders a transcript: auto-extracted user inputs, LLM turns, tool calls, and collapsed sub-agent cards. Hover an LLM span to copy a ready-to-paste rerun prompt; hover any other span to copy its ID.
 
-<Note>
-If the file exposes multiple debugger entrypoints, pass `--function` to select one.
-Set `LMNR_PROJECT_API_KEY` or use `--project-api-key` to connect.
-</Note>
+### 3. Name the session and annotate each run
 
-## Use in Laminar
+The session view shows your `session_id` in the header. Name the investigation once:
 
-1. Open **Debugger** and select your session.
-2. In the **Run** tab, enter **Input Arguments** as JSON, either as an array of ordered args or an object keyed by param name.
-3. Click **Run** to generate the first trace.
-4. In Transcript or Tree view, click the checkpoint icon on a span (**Run from here**) to reuse earlier outputs.
-5. Optionally override **System Prompts** in the **Run** tab.
-6. Click **Run** again to get the updated, faster trace.
-7. Use Transcript or Tree view, search, and the condensed timeline to navigate.
-8. Click **Stop** to cancel a run.
+```bash
+npx lmnr-cli debug session set-name <session-id> "Fix report length + search tool"
+```
 
-<Note>
-Keep the CLI running while you iterate. Reruns will use the latest code on disk; restart the CLI if you change dependencies or entrypoint discovery.
-</Note>
+Write a note **before** each run to explain what you are about to test. Set it via `LMNR_TRACE_METADATA`:
 
+```bash
+LMNR_DEBUG=true \
+LMNR_DEBUG_SESSION_ID=<session-id> \
+LMNR_TRACE_METADATA='{"rollout.note": "## What I am testing\nReplaying calls 1–3, running call 4 live with the new length cap.\n\n"}' \
+node my_agent.js 2>&1 | tee run.log
+```
 
-<video
-  src="/images/rollout/rollout.mp4"
-  controls
-  loop
-  muted
-  playsInline
-  className="block w-full"
-/>
+The note appears in the session view as markdown above the run's transcript. The human watching the session sees your reasoning in real time as the trace arrives.
+
+After the run completes, append a follow-up:
+
+```bash
+npx lmnr-cli trace append-note <trace-id> "## What this run showed
+Length cap is working (~180 words, was ~600). Next: check citations."
+```
+
+Notes are append-only. Each call adds a paragraph to the existing note.
+
+In notes, reference a specific span with an XML tag. The UI renders it as a clickable chip that opens that span:
+
+```text
+<span id='<spanId>' name='synthesis call' />
+```
+
+Get the span id from the session view (hover the span row and click **Copy span ID**) or from a SQL query.
+
+### 4. Inspect with SQL
+
+Query the session's traces from the CLI:
+
+```bash
+npx lmnr-cli sql query "
+  SELECT id AS trace_id, start_time, status, total_tokens
+  FROM traces
+  WHERE simpleJSONExtractString(metadata, 'rollout.session_id') = '<session-id>'
+  ORDER BY start_time DESC
+  LIMIT 10"
+```
+
+Locate the bad span:
+
+```bash
+npx lmnr-cli sql query "
+  SELECT span_id, name, span_type, start_time, status
+  FROM spans
+  WHERE trace_id = '<trace-id>'
+  ORDER BY start_time ASC"
+```
+
+`span_type` is `LLM`, `TOOL`, `DEFAULT`, or `CACHED` (a replayed call in a replay run). Count the LLM calls along the loop to find the index you want for `LMNR_DEBUG_CACHE_UNTIL`:
+
+```bash
+npx lmnr-cli sql query "
+  SELECT count() FROM spans
+  WHERE trace_id = '<trace-id>' AND span_type IN ('LLM', 'CACHED')"
+```
+
+Run `npx lmnr-cli sql schema` to see all available tables.
+
+### 5. Replay to iterate fast
+
+After editing the agent, re-run with replay:
+
+```bash
+LMNR_DEBUG=true \
+LMNR_DEBUG_SESSION_ID=<session-id> \
+LMNR_DEBUG_REPLAY_TRACE_ID=<trace-id> \
+LMNR_DEBUG_CACHE_UNTIL=3 \
+node my_agent.js 2>&1 | tee run.log
+grep 'LMNR_DEBUG_RUN' run.log
+```
+
+`LMNR_DEBUG_REPLAY_TRACE_ID` is the `trace_id` from the run you want to replay. `LMNR_DEBUG_CACHE_UNTIL` tells the debugger where to stop replaying and start running live:
+
+- **A count N**: replay the first N LLM calls, then run live.
+- **A span id**: replay through that call (inclusive) and run live past it. Accepts a full UUID, the last two UUID groups, the 16-char OTel id, or any hex suffix.
+
+```bash
+LMNR_DEBUG=true \
+LMNR_DEBUG_SESSION_ID=<session-id> \
+LMNR_DEBUG_REPLAY_TRACE_ID=<trace-id> \
+LMNR_DEBUG_CACHE_UNTIL=<span-id> \
+node my_agent.js
+```
+
+The span-id form is the most precise: pass the id of the call **before** the buggy one (inclusive semantics), and the debugger runs your fix live while caching everything before it. Each replay produces a new trace in the same session, so attempts appear side by side in the UI.
+
+### 6. Replay the last run automatically
+
+`LMNR_DEBUG_FROM_LAST_RUN=true` seeds the config from the previous run's pointer file (`.lmnr/last-run.json` in the working directory):
+
+```bash
+LMNR_DEBUG=true \
+LMNR_DEBUG_FROM_LAST_RUN=true \
+LMNR_DEBUG_CACHE_UNTIL=3 \
+node my_agent.js
+```
+
+This replays the most recent trace without having to copy ids. Individual `LMNR_DEBUG_*` vars still override per-field.
+
+### 7. Re-orient with a session summary
+
+After a context reset or to catch up on an ongoing session, dump all trace notes in order:
+
+```bash
+npx lmnr-cli debug session summary <session-id>
+npx lmnr-cli debug session summary <session-id> --json
+```
+
+Output is one block per trace, oldest first: the markdown note followed by a `<trace id="…" end-time="…"/>` tag you can feed into SQL queries.
+
+## Environment variables reference
+
+| Variable | Required | Description |
+|---|---|---|
+| `LMNR_DEBUG` | Yes | Set to `true`, `1`, `yes`, or `on` to enable debug mode. |
+| `LMNR_DEBUG_SESSION_ID` | After first run | Session id from the first run's `LMNR_DEBUG_RUN` line. Required on every run after the first. |
+| `LMNR_DEBUG_REPLAY_TRACE_ID` | For replay | Trace id of the run to replay from. |
+| `LMNR_DEBUG_CACHE_UNTIL` | For replay | How many LLM calls to replay (count N) or through which call (span id). |
+| `LMNR_DEBUG_FROM_LAST_RUN` | Optional | Seed replay config from `.lmnr/last-run.json` instead of env vars. |
+| `LMNR_TRACE_METADATA` | Optional | JSON object attached to the trace. Use key `rollout.note` for the pre-run annotation. |
+
+## Things to keep in mind
+
+**Replay is best-effort.** If the source trace has no clear sequential loop (wildly parallel fan-out, overlapping LLM calls), the run falls back to fully live. You still get a normal debug trace with no speedup, but no crash either.
+
+**A zero cache window means no replay.** A fresh record run has `cache_until: 0`. Always set `LMNR_DEBUG_CACHE_UNTIL` explicitly on replay runs.
+
+**Replayed traces can be replay sources.** `CACHED` spans count as loop positions just like live ones. The next replay can build on top of any prior replay.
+
+**Restart long-lived processes after each edit.** If your stack has a component that loads code at startup (a Temporal worker, a module-level import), restart it after every edit, or replay exercises stale code.
+
+**Turn it off for production.** `LMNR_DEBUG` is opt-in. Every primitive is inert when the variable is unset.
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Viewing traces" href="/platform/viewing-traces">
+    Read the full transcript view: inputs, LLM turns, tool calls, and sub-agent cards.
+  </Card>
+  <Card title="SQL editor" href="/platform/sql-editor">
+    Query spans, traces, and signal events with ClickHouse SQL directly in the browser.
+  </Card>
+  <Card title="CLI reference" href="/platform/cli">
+    Full reference for `lmnr-cli sql`, `dataset`, `debug`, and `trace` commands.
+  </Card>
+  <Card title="Browser Use debugger guide" href="/guides/browser-use-debugger">
+    End-to-end walkthrough debugging a Browser Use agent with the debugger.
+  </Card>
+</CardGroup>
