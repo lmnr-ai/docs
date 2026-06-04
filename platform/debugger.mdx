@@ -5,6 +5,10 @@ sidebarTitle: Debugger
 
 The Laminar debugger lets you record an agent run, inspect every LLM call and tool use in a transcript, and replay from any point with your fix applied. You only pay for the calls that actually changed.
 
+<Note>
+The debugger is designed to be driven by an AI coding agent — use the [Laminar skill](https://github.com/lmnr-ai/lmnr-skills) in Claude Code, Cursor, or Codex to run the record/replay loop automatically. All the steps are also documented below if you want to run them manually.
+</Note>
+
 ## Why the debugger
 
 Long-running agents fail slowly. You wait for the full run, find the bad call three-quarters of the way through, fix it, and wait again. Repeat.
