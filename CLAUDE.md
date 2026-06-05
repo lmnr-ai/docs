@@ -20,6 +20,12 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - Run `npx mintlify broken-links` from `/repos/docs` after any restructuring that moves or renames pages; it catches intra-docs link regressions in seconds and is more reliable than grepping for old paths.
 - `npx mintlify broken-links` parses every `.md`/`.mdx` under the cwd, including this `CLAUDE.md`. A parse error here (e.g. a literal `<X>` in prose) aborts the run before any broken-link output is printed. If the check dies on `CLAUDE.md`, temporarily `mv CLAUDE.md .CLAUDE.md.bak`, rerun, then restore. Long-term fix: escape stray `<tag>`-looking tokens in this file.
 
+## Debugger (`/platform/debugger`)
+
+- The revamped debugger (LAM-1711 / `feat/debugger-rework-fe`) is **env-var driven**, not CLI-driven. Users run their agent with `LMNR_DEBUG=true` and iterate with `LMNR_DEBUG_REPLAY_TRACE_ID` + `LMNR_DEBUG_CACHE_UNTIL`. The old `lmnr-cli dev` interactive session model is a separate, still-present command.
+- The backend table was renamed `rollout_sessions` → `debugger_sessions` on that branch. The UI route is `/project/<id>/debugger-sessions/<sessionId>`. Don't document the old `/rollout-sessions` path.
+- `lmnr-cli debug` and `lmnr-cli trace` are new command groups added in `lmnr-ts` `feat/lam-1672-cli-debug-trace-tools`. Document them in `platform/cli.mdx` alongside `sql` and `dataset`.
+
 ## Vercel AI SDK integration (v0.8.x SDK)
 
 - AI SDK telemetry is opt-in per call via `experimental_telemetry: { isEnabled: true, tracer: getTracer() }`. Forgetting to pass the tracer is the single most common "no traces" failure.

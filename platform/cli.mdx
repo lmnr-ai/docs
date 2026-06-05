@@ -81,25 +81,45 @@ lmnr-cli dataset create my-dataset data.jsonl -o my-dataset.jsonl
 
 See [Datasets CLI](/datasets/cli) for the full dataset workflow including versioning semantics.
 
-## Run the agent debugger
+## Annotate debug sessions
 
-`lmnr-cli dev` spins up an interactive debugging session for a function in your codebase and connects it to the Laminar debugger UI so you can rerun, inspect, and edit inputs live.
+These commands are the operational layer for the [Debugger](/platform/debugger): you run the agent with `LMNR_DEBUG=true`, then use these to name the session and write per-trace notes.
+
+### trace append-note
+
+Append a markdown note to an existing trace (stored in `rollout.note` trace metadata). Notes are append-only: each call adds a paragraph to the existing note.
 
 ```bash
-# TypeScript
-lmnr-cli dev agent.ts
-
-# Python (script mode)
-lmnr-cli dev agent.py
-
-# Python (module mode)
-lmnr-cli dev -m src.agent
-
-# Pick a specific entrypoint when multiple are present
-lmnr-cli dev agent.ts --function myAgent
+lmnr-cli trace append-note <trace-id> "## What this run showed
+Length cap is working. Next: check citations."
 ```
 
-See [Debugger](/platform/debugger) for the full workflow.
+Span references in the note are written as XML tags; the Laminar UI renders them as clickable chips:
+
+```bash
+lmnr-cli trace append-note <trace-id> "<span id='<spanId>' name='synthesis call' />"
+```
+
+### debug session set-name
+
+Set the display name of a debug session. The session must already exist (created by a `LMNR_DEBUG=true` run).
+
+```bash
+lmnr-cli debug session set-name <session-id> "Fix report length + search tool"
+```
+
+### debug session summary
+
+Print every trace in a debug session with its note, oldest first. Use this to re-orient in an ongoing session after a context reset.
+
+```bash
+lmnr-cli debug session summary <session-id>
+lmnr-cli debug session summary <session-id> --json
+```
+
+Output is one block per trace: the markdown note followed by a `<trace id="..." end-time="..."/>` tag you can feed into SQL queries.
+
+See [Debugger](/platform/debugger) for the full record/replay workflow.
 
 ## Piping and agent-friendly output
 
@@ -107,7 +127,7 @@ The CLI is designed to be scriptable and to plug cleanly into AI coding agents:
 
 - **Structured output on stdout, logs on stderr.** Every command that supports it takes `--json` and prints machine-readable output to stdout, while human-friendly progress messages are written to stderr. This keeps pipes clean.
 - **Non-zero exit codes on failure.** Scripts and agents can branch on success/failure without parsing output.
-- **Stable noun-verb command surface** (`sql query`, `dataset push`, `dataset pull`, `dataset list`, `dataset create`, `dev`), so commands are easy for an agent to compose.
+- **Stable noun-verb command surface** (`sql query`, `dataset push/pull/list/create`, `trace append-note`, `debug session set-name/summary`), so commands are easy for an agent to compose.
 
 Combined with `sql query --json`, this makes the CLI a drop-in SQL layer for any agent that can run shell commands, with no SDK install required.
 
@@ -120,7 +140,9 @@ lmnr-cli --help
 lmnr-cli sql --help
 lmnr-cli sql query --help
 lmnr-cli dataset --help
-lmnr-cli dev --help
+lmnr-cli trace --help
+lmnr-cli debug --help
+lmnr-cli debug session --help
 ```
 
 ## What's next
