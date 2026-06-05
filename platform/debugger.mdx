@@ -42,7 +42,7 @@ LMNR_DEBUG=true python my_agent.py 2>&1 | tee run.log
 grep 'LMNR_DEBUG_RUN' run.log
 ```
 
-On startup the SDK registers a new debug session with Laminar and prints a `LMNR_DEBUG_RUN` line. Always pipe stdout/stderr and grep for it explicitly, since other output will drown it.
+On startup the SDK registers a new debug session with Laminar, logs the session's `debugger_url`, and opens it in your browser. When the run finishes, the SDK prints a `LMNR_DEBUG_RUN` line with the run's ids. Always pipe stdout/stderr and grep for it explicitly, since other output will drown it.
 
 The JSON on that line looks like:
 
@@ -57,7 +57,7 @@ The JSON on that line looks like:
 }
 ```
 
-Save the `session_id`. Every subsequent run in this investigation must set `LMNR_DEBUG_SESSION_ID` to it, or each run silently mints a new orphaned session and your traces stop appearing together.
+Save the `session_id`. Every subsequent run in this investigation must set `LMNR_DEBUG_SESSION_ID` to it, or each run mints a fresh session that isn't grouped with your investigation and your traces stop appearing together.
 
 ### 2. Open the session in Laminar
 
@@ -164,9 +164,15 @@ The span-id form is the most precise: pass the id of the call **before** the bug
 
 ### 6. Replay the last run automatically
 
-`LMNR_DEBUG_FROM_LAST_RUN=true` seeds the config from the previous run's pointer file (`.lmnr/last-run.json` in the working directory):
+`LMNR_DEBUG_FROM_LAST_RUN=true` seeds the config from the previous run's pointer file (`.lmnr/last-run.json` in the working directory). The pointer file is opt-in: it is only written when the run that produced it set `LMNR_DEBUG_WRITE_LAST_RUN_TO_FILE=true`.
 
 ```bash
+# Record — writes .lmnr/last-run.json when the run finishes
+LMNR_DEBUG=true \
+LMNR_DEBUG_WRITE_LAST_RUN_TO_FILE=true \
+node my_agent.js
+
+# Replay the run above without copying ids
 LMNR_DEBUG=true \
 LMNR_DEBUG_FROM_LAST_RUN=true \
 LMNR_DEBUG_CACHE_UNTIL=3 \
@@ -194,7 +200,8 @@ Output is one block per trace, oldest first: the markdown note followed by a `<t
 | `LMNR_DEBUG_SESSION_ID` | After first run | Session id from the first run's `LMNR_DEBUG_RUN` line. Required on every run after the first. |
 | `LMNR_DEBUG_REPLAY_TRACE_ID` | For replay | Trace id of the run to replay from. |
 | `LMNR_DEBUG_CACHE_UNTIL` | For replay | How many LLM calls to replay (count N) or through which call (span id). |
-| `LMNR_DEBUG_FROM_LAST_RUN` | Optional | Seed replay config from `.lmnr/last-run.json` instead of env vars. |
+| `LMNR_DEBUG_WRITE_LAST_RUN_TO_FILE` | Optional | Write the run pointer to `.lmnr/last-run.json` when the run finishes, so a later run can replay it with `LMNR_DEBUG_FROM_LAST_RUN`. |
+| `LMNR_DEBUG_FROM_LAST_RUN` | Optional | Seed replay config from `.lmnr/last-run.json` instead of env vars. Requires the previous run to have set `LMNR_DEBUG_WRITE_LAST_RUN_TO_FILE`. |
 | `LMNR_TRACE_METADATA` | Optional | JSON object attached to the trace. Use key `rollout.note` for the pre-run annotation. |
 
 ## What's next
