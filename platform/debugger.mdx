@@ -147,9 +147,9 @@ node my_agent.js 2>&1 | tee run.log
 grep 'LMNR_DEBUG_RUN' run.log
 ```
 
-`LMNR_DEBUG_REPLAY_TRACE_ID` is the `trace_id` from the run you want to replay. `LMNR_DEBUG_CACHE_UNTIL` is the span id of the last LLM call to replay: the debugger serves cached responses through that call (inclusive) and runs live past it. Pass the id of the call **before** the buggy one, and the debugger runs your fix live while caching everything before it. The span id can be a full UUID, the last two UUID groups, the 16-char OTel id, or any hex suffix.
+`LMNR_DEBUG_REPLAY_TRACE_ID` is the `trace_id` from the run you want to replay. `LMNR_DEBUG_CACHE_UNTIL` is the span id of the last LLM call to replay: the debugger serves cached responses through that call (inclusive) and runs live past it. Pass the id of the call **before** the buggy one, and the debugger runs your fix live while caching everything before it.
 
-Each replay produces a new trace in the same session, so attempts appear side by side in the UI.
+Each replay produces a new trace in the same session, so attempts appear sequentially in the UI.
 
 ### 5. Replay the last run automatically
 
