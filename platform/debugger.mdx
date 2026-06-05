@@ -26,6 +26,16 @@ Install and instrument the agent first:
 - **Install the CLI**: `npm install -g lmnr-cli` or run with `npx lmnr-cli@latest`
 - **Make sure your project API key is in your environment** (`LMNR_PROJECT_API_KEY`)
 
+## Web view
+
+Watch your agent work from the Laminar UI while it drives the loop from the terminal. Open **Debugger** in your project and select the session, or click the `debugger_url` the SDK prints â€” it opens automatically when a debug run starts.
+
+The session view streams every debug run as your coding agent works. Each segment renders Laminar's auto-extracted user inputs, LLM turns, tool calls, and collapsed sub-agent cards. Notes the agent attaches via `lmnr-cli trace append-note` (more on this below) render as markdown above each run's transcript, so you can follow its reasoning in real time.
+
+<Frame caption="A debug session: the run's note on top, followed by each trace's transcript.">
+  <img src="/images/debugger-session-view.png" alt="Debugger session view showing a named investigation with a markdown note and expandable trace segments" />
+</Frame>
+
 ## How your agent uses Debugger
 
 This is what your agent will be instructed to do when using the Laminar skill.
@@ -61,17 +71,7 @@ The JSON on that line looks like:
 
 Save the `session_id`. Every subsequent run in this investigation must set `LMNR_DEBUG_SESSION_ID` to it, or each run mints a fresh session that isn't grouped with your investigation and your traces stop appearing together.
 
-### 2. Open the session in Laminar
-
-Click the `debugger_url` from the `LMNR_DEBUG_RUN` line, or open **Debugger** in your project and select the session.
-
-The session view shows every debug run as an expandable trace segment. Each segment renders a transcript: auto-extracted user inputs, LLM turns, tool calls, and collapsed sub-agent cards. Hover an LLM span to copy a ready-to-paste rerun prompt; hover any other span to copy its ID.
-
-<Frame caption="A debug session: the run's note on top, followed by each trace's transcript.">
-  <img src="/images/debugger-session-view.png" alt="Debugger session view showing a named investigation with a markdown note and expandable trace segments" />
-</Frame>
-
-### 3. Name the session and annotate each run
+### 2. Name the session and annotate each run
 
 The session view shows your `session_id` in the header. Name the investigation once:
 
@@ -88,7 +88,7 @@ LMNR_TRACE_METADATA='{"rollout.note": "## What I am testing\nReplaying calls 1â€
 node my_agent.js 2>&1 | tee run.log
 ```
 
-The note appears in the session view as markdown above the run's transcript. The human watching the session sees your reasoning in real time as the trace arrives.
+The note appears in the session view above the run's transcript, so the human watching sees what you're testing before the trace arrives.
 
 After the run completes, append a follow-up:
 
@@ -107,7 +107,7 @@ In notes, reference a specific span with an XML tag. The UI renders it as a clic
 
 Get the span id from the session view (hover the span row and click **Copy span ID**) or from a SQL query.
 
-### 4. Inspect with SQL
+### 3. Inspect with SQL
 
 Query the session's traces from the CLI:
 
@@ -134,7 +134,7 @@ npx lmnr-cli sql query "
 
 Run `npx lmnr-cli sql schema` to see all available tables.
 
-### 5. Replay to iterate fast
+### 4. Replay to iterate fast
 
 After editing the agent, re-run with replay:
 
@@ -151,7 +151,7 @@ grep 'LMNR_DEBUG_RUN' run.log
 
 Each replay produces a new trace in the same session, so attempts appear side by side in the UI.
 
-### 6. Replay the last run automatically
+### 5. Replay the last run automatically
 
 `LMNR_DEBUG_FROM_LAST_RUN=true` seeds the config from the previous run's pointer file (`.lmnr/last-run.json` in the working directory). The pointer file is opt-in: it is only written when the run that produced it set `LMNR_DEBUG_WRITE_LAST_RUN_TO_FILE=true`.
 
@@ -170,7 +170,7 @@ node my_agent.js
 
 This replays the most recent trace without having to copy ids. Individual `LMNR_DEBUG_*` vars still override per-field.
 
-### 7. Re-orient with a session summary
+### 6. Re-orient with a session summary
 
 After a context reset or to catch up on an ongoing session, dump all trace notes in order:
 
