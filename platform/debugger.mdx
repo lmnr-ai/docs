@@ -124,13 +124,7 @@ npx lmnr-cli sql query "
   ORDER BY start_time ASC"
 ```
 
-`span_type` is `LLM`, `TOOL`, `DEFAULT`, or `CACHED` (a replayed call in a replay run). Count the LLM calls along the loop to find the index you want for `LMNR_DEBUG_CACHE_UNTIL`:
-
-```bash
-npx lmnr-cli sql query "
-  SELECT count() FROM spans
-  WHERE trace_id = '<trace-id>' AND span_type IN ('LLM', 'CACHED')"
-```
+`span_type` is `LLM`, `TOOL`, `DEFAULT`, or `CACHED` (a replayed call in a replay run). Find the LLM call **before** the buggy one — its `span_id` is the replay boundary you'll pass as `LMNR_DEBUG_CACHE_UNTIL`.
 
 Run `npx lmnr-cli sql schema` to see all available tables.
 
@@ -142,25 +136,14 @@ After editing the agent, re-run with replay:
 LMNR_DEBUG=true \
 LMNR_DEBUG_SESSION_ID=<session-id> \
 LMNR_DEBUG_REPLAY_TRACE_ID=<trace-id> \
-LMNR_DEBUG_CACHE_UNTIL=3 \
+LMNR_DEBUG_CACHE_UNTIL=<span-id> \
 node my_agent.js 2>&1 | tee run.log
 grep 'LMNR_DEBUG_RUN' run.log
 ```
 
-`LMNR_DEBUG_REPLAY_TRACE_ID` is the `trace_id` from the run you want to replay. `LMNR_DEBUG_CACHE_UNTIL` tells the debugger where to stop replaying and start running live:
+`LMNR_DEBUG_REPLAY_TRACE_ID` is the `trace_id` from the run you want to replay. `LMNR_DEBUG_CACHE_UNTIL` is the span id of the last LLM call to replay: the debugger serves cached responses through that call (inclusive) and runs live past it. Pass the id of the call **before** the buggy one, and the debugger runs your fix live while caching everything before it. The span id can be a full UUID, the last two UUID groups, the 16-char OTel id, or any hex suffix.
 
-- **A count N**: replay the first N LLM calls, then run live.
-- **A span id**: replay through that call (inclusive) and run live past it. Accepts a full UUID, the last two UUID groups, the 16-char OTel id, or any hex suffix.
-
-```bash
-LMNR_DEBUG=true \
-LMNR_DEBUG_SESSION_ID=<session-id> \
-LMNR_DEBUG_REPLAY_TRACE_ID=<trace-id> \
-LMNR_DEBUG_CACHE_UNTIL=<span-id> \
-node my_agent.js
-```
-
-The span-id form is the most precise: pass the id of the call **before** the buggy one (inclusive semantics), and the debugger runs your fix live while caching everything before it. Each replay produces a new trace in the same session, so attempts appear side by side in the UI.
+Each replay produces a new trace in the same session, so attempts appear side by side in the UI.
 
 ### 6. Replay the last run automatically
 
@@ -175,7 +158,7 @@ node my_agent.js
 # Replay the run above without copying ids
 LMNR_DEBUG=true \
 LMNR_DEBUG_FROM_LAST_RUN=true \
-LMNR_DEBUG_CACHE_UNTIL=3 \
+LMNR_DEBUG_CACHE_UNTIL=<span-id> \
 node my_agent.js
 ```
 
@@ -199,7 +182,7 @@ Output is one block per trace, oldest first: the markdown note followed by a `<t
 | `LMNR_DEBUG` | Yes | Set to `true`, `1`, `yes`, or `on` to enable debug mode. |
 | `LMNR_DEBUG_SESSION_ID` | After first run | Session id from the first run's `LMNR_DEBUG_RUN` line. Required on every run after the first. |
 | `LMNR_DEBUG_REPLAY_TRACE_ID` | For replay | Trace id of the run to replay from. |
-| `LMNR_DEBUG_CACHE_UNTIL` | For replay | How many LLM calls to replay (count N) or through which call (span id). |
+| `LMNR_DEBUG_CACHE_UNTIL` | For replay | Span id of the last LLM call to replay (inclusive); calls after it run live. Accepts a full UUID, the last two UUID groups, the 16-char OTel id, or any hex suffix. |
 | `LMNR_DEBUG_WRITE_LAST_RUN_TO_FILE` | Optional | Write the run pointer to `.lmnr/last-run.json` when the run finishes, so a later run can replay it with `LMNR_DEBUG_FROM_LAST_RUN`. |
 | `LMNR_DEBUG_FROM_LAST_RUN` | Optional | Seed replay config from `.lmnr/last-run.json` instead of env vars. Requires the previous run to have set `LMNR_DEBUG_WRITE_LAST_RUN_TO_FILE`. |
 | `LMNR_TRACE_METADATA` | Optional | JSON object attached to the trace. Use key `rollout.note` for the pre-run annotation. |
