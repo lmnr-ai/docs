@@ -1,0 +1,40 @@
+---
+title: AI Agent Debugger for Long-Running Agents
+sidebarTitle: Introduction
+---
+
+The Laminar debugger records an agent run, lets you inspect every LLM call and tool use in a transcript, and replays the run from any point with your fix applied. On replay it serves cached LLM responses from the recorded trace up to a boundary you pick, then runs live past it, so you only pay for the calls that actually changed.
+
+<Note>
+**The debugger is built for AI coding agents.** Add the [Laminar skill](https://github.com/lmnr-ai/lmnr-skills) to Claude Code, Cursor, or Codex and the agent drives the whole record/inspect/replay loop on its own. A human can run the same loop by hand: every step is a CLI command or an environment variable.
+</Note>
+
+## Why it exists
+
+Long-running agents fail slowly. A run takes minutes, the bad call is three-quarters of the way through, and every fix means waiting for the full run again. The feedback loop is too slow to iterate on.
+
+The debugger collapses that loop. Record once, then replay from just before the call you're fixing. The recorded calls before your boundary come back from cache instantly; only the calls after it run live.
+
+This matters most for an AI coding agent fixing your agent. The agent can run dozens of replay iterations while you watch, each one cheap and fast, without re-running the expensive prefix of the trace every time.
+
+## The two primitives
+
+- **Sessions** group every debug run from one investigation. All the traces appear together in the Laminar UI so you (or your coding agent) can compare attempts side by side and follow the notes attached to each run.
+- **Replay** re-runs the agent against a recorded trace. The debugger serves cached LLM responses up to the boundary you choose and runs everything past it live. See [how caching works](/debugger/caching) for the mechanism.
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Setup" href="/debugger/setup" icon="wrench">
+    Instrument your agent and turn the debugger on with environment variables.
+  </Card>
+  <Card title="How caching works" href="/debugger/caching" icon="database">
+    What gets cached, how the input hash works, and which integrations support it.
+  </Card>
+  <Card title="Workflow" href="/debugger/workflow" icon="repeat">
+    The full record, inspect, and replay loop, step by step.
+  </Card>
+  <Card title="Browser Use debugger guide" href="/guides/browser-use-debugger" icon="globe">
+    End-to-end walkthrough debugging a Browser Use agent.
+  </Card>
+</CardGroup>

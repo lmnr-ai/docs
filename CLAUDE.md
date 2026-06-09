@@ -20,11 +20,13 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - Run `npx mintlify broken-links` from `/repos/docs` after any restructuring that moves or renames pages; it catches intra-docs link regressions in seconds and is more reliable than grepping for old paths.
 - `npx mintlify broken-links` parses every `.md`/`.mdx` under the cwd, including this `CLAUDE.md`. A parse error here (e.g. a literal `<X>` in prose) aborts the run before any broken-link output is printed. If the check dies on `CLAUDE.md`, temporarily `mv CLAUDE.md .CLAUDE.md.bak`, rerun, then restore. Long-term fix: escape stray `<tag>`-looking tokens in this file.
 
-## Debugger (`/platform/debugger`)
+## Debugger (`/debugger/*`)
 
+- The Debugger is its own top-level sidebar group (LAM-1733), not a single page under Platform. Pages: `debugger/introduction` (what/why, coding-agent oriented), `debugger/setup` (env vars + AI SDK special case), `debugger/caching` (backend cache mechanics), `debugger/workflow` (record/inspect/replay loop). Canonical landing page is `/debugger/introduction`. The old `/platform/debugger` URL is gone; inbound links live in `platform.mdx` and `platform/cli.mdx`.
 - The revamped debugger (LAM-1711 / `feat/debugger-rework-fe`) is **env-var driven**, not CLI-driven. Users run their agent with `LMNR_DEBUG=true` and iterate with `LMNR_DEBUG_REPLAY_TRACE_ID` + `LMNR_DEBUG_CACHE_UNTIL`. The old `lmnr-cli dev` interactive session model is a separate, still-present command.
 - The backend table was renamed `rollout_sessions` → `debugger_sessions` on that branch. The UI route is `/project/<id>/debugger-sessions/<sessionId>`. Don't document the old `/rollout-sessions` path.
 - `lmnr-cli debug` and `lmnr-cli trace` are new command groups added in `lmnr-ts` `feat/lam-1672-cli-debug-trace-tools`. Document them in `platform/cli.mdx` alongside `sql` and `dataset`.
+- **Caching model** (LAM-1733): cache is served from the Laminar backend, keyed by `(trace_id, span_input_hash)`. Supported SDK integrations hash span input in cache mode, ask the backend before a live call, serve on hit, and flip to live mode on the first miss within a trace. The input hash **excludes system messages** (so iterating on the system prompt doesn't bust the cache). Caching integrations: OpenAI, Anthropic, Google GenAI, LiteLLM (Python), AI SDK (TS). The debugger itself runs with all integrations + manual instrumentation — only caching is limited to that list. AI SDK additionally needs `wrapLanguageModel` per model call for caching to engage.
 
 ## Vercel AI SDK integration (v0.8.x SDK)
 

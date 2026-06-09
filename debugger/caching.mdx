@@ -1,0 +1,50 @@
+---
+title: How Debugger Caching Works
+sidebarTitle: How caching works
+---
+
+When you replay a run, the debugger serves LLM responses from a previously recorded trace instead of calling the model again. This is what makes iteration cheap: the expensive prefix of a run comes back from cache, and only the calls you actually want to test run live.
+
+## The cache lookup
+
+The cache is served from the Laminar backend. Each cached response is keyed by the **trace id** of the run being replayed and a **hash of the span's input**.
+
+On a replay run, a supported integration does the following for each LLM call:
+
+1. Computes the input hash for the call.
+2. Asks the Laminar backend whether a cached response exists for that `(trace_id, input_hash)` pair.
+3. On a **hit**, serves the recorded response and never calls the model.
+4. On a **miss**, calls the model live, and from that point on the run stays in **live mode**: every subsequent call goes live too.
+
+So a replay run is cached up to the first miss and live after it. You control where that boundary lands with `LMNR_DEBUG_CACHE_UNTIL` (see [setup](/debugger/setup)).
+
+The same input-hash algorithm is implemented in every supported SDK and in the Laminar backend, so a response recorded by one matches the lookup done by another.
+
+## The input hash excludes system messages
+
+The hash is computed over all input messages **except any system message**.
+
+This is deliberate. The system prompt is the thing you iterate on most while debugging an agent, and if it were part of the hash, every edit to the system prompt would change the hash of every call and break the entire cache. Excluding it means you can rewrite the system prompt and still replay the rest of the run from cache, which is exactly the workflow the debugger is built for.
+
+## Supported caching integrations
+
+Caching is supported in these integrations:
+
+- [OpenAI](/tracing/integrations/openai) (Python, TypeScript)
+- [Anthropic](/tracing/integrations/anthropic) (Python, TypeScript)
+- [Google GenAI](/tracing/integrations/gemini) (Python, TypeScript)
+- [LiteLLM](/tracing/integrations/litellm) (Python)
+- [AI SDK](/tracing/integrations/vercel-ai-sdk) (TypeScript): requires `wrapLanguageModel`, see [setup](/debugger/setup#special-case-ai-sdk)
+
+The debugger itself runs with **many more integrations than this**. Recording, inspecting the transcript, and replaying work with everything Laminar [integrates with](/tracing/integrations/overview) and with [manual LLM instrumentation](/tracing/structure/manual-span-creation). Caching is the only part limited to the list above: with an unsupported integration, every LLM call on a replay run goes live rather than serving from the recorded trace.
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Workflow" href="/debugger/workflow" icon="repeat">
+    Record, inspect, and replay your agent step by step.
+  </Card>
+  <Card title="Setup" href="/debugger/setup" icon="wrench">
+    Environment variables and the AI SDK special case.
+  </Card>
+</CardGroup>
