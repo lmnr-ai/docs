@@ -24,7 +24,7 @@ Install and instrument the agent first:
 
 - **Instrument your agent**: see available integrations [here](/tracing/integrations/overview)
 - **Install the CLI**: `npm install -g lmnr-cli` or run with `npx lmnr-cli@latest`
-- **Make sure your project API key is in your environment** (`LMNR_PROJECT_API_KEY`)
+- **Log in and link this directory**: run `lmnr-cli setup`. It logs you in (the CLI commands below authenticate as you), links the directory to a project, and writes `LMNR_PROJECT_API_KEY` to `./.env` so the SDK can send traces. See the [CLI page](/platform/cli) for details.
 
 ## See your agent runs in browser
 
