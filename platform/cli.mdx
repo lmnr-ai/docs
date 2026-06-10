@@ -204,8 +204,6 @@ The CLI is designed to be scriptable and to plug cleanly into AI coding agents:
 
 - **One-shot onboarding.** `lmnr-cli setup --json` emits a single machine-readable line (project id, minted key, dashboard URL) and uses distinct exit codes so an agent can branch on the failure mode: `6` login failed, `7` no project to select, `8` `.env` write failed, `9` key minting failed, `10` project discovery failed.
 - **Structured output on stdout, logs on stderr.** Every command that supports it takes `--json` and prints machine-readable output to stdout, while human-friendly progress messages are written to stderr. This keeps pipes clean.
-- **Non-zero exit codes on failure.** Scripts and agents can branch on success/failure without parsing output.
-- **Stable noun-verb command surface** (`sql query`, `dataset push/pull/list/create`, `project list`, `trace append-note`, `debug session set-name/summary`), so commands are easy for an agent to compose.
 
 Combined with `sql query --json`, this makes the CLI a drop-in SQL layer for any agent that can run shell commands, with no SDK install required.
 
