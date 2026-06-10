@@ -30,11 +30,13 @@ This is deliberate. The system prompt is the thing you iterate on most while deb
 
 Caching is supported in these integrations:
 
-- [OpenAI](/tracing/integrations/openai) (Python, TypeScript)
-- [Anthropic](/tracing/integrations/anthropic) (Python, TypeScript)
-- [Google GenAI](/tracing/integrations/gemini) (Python, TypeScript)
+- [OpenAI](/tracing/integrations/openai) (Python)
+- [Anthropic](/tracing/integrations/anthropic) (Python)
+- [Google GenAI](/tracing/integrations/gemini) (Python)
 - [LiteLLM](/tracing/integrations/litellm) (Python)
-- [AI SDK](/tracing/integrations/vercel-ai-sdk) (TypeScript): requires `wrapLanguageModel`, see [setup](/debugger/setup#special-case-ai-sdk)
+- [AI SDK](/tracing/integrations/vercel-ai-sdk) (TypeScript, all providers): requires `wrapLanguageModel`, see [setup](/debugger/setup#special-case-ai-sdk)
+
+In TypeScript, the AI SDK is the only caching integration today; it covers all providers the AI SDK supports. The other integrations are Python-only.
 
 The debugger itself runs with **many more integrations than this**. Recording, inspecting the transcript, and replaying work with everything Laminar [integrates with](/tracing/integrations/overview) and with [manual LLM instrumentation](/tracing/structure/manual-span-creation). Caching is the only part limited to the list above: with an unsupported integration, every LLM call on a replay run goes live rather than serving from the recorded trace.
 
