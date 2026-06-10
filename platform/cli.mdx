@@ -83,7 +83,7 @@ See [Datasets CLI](/datasets/cli) for the full dataset workflow including versio
 
 ## Annotate debug sessions
 
-These commands are the operational layer for the [Debugger](/platform/debugger): you run the agent with `LMNR_DEBUG=true`, then use these to name the session and write per-trace notes.
+These commands are the operational layer for the [Debugger](/debugger/workflow): you run the agent with `LMNR_DEBUG=true`, then use these to name the session and write per-trace notes.
 
 ### trace append-note
 
@@ -119,7 +119,7 @@ lmnr-cli debug session summary <session-id> --json
 
 Output is one block per trace: the markdown note followed by a `<trace id="..." end-time="..."/>` tag you can feed into SQL queries.
 
-See [Debugger](/platform/debugger) for the full record/replay workflow.
+See [Debugger](/debugger/workflow) for the full record/replay workflow.
 
 ## Piping and agent-friendly output
 
@@ -157,7 +157,7 @@ lmnr-cli debug session --help
   <Card title="Datasets CLI workflow" href="/datasets/cli">
     End-to-end example of pulling, editing, and pushing a dataset.
   </Card>
-  <Card title="Debugger" href="/platform/debugger">
+  <Card title="Debugger" href="/debugger/introduction">
     Rerun long-running agents from a checkpoint without leaving the page.
   </Card>
 </CardGroup>

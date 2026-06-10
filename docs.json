@@ -93,6 +93,15 @@
             ]
           },
           {
+            "group": "Debugger",
+            "pages": [
+              "debugger/introduction",
+              "debugger/setup",
+              "debugger/caching",
+              "debugger/workflow"
+            ]
+          },
+          {
             "group": "Evaluations",
             "pages": [
               "evaluations/introduction",
@@ -120,7 +129,6 @@
               "platform/table-views",
               "platform/integrations",
               "platform/live-tracing",
-              "platform/debugger",
               "platform/mcp",
               "platform/sql-editor",
               "platform/cli",
