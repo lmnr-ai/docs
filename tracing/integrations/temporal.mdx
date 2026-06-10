@@ -1,0 +1,334 @@
+---
+title: Observability and Tracing for Temporal in TypeScript
+sidebarTitle: Temporal
+---
+
+import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
+
+## Overview
+
+Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. Trace, debug, and monitor every [Temporal](https://temporal.io/) workflow execution and activity in one distributed trace, even though your client and workers run in separate processes. Self-host via Helm or use managed cloud.
+
+Temporal splits a run across processes: a **client** starts a workflow, a **worker** executes the workflow code and its activities, and the workflow itself runs inside Temporal's deterministic sandbox. Laminar stitches these back together. The client opens a span when it starts a workflow, propagates the trace context through Temporal headers, and the worker restores that context so the workflow's activities nest under the original span. The result is a single trace: `start workflow` -> `workflow` -> each `activity`.
+
+What Laminar captures:
+
+- A client-side span tracking each workflow's lifecycle (start to result, cancel, or terminate).
+- One span per activity execution, named after the activity type, with arguments and return value.
+- Child workflows and activities scheduled from inside a workflow, parented to the workflow span.
+
+<Frame caption="A Temporal greetingWorkflow run in Laminar: the client start span wraps the workflow span, and the greet and farewell activities nest underneath with their recorded inputs.">
+<img src="/images/integrations/temporal-trace-tree.png" alt="Temporal workflow and activity spans in Laminar, tree view" />
+</Frame>
+
+<Note>
+This integration is TypeScript-only. Wire up the interceptors explicitly as shown below. Requires `@lmnr-ai/lmnr >= 0.8.28` and `@temporalio/* >= 1.18.0`.
+</Note>
+
+## How the pieces fit together
+
+Temporal's deterministic workflow sandbox forbids the non-deterministic calls (`crypto.randomUUID`, `Date.now`) that Laminar's span APIs rely on, so spans are never created inside workflow code. Instrumentation lives in three places:
+
+- **Client process**: `Laminar.initialize()` wraps each workflow run in a span, and three client interceptors inject the trace context into Temporal headers.
+- **Worker process**: `Laminar.initialize({ disableBatch: true })`, an activity interceptor that wraps each activity in a span, and a workflow interceptor module that forwards the trace context from the workflow to the activities and child workflows it schedules.
+- **Workflow sandbox**: the workflow interceptor module runs here. It only reads and copies headers (deterministic), so it is safe in the sandbox.
+
+## Set environment variables
+
+```bash
+# .env
+LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+```
+
+<GetProjectApiKey />
+
+## Worker process
+
+In the worker, call `Laminar.initialize()` with `disableBatch: true`. Activity spans are short-lived; the default batch span processor can drop them if the worker shuts down before the batch flushes. `disableBatch: true` switches to a simple processor that exports each span on end.
+
+Pass two interceptor sets to `Worker.create`:
+
+- `activity`: `ActivityInterceptorFactory()` wraps every activity in a Laminar span and restores the trace context the client injected.
+- `workflowModules`: the path to Laminar's workflow interceptor module, resolved with `require.resolve`. Temporal bundles this module into the workflow sandbox so it can forward trace headers from the workflow to the activities and child workflows it schedules.
+
+```typescript worker.ts
+import { Worker } from '@temporalio/worker';
+import { Laminar, LaminarTemporalInterceptors } from '@lmnr-ai/lmnr';
+import * as activities from './activities';
+import 'dotenv/config';
+
+Laminar.initialize({ disableBatch: true });
+
+async function run() {
+  const worker = await Worker.create({
+    taskQueue: 'demo',
+    workflowsPath: require.resolve('./workflows'),
+    activities,
+    interceptors: {
+      activity: [LaminarTemporalInterceptors.ActivityInterceptorFactory()],
+      workflowModules: [
+        require.resolve('@lmnr-ai/lmnr/temporal-workflow-interceptors'),
+      ],
+    },
+  });
+
+  await worker.run();
+}
+
+run().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
+```
+
+### Activity interceptor options
+
+`ActivityInterceptorFactory()` takes three independent options, all default `true`:
+
+```typescript
+LaminarTemporalInterceptors.ActivityInterceptorFactory({
+  createActivitySpan: true,   // Wrap each activity in a span named after its type.
+  recordActivityArgs: true,   // Record the activity's arguments as the span input.
+  recordActivityOutput: true, // Record the activity's return value as the span output.
+});
+```
+
+- `createActivitySpan`: set to `false` to skip the activity span entirely and only restore the trace context, letting your own `observe()` calls act as roots inside the activity.
+- `recordActivityArgs` / `recordActivityOutput`: set to `false` to omit large or sensitive activity inputs/outputs from the span. Both are ignored when `createActivitySpan` is `false`.
+
+## Client process
+
+In the client, call `Laminar.initialize()` and pass the `@temporalio/client` module under `instrumentModules.temporal.client`. This lets Laminar wrap each workflow run in a span that tracks its full lifecycle (start to result), which is what the worker-side workflow and activities nest under.
+
+Pass all three client interceptors so trace context is injected for workflows, standalone activities, and schedules:
+
+```typescript client.ts
+import * as client from '@temporalio/client';
+import { Laminar, LaminarTemporalInterceptors } from '@lmnr-ai/lmnr';
+import 'dotenv/config';
+
+Laminar.initialize({
+  instrumentModules: { temporal: { client } },
+});
+
+async function run() {
+  const connection = await client.Connection.connect();
+  const c = new client.Client({
+    connection,
+    interceptors: {
+      workflow: [new LaminarTemporalInterceptors.WorkflowClientInterceptor()],
+      activity: [new LaminarTemporalInterceptors.ActivityClientInterceptor()],
+      schedule: [new LaminarTemporalInterceptors.ScheduleClientInterceptor()],
+    },
+  });
+
+  const result = await c.workflow.execute('greetingWorkflow', {
+    taskQueue: 'demo',
+    workflowId: 'greeting-' + Date.now(),
+    args: ['Laminar'],
+  });
+
+  console.log(result);
+  await Laminar.shutdown();
+}
+
+run().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
+```
+
+To group several workflow runs under one trace, or to attach a session id, user id, or metadata, wrap the calls in `observe()`:
+
+```typescript
+import { observe } from '@lmnr-ai/lmnr';
+
+await observe({ name: 'greeting-run' }, async () => {
+  return c.workflow.execute('greetingWorkflow', {
+    taskQueue: 'demo',
+    workflowId: 'greeting-' + Date.now(),
+    args: ['Laminar'],
+  });
+});
+```
+
+See the full [observe reference](/tracing/structure/observe-decorator) for session IDs, user IDs, metadata, and tags.
+
+## The workflow you are tracing
+
+The example above traces this workflow and its activities. Nothing here changes for Laminar: the workflow and activities are plain Temporal code.
+
+```typescript workflows.ts
+import { proxyActivities } from '@temporalio/workflow';
+import type * as activities from './activities';
+
+const { greet, farewell } = proxyActivities<typeof activities>({
+  startToCloseTimeout: '1 minute',
+});
+
+export async function greetingWorkflow(name: string): Promise<string> {
+  const hello = await greet(name);
+  const bye = await farewell(name);
+  return `${hello} ${bye}`;
+}
+```
+
+```typescript activities.ts
+export async function greet(name: string): Promise<string> {
+  return `Hello, ${name}!`;
+}
+
+export async function farewell(name: string): Promise<string> {
+  return `Goodbye, ${name}!`;
+}
+```
+
+## When require.resolve does not work
+
+`require.resolve('@lmnr-ai/lmnr/temporal-workflow-interceptors')` is the recommended way to point Temporal at Laminar's workflow interceptor module. Some setups can't resolve a package subpath into the workflow bundle (custom bundlers, restricted module resolution, monorepo layouts). In that case, drop the interceptor module into your own source tree and pass a relative path instead:
+
+```typescript
+workflowModules: [require.resolve('./laminar-workflow-interceptors')],
+```
+
+The file below is self-contained. Save it next to your workflows and keep the path in sync.
+
+<Accordion title="laminar-workflow-interceptors.ts">
+
+```typescript laminar-workflow-interceptors.ts
+import {
+  AsyncLocalStorage,
+  type Headers,
+  type WorkflowInterceptors,
+} from '@temporalio/workflow';
+
+const LAMINAR_SPAN_CONTEXT_HEADER = 'x-lmnr-span-context';
+const TRACEPARENT_HEADER = 'traceparent';
+
+const hasTraceHeaders = (headers: Headers): boolean =>
+  headers[LAMINAR_SPAN_CONTEXT_HEADER] != null ||
+  headers[TRACEPARENT_HEADER] != null;
+
+let _startHeaders: Headers = {};
+
+const _handlerHeaders = new AsyncLocalStorage<Headers>();
+
+const activeHeaders = (): Headers =>
+  _handlerHeaders.getStore() ?? _startHeaders;
+
+export const interceptors = (): WorkflowInterceptors => ({
+  inbound: [
+    {
+      execute: async (input, next) => {
+        _startHeaders = input.headers ?? {};
+        return next(input);
+      },
+      handleSignal: async (input, next) => {
+        const headers = input.headers ?? {};
+        return hasTraceHeaders(headers)
+          ? _handlerHeaders.run(headers, () => next(input))
+          : next(input);
+      },
+      handleUpdate: async (input, next) => {
+        const headers = input.headers ?? {};
+        return hasTraceHeaders(headers)
+          ? _handlerHeaders.run(headers, () => next(input))
+          : next(input);
+      },
+    },
+  ],
+  outbound: [
+    {
+      scheduleActivity: async (input, next) =>
+        next({ ...input, headers: { ...activeHeaders(), ...input.headers } }),
+      scheduleLocalActivity: async (input, next) =>
+        next({ ...input, headers: { ...activeHeaders(), ...input.headers } }),
+      startChildWorkflowExecution: async (input, next) =>
+        next({ ...input, headers: { ...activeHeaders(), ...input.headers } }),
+      continueAsNew: async (input, next) =>
+        next({ ...input, headers: { ...activeHeaders(), ...input.headers } }),
+    },
+  ],
+});
+```
+
+</Accordion>
+
+<Warning>
+If you create the worker with a pre-built `workflowBundle`, Temporal ignores `interceptors.workflowModules`: the bundle is compiled before `Worker.create` runs. Register the interceptor at bundle time instead, or trace context from workflow start won't reach the activities and child workflows the workflow schedules.
+
+```typescript
+import { bundleWorkflowCode } from '@temporalio/worker';
+
+const { code } = await bundleWorkflowCode({
+  workflowsPath: require.resolve('./workflows'),
+  workflowInterceptorModules: [
+    require.resolve('@lmnr-ai/lmnr/temporal-workflow-interceptors'),
+  ],
+});
+```
+</Warning>
+
+## See what happened in a trace
+
+Open the trace in Laminar and you get the full distributed view: the client's `start workflow` span, the `workflow` span on the worker, and each `activity` span nested underneath with its recorded arguments and result. Switch between tree view (span-by-span structure, shown above) and the transcript view, which extracts inputs and outputs into a readable conversation instead of a raw span tree.
+
+More on the trace UX: [Viewing traces](/platform/viewing-traces).
+
+## Track outcomes with Signals
+
+Traces answer *what happened on this run*. **[Signals](/signals/introduction) answer the cross-trace question**: *how often does an activity time out, which workflows retry more than three times before succeeding, when do child workflows fail without surfacing an error to the parent*. A Signal pairs a plain-language prompt with a JSON output schema. Laminar runs it live on new traces (Triggers) or backfills it across history (Jobs) and records a structured event every time it matches. From there you [query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on events across every trace.
+
+<Note>
+Every new project ships with a **Failure Detector** Signal that categorizes issues on any trace over 1000 tokens. Open it from the Signals sidebar to see events as soon as your Temporal traces arrive.
+</Note>
+
+## Query across traces
+
+- **[SQL editor](/platform/sql-editor)** for ad-hoc queries across traces, spans, signals, and evals.
+- **SQL API** for programmatic access from scripts and pipelines.
+- **[CLI](/platform/cli)** (`lmnr-cli sql query`) for terminal-driven queries and piping JSON into shell tools or coding agents.
+- **[MCP server](/platform/mcp)** to query Laminar from Claude Code, Cursor, or Codex.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="I don't see any traces in Laminar">
+    - Confirm `LMNR_PROJECT_API_KEY` is set in both the client and worker processes.
+    - The client must call `Laminar.initialize({ instrumentModules: { temporal: { client } } })` and pass the three client interceptors, or workflow runs won't be wrapped in a span.
+    - The worker must call `Laminar.initialize({ disableBatch: true })`. Without `disableBatch`, short-lived activity spans can be dropped before the batch processor flushes.
+  </Accordion>
+  <Accordion title="Activities don't nest under the workflow span">
+    - Make sure the worker passes both the `activity` interceptor and the `workflowModules` entry. The workflow interceptor module is what forwards trace context from the workflow to its activities.
+    - If you use a pre-built `workflowBundle`, register the interceptor at bundle time via `bundleWorkflowCode({ workflowInterceptorModules: [...] })`. See the warning above.
+  </Accordion>
+  <Accordion title="Self-hosting Laminar">
+    Set `baseUrl` and the ports of your instance when initializing. For a local OSS deployment:
+
+    ```typescript
+    Laminar.initialize({
+      baseUrl: 'http://localhost',
+      httpPort: 8000,
+      grpcPort: 8001,
+      disableBatch: true, // worker process
+    });
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Viewing traces" href="/platform/viewing-traces">
+    Read the transcript view, filter, and search across traces.
+  </Card>
+  <Card title="Signals" href="/signals/introduction">
+    Detect behaviors and failures across every run, then query, cluster, and alert on them.
+  </Card>
+  <Card title="SQL editor and MCP server" href="/platform/sql-editor">
+    Query traces programmatically from the UI, API, or your IDE.
+  </Card>
+  <Card title="Tracing structure" href="/tracing/structure/overview">
+    Sessions, user IDs, metadata, and tags.
+  </Card>
+</CardGroup>
