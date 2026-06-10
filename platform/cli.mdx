@@ -95,7 +95,7 @@ Alternatively, pass `--project-api-key <key>` on those commands. `lmnr-cli setup
 
 ## Directory-scoped projects
 
-`sql`, `dataset`, and `project` resolve which project they target from the directory you run in, Vercel- and Supabase-style. `lmnr-cli setup` writes a `.lmnr/project.json` link file at the project root (it holds the project id and display details, never secrets). Commands then resolve the project in this order:
+`sql`, `dataset`, and `project` resolve which project they target from the directory you run in. `lmnr-cli setup` writes a `.lmnr/project.json` link file at the project root (it holds the project id and display details, never secrets). Commands then resolve the project in this order:
 
 1. `--project-id <id>` flag.
 2. The nearest `.lmnr/project.json`, walking up from the current directory.
