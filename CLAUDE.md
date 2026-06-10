@@ -8,7 +8,7 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 
 ## SEO
 
-- The first ~150 words of a page matter disproportionately for search ranking and snippets. On integration and overview pages, lead paragraph one with what Laminar is plus the framework/SDK name (e.g. "Laminar is an open-source, OpenTelemetry-native observability platform for <X>. Trace, debug, and monitor ..."). Include the key product nouns (observability, OpenTelemetry, self-host/Helm, managed cloud) and action verbs (trace, debug, monitor).
+- The first ~150 words of a page matter disproportionately for search ranking and snippets. On integration and overview pages, lead paragraph one with what Laminar is plus the framework/SDK name (e.g. "Laminar is an open-source, OpenTelemetry-native observability platform for \<X\>. Trace, debug, and monitor ..."). Include the key product nouns (observability, OpenTelemetry, self-host/Helm, managed cloud) and action verbs (trace, debug, monitor).
 - Defer "what the third-party SDK is" to paragraph two. The opening shouldn't burn SEO real estate on content that never names Laminar.
 
 ## Navigation and linking
@@ -18,7 +18,7 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - Internal links use absolute paths from the docs root with no `.mdx` extension: `[Signals](/signals/introduction)`.
 - Mintlify auto-redirects `/<group-slug>` to the first page in the group when you add a sidebar group whose slug matches an existing single-page URL (verified: `/signals` → 307 → `/signals/introduction` after converting `signals.mdx` into a `signals/` group). No explicit redirect entry is needed in `docs.json` when splitting a page into a group, but inbound links should still be updated to the canonical first-page URL.
 - Run `npx mintlify broken-links` from `/repos/docs` after any restructuring that moves or renames pages; it catches intra-docs link regressions in seconds and is more reliable than grepping for old paths.
-- `npx mintlify broken-links` parses every `.md`/`.mdx` under the cwd, including this `CLAUDE.md`. A parse error here (e.g. a literal `<X>` in prose) aborts the run before any broken-link output is printed. If the check dies on `CLAUDE.md`, temporarily `mv CLAUDE.md .CLAUDE.md.bak`, rerun, then restore. Long-term fix: escape stray `<tag>`-looking tokens in this file.
+- `npx mintlify broken-links` parses every `.md`/`.mdx` under the cwd, including this `CLAUDE.md`. A parse error here aborts the run before any broken-link output is printed. If the check dies on `CLAUDE.md`, temporarily `mv CLAUDE.md .CLAUDE.md.bak`, rerun, then restore. Long-term fix: escape stray `<tag>`-looking tokens in this file.
 
 ## Debugger (`/debugger/*`)
 
