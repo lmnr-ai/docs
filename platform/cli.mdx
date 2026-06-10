@@ -30,9 +30,11 @@ It opens your browser to authorize the CLI, then:
 
 1. Logs you in (if you are not already).
 2. Lets you pick or create a project.
-3. Mints a fresh project API key and writes `LMNR_PROJECT_API_KEY=...` to `./.env`.
+3. Mints a fresh project API key for your application's SDK and writes `LMNR_PROJECT_API_KEY=...` to `./.env`.
 4. Links the directory by writing `.lmnr/project.json`.
 5. Installs the Laminar agent skill into your project (`.claude/`, `.cursor/`, `.codex/`, or `.agents/`).
+
+The CLI itself never uses that key: it authenticates as you (see [Authenticate](#authenticate)). The key is purely for the SDK in your app to send traces.
 
 Add the SDK to your app, run it, then confirm traces are landing:
 
@@ -58,12 +60,7 @@ Re-running `setup` in the same directory reuses the linked project but mints a f
 
 ## Authenticate
 
-The CLI uses two kinds of credentials, depending on the command:
-
-- **Your user account**, via `lmnr-cli login`. Used by `sql`, `dataset`, and `project`. These commands run as the signed-in user, scoped to a project (see [Directory-scoped projects](#directory-scoped-projects)).
-- **A project API key**, via `--project-api-key` or `LMNR_PROJECT_API_KEY`. Used by `debug` and `trace`.
-
-### Log in
+Every CLI command authenticates as you, the signed-in user. Log in once with `lmnr-cli login` (or run `lmnr-cli setup`, which logs you in as its first step):
 
 ```bash
 lmnr-cli login
@@ -83,24 +80,18 @@ lmnr-cli login --dashboard-url https://laminar.example.com --base-url https://ap
 
 `LMNR_DASHBOARD_URL` and `LMNR_BASE_URL` are honored as fallbacks.
 
-### Project API key
-
-`debug` and `trace` authenticate with a project API key. Grab one from **Settings → Project API Keys**, then set it once:
-
-```bash
-export LMNR_PROJECT_API_KEY=<your-key>
-```
-
-Alternatively, pass `--project-api-key <key>` on those commands. `lmnr-cli setup` writes this key to `./.env` for you.
+<Note>
+The CLI does not use a project API key. The `LMNR_PROJECT_API_KEY` that `lmnr-cli setup` writes to `./.env` is for the Laminar SDK in your application to send traces; the CLI authenticates as you instead.
+</Note>
 
 ## Directory-scoped projects
 
-`sql`, `dataset`, and `project` resolve which project they target from the directory you run in. `lmnr-cli setup` writes a `.lmnr/project.json` link file at the project root (it holds the project id and display details, never secrets). Commands then resolve the project in this order:
+Every project command (`sql`, `dataset`, `project`, `trace`, `debug`) resolves which project it targets from the directory you run in. `lmnr-cli setup` writes a `.lmnr/project.json` link file at the project root (it holds the project id and display details, never secrets). Commands then resolve the project in this order:
 
 1. `--project-id <id>` flag.
 2. The nearest `.lmnr/project.json`, walking up from the current directory.
 
-So once a directory is linked, every `sql` and `dataset` command in it (or any subdirectory) targets that project with no extra flags. Override per command with `--project-id`.
+So once a directory is linked, every command in it (or any subdirectory) targets that project with no extra flags. Override per command with `--project-id`.
 
 List the projects you can access and see which one is linked here:
 
@@ -113,7 +104,7 @@ The linked project is marked with a `●`.
 
 ## Query data with SQL
 
-Run ClickHouse SQL against your project's spans, traces, signal events, and more. `sql` runs as the signed-in user against the linked project, so `lmnr-cli login` plus a linked directory (or `--project-id`) is all you need:
+Run ClickHouse SQL against your project's spans, traces, signal events, and more. `sql` runs against the linked project, so `lmnr-cli login` plus a linked directory (or `--project-id`) is all you need:
 
 ```bash
 lmnr-cli sql query "SELECT name, duration FROM spans WHERE start_time > now() - INTERVAL 1 HOUR LIMIT 20"
@@ -140,7 +131,7 @@ Only `SELECT` queries are allowed. The query runs scoped to your project automat
 
 ## Manage datasets
 
-List, push, pull, and create datasets from files on disk. Supported formats: `.jsonl`, `.json`, `.csv`. Like `sql`, these commands run as the signed-in user against the linked project.
+List, push, pull, and create datasets from files on disk. Supported formats: `.jsonl`, `.json`, `.csv`. Like `sql`, these commands run against the linked project.
 
 ```bash
 # List all datasets in the project
@@ -160,7 +151,7 @@ See [Datasets CLI](/datasets/cli) for the full dataset workflow including versio
 
 ## Annotate debug sessions
 
-These commands are the operational layer for the [Debugger](/platform/debugger): you run the agent with `LMNR_DEBUG=true`, then use these to name the session and write per-trace notes. They authenticate with a project API key (`--project-api-key` or `LMNR_PROJECT_API_KEY`).
+These commands are the operational layer for the [Debugger](/platform/debugger): you run the agent with `LMNR_DEBUG=true`, then use these to name the session and write per-trace notes. Like the other commands, they run against the linked project.
 
 ### trace append-note
 
