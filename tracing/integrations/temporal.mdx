@@ -1,5 +1,5 @@
 ---
-title: Observability for Temporal Workflows in TypeScript
+title: Observability for Temporal Workflows
 sidebarTitle: Temporal
 ---
 
@@ -16,10 +16,6 @@ What Laminar captures:
 - Any LLM calls, tool calls, or `observe()` spans inside an activity, nested under that activity.
 - Trace context forwarded to activities, child workflows, and `continueAsNew` scheduled from inside a workflow.
 
-<Note>
-This integration is TypeScript-only at the time of writing. The Python Temporal integration is in progress.
-</Note>
-
 ## How the wiring fits together
 
 Temporal runs the client and worker as separate entry points, so you initialize Laminar and register interceptors in each:
@@ -31,16 +27,21 @@ The workflow interceptor is special: Temporal compiles workflow code into a dete
 
 ## Getting started
 
+<Tabs>
+<Tab title="TypeScript">
+
 <Steps>
 <Step title="Install">
 
 Ensure you are using `@lmnr-ai/lmnr` version `0.8.28` or higher:
 
 ```bash
-npm install @lmnr-ai/lmnr@latest @temporalio/client @temporalio/worker @temporalio/workflow @temporalio/activity
+npm install @lmnr-ai/lmnr@latest @temporalio/client @temporalio/worker @temporalio/workflow @temporalio/activity ai @ai-sdk/openai
 # or
-pnpm add @lmnr-ai/lmnr@latest @temporalio/client @temporalio/worker @temporalio/workflow @temporalio/activity
+pnpm add @lmnr-ai/lmnr@latest @temporalio/client @temporalio/worker @temporalio/workflow @temporalio/activity ai @ai-sdk/openai
 ```
+
+The `ai` and `@ai-sdk/openai` packages are only for the example activity below; swap them for whatever your activities actually call.
 
 </Step>
 <Step title="Set environment variables">
@@ -65,14 +66,12 @@ You pass this path in the worker setup below. If your worker uses a pre-built wo
 
 Initialize Laminar with `disableBatch: true`, register the activity interceptor factory, and register the workflow interceptor module by path:
 
-```typescript worker.ts
+```typescript worker.ts {2,5-7,14-19}
 import { Worker } from '@temporalio/worker';
-import OpenAI from 'openai';
 import { Laminar, LaminarTemporalInterceptors } from '@lmnr-ai/lmnr';
 import * as activities from './activities';
 
 Laminar.initialize({
-  instrumentModules: { OpenAI },
   disableBatch: true,
 });
 
@@ -106,7 +105,7 @@ Set `disableBatch: true` in the worker. The worker spawns short-lived activity e
 
 Import the `@temporalio/client` module as a namespace and pass it to `Laminar.initialize` so each workflow run is wrapped in a span. Then register the workflow, activity, and schedule client interceptors:
 
-```typescript client.ts
+```typescript client.ts {2-3,6-9,15-19,22,29,31}
 import { Connection, Client } from '@temporalio/client';
 import * as client from '@temporalio/client';
 import { Laminar, LaminarTemporalInterceptors, observe } from '@lmnr-ai/lmnr';
@@ -158,21 +157,22 @@ Pass the `@temporalio/client` module via `instrumentModules: { temporal: { clien
 
 Activities run on the worker as ordinary functions, so any auto-instrumented SDK call or `observe()` span inside them is captured and nested under the activity span:
 
-```typescript activities.ts
-import OpenAI from 'openai';
-import { observe } from '@lmnr-ai/lmnr';
-
-const openai = new OpenAI();
+```typescript activities.ts {3,10-13}
+import { openai } from '@ai-sdk/openai';
+import { generateText } from 'ai';
+import { observe, getTracer } from '@lmnr-ai/lmnr';
 
 export async function summarizeTopic(topic: string): Promise<string> {
-  const response = await openai.chat.completions.create({
-    model: 'gpt-5-mini',
-    messages: [
-      { role: 'system', content: 'You are a concise technical writer.' },
-      { role: 'user', content: `Write a two-sentence summary of: ${topic}` },
-    ],
+  const { text } = await generateText({
+    model: openai('gpt-5-mini'),
+    system: 'You are a concise technical writer.',
+    prompt: `Write a two-sentence summary of: ${topic}`,
+    experimental_telemetry: {
+      isEnabled: true,
+      tracer: getTracer(),
+    },
   });
-  return response.choices[0]?.message?.content ?? '';
+  return text;
 }
 
 export async function countWords(text: string): Promise<number> {
@@ -207,6 +207,9 @@ Do not call `observe()` or `Laminar.startSpan()` inside a workflow function. Wor
 </Step>
 </Steps>
 
+</Tab>
+</Tabs>
+
 ## See what happened in a trace
 
 Open the trace in Laminar and you land on the transcript view: the workflow's LLM call reads as a conversation, with the prompt, the model's response, and the `count_words` tool call inline. A span tree tells you the shape of the run; the transcript tells you what actually happened.
@@ -215,7 +218,7 @@ Open the trace in Laminar and you land on the transcript view: the workflow's LL
 <img src="/images/traces/temporal.png" alt="Temporal workflow trace in Laminar, transcript view" />
 </Frame>
 
-Because the client, workflow, and activities run in separate processes, the tree view is where the propagation pays off: the client-side `run-summary` root, the workflow lifecycle span, each activity, and the LLM and tool spans inside them all line up in a single hierarchy.
+Production workflows rarely run two neat activities back to back. They fan out across many activities, child workflows, and signals, each in its own process, and a naive setup scatters them into a pile of disconnected traces you have to correlate by hand. The interceptors do that correlation for you: they propagate the trace context through Temporal headers so the client-side `run-summary` root, the workflow lifecycle span, every activity, and the LLM and tool spans inside them all land in **one trace, out of the box**, no matter how disjoint the activities are. The tree view below just makes that single stitched-together hierarchy easy to read.
 
 <Frame caption="Tree view of the same run: run-summary wraps the summaryWorkflow lifecycle span, summarizeTopic nests the gpt-5-mini LLM span, and countWords nests the count_words tool span, all stitched across processes via Temporal headers.">
 <img src="/images/traces/temporal-tree.png" alt="Temporal workflow trace in Laminar, tree view showing cross-process span nesting" />
