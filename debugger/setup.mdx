@@ -1,0 +1,108 @@
+---
+title: Set Up the Laminar Debugger
+sidebarTitle: Setup
+---
+
+The debugger is controlled almost entirely with environment variables. Once your agent is instrumented, you turn debug mode on, group runs into a session, and pick a replay boundary by setting variables on the run command. No code changes are needed in the general case.
+
+One integration needs a small code change first. Read the special case below if it applies to you, then follow the general setup.
+
+## Special case: AI SDK
+
+For the [AI SDK](/tracing/integrations/vercel-ai-sdk) (TypeScript), caching needs one extra step on top of the normal telemetry integration: wrap each model with `wrapLanguageModel`. The wrapper is what hashes the span input and consults the Laminar backend for a cached response. Without it, your AI SDK calls are traced and replayable as part of the transcript, but they will not serve from cache.
+
+```typescript
+import { generateText, gateway } from 'ai';
+// or
+import { anthropic } from '@ai-sdk/anthropic';
+import { Laminar, wrapLanguageModel, getTracer } from '@lmnr-ai/lmnr';
+
+Laminar.initialize();
+
+await generateText({
+  // this line is what enables debugger caching
+  model: wrapLanguageModel(gateway('openai/gpt-5')),
+  // or
+  // model: wrapLanguageModel(anthropic('claude-opus-4-5')),
+  // ... other params
+
+  // general Laminar telemetry integration
+  experimental_telemetry: {
+    isEnabled: true,
+    tracer: getTracer(),
+  },
+});
+```
+
+<Accordion title="AI SDK v7 (pre-release canary)">
+AI SDK v7 replaces `experimental_telemetry` with a `telemetry` option that takes integrations. The `wrapLanguageModel` step is the same; only the telemetry wiring changes.
+
+```typescript
+import { generateText, gateway } from 'ai';
+// or
+import { anthropic } from '@ai-sdk/anthropic';
+import { Laminar, wrapLanguageModel, LaminarAiSdkTelemetry } from '@lmnr-ai/lmnr';
+
+Laminar.initialize();
+
+await generateText({
+  // this line is what enables debugger caching
+  model: wrapLanguageModel(gateway('openai/gpt-5')),
+  // or
+  // model: wrapLanguageModel(anthropic('claude-opus-4-5')),
+  // ... other params
+
+  // general Laminar telemetry integration
+  telemetry: {
+    isEnabled: true,
+    integrations: [new LaminarAiSdkTelemetry()],
+  },
+});
+```
+</Accordion>
+
+## General setup
+
+### 1. Instrument your agent
+
+The debugger works on top of normal Laminar tracing. Instrument your agent with any of the available [integrations](/tracing/integrations/overview), or with [manual LLM instrumentation](/tracing/structure/manual-span-creation). Caching is limited to a specific set of integrations (see [how caching works](/debugger/caching)), but the record, inspect, and replay loop runs with everything Laminar traces.
+
+### 2. Install the CLI and link the project
+
+```bash
+npm install -g lmnr-cli
+# or run on demand with: npx lmnr-cli@latest
+```
+
+Run `lmnr-cli setup` to log in and link this directory. It logs you in (the debug commands authenticate as you, the signed-in user), links the directory to a project via `.lmnr/project.json`, and writes `LMNR_PROJECT_API_KEY` to your env file so the SDK can send traces:
+
+```bash
+lmnr-cli setup
+```
+
+The CLI itself never uses the project API key; that key is only for the SDK in your agent. See the [CLI page](/platform/cli) for details.
+
+### 3. Turn on debug mode
+
+Add `LMNR_DEBUG=true` to your run command to record a session. From there, a handful of environment variables control session grouping and replay:
+
+| Variable | Required | Description |
+|---|---|---|
+| `LMNR_DEBUG` | Yes | Set to `true`, `1`, `yes`, or `on` to enable debug mode. |
+| `LMNR_DEBUG_SESSION_ID` | After first run | Session id from the first run's `LMNR_DEBUG_RUN` line. Required on every run after the first so traces stay grouped. |
+| `LMNR_DEBUG_REPLAY_TRACE_ID` | For replay | Trace id of the run to replay from. |
+| `LMNR_DEBUG_CACHE_UNTIL` | For replay | Span id of the last LLM call to replay (inclusive); calls after it run live. Accepts a full UUID, the last two UUID groups, the 16-char OTel id, or any hex suffix. |
+| `LMNR_TRACE_METADATA` | Optional | JSON object attached to the trace. Use key `rollout.note` for the pre-run annotation. |
+
+The [workflow](/debugger/workflow) page walks through using these variables end to end.
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="How caching works" href="/debugger/caching" icon="database">
+    What gets cached, the input hash, and which integrations support it.
+  </Card>
+  <Card title="Workflow" href="/debugger/workflow" icon="repeat">
+    Record, inspect, and replay your agent step by step.
+  </Card>
+</CardGroup>
