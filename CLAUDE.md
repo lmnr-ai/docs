@@ -26,6 +26,13 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - The backend table was renamed `rollout_sessions` → `debugger_sessions` on that branch. The UI route is `/project/<id>/debugger-sessions/<sessionId>`. Don't document the old `/rollout-sessions` path.
 - `lmnr-cli debug` and `lmnr-cli trace` are new command groups added in `lmnr-ts` `feat/lam-1672-cli-debug-trace-tools`. Document them in `platform/cli.mdx` alongside `sql` and `dataset`.
 
+## CLI: two distinct tools, don't conflate
+
+- `platform/cli.mdx` documents the **standalone `lmnr-cli`** npm package. `datasets/cli.mdx` documents a **different** CLI: `lmnr datasets`, bundled with the `@lmnr-ai/lmnr` SDK. They are not the same binary; a change to `lmnr-cli` (the standalone) does NOT necessarily touch the SDK-bundled `lmnr datasets`. Scope CLI doc edits to the right page.
+- `lmnr-cli` auth model (lmnr-ts PR #243 / `feat/cli-better-auth`, paired with lmnr PR #1882): **dual auth, split by command.** `sql` / `dataset` / `project` run as the signed-in **user** (OAuth device flow via `lmnr-cli login`, BetterAuth JWT, routes to `/v1/cli/*`). `debug` / `trace` still use a **project API key** (`--project-api-key` / `LMNR_PROJECT_API_KEY`). The old project-API-key-for-everything model is dead.
+- Projects are **directory-scoped** (Vercel/Supabase style): `lmnr-cli setup` writes `.lmnr/project.json`; user-token commands resolve the project as `--project-id` > nearest `.lmnr/project.json` (walk-up). The PR descriptions mention `LMNR_PROJECT_ID` as a third precedence tier, but it is NOT actually wired in the shipped code (grep `src/auth/resolve.ts`) — don't document it.
+- The **`lmnr-cli` README on the branch is stale** (still lists removed `list` / `switch` / `dev` commands and a `profiles` credentials model). `src/index.ts` is the source of truth for the command surface; verify against it, not the README. Removed: `list`, `switch`, `dev`, the `profiles`/`active` credentials map. Added: `setup`, `project list`, flat single-user `credentials.json`.
+
 ## Vercel AI SDK integration (v0.8.x SDK)
 
 - AI SDK telemetry is opt-in per call via `experimental_telemetry: { isEnabled: true, tracer: getTracer() }`. Forgetting to pass the tracer is the single most common "no traces" failure.
