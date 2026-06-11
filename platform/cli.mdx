@@ -56,7 +56,7 @@ lmnr-cli setup --no-write-env        # Skip writing ./.env
 lmnr-cli setup --no-browser          # Print the device-flow URL instead of opening it
 ```
 
-Re-running `setup` in the same directory reuses the linked project and keeps a working key in place: if a valid key for this project is already configured (in your environment or env file), it leaves it untouched. It mints a fresh one only when no key is set, or the existing one is invalid or revoked. Keys stay visible (and revocable) in **Settings → Project API Keys**.
+Re-running `setup` in the same directory reuses the linked project and keeps a working key in place: if a valid key for this project is already configured (in your environment or env file), it leaves it untouched. If your API key is invalid or revoked it will mint a new one. If your API key does not match the project configured in `.lmnr/project.json` it will abort with an error. Keys stay visible (and revocable) in **Settings → Project API Keys**.
 
 ## Authenticate
 
