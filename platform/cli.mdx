@@ -66,20 +66,36 @@ Every CLI command authenticates as you, the signed-in user. Log in once with `lm
 lmnr-cli login
 ```
 
-This starts an OAuth device flow: the CLI prints a verification URL and code and opens your browser. Approve the request to finish signing in. Credentials are stored at `~/.config/lmnr/credentials.json` (mode `0600`, XDG-aware via `$XDG_CONFIG_HOME`). The short-lived access token is refreshed automatically as it nears expiry; if your session is revoked, run `lmnr-cli login` again.
+This starts an OAuth device flow: the CLI prints a verification URL and code and opens your browser. Approve the request to finish signing in. Credentials are stored at `~/.config/lmnr/credentials.json` (fallback precedence `&XDG_CONFIG_HOME/`, `%APPDATA%\`, `~/.config/`). The short-lived access token is refreshed automatically as it nears expiry; if your session is revoked, run `lmnr-cli login` again.
 
 ```bash
 lmnr-cli logout   # Remove the stored credentials
 ```
 
-For a self-hosted deployment, point the CLI at your instance. `login` talks to your frontend (the auth issuer); the data commands (`sql`, `dataset`, `project`, `trace`, `debug`) talk to your API and take `--base-url` separately:
+## Self-hosting
+
+For a self-hosted deployment, point the CLI at your instance. `login` talks to your frontend (the auth issuer); the data commands (`sql`, `dataset`, `project`, `trace`, `debug`) talk to your API.
+
+The cleanest way is to set the URLs once via environment variables. The CLI reads them from your environment and from a `.env` or `.env.local` file in the current directory.
+```bash
+LMNR_FRONTEND_URL=https://example.com   
+LMNR_BASE_URL=https://api.example.com  
+LMNR_HTTP_PORT=8000                             
+```
+
+With those set, every command works as usual:
+
+```bash
+lmnr-cli login
+lmnr-cli sql query "SELECT 1"
+```
+
+You can also pass the URLs per command instead. `login` takes `--frontend-url`; the data commands take `--base-url` (and `--port`):
 
 ```bash
 lmnr-cli login --frontend-url https://laminar.example.com
 lmnr-cli sql query "SELECT 1" --base-url https://api.laminar.example.com
 ```
-
-`LMNR_FRONTEND_URL`, `LMNR_BASE_URL`, and `LMNR_HTTP_PORT` are honored as fallbacks. The CLI also reads them from a `.env` or `.env.local` file in the current directory, so a self-hosted config committed to your repo applies to every command without exporting anything.
 
 <Note>
 The CLI does not use a project API key. The `LMNR_PROJECT_API_KEY` that `lmnr-cli setup` writes to your env file is for the Laminar SDK in your application to send traces; the CLI authenticates as you instead.
