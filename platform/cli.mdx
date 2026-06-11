@@ -30,7 +30,7 @@ It opens your browser to authorize the CLI, then:
 
 1. Logs you in (if you are not already).
 2. Lets you pick or create a project.
-3. Mints a fresh project API key for your application's SDK and writes `LMNR_PROJECT_API_KEY=...` to your env file (an existing `.env.local` if you have one, otherwise `.env`).
+3. Mints a project API key for your application's SDK and writes `LMNR_PROJECT_API_KEY=...` to your env file (an existing `.env.local` if you have one, otherwise `.env`). If a valid key for this project is already configured, it keeps that one.
 4. Links the directory by writing `.lmnr/project.json`.
 5. Installs the Laminar agent skill into your project (`.claude/`, `.cursor/`, `.codex/`, or `.agents/`).
 
@@ -56,7 +56,7 @@ lmnr-cli setup --no-write-env        # Skip writing ./.env
 lmnr-cli setup --no-browser          # Print the device-flow URL instead of opening it
 ```
 
-Re-running `setup` in the same directory reuses the linked project but mints a fresh key. Previous keys stay visible (and revocable) in **Settings → Project API Keys**.
+Re-running `setup` in the same directory reuses the linked project and keeps a working key in place: if a valid key for this project is already configured (in your environment or env file), it leaves it untouched. It mints a fresh one only when no key is set, or the existing one is invalid or revoked. Keys stay visible (and revocable) in **Settings → Project API Keys**.
 
 ## Authenticate
 
@@ -72,13 +72,14 @@ This starts an OAuth device flow: the CLI prints a verification URL and code and
 lmnr-cli logout   # Remove the stored credentials
 ```
 
-For a self-hosted deployment, point the CLI at your instance:
+For a self-hosted deployment, point the CLI at your instance. `login` talks to your frontend (the auth issuer); the data commands (`sql`, `dataset`, `project`, `trace`, `debug`) talk to your API and take `--base-url` separately:
 
 ```bash
-lmnr-cli login --dashboard-url https://laminar.example.com --base-url https://api.laminar.example.com
+lmnr-cli login --frontend-url https://laminar.example.com
+lmnr-cli sql query "SELECT 1" --base-url https://api.laminar.example.com
 ```
 
-`LMNR_DASHBOARD_URL`, `LMNR_BASE_URL`, and `LMNR_HTTP_PORT` are honored as fallbacks. The CLI also reads them from a `.env` or `.env.local` file in the current directory, so a self-hosted config committed to your repo applies to every command without exporting anything.
+`LMNR_FRONTEND_URL`, `LMNR_BASE_URL`, and `LMNR_HTTP_PORT` are honored as fallbacks. The CLI also reads them from a `.env` or `.env.local` file in the current directory, so a self-hosted config committed to your repo applies to every command without exporting anything.
 
 <Note>
 The CLI does not use a project API key. The `LMNR_PROJECT_API_KEY` that `lmnr-cli setup` writes to your env file is for the Laminar SDK in your application to send traces; the CLI authenticates as you instead.
