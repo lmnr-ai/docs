@@ -67,18 +67,20 @@ await generateText({
 
 The debugger works on top of normal Laminar tracing. Instrument your agent with any of the available [integrations](/tracing/integrations/overview), or with [manual LLM instrumentation](/tracing/structure/manual-span-creation). Caching is limited to a specific set of integrations (see [how caching works](/debugger/caching)), but the record, inspect, and replay loop runs with everything Laminar traces.
 
-### 2. Install the CLI and set your API key
+### 2. Install the CLI and link the project
 
 ```bash
 npm install -g lmnr-cli
 # or run on demand with: npx lmnr-cli@latest
 ```
 
-Put your project API key in the environment so both the SDK and the CLI can authenticate:
+Run `lmnr-cli setup` to log in and link this directory. It logs you in (the debug commands authenticate as you, the signed-in user), links the directory to a project via `.lmnr/project.json`, and writes `LMNR_PROJECT_API_KEY` to your env file so the SDK can send traces:
 
 ```bash
-export LMNR_PROJECT_API_KEY=<your-key>
+lmnr-cli setup
 ```
+
+The CLI itself never uses the project API key; that key is only for the SDK in your agent. See the [CLI page](/platform/cli) for details.
 
 ### 3. Turn on debug mode
 

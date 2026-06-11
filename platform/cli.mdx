@@ -2,12 +2,11 @@
 title: CLI
 ---
 
-The `lmnr-cli` is a command-line tool for querying Laminar data, managing datasets, and running the interactive agent debugger from your terminal. It is the fastest way to pull traces into a shell pipeline, script dataset maintenance, or connect an AI coding agent that can shell out, all without leaving the command line.
+The `lmnr-cli` is a command-line tool for onboarding a project, querying Laminar data, managing datasets, and annotating debug sessions from your terminal. It is the fastest way to wire up a new project, pull traces into a shell pipeline, script dataset maintenance, or connect an AI coding agent that can shell out, all without leaving the command line.
 
 <Note>
-The CLI is a standalone npm package (`lmnr-cli`) and ships independently from the `@lmnr-ai/lmnr` SDK. You do not need the SDK installed to query data or manage datasets.
+The CLI is a standalone npm package (`lmnr-cli`) and ships independently from the `@lmnr-ai/lmnr` SDK. You do not need the SDK installed to onboard a project, query data, or manage datasets.
 </Note>
-
 ## Install
 
 ```bash
@@ -18,25 +17,110 @@ npx lmnr-cli@latest <command>
 npm install -g lmnr-cli
 ```
 
+## Quick start
+
+`lmnr-cli setup` takes you from a fresh install to an instrumented project in one command:
+
+```bash
+lmnr-cli setup
+```
+
+It opens your browser to authorize the CLI, then:
+
+1. Logs you in (if you are not already).
+2. Lets you pick or create a project.
+3. Mints a project API key for your application's SDK and writes `LMNR_PROJECT_API_KEY=...` to your env file (an existing `.env.local` if you have one, otherwise `.env`). If a valid key for this project is already configured, it keeps that one.
+4. Links the directory by writing `.lmnr/project.json`.
+5. Installs the Laminar agent skill into your project (`.claude/`, `.cursor/`, `.codex/`, or `.agents/`).
+
+The CLI itself never uses that key: it authenticates as you (see [Authenticate](#authenticate)). The key is purely for the SDK in your app to send traces.
+
+Add the SDK to your app, run it, then confirm traces are landing:
+
+```bash
+lmnr-cli sql query "SELECT * FROM traces ORDER BY start_time DESC LIMIT 1"
+```
+
+`setup` is designed to be driven by coding agents. Pass `--json` for a single machine-readable line on stdout:
+
+```bash
+lmnr-cli setup --json
+```
+
+Useful flags:
+
+```bash
+lmnr-cli setup --project-id <uuid>   # Disambiguate when you can access multiple projects
+lmnr-cli setup --no-write-env        # Skip writing ./.env
+lmnr-cli setup --no-browser          # Print the device-flow URL instead of opening it
+```
+
+Re-running `setup` in the same directory reuses the linked project and keeps a working key in place: if a valid key for this project is already configured (in your environment or env file), it leaves it untouched. If your API key is invalid or revoked it will mint a new one. If your API key does not match the project configured in `.lmnr/project.json` it will abort with an error. Keys stay visible (and revocable) in **Settings → Project API Keys**.
+
 ## Authenticate
 
-Every command talks to your Laminar project with a project API key. Grab one from **Settings → Project API Keys** in the dashboard, then set it once:
+Every CLI command authenticates as you, the signed-in user. Log in once with `lmnr-cli login` (or run `lmnr-cli setup`, which logs you in as its first step):
 
 ```bash
-export LMNR_PROJECT_API_KEY=<your-key>
+lmnr-cli login
 ```
 
-Alternatively, pass `--project-api-key <key>` on any command.
-
-For self-hosted deployments, override the API URL and port:
+This starts an OAuth device flow: the CLI prints a verification URL and code and opens your browser. Approve the request to finish signing in. Credentials are stored at `~/.config/lmnr/credentials.json` (fallback precedence `&XDG_CONFIG_HOME/`, `%APPDATA%\`, `~/.config/`). The short-lived access token is refreshed automatically as it nears expiry; if your session is revoked, run `lmnr-cli login` again.
 
 ```bash
-lmnr-cli --base-url http://localhost --port 8000 sql schema
+lmnr-cli logout   # Remove the stored credentials
 ```
+
+## Self-hosting
+
+For a self-hosted deployment, point the CLI at your instance. `login` talks to your frontend (the auth issuer); the data commands (`sql`, `dataset`, `project`, `trace`, `debug`) talk to your API.
+
+The cleanest way is to set the URLs once via environment variables. The CLI reads them from your environment and from a `.env` or `.env.local` file in the current directory.
+```bash
+LMNR_FRONTEND_URL=https://example.com   
+LMNR_BASE_URL=https://api.example.com  
+LMNR_HTTP_PORT=8000                             
+```
+
+With those set, every command works as usual:
+
+```bash
+lmnr-cli login
+lmnr-cli sql query "SELECT 1"
+```
+
+You can also pass the URLs per command instead. `login` takes `--frontend-url`; the data commands take `--base-url` (and `--port`):
+
+```bash
+lmnr-cli login --frontend-url https://laminar.example.com
+lmnr-cli sql query "SELECT 1" --base-url https://api.laminar.example.com
+```
+
+<Note>
+The CLI does not use a project API key. The `LMNR_PROJECT_API_KEY` that `lmnr-cli setup` writes to your env file is for the Laminar SDK in your application to send traces; the CLI authenticates as you instead.
+</Note>
+
+## Directory-scoped projects
+
+Every project command (`sql`, `dataset`, `project`, `trace`, `debug`) resolves which project it targets from the directory you run in. `lmnr-cli setup` writes a `.lmnr/project.json` link file at the project root (it holds the project id and display details, never secrets). Commands then resolve the project in this order:
+
+1. `--project-id <id>` flag.
+2. The nearest `.lmnr/project.json`, walking up from the current directory.
+
+So once a directory is linked, every command in it (or any subdirectory) targets that project with no extra flags. Override per command with `--project-id`.
+
+List the projects you can access and see which one is linked here:
+
+```bash
+lmnr-cli project list
+lmnr-cli project list --json
+```
+
+The linked project is marked with a `●`.
 
 ## Query data with SQL
 
-Run ClickHouse SQL against your project's spans, traces, signal events, and more:
+Run ClickHouse SQL against your project's spans, traces, signal events, and more. `sql` runs against the linked project, so `lmnr-cli login` plus a linked directory (or `--project-id`) is all you need:
 
 ```bash
 lmnr-cli sql query "SELECT name, duration FROM spans WHERE start_time > now() - INTERVAL 1 HOUR LIMIT 20"
@@ -63,7 +147,7 @@ Only `SELECT` queries are allowed. The query runs scoped to your project automat
 
 ## Manage datasets
 
-List, push, pull, and create datasets from files on disk. Supported formats: `.jsonl`, `.json`, `.csv`.
+List, push, pull, and create datasets from files on disk. Supported formats: `.jsonl`, `.json`, `.csv`. Like `sql`, these commands run against the linked project.
 
 ```bash
 # List all datasets in the project
@@ -83,7 +167,7 @@ See [Datasets CLI](/datasets/cli) for the full dataset workflow including versio
 
 ## Annotate debug sessions
 
-These commands are the operational layer for the [Debugger](/debugger/workflow): you run the agent with `LMNR_DEBUG=true`, then use these to name the session and write per-trace notes.
+These commands are the operational layer for the [Debugger](/debugger/workflow): you run the agent with `LMNR_DEBUG=true`, then use these to name the session and write per-trace notes. Like the other commands, they run against the linked project.
 
 ### trace append-note
 
@@ -125,9 +209,8 @@ See [Debugger](/debugger/workflow) for the full record/replay workflow.
 
 The CLI is designed to be scriptable and to plug cleanly into AI coding agents:
 
+- **One-shot onboarding.** `lmnr-cli setup --json` emits a single machine-readable line (project id, minted key, dashboard URL) and uses distinct exit codes so an agent can branch on the failure mode: `6` login failed, `7` no project to select, `8` `.env` write failed, `9` key minting failed, `10` project discovery failed.
 - **Structured output on stdout, logs on stderr.** Every command that supports it takes `--json` and prints machine-readable output to stdout, while human-friendly progress messages are written to stderr. This keeps pipes clean.
-- **Non-zero exit codes on failure.** Scripts and agents can branch on success/failure without parsing output.
-- **Stable noun-verb command surface** (`sql query`, `dataset push/pull/list/create`, `trace append-note`, `debug session set-name/summary`), so commands are easy for an agent to compose.
 
 Combined with `sql query --json`, this makes the CLI a drop-in SQL layer for any agent that can run shell commands, with no SDK install required.
 
@@ -137,6 +220,9 @@ Every command accepts `-h` / `--help`:
 
 ```bash
 lmnr-cli --help
+lmnr-cli setup --help
+lmnr-cli login --help
+lmnr-cli project --help
 lmnr-cli sql --help
 lmnr-cli sql query --help
 lmnr-cli dataset --help

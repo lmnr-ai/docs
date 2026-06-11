@@ -4,6 +4,10 @@ title: Changelog
 
 New releases and improvements.
 
+## June 2026
+
+- **One-command CLI onboarding** - `lmnr-cli setup` logs you in, picks or creates a project, writes a fresh `LMNR_PROJECT_API_KEY` to `./.env`, links the directory, and installs the Laminar agent skill. `lmnr-cli login` adds OAuth device-flow auth so `sql`, `dataset`, and `project` run as the signed-in user against the directory-linked project (`.lmnr/project.json`), no project API key needed. See [CLI](/platform/cli).
+
 ## May 2026
 
 - **Table views** - Save filters, search, sort, columns, and custom SQL columns as a named [table view](/platform/table-views) per project and per resource (traces, spans, sessions, evaluations, datasets, queues, debugger sessions, playgrounds, signal events). Views are shared across the project so a teammate can open the same dropdown and pick the same preset.
