@@ -7,27 +7,196 @@ sidebarTitle: Temporal
 
 Laminar is an open-source, OpenTelemetry-native observability platform for [Temporal](https://temporal.io) workflows. Trace, debug, and monitor a workflow run as a single trace, even though its client, workflow, and activities run in separate processes. Self-host via Helm or use managed cloud.
 
-Temporal splits an application across processes: a client starts workflows, a worker runs the workflow functions and their activities, and workflows can fan out to activities, child workflows, signals, and updates. Laminar's interceptors propagate trace context through Temporal headers, so the client-side workflow call, the worker-side workflow, and every activity it schedules land under one trace instead of scattering into disconnected spans.
+Temporal splits an application across processes: a client starts workflows, a worker runs the workflow functions and their activities, and workflows can fan out to activities, child workflows, signals, and updates. Laminar propagates trace context through Temporal headers, so the client-side workflow call, the worker-side workflow, and every activity it schedules land under one trace instead of scattering into disconnected spans. In Python this is fully automatic; in TypeScript you register a set of interceptors.
 
 What Laminar captures:
 
 - A client-side span for each workflow's lifecycle (start to result, cancel, or terminate).
 - A span per activity execution on the worker, named after the activity type, with arguments and return value.
-- Any LLM calls, tool calls, or `observe()` spans inside an activity, nested under that activity.
+- Any LLM calls, tool calls, or manual spans inside an activity, nested under that activity.
 - Trace context forwarded to activities, child workflows, and `continueAsNew` scheduled from inside a workflow.
 
 ## How the wiring fits together
 
-Temporal runs the client and worker as separate entry points, so you initialize Laminar and register interceptors in each:
+Temporal runs the client and worker as separate entry points. How much you wire up depends on the language.
+
+<Tabs>
+<Tab title="Python">
+
+There is nothing to wire up. `Laminar.initialize()` auto-instruments Temporal whenever `temporalio` is importable: it patches `Client` construction to inject a single interceptor that covers the client, activity, and workflow paths. The Temporal worker inherits client interceptors automatically, so initializing Laminar in each process is all you need. Call `Laminar.initialize()` once in the client entry point and once in the worker entry point, construct the `Client` as usual, and the workflow run, its activities, and any LLM calls inside them land under one trace.
+
+</Tab>
+<Tab title="TypeScript">
+
+You initialize Laminar and register interceptors in each process:
 
 - **Client process**: initialize Laminar with the `@temporalio/client` module so workflow runs are wrapped in a span, then register the workflow, activity, and schedule client interceptors. These inject the active trace context into Temporal headers.
 - **Worker process**: initialize Laminar with `disableBatch: true`, register the activity interceptor (reads the headers and wraps each activity in a span), and register the workflow interceptor module (forwards the trace context from a running workflow to anything it schedules).
 
 The workflow interceptor is special: Temporal compiles workflow code into a deterministic V8 sandbox, so the interceptor has to be a standalone module that Temporal bundles separately. You register it by path, not by passing an instance.
 
+</Tab>
+</Tabs>
+
 ## Getting started
 
 <Tabs>
+<Tab title="Python">
+
+<Steps>
+<Step title="Install">
+
+Ensure you have `lmnr` version `0.7.53` or higher:
+
+```bash
+pip install -U lmnr temporalio openai
+```
+
+The `openai` package is only for the example activity below; swap it for whatever your activities actually call.
+
+</Step>
+<Step title="Set environment variables">
+
+```bash
+export LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+export OPENAI_API_KEY=your-openai-api-key
+```
+
+</Step>
+<Step title="Initialize Laminar in the worker">
+
+Call `Laminar.initialize()` before the worker connects. It auto-instruments Temporal when `temporalio` is importable: each activity execution is wrapped in a span, and any LLM call inside it nests underneath.
+
+```python worker.py {4,7}
+import asyncio
+
+from temporalio.client import Client
+from lmnr import Laminar
+from temporalio.worker import Worker
+
+Laminar.initialize()
+
+import activities
+from workflows import SummaryWorkflow
+
+
+async def main():
+    client = await Client.connect("localhost:7233")
+    worker = Worker(
+        client,
+        task_queue="summary-queue",
+        workflows=[SummaryWorkflow],
+        activities=[activities.summarize_topic, activities.count_words],
+    )
+    await worker.run()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+</Step>
+<Step title="Initialize Laminar in the client">
+
+Initialize Laminar in the client process too, then start workflows as usual. Wrapping the call in a span is optional but recommended: it creates a root span so the whole run is easy to find.
+
+```python client.py {4,6,14,23}
+import asyncio
+
+from temporalio.client import Client
+from lmnr import Laminar
+
+Laminar.initialize()
+
+from workflows import SummaryWorkflow
+
+
+async def main():
+    client = await Client.connect("localhost:7233")
+
+    with Laminar.start_as_current_span(name="run-summary"):
+        result = await client.execute_workflow(
+            SummaryWorkflow.run,
+            "distributed tracing for Temporal workflows",
+            id=f"summary-{asyncio.get_event_loop().time()}",
+            task_queue="summary-queue",
+        )
+        print("Workflow result:", result)
+
+    Laminar.shutdown()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+</Step>
+<Step title="Write workflows and activities as usual">
+
+Activities run on the worker as ordinary functions, so any auto-instrumented SDK call or manual span inside them is captured and nested under the activity span. Mark a manual span with `span_type="TOOL"` (see [span types](/tracing/structure/span-types)) so it surfaces in the transcript view:
+
+```python activities.py {3,22-24}
+from temporalio import activity
+from openai import OpenAI
+from lmnr import Laminar
+
+openai = OpenAI()
+
+
+@activity.defn
+async def summarize_topic(topic: str) -> str:
+    response = openai.chat.completions.create(
+        model="gpt-5-mini",
+        messages=[
+            {"role": "system", "content": "You are a concise technical writer."},
+            {"role": "user", "content": f"Write a two-sentence summary of: {topic}"},
+        ],
+    )
+    return response.choices[0].message.content or ""
+
+
+@activity.defn
+async def count_words(text: str) -> int:
+    with Laminar.start_as_current_span(
+        name="count_words", span_type="TOOL", input={"text": text}
+    ):
+        return len([w for w in text.split() if w])
+```
+
+```python workflows.py
+from datetime import timedelta
+
+from temporalio import workflow
+
+with workflow.unsafe.imports_passed_through():
+    from activities import count_words, summarize_topic
+
+
+@workflow.defn
+class SummaryWorkflow:
+    @workflow.run
+    async def run(self, topic: str) -> dict:
+        summary = await workflow.execute_activity(
+            summarize_topic,
+            topic,
+            start_to_close_timeout=timedelta(minutes=1),
+        )
+        word_count = await workflow.execute_activity(
+            count_words,
+            summary,
+            start_to_close_timeout=timedelta(minutes=1),
+        )
+        return {"summary": summary, "word_count": word_count}
+```
+
+<Warning>
+Do not call `observe()` or `Laminar.start_span()` inside a workflow function. Workflow code runs in Temporal's deterministic sandbox, where `uuid.uuid4()` and wall-clock time are unavailable, so span creation throws. Instrument inside activities (which run as normal Python functions) and on the client; Laminar forwards the trace context into the workflow and out to its activities for you.
+</Warning>
+
+</Step>
+</Steps>
+
+</Tab>
 <Tab title="TypeScript">
 
 <Steps>
@@ -218,7 +387,7 @@ Open the trace in Laminar and you land on the transcript view: the workflow's LL
 <img src="/images/traces/temporal.png" alt="Temporal workflow trace in Laminar, transcript view" />
 </Frame>
 
-Production workflows rarely run two neat activities back to back. They fan out across many activities, child workflows, and signals, each in its own process, and a naive setup scatters them into a pile of disconnected traces you have to correlate by hand. The interceptors do that correlation for you: they propagate the trace context through Temporal headers so the client-side `run-summary` root, the workflow lifecycle span, every activity, and the LLM and tool spans inside them all land in **one trace, out of the box**, no matter how disjoint the activities are. The tree view below just makes that single stitched-together hierarchy easy to read.
+Production workflows rarely run two neat activities back to back. They fan out across many activities, child workflows, and signals, each in its own process, and a naive setup scatters them into a pile of disconnected traces you have to correlate by hand. Laminar does that correlation for you: it propagates the trace context through Temporal headers so the client-side `run-summary` root, the workflow lifecycle span, every activity, and the LLM and tool spans inside them all land in **one trace, out of the box**, no matter how disjoint the activities are. The tree view below just makes that single stitched-together hierarchy easy to read.
 
 <Frame caption="Tree view of the same run: run-summary wraps the summaryWorkflow lifecycle span, summarizeTopic nests the gpt-5-mini LLM span, and countWords nests the count_words tool span, all stitched across processes via Temporal headers.">
 <img src="/images/traces/temporal-tree.png" alt="Temporal workflow trace in Laminar, tree view showing cross-process span nesting" />
@@ -226,9 +395,9 @@ Production workflows rarely run two neat activities back to back. They fan out a
 
 More on the trace UX: [Viewing traces](/platform/viewing-traces).
 
-## Control what activity spans record
+## Control what activity spans record (TypeScript)
 
-`ActivityInterceptorFactory` accepts three options, all defaulting to `true`:
+In TypeScript, `ActivityInterceptorFactory` accepts three options, all defaulting to `true`:
 
 ```typescript
 interceptors: {
@@ -254,7 +423,7 @@ The three client interceptors map to Temporal's three client surfaces:
 - `ActivityClientInterceptor`: injects trace context on standalone activity client calls. Standalone activities are experimental in Temporal, so this interceptor is best-effort.
 - `ScheduleClientInterceptor`: registered but a deliberate no-op. A Schedule is a long-lived server-side object whose stored workflow-start action replays on every triggered run, so injecting the active span at creation time would pin every future run to one long-dead trace. Each triggered run starts its own root trace instead.
 
-## Keep the workflow interceptor in your own file
+## Keep the workflow interceptor in your own file (TypeScript)
 
 The `require.resolve('@lmnr-ai/lmnr/temporal-workflow-interceptors')` path works for most setups. Two cases call for vendoring the interceptor in your own repository and passing a relative path:
 
@@ -355,22 +524,30 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
 <AccordionGroup>
   <Accordion title="I don't see any traces in Laminar">
     - Confirm `LMNR_PROJECT_API_KEY` is set in both the client and the worker process.
-    - Both processes must call `Laminar.initialize()`. The client needs `instrumentModules: { temporal: { client } }`; the worker needs `disableBatch: true`.
+    - **Python**: both processes must call `Laminar.initialize()` before the `Client` connects, and `temporalio` must be importable at that point so the auto-instrumentation engages.
+    - **TypeScript**: both processes must call `Laminar.initialize()`. The client needs `instrumentModules: { temporal: { client } }`; the worker needs `disableBatch: true`.
   </Accordion>
   <Accordion title="The workflow and activities are separate traces, not one">
-    - The client must register `WorkflowClientInterceptor` and pass the `@temporalio/client` module via `instrumentModules: { temporal: { client } }`. The module is what wraps the run in the parent span; the interceptor injects that span into headers.
-    - The worker must register the workflow interceptor module via `interceptors.workflowModules`. If it is missing, the workflow starts but never forwards its context to the activities it schedules.
+    - **Python**: make sure `Laminar.initialize()` runs before `Client.connect()` in both processes. The interceptor that propagates context is injected at `Client` construction, so initializing afterward misses it.
+    - **TypeScript**: the client must register `WorkflowClientInterceptor` and pass the `@temporalio/client` module via `instrumentModules: { temporal: { client } }`. The module is what wraps the run in the parent span; the interceptor injects that span into headers. The worker must register the workflow interceptor module via `interceptors.workflowModules`. If it is missing, the workflow starts but never forwards its context to the activities it schedules.
   </Accordion>
   <Accordion title="Activity spans are missing or empty">
-    - Register `ActivityInterceptorFactory()` under `interceptors.activity` in `Worker.create`.
-    - Set `disableBatch: true` in the worker. Short-lived activity executions can exit before a batched span processor flushes their spans.
-    - If you set `createActivitySpan: false`, activities only restore context and rely on your own `observe()` spans to appear.
+    - **Python**: confirm `Laminar.initialize()` runs in the worker process before the worker connects.
+    - **TypeScript**: register `ActivityInterceptorFactory()` under `interceptors.activity` in `Worker.create`, and set `disableBatch: true` in the worker. Short-lived activity executions can exit before a batched span processor flushes their spans. If you set `createActivitySpan: false`, activities only restore context and rely on your own `observe()` spans to appear.
   </Accordion>
-  <Accordion title="Workflow start throws on crypto.randomUUID or timestamps">
-    You are calling `observe()` or `Laminar.startSpan()` inside a workflow function. Workflow code runs in Temporal's deterministic V8 sandbox and cannot create spans. Move instrumentation into activities or onto the client.
+  <Accordion title="Workflow start throws on uuid or timestamps">
+    You are creating a span inside a workflow function (`Laminar.start_as_current_span()` / `Laminar.start_span()` in Python, `observe()` / `Laminar.startSpan()` in TypeScript). Workflow code runs in Temporal's deterministic sandbox and cannot create spans. Move instrumentation into activities (normal functions) or onto the client.
   </Accordion>
   <Accordion title="Self-hosting Laminar">
-    Set `baseUrl` and the ports of your instance when initializing. For a local OSS deployment:
+    Set the base URL and the ports of your instance when initializing. For a local OSS deployment:
+
+    ```python
+    Laminar.initialize(
+        base_url="http://localhost",
+        http_port=8000,
+        grpc_port=8001,
+    )
+    ```
 
     ```typescript
     Laminar.initialize({
