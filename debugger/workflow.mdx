@@ -52,10 +52,10 @@ Continuation is not replay. Rejoining the session records another fresh run; it 
 
 ## 2. Name the session and annotate each run
 
-Name the investigation so it's easy to find later. Click the session title in the session-view header and type a name inline, or set it from the CLI:
+Name the investigation so it's easy to find later. Click the session title in the session-view header and type a name inline, or set it from the CLI. The CLI commands below target the session in `.lmnr/debug-session.json` by default, so you don't pass a session id:
 
 ```bash
-npx lmnr-cli debug session set-name <session-id> "Fix report length + search tool"
+npx lmnr-cli debug session set-name "Fix report length + search tool"
 ```
 
 Write a note **before** each run to explain what you are about to test. Set it via `LMNR_TRACE_METADATA`:
@@ -73,11 +73,11 @@ The note appears in the session view above the run's transcript, so the human wa
 After the run completes, append a follow-up:
 
 ```bash
-npx lmnr-cli trace append-note <trace-id> "## What this run showed
+npx lmnr-cli trace append-note "## What this run showed
 Length cap is working (~180 words, was ~600). Next: check citations."
 ```
 
-Notes are append-only. Each call adds a paragraph to the existing note.
+The note lands on the latest trace of the current debug session; pass `--trace-id <trace-id>` to annotate a specific run. Notes are append-only: each call adds a paragraph to the existing note.
 
 In notes, reference a specific span with an XML tag. The UI renders it as a clickable chip that opens that span:
 
@@ -135,11 +135,11 @@ Each replay produces a new trace in the same session, so attempts appear sequent
 After a context reset or to catch up on an ongoing session, dump all trace notes in order:
 
 ```bash
-npx lmnr-cli debug session summary <session-id>
-npx lmnr-cli debug session summary <session-id> --json
+npx lmnr-cli debug session summary
+npx lmnr-cli debug session summary --json
 ```
 
-Output is one block per trace, oldest first: the markdown note followed by a `<trace id="…" end-time="…"/>` tag you can feed into SQL queries.
+This defaults to the current session; pass `--session-id <session-id>` for another. Output is one block per trace, oldest first: the markdown note followed by a `<trace id="…" end-time="…"/>` tag you can feed into SQL queries.
 
 ## What's next
 

@@ -167,21 +167,27 @@ See [Datasets CLI](/datasets/cli) for the full dataset workflow including versio
 
 ## Annotate debug sessions
 
-These commands are the operational layer for the [Debugger](/debugger/workflow): you run the agent with `LMNR_DEBUG=true`, then use these to name the session and write per-trace notes. Like the other commands, they run against the linked project.
+These commands are the operational layer for the [Debugger](/debugger/workflow): you run the agent with `LMNR_DEBUG=true`, then use these to name the session, write per-trace notes, and open the session view. Like the other commands, they run against the linked project.
+
+<Note>
+None of these commands need an id passed in. By default they target the session in `.lmnr/debug-session.json` (the most recent `LMNR_DEBUG=true` run in this directory), and `trace append-note` targets that session's latest trace. Pass `--session-id` or `--trace-id` to target a different one.
+</Note>
 
 ### trace append-note
 
-Append a markdown note to an existing trace (stored in `rollout.note` trace metadata). Notes are append-only: each call adds a paragraph to the existing note.
+Append a markdown note to a trace (stored in `rollout.note` trace metadata). Notes are append-only: each call adds a paragraph to the existing note. The note text is the only required argument; the note lands on the latest trace of the current debug session unless you pass `--trace-id`.
 
 ```bash
-lmnr-cli trace append-note <trace-id> "## What this run showed
+lmnr-cli trace append-note "## What this run showed
 Length cap is working. Next: check citations."
+
+lmnr-cli trace append-note "Length cap is working." --trace-id <trace-id>
 ```
 
 Span references in the note are written as XML tags; the Laminar UI renders them as clickable chips:
 
 ```bash
-lmnr-cli trace append-note <trace-id> "<span id='<spanId>' name='synthesis call' />"
+lmnr-cli trace append-note "<span id='<spanId>' name='synthesis call' />"
 ```
 
 ### debug session new
@@ -196,21 +202,31 @@ lmnr-cli debug session new --no-browser
 
 The bare session id prints to stdout (so an agent can capture it); `--json` emits `{"sessionId","projectId","debuggerUrl"}` instead. The command opens the session in your browser unless you pass `--no-browser`.
 
-### debug session set-name
+### debug session open
 
-Set the display name of a debug session. The session must already exist (created by a `LMNR_DEBUG=true` run or `debug session new`). You can also rename a session inline by clicking its title in the session view.
+Open the debug session's debugger page in your browser. With no flag it opens the session in `.lmnr/debug-session.json`; pass `--session-id` to open another. The URL also prints to stdout (`--json` emits `{"sessionId","debuggerUrl"}`). This command is local-only: no login or network call.
 
 ```bash
-lmnr-cli debug session set-name <session-id> "Fix report length + search tool"
+lmnr-cli debug session open
+lmnr-cli debug session open --session-id <session-id>
+```
+
+### debug session set-name
+
+Set the display name of the current debug session (the one in `.lmnr/debug-session.json`), or pass `--session-id` to name another. The session must already exist (created by a `LMNR_DEBUG=true` run or `debug session new`). You can also rename a session inline by clicking its title in the session view.
+
+```bash
+lmnr-cli debug session set-name "Fix report length + search tool"
+lmnr-cli debug session set-name "Fix report length" --session-id <session-id>
 ```
 
 ### debug session summary
 
-Print every trace in a debug session with its note, oldest first. Use this to re-orient in an ongoing session after a context reset.
+Print every trace in the debug session with its note, oldest first. Use this to re-orient in an ongoing session after a context reset. Defaults to the current session; pass `--session-id` for another.
 
 ```bash
-lmnr-cli debug session summary <session-id>
-lmnr-cli debug session summary <session-id> --json
+lmnr-cli debug session summary
+lmnr-cli debug session summary --session-id <session-id> --json
 ```
 
 Output is one block per trace: the markdown note followed by a `<trace id="..." end-time="..."/>` tag you can feed into SQL queries.
@@ -242,6 +258,7 @@ lmnr-cli trace --help
 lmnr-cli debug --help
 lmnr-cli debug session --help
 lmnr-cli debug session new --help
+lmnr-cli debug session open --help
 ```
 
 ## What's next
