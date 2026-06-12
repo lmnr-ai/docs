@@ -5,9 +5,46 @@ sidebarTitle: Setup
 
 The debugger is controlled almost entirely with environment variables. Once your agent is instrumented, you turn debug mode on and pick a replay boundary by setting variables on the run command. Runs group into a session automatically: the first run writes `.lmnr/debug-session.json` and every later run in the same directory rejoins it, so you don't pass a session id around. No code changes are needed in the general case.
 
-One integration needs a small code change first. Read the special case below if it applies to you, then follow the general setup.
+## General setup
 
-## Special case: AI SDK
+### 1. Install the CLI
+
+```bash
+npm install -g lmnr-cli
+# or run on demand with: npx lmnr-cli@latest
+```
+
+### 2. Run setup
+
+```bash
+lmnr-cli setup
+```
+
+`setup` logs you in (the debug commands authenticate as you, the signed-in user), links the directory to a project via `.lmnr/project.json`, writes `LMNR_PROJECT_API_KEY` to your env file so the SDK can send traces, and installs the [Laminar skill](https://github.com/lmnr-ai/lmnr-skills) into your project so your coding agent knows how to drive the debugger. The CLI itself never uses the project API key; that key is only for the SDK in your agent. See the [CLI page](/platform/cli) for details.
+
+### 3. Ask your coding agent to instrument your agent
+
+The debugger works on top of normal Laminar tracing. With the skill installed, ask your coding agent to instrument your agent and it will wire up the right [integration](/tracing/integrations/overview) for you. Caching is limited to a specific set of integrations (see [how caching works](/debugger/caching)), but the record, inspect, and replay loop runs with everything Laminar traces. If you use the AI SDK, see the [AI SDK caching note](#ai-sdk-caching) below for one extra wrapper.
+
+### 4. Ask your coding agent to run the debugger
+
+Once your agent is instrumented, ask your coding agent to run the full debugger loop. It records a run, reads the trace, edits your code, and replays from a checkpoint, all on its own. The [debugger process](/debugger/process) page walks through every step it runs.
+
+To drive it yourself instead, add `LMNR_DEBUG=true` to your run command to record a session. From there, a handful of environment variables control replay:
+
+| Variable | Required | Description |
+|---|---|---|
+| `LMNR_DEBUG` | Yes | Set to `true`, `1`, `yes`, or `on` to enable debug mode. |
+| `LMNR_DEBUG_REPLAY_TRACE_ID` | For replay | Trace id of the run to replay from. |
+| `LMNR_DEBUG_CACHE_UNTIL` | For replay | Span id of the last LLM call to replay (inclusive); calls after it run live. Accepts a full UUID, the last two UUID groups, the 16-char OTel id, or any hex suffix. |
+| `LMNR_DEBUG_SESSION_ID` | Optional | Pin a run to a specific session. You rarely need this: after the first run, `.lmnr/debug-session.json` rejoins the same session automatically. Set it to override the file or to join a session created elsewhere. |
+| `LMNR_TRACE_METADATA` | Optional | JSON object attached to the trace. Use key `rollout.note` for the pre-run annotation. |
+
+The first `LMNR_DEBUG=true` run mints a session, registers it with Laminar, writes `.lmnr/debug-session.json`, and opens the session in your browser. Later runs in the same directory read that file and rejoin the session silently (no second browser tab). To start a clean session on purpose, run [`lmnr-cli debug session new`](/platform/cli#debug-session-new), which resets the file.
+
+The [debugger process](/debugger/process) page walks through using these variables end to end.
+
+## AI SDK caching
 
 For the [AI SDK](/tracing/integrations/vercel-ai-sdk) (TypeScript), caching needs one extra step on top of the normal telemetry integration: wrap each model with `wrapLanguageModel`. The wrapper is what hashes the span input and consults the Laminar backend for a cached response. Without it, your AI SDK calls are traced and replayable as part of the transcript, but they will not serve from cache.
 
@@ -60,45 +97,6 @@ await generateText({
 });
 ```
 </Accordion>
-
-## General setup
-
-### 1. Install the CLI
-
-```bash
-npm install -g lmnr-cli
-# or run on demand with: npx lmnr-cli@latest
-```
-
-### 2. Run setup
-
-```bash
-lmnr-cli setup
-```
-
-`setup` logs you in (the debug commands authenticate as you, the signed-in user), links the directory to a project via `.lmnr/project.json`, writes `LMNR_PROJECT_API_KEY` to your env file so the SDK can send traces, and installs the [Laminar skill](https://github.com/lmnr-ai/lmnr-skills) into your project so your coding agent knows how to drive the debugger. The CLI itself never uses the project API key; that key is only for the SDK in your agent. See the [CLI page](/platform/cli) for details.
-
-### 3. Ask your coding agent to instrument your agent
-
-The debugger works on top of normal Laminar tracing. With the skill installed, ask your coding agent to instrument your agent and it will wire up the right [integration](/tracing/integrations/overview) for you. Caching is limited to a specific set of integrations (see [how caching works](/debugger/caching)), but the record, inspect, and replay loop runs with everything Laminar traces.
-
-### 4. Ask your coding agent to run the debugger
-
-Once your agent is instrumented, ask your coding agent to run the full debugger loop. It records a run, reads the trace, edits your code, and replays from a checkpoint, all on its own. The [debugger process](/debugger/process) page walks through every step it runs.
-
-To drive it yourself instead, add `LMNR_DEBUG=true` to your run command to record a session. From there, a handful of environment variables control replay:
-
-| Variable | Required | Description |
-|---|---|---|
-| `LMNR_DEBUG` | Yes | Set to `true`, `1`, `yes`, or `on` to enable debug mode. |
-| `LMNR_DEBUG_REPLAY_TRACE_ID` | For replay | Trace id of the run to replay from. |
-| `LMNR_DEBUG_CACHE_UNTIL` | For replay | Span id of the last LLM call to replay (inclusive); calls after it run live. Accepts a full UUID, the last two UUID groups, the 16-char OTel id, or any hex suffix. |
-| `LMNR_DEBUG_SESSION_ID` | Optional | Pin a run to a specific session. You rarely need this: after the first run, `.lmnr/debug-session.json` rejoins the same session automatically. Set it to override the file or to join a session created elsewhere. |
-| `LMNR_TRACE_METADATA` | Optional | JSON object attached to the trace. Use key `rollout.note` for the pre-run annotation. |
-
-The first `LMNR_DEBUG=true` run mints a session, registers it with Laminar, writes `.lmnr/debug-session.json`, and opens the session in your browser. Later runs in the same directory read that file and rejoin the session silently (no second browser tab). To start a clean session on purpose, run [`lmnr-cli debug session new`](/platform/cli#debug-session-new), which resets the file.
-
-The [debugger process](/debugger/process) page walks through using these variables end to end.
 
 ## What's next
 
