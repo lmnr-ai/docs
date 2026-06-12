@@ -24,19 +24,7 @@ The point is the turnaround. A long-running agent can take minutes end to end, a
 
 ## Who drives the loop
 
-The loop is the same whoever runs it, and you watch it from the same session view either way.
-
-<CardGroup cols={3}>
-  <Card title="Coding agent drives" icon="robot">
-    Hand the loop to Claude Code, Cursor, or Codex and watch. With the [Laminar skill](https://github.com/lmnr-ai/lmnr-skills) the agent runs your agent, reads the trace, edits your code, and reruns, writing a note before each turn so you can follow its reasoning without touching the terminal.
-  </Card>
-  <Card title="Human in the loop" icon="users">
-    Let the coding agent iterate, but stay in the driver's seat. Read each run as it lands, point the agent at the span that's wrong, move the cache boundary yourself, or take a turn by hand. The session is the shared workspace: the agent's notes and yours sit side by side.
-  </Card>
-  <Card title="You drive" icon="user">
-    Skip the coding agent entirely. Every step is a CLI command or an environment variable you can run yourself: run with `LMNR_DEBUG=true`, read with SQL or the UI, rerun with two more env vars. The loop and the session view are identical.
-  </Card>
-</CardGroup>
+The loop is the same whoever runs it, and you watch it from the same session view either way. Hand it to a **coding agent** and watch: with the [Laminar skill](https://github.com/lmnr-ai/lmnr-skills) it runs your agent, reads the trace, edits your code, and reruns on its own, writing a note before each turn so you can follow along without touching the terminal. Stay **in the loop** by reading each run as it lands and pointing the agent at the span that's wrong, or **drive it yourself**: every step is a CLI command or an environment variable, no coding agent required.
 
 ## Sessions and replay
 
