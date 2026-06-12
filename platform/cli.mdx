@@ -184,9 +184,21 @@ Span references in the note are written as XML tags; the Laminar UI renders them
 lmnr-cli trace append-note <trace-id> "<span id='<spanId>' name='synthesis call' />"
 ```
 
+### debug session new
+
+Mint a fresh debug session and reset `.lmnr/debug-session.json` to it. The next `LMNR_DEBUG=true` run in this directory rejoins the new session instead of continuing the previous one. Use this to start a clean investigation.
+
+```bash
+lmnr-cli debug session new
+lmnr-cli debug session new --json
+lmnr-cli debug session new --no-browser
+```
+
+The bare session id prints to stdout (so an agent can capture it); `--json` emits `{"sessionId","projectId","debuggerUrl"}` instead. The command opens the session in your browser unless you pass `--no-browser`.
+
 ### debug session set-name
 
-Set the display name of a debug session. The session must already exist (created by a `LMNR_DEBUG=true` run).
+Set the display name of a debug session. The session must already exist (created by a `LMNR_DEBUG=true` run or `debug session new`). You can also rename a session inline by clicking its title in the session view.
 
 ```bash
 lmnr-cli debug session set-name <session-id> "Fix report length + search tool"
@@ -229,6 +241,7 @@ lmnr-cli dataset --help
 lmnr-cli trace --help
 lmnr-cli debug --help
 lmnr-cli debug session --help
+lmnr-cli debug session new --help
 ```
 
 ## What's next

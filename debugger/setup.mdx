@@ -3,7 +3,7 @@ title: Set Up the Laminar Debugger
 sidebarTitle: Setup
 ---
 
-The debugger is controlled almost entirely with environment variables. Once your agent is instrumented, you turn debug mode on, group runs into a session, and pick a replay boundary by setting variables on the run command. No code changes are needed in the general case.
+The debugger is controlled almost entirely with environment variables. Once your agent is instrumented, you turn debug mode on and pick a replay boundary by setting variables on the run command. Runs group into a session automatically: the first run writes `.lmnr/debug-session.json` and every later run in the same directory rejoins it, so you don't pass a session id around. No code changes are needed in the general case.
 
 One integration needs a small code change first. Read the special case below if it applies to you, then follow the general setup.
 
@@ -84,15 +84,17 @@ The CLI itself never uses the project API key; that key is only for the SDK in y
 
 ### 3. Turn on debug mode
 
-Add `LMNR_DEBUG=true` to your run command to record a session. From there, a handful of environment variables control session grouping and replay:
+Add `LMNR_DEBUG=true` to your run command to record a session. From there, a handful of environment variables control replay:
 
 | Variable | Required | Description |
 |---|---|---|
 | `LMNR_DEBUG` | Yes | Set to `true`, `1`, `yes`, or `on` to enable debug mode. |
-| `LMNR_DEBUG_SESSION_ID` | After first run | Session id from the first run's `LMNR_DEBUG_RUN` line. Required on every run after the first so traces stay grouped. |
 | `LMNR_DEBUG_REPLAY_TRACE_ID` | For replay | Trace id of the run to replay from. |
 | `LMNR_DEBUG_CACHE_UNTIL` | For replay | Span id of the last LLM call to replay (inclusive); calls after it run live. Accepts a full UUID, the last two UUID groups, the 16-char OTel id, or any hex suffix. |
+| `LMNR_DEBUG_SESSION_ID` | Optional | Pin a run to a specific session. You rarely need this: after the first run, `.lmnr/debug-session.json` rejoins the same session automatically. Set it to override the file or to join a session created elsewhere. |
 | `LMNR_TRACE_METADATA` | Optional | JSON object attached to the trace. Use key `rollout.note` for the pre-run annotation. |
+
+The first `LMNR_DEBUG=true` run mints a session, registers it with Laminar, writes `.lmnr/debug-session.json`, and opens the session in your browser. Later runs in the same directory read that file and rejoin the session silently (no second browser tab). To start a clean session on purpose, run [`lmnr-cli debug session new`](/platform/cli#debug-session-new), which resets the file.
 
 The [workflow](/debugger/workflow) page walks through using these variables end to end.
 
