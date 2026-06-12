@@ -63,28 +63,30 @@ await generateText({
 
 ## General setup
 
-### 1. Instrument your agent
-
-The debugger works on top of normal Laminar tracing. Instrument your agent with any of the available [integrations](/tracing/integrations/overview), or with [manual LLM instrumentation](/tracing/structure/manual-span-creation). Caching is limited to a specific set of integrations (see [how caching works](/debugger/caching)), but the record, inspect, and replay loop runs with everything Laminar traces.
-
-### 2. Install the CLI and link the project
+### 1. Install the CLI
 
 ```bash
 npm install -g lmnr-cli
 # or run on demand with: npx lmnr-cli@latest
 ```
 
-Run `lmnr-cli setup` to log in and link this directory. It logs you in (the debug commands authenticate as you, the signed-in user), links the directory to a project via `.lmnr/project.json`, and writes `LMNR_PROJECT_API_KEY` to your env file so the SDK can send traces:
+### 2. Run setup
 
 ```bash
 lmnr-cli setup
 ```
 
-The CLI itself never uses the project API key; that key is only for the SDK in your agent. See the [CLI page](/platform/cli) for details.
+`setup` logs you in (the debug commands authenticate as you, the signed-in user), links the directory to a project via `.lmnr/project.json`, writes `LMNR_PROJECT_API_KEY` to your env file so the SDK can send traces, and installs the [Laminar skill](https://github.com/lmnr-ai/lmnr-skills) into your project so your coding agent knows how to drive the debugger. The CLI itself never uses the project API key; that key is only for the SDK in your agent. See the [CLI page](/platform/cli) for details.
 
-### 3. Turn on debug mode
+### 3. Ask your coding agent to instrument your agent
 
-Add `LMNR_DEBUG=true` to your run command to record a session. From there, a handful of environment variables control replay:
+The debugger works on top of normal Laminar tracing. With the skill installed, ask your coding agent to instrument your agent and it will wire up the right [integration](/tracing/integrations/overview) for you. Caching is limited to a specific set of integrations (see [how caching works](/debugger/caching)), but the record, inspect, and replay loop runs with everything Laminar traces.
+
+### 4. Ask your coding agent to run the debugger
+
+Once your agent is instrumented, ask your coding agent to run the full debugger loop. It records a run, reads the trace, edits your code, and replays from a checkpoint, all on its own. The [debugger process](/debugger/process) page walks through every step it runs.
+
+To drive it yourself instead, add `LMNR_DEBUG=true` to your run command to record a session. From there, a handful of environment variables control replay:
 
 | Variable | Required | Description |
 |---|---|---|
@@ -96,15 +98,15 @@ Add `LMNR_DEBUG=true` to your run command to record a session. From there, a han
 
 The first `LMNR_DEBUG=true` run mints a session, registers it with Laminar, writes `.lmnr/debug-session.json`, and opens the session in your browser. Later runs in the same directory read that file and rejoin the session silently (no second browser tab). To start a clean session on purpose, run [`lmnr-cli debug session new`](/platform/cli#debug-session-new), which resets the file.
 
-The [workflow](/debugger/workflow) page walks through using these variables end to end.
+The [debugger process](/debugger/process) page walks through using these variables end to end.
 
 ## What's next
 
 <CardGroup cols={2}>
+  <Card title="The debugger process" href="/debugger/process" icon="repeat">
+    The full loop your coding agent runs: record, inspect, and replay.
+  </Card>
   <Card title="How caching works" href="/debugger/caching" icon="database">
     What gets cached, the input hash, and which integrations support it.
-  </Card>
-  <Card title="Workflow" href="/debugger/workflow" icon="repeat">
-    Record, inspect, and replay your agent step by step.
   </Card>
 </CardGroup>

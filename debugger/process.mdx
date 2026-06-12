@@ -1,9 +1,9 @@
 ---
-title: Record and Replay Agent Runs
-sidebarTitle: Workflow
+title: How the Debugger Runs
+sidebarTitle: The debugger process
 ---
 
-This is the full record, inspect, and replay loop. It's also what your AI coding agent runs for you when you use the [Laminar skill](https://github.com/lmnr-ai/lmnr-skills). Make sure you've completed [setup](/debugger/setup) first.
+This is the loop your coding agent runs for you. With the [Laminar skill](https://github.com/lmnr-ai/lmnr-skills) installed, Claude Code, Cursor, or Codex drives every step below on its own: it records a run, names and annotates the session, inspects the traces with SQL, and replays from a checkpoint to iterate fast. Each step is also a plain CLI command or environment variable, so you can run any step by hand or take over at any point. Make sure you've completed [setup](/debugger/setup) first.
 
 ## See your agent runs in browser
 

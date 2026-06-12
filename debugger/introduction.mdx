@@ -5,7 +5,7 @@ sidebarTitle: Introduction
 
 Building an agent is a loop: run it, see what it did, change something, run it again. When your coding agent drives that loop, it needs to see what the agent did as clearly as you would, and it can't afford to wait minutes for a full run on every change.
 
-**The Laminar debugger is that loop, built for a coding agent to run.** Claude Code, Cursor, or Codex runs your agent, reads the resulting trace in Laminar to understand what worked and what didn't, changes your code, and runs again, with each rerun served from cache up to the point it's testing so the turn is fast and cheap. Every run lands in one [session](/debugger/workflow) you watch live.
+**The Laminar debugger is that loop, built for a coding agent to run.** Claude Code, Cursor, or Codex runs your agent, reads the resulting trace in Laminar to understand what worked and what didn't, changes your code, and runs again, with each rerun served from cache up to the point it's testing so the turn is fast and cheap. Every run lands in one [session](/debugger/process) you watch live.
 
 <Frame>
   <img src="/images/debugger-session-view.png" alt="Debugger session view showing a named investigation with a markdown note and expandable trace segments" />
@@ -37,13 +37,13 @@ Two primitives make the loop work:
 
 <CardGroup cols={2}>
   <Card title="Setup" href="/debugger/setup" icon="wrench">
-    Instrument your agent and turn the debugger on with environment variables.
+    Install the CLI, run setup, and let your coding agent take it from there.
+  </Card>
+  <Card title="The debugger process" href="/debugger/process" icon="repeat">
+    The full run, read, change, and rerun loop your coding agent runs, step by step.
   </Card>
   <Card title="How caching works" href="/debugger/caching" icon="database">
     What gets cached, how the input hash works, and which integrations support it.
-  </Card>
-  <Card title="Workflow" href="/debugger/workflow" icon="repeat">
-    The full run, read, change, and rerun loop, step by step.
   </Card>
   <Card title="Browser Use debugger guide" href="/guides/browser-use-debugger" icon="globe">
     End-to-end walkthrough debugging a Browser Use agent.

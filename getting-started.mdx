@@ -213,35 +213,34 @@ Now, here is my repo context + code:
 [PASTE HERE]
 `;
 
-## Set up with AI
+## Set up with your coding agent
 
-The fastest way to get started. Pick whichever fits your workflow.
+The fastest way to get started: run the CLI once, then let your coding agent do the rest.
 
-**Skills** — reviewable diff in minutes, no manual setup.
+<Steps>
+  <Step title="Run setup at the project root">
+    ```bash
+    npx lmnr-cli@latest setup
+    ```
+    `setup` authenticates you, writes a new project API key to your env file, links the directory, and installs the [Laminar skill](https://github.com/lmnr-ai/lmnr-skills) into your project (`.claude/`, `.cursor/`, `.codex/`, or `.agents/`) so your coding agent knows how to instrument with Laminar. See the [CLI page](/platform/cli) for details.
+  </Step>
+  <Step title="Ask your coding agent to instrument your project">
+    With the skill installed, prompt Claude Code, Cursor, or Codex with something like `Instrument this repo with Laminar`. It picks the right [integration](/tracing/integrations/overview), adds initialization at the correct entrypoint, and wires up the SDK.
+  </Step>
+  <Step title="Run your project">
+    Run your app as you normally would so it produces a trace.
+  </Step>
+  <Step title="Verify traces are landing">
+    ```bash
+    lmnr-cli sql query "SELECT * FROM traces ORDER BY start_time DESC LIMIT 1" --json
+    ```
+  </Step>
+  <Step title="View your traces in the browser">
+    Open your project in the [dashboard](https://www.lmnr.ai/projects) to read the full transcript.
+  </Step>
+</Steps>
 
-```bash
-# Quick demo trace
-npx skills add lmnr-ai/laminar-skills --skill laminar-quickstart-trace
-
-# Instrument a real codebase
-npx skills add lmnr-ai/laminar-skills --skill laminar-instrument-codebase
-
-# Migrate from another observability tool
-npx skills add lmnr-ai/laminar-skills --skill laminar-migrate-observability
-```
-
-Browse more at [skills.sh](https://skills.sh) · Source: [lmnr-ai/laminar-skills](https://github.com/lmnr-ai/laminar-skills)
-
-Once installed, prompt your LLM with something like: `Set up Laminar in this repo.`
-
-**Cursor rules** — Laminar-aware completions in your editor.
-
-```bash
-pip install 'lmnr[all]'
-lmnr add-cursor-rules
-```
-
-Creates `.cursor/rules/laminar.mdc`. Reload Cursor (`Cmd+Shift+P` → "Reload Window") to activate. Or [download directly](#).
+Prefer Cursor completions over the skill? Run `lmnr-cli setup` for the key, then `pip install 'lmnr[all]' && lmnr add-cursor-rules` to write `.cursor/rules/laminar.mdc`. Reload Cursor (`Cmd+Shift+P` → "Reload Window") to activate.
 
 ## Prompt Install
 
@@ -365,7 +364,7 @@ pip install 'lmnr[all]'
 npm install @lmnr-ai/lmnr
 ```
 
-→ [Tracing docs](#) · [Hosting options](#)
+→ [Tracing docs](/tracing/introduction) · [Hosting options](/hosting-options)
 
 ---
 

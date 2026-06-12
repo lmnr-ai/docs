@@ -167,7 +167,7 @@ See [Datasets CLI](/datasets/cli) for the full dataset workflow including versio
 
 ## Annotate debug sessions
 
-These commands are the operational layer for the [Debugger](/debugger/workflow): you run the agent with `LMNR_DEBUG=true`, then use these to name the session, write per-trace notes, and open the session view. Like the other commands, they run against the linked project.
+These commands are the operational layer for the [Debugger](/debugger/process): you run the agent with `LMNR_DEBUG=true`, then use these to name the session, write per-trace notes, and open the session view. Like the other commands, they run against the linked project.
 
 <Note>
 None of these commands need an id passed in. By default they target the session in `.lmnr/debug-session.json` (the most recent `LMNR_DEBUG=true` run in this directory), and `trace append-note` targets that session's latest trace. Pass `--session-id` or `--trace-id` to target a different one.
@@ -231,7 +231,7 @@ lmnr-cli debug session summary --session-id <session-id> --json
 
 Output is one block per trace: the markdown note followed by a `<trace id="..." end-time="..."/>` tag you can feed into SQL queries.
 
-See [Debugger](/debugger/workflow) for the full record/replay workflow.
+See [Debugger](/debugger/process) for the full record/replay process.
 
 ## Piping and agent-friendly output
 

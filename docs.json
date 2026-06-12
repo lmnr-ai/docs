@@ -98,8 +98,8 @@
             "pages": [
               "debugger/introduction",
               "debugger/setup",
-              "debugger/caching",
-              "debugger/workflow"
+              "debugger/process",
+              "debugger/caching"
             ]
           },
           {
