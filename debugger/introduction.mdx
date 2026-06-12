@@ -3,36 +3,47 @@ title: AI Agent Debugger for Long-Running Agents
 sidebarTitle: Introduction
 ---
 
-The Laminar debugger records an agent run, lets you inspect every LLM call and tool use in a transcript, and replays the run from any point with your fix applied. On replay it serves cached LLM responses from the recorded trace up to a boundary you pick, then runs live past it, so you only pay for the calls that actually changed.
+Building an agent is a loop: run it, see what it did, change something, run it again. When your coding agent drives that loop, it needs to see what the agent did as clearly as you would, and it can't afford to wait minutes for a full run on every change.
 
-<Note>
-**The debugger is built for AI coding agents.** Add the [Laminar skill](https://github.com/lmnr-ai/lmnr-skills) to Claude Code, Cursor, or Codex and the agent drives the whole record/inspect/replay loop on its own. A human can run the same loop by hand: every step is a CLI command or an environment variable.
-</Note>
+**The Laminar debugger is that loop, built for a coding agent to run.** Claude Code, Cursor, or Codex runs your agent, reads the resulting trace in Laminar to understand what worked and what didn't, changes your code, and runs again, with each rerun served from cache up to the point it's testing so the turn is fast and cheap. Every run lands in one [session](/debugger/process) you watch live.
 
-## Why it exists
+<Frame>
+  <img src="/images/debugger-session-view.png" alt="Debugger session view showing a named investigation with a markdown note and expandable trace segments" />
+</Frame>
 
-Long-running agents fail slowly. A run takes minutes, the bad call is three-quarters of the way through, and every fix means waiting for the full run again. The feedback loop is too slow to iterate on.
+## The iteration loop
 
-The debugger collapses that loop. Record once, then replay from just before the call you're fixing. The recorded calls before your boundary come back from cache instantly; only the calls after it run live.
+One turn of the loop has four steps. A coding agent with the [Laminar skill](https://github.com/lmnr-ai/lmnr-skills) runs all four on its own; you can run any of them by hand.
 
-This matters most for an AI coding agent fixing your agent. The agent can run dozens of replay iterations while you watch, each one cheap and fast, without re-running the expensive prefix of the trace every time.
+1. **Run.** Start your agent with `LMNR_DEBUG=true`. The run is traced and recorded into the session.
+2. **Read.** Open the trace in Laminar and read the transcript: the agent's inputs, every LLM turn, every tool call, sub-agents collapsed into cards. This is where *what worked and what didn't* becomes obvious, for you and for the coding agent reading the same trace.
+3. **Change.** Edit the agent: the prompt, a tool, the control flow, whatever the trace pointed at.
+4. **Run again.** Rerun against the recorded trace. Everything before the call you're testing comes back from cache instantly; only your change and what follows it run live. The new run is a fresh trace in the same session, next to the last one.
 
-## The two primitives
+The point is the turnaround. A long-running agent can take minutes end to end, and the call you're fixing is often three-quarters of the way through. Caching the prefix means the coding agent can take that turn dozens of times in the span it would take to run the agent live once. See [how caching works](/debugger/caching) for the mechanism.
 
-- **Sessions** group every debug run from one investigation. All the traces appear together in the Laminar UI so you (or your coding agent) can compare attempts side by side and follow the notes attached to each run.
-- **Replay** re-runs the agent against a recorded trace. The debugger serves cached LLM responses up to the boundary you choose and runs everything past it live. See [how caching works](/debugger/caching) for the mechanism.
+## Who drives the loop
+
+The loop is the same whoever runs it, and you watch it from the same session view either way. Hand it to a **coding agent** and watch: with the [Laminar skill](https://github.com/lmnr-ai/lmnr-skills) it runs your agent, reads the trace, edits your code, and reruns on its own, writing a note before each turn so you can follow along without touching the terminal. Stay **in the loop** by reading each run as it lands and pointing the agent at the span that's wrong, or **drive it yourself**: every step is a CLI command or an environment variable, no coding agent required.
+
+## Sessions and replay
+
+Two primitives make the loop work:
+
+- **Sessions** group every run from one investigation so the turns sit together. The traces appear in order in the Laminar UI, so you (or your coding agent) can compare attempts and follow the notes on each one. The first `LMNR_DEBUG=true` run starts a session and writes `.lmnr/debug-session.json`; every later run in the same directory rejoins it automatically, so neither you nor the agent copies a session id between runs.
+- **Replay** is what makes a turn fast. Rerunning against a recorded trace serves cached LLM responses up to the boundary you pick and runs everything past it live, so you only pay for the calls your change actually touched. See [how caching works](/debugger/caching) for the mechanism.
 
 ## What's next
 
 <CardGroup cols={2}>
   <Card title="Setup" href="/debugger/setup" icon="wrench">
-    Instrument your agent and turn the debugger on with environment variables.
+    Install the CLI, run setup, and let your coding agent take it from there.
+  </Card>
+  <Card title="The debugger process" href="/debugger/process" icon="repeat">
+    The full run, read, change, and rerun loop your coding agent runs, step by step.
   </Card>
   <Card title="How caching works" href="/debugger/caching" icon="database">
     What gets cached, how the input hash works, and which integrations support it.
-  </Card>
-  <Card title="Workflow" href="/debugger/workflow" icon="repeat">
-    The full record, inspect, and replay loop, step by step.
   </Card>
   <Card title="Browser Use debugger guide" href="/guides/browser-use-debugger" icon="globe">
     End-to-end walkthrough debugging a Browser Use agent.

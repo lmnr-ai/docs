@@ -6,6 +6,7 @@ New releases and improvements.
 
 ## June 2026
 
+- **Debugger session continuation** - Debug runs now group into a session automatically. The first `LMNR_DEBUG=true` run writes `.lmnr/debug-session.json`, and every later run in the same directory rejoins it with no `LMNR_DEBUG_SESSION_ID` to copy around. New `lmnr-cli debug session new` mints a clean session on demand, and session names are editable inline in the session view. See [Debugger](/debugger/introduction).
 - **One-command CLI onboarding** - `lmnr-cli setup` logs you in, picks or creates a project, writes a fresh `LMNR_PROJECT_API_KEY` to `./.env`, links the directory, and installs the Laminar agent skill. `lmnr-cli login` adds OAuth device-flow auth so `sql`, `dataset`, and `project` run as the signed-in user against the directory-linked project (`.lmnr/project.json`), no project API key needed. See [CLI](/platform/cli).
 
 ## May 2026

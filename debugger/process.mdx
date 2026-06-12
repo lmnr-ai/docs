@@ -1,9 +1,9 @@
 ---
-title: Record and Replay Agent Runs
-sidebarTitle: Workflow
+title: How the Debugger Runs
+sidebarTitle: The debugger process
 ---
 
-This is the full record, inspect, and replay loop. It's also what your AI coding agent runs for you when you use the [Laminar skill](https://github.com/lmnr-ai/lmnr-skills). Make sure you've completed [setup](/debugger/setup) first.
+This is the loop your coding agent runs for you. With the [Laminar skill](https://github.com/lmnr-ai/lmnr-skills) installed, Claude Code, Cursor, or Codex drives every step below on its own: it records a run, names and annotates the session, inspects the traces with SQL, and replays from a checkpoint to iterate fast. Each step is also a plain CLI command or environment variable, so you can run any step by hand or take over at any point. Make sure you've completed [setup](/debugger/setup) first.
 
 ## See your agent runs in browser
 
@@ -29,50 +29,55 @@ LMNR_DEBUG=true python my_agent.py 2>&1 | tee run.log
 grep 'LMNR_DEBUG_RUN' run.log
 ```
 
-On startup the SDK registers a new debug session with Laminar, logs the session's `debugger_url`, and opens it in your browser. When the run finishes, the SDK prints a `LMNR_DEBUG_RUN` line with the run's ids. Always pipe stdout/stderr and grep for it explicitly, since other output will drown it.
+On startup the SDK registers a new debug session with Laminar, logs the session's `debugger_url`, opens it in your browser, and writes `.lmnr/debug-session.json` in the working directory. When the run finishes, the SDK prints a `LMNR_DEBUG_RUN` line with the run's ids. Always pipe stdout/stderr and grep for it explicitly, since other output will drown it.
 
 The JSON on that line looks like:
 
 ```json
 {
-  "trace_id": "…",
   "session_id": "…",
+  "trace_id": "…",
   "replay_trace_id": null,
-  "cache_until": 0,
+  "cache_until": null,
   "debugger_url": "https://laminar.sh/project/<projectId>/debugger-sessions/<sessionId>",
   "started_at": "…"
 }
 ```
 
-Save the `session_id`. Every subsequent run in this investigation must set `LMNR_DEBUG_SESSION_ID` to it, or each run mints a fresh session that isn't grouped with your investigation and your traces stop appearing together.
+You don't need to copy any of these ids. The same payload is saved to `.lmnr/debug-session.json`, and every later `LMNR_DEBUG=true` run in this directory reads that file and rejoins the same session automatically (no browser reopens). Your traces stay grouped without passing a session id around.
+
+<Note>
+Continuation is not replay. Rejoining the session records another fresh run; it does not replay the previous trace. Replay is armed explicitly in [step 4](#4-replay-to-iterate-fast). To start a clean session instead of continuing, run `npx lmnr-cli debug session new`, which mints a new session and resets the file.
+</Note>
 
 ## 2. Name the session and annotate each run
 
-The session view shows your `session_id` in the header. Name the investigation once:
+Name the investigation so it's easy to find later. Click the session title in the session-view header and type a name inline, or set it from the CLI. The CLI commands below target the session in `.lmnr/debug-session.json` by default, so you don't pass a session id:
 
 ```bash
-npx lmnr-cli debug session set-name <session-id> "Fix report length + search tool"
+npx lmnr-cli debug session set-name "Fix report length + search tool"
 ```
 
 Write a note **before** each run to explain what you are about to test. Set it via `LMNR_TRACE_METADATA`:
 
 ```bash
 LMNR_DEBUG=true \
-LMNR_DEBUG_SESSION_ID=<session-id> \
 LMNR_TRACE_METADATA='{"rollout.note": "## What I am testing\nReplaying calls 1-3, running call 4 live with the new length cap.\n\n"}' \
 npx tsx my_agent.ts 2>&1 | tee run.log
 ```
+
+The run rejoins the session from `.lmnr/debug-session.json`, so no `LMNR_DEBUG_SESSION_ID` is needed.
 
 The note appears in the session view above the run's transcript, so the human watching sees what you're testing before the trace arrives.
 
 After the run completes, append a follow-up:
 
 ```bash
-npx lmnr-cli trace append-note <trace-id> "## What this run showed
+npx lmnr-cli trace append-note "## What this run showed
 Length cap is working (~180 words, was ~600). Next: check citations."
 ```
 
-Notes are append-only. Each call adds a paragraph to the existing note.
+The note lands on the latest trace of the current debug session; pass `--trace-id <trace-id>` to annotate a specific run. Notes are append-only: each call adds a paragraph to the existing note.
 
 In notes, reference a specific span with an XML tag. The UI renders it as a clickable chip that opens that span:
 
@@ -115,14 +120,13 @@ After editing the agent, re-run with replay:
 
 ```bash
 LMNR_DEBUG=true \
-LMNR_DEBUG_SESSION_ID=<session-id> \
 LMNR_DEBUG_REPLAY_TRACE_ID=<trace-id> \
 LMNR_DEBUG_CACHE_UNTIL=<span-id> \
 npx tsx my_agent.ts 2>&1 | tee run.log
 grep 'LMNR_DEBUG_RUN' run.log
 ```
 
-`LMNR_DEBUG_REPLAY_TRACE_ID` is the `trace_id` from the run you want to replay. `LMNR_DEBUG_CACHE_UNTIL` is the span id of the last LLM call to replay: the debugger serves cached responses through that call (inclusive) and runs live past it. Pass the id of the call **before** the buggy one, and the debugger runs your fix live while caching everything before it. See [how caching works](/debugger/caching) for the lookup mechanism.
+The run rejoins the session automatically, so you only set the replay variables. `LMNR_DEBUG_REPLAY_TRACE_ID` is the `trace_id` from the run you want to replay. `LMNR_DEBUG_CACHE_UNTIL` is the span id of the last LLM call to replay: the debugger serves cached responses through that call (inclusive) and runs live past it. Pass the id of the call **before** the buggy one, and the debugger runs your fix live while caching everything before it. See [how caching works](/debugger/caching) for the lookup mechanism.
 
 Each replay produces a new trace in the same session, so attempts appear sequentially in the UI.
 
@@ -131,11 +135,11 @@ Each replay produces a new trace in the same session, so attempts appear sequent
 After a context reset or to catch up on an ongoing session, dump all trace notes in order:
 
 ```bash
-npx lmnr-cli debug session summary <session-id>
-npx lmnr-cli debug session summary <session-id> --json
+npx lmnr-cli debug session summary
+npx lmnr-cli debug session summary --json
 ```
 
-Output is one block per trace, oldest first: the markdown note followed by a `<trace id="…" end-time="…"/>` tag you can feed into SQL queries.
+This defaults to the current session; pass `--session-id <session-id>` for another. Output is one block per trace, oldest first: the markdown note followed by a `<trace id="…" end-time="…"/>` tag you can feed into SQL queries.
 
 ## What's next
 
