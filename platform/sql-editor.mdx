@@ -213,9 +213,9 @@ These are the logical tables exposed in the SQL Editor. The schemas below reflec
 | `input_tokens` | `Int64` | `150` |
 | `output_tokens` | `Int64` | `100` |
 | `total_tokens` | `Int64` | `250` |
-| `request_model` | `String` | `"gpt-4.1-mini"` |
-| `response_model` | `String` | `"gpt-4.1-mini-2025-04-14"` |
-| `model` | `String` | `"gpt-4.1-mini-2025-04-14"` |
+| `request_model` | `String` | `"gpt-5-mini"` |
+| `response_model` | `String` | `"gpt-5-mini-2025-08-07"` |
+| `model` | `String` | `"gpt-5-mini-2025-08-07"` |
 | `trace_id` | `UUID` | `"12345678-90ab-4def-8234-426614174000"` |
 | `provider` | `String` | `"openai"` |
 | `path` | `String` | `"workflow.process.step1.openai.chat"` |
@@ -432,7 +432,7 @@ The `payload` column is stored as a string in JSON format. That is, you can safe
 
 #### Clusters
 
-`clusters` is the list of cluster IDs this event belongs to (see [Clusters](/signals/clusters)). Only non-L0 clusters are included. To list events that belong to an L0 cluster, query the `signal_events_all` table, which has the same schema but exposes L0-cluster membership as well.
+`clusters` is the list of cluster IDs this event belongs to (see [Clusters](/signals/clusters)). Only non-L0 clusters are included.
 
 
 ### signal_events_all
@@ -479,7 +479,7 @@ Same schema as `signal_events`, but the `clusters` column includes L0-cluster me
 
 ### clusters
 
-Clusters group similar signal events together (see [Clusters](/signals/clusters)). Only non-L0 clusters are exposed here.
+Clusters group similar signal events into a hierarchy (see [Clusters](/signals/clusters)). Each row is one cluster. L0 (lowest-level) clusters are excluded.
 
 | Column | Type | Example value |
 |--------|------|---------------|

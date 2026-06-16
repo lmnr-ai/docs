@@ -1,10 +1,121 @@
 ---
-title: Integrations
+title: Agent and LLM Observability Integrations
 sidebarTitle: Introduction
 ---
 
-Laminar automatically traces calls to supported LLM providers, agent frameworks, and vector databases. You don't need to change your code—just initialize Laminar, and calls to OpenAI, Anthropic, LangChain, and others are captured with full details: prompts, responses, tokens, latency, and cost.
+Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. It auto-instruments LLM provider SDKs, agent frameworks, and browser agents, so you trace, debug, and monitor every call without changing your code. Initialize Laminar once and calls to OpenAI, Anthropic, LangChain, the Vercel AI SDK, and the rest of the integrations below are captured with full detail: prompts, responses, tool calls, tokens, latency, and cost.
 
-Browse the integrations below to see setup instructions and what's captured for each.
+Each integration page below has setup steps for TypeScript and Python (where both are supported) and shows what Laminar captures. Pick the SDK or framework you use.
 
-Don't see your provider? You can trace any LLM with the `@observe` decorator or by creating manual spans. See [Tracing Structure](/tracing/structure/overview) or jump straight to [observe usage](/tracing/structure/observe-decorator).
+## LLM provider SDKs
+
+Auto-instrumented provider clients. Initialize Laminar and every model call is traced.
+
+<CardGroup cols={2}>
+  <Card title="OpenAI" href="/tracing/integrations/openai">
+    Trace the OpenAI SDK in JavaScript and Python.
+  </Card>
+  <Card title="Anthropic" href="/tracing/integrations/anthropic">
+    Trace the Anthropic SDK in JavaScript and Python.
+  </Card>
+  <Card title="Gemini" href="/tracing/integrations/gemini">
+    Trace the Google Gemini SDK.
+  </Card>
+  <Card title="Cohere" href="/tracing/integrations/cohere">
+    Trace the Cohere SDK.
+  </Card>
+  <Card title="LiteLLM" href="/tracing/integrations/litellm">
+    Trace calls routed through LiteLLM.
+  </Card>
+  <Card title="OpenRouter" href="/tracing/integrations/openrouter">
+    Trace any model called through OpenRouter.
+  </Card>
+</CardGroup>
+
+## Agent frameworks
+
+Multi-step agents, tool calls, and subagents render as a transcript instead of a raw span tree.
+
+<CardGroup cols={2}>
+  <Card title="Vercel AI SDK" href="/tracing/integrations/vercel-ai-sdk">
+    Trace `generateText` and `streamText` in Next.js and Node.js.
+  </Card>
+  <Card title="LangChain / LangGraph" href="/tracing/integrations/langchain">
+    Trace LangChain chains and LangGraph graphs.
+  </Card>
+  <Card title="deepagents" href="/tracing/integrations/deepagents">
+    Trace LangChain deepagents and their subagents.
+  </Card>
+  <Card title="Mastra" href="/tracing/integrations/mastra">
+    Trace Mastra agents and workflows in TypeScript.
+  </Card>
+  <Card title="Pydantic AI" href="/tracing/integrations/pydantic-ai">
+    Trace Pydantic AI agents and tool calls.
+  </Card>
+  <Card title="OpenAI Agents SDK" href="/tracing/integrations/openai-agents-sdk">
+    Trace OpenAI Agents, handoffs, and tools.
+  </Card>
+  <Card title="OpenHands SDK" href="/tracing/integrations/openhands-sdk">
+    Trace OpenHands software agents.
+  </Card>
+  <Card title="Temporal" href="/tracing/integrations/temporal">
+    Trace agent activities across Temporal workflows.
+  </Card>
+</CardGroup>
+
+## Coding agents
+
+<CardGroup cols={2}>
+  <Card title="Claude Agent SDK" href="/tracing/integrations/claude-agent-sdk">
+    Trace Claude Agent SDK runs and subagents.
+  </Card>
+  <Card title="OpenCode" href="/tracing/integrations/opencode">
+    Trace OpenCode coding agent sessions.
+  </Card>
+</CardGroup>
+
+## Browser and computer-use agents
+
+Browser session recordings sync with the trace: scrub the video and the trace scrolls with it.
+
+<CardGroup cols={2}>
+  <Card title="Browser Use" href="/tracing/integrations/browser-use">
+    Trace Browser Use agents with synced session recordings.
+  </Card>
+  <Card title="Stagehand" href="/tracing/integrations/stagehand">
+    Trace Stagehand browser automation.
+  </Card>
+  <Card title="Skyvern" href="/tracing/integrations/skyvern">
+    Trace Skyvern browser agents.
+  </Card>
+  <Card title="Kernel" href="/tracing/integrations/kernel">
+    Trace computer-using agents running on Kernel.
+  </Card>
+  <Card title="Playwright" href="/tracing/integrations/playwright">
+    Trace Playwright browser sessions.
+  </Card>
+  <Card title="Puppeteer" href="/tracing/integrations/puppeteer">
+    Trace Puppeteer browser sessions.
+  </Card>
+</CardGroup>
+
+## Don't see your SDK?
+
+Laminar is OpenTelemetry-native, so it traces any LLM call or function you wrap yourself. Use the `@observe` decorator or create manual spans, and point any OTel-emitting code at Laminar. See [Tracing Structure](/tracing/structure/overview) or jump to [observe usage](/tracing/structure/observe-decorator).
+
+## Once your traces land
+
+<CardGroup cols={2}>
+  <Card title="View traces" href="/platform/viewing-traces">
+    Laminar extracts inputs, LLM outputs, and tool calls into a transcript view, so you read the conversation instead of a span tree.
+  </Card>
+  <Card title="Track outcomes with Signals" href="/signals/introduction">
+    Define signals in plain language to track the outcomes and failures you care about across every run.
+  </Card>
+  <Card title="Query across traces" href="/platform/sql-editor">
+    Run read-only SQL over your traces in the editor, the SQL API, the [CLI](/platform/cli), or the [MCP server](/platform/mcp).
+  </Card>
+  <Card title="Tracing structure" href="/tracing/structure/overview">
+    Use `observe`, sessions, metadata, and tags for deeper control over what gets captured.
+  </Card>
+</CardGroup>

@@ -41,6 +41,7 @@
                   "tracing/integrations/litellm",
                   "tracing/integrations/mastra",
                   "tracing/integrations/pydantic-ai",
+                  "tracing/integrations/temporal",
                   "tracing/integrations/openrouter",
                   "tracing/integrations/browser-use",
                   "tracing/integrations/cohere",
@@ -93,6 +94,15 @@
             ]
           },
           {
+            "group": "Debugger",
+            "pages": [
+              "debugger/introduction",
+              "debugger/setup",
+              "debugger/process",
+              "debugger/caching"
+            ]
+          },
+          {
             "group": "Evaluations",
             "pages": [
               "evaluations/introduction",
@@ -120,7 +130,6 @@
               "platform/table-views",
               "platform/integrations",
               "platform/live-tracing",
-              "platform/debugger",
               "platform/mcp",
               "platform/sql-editor",
               "platform/cli",
