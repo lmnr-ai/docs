@@ -7,7 +7,7 @@ import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
 
 ## Overview
 
-Laminar is OpenTelemetry-native, so it captures full traces of every [Vercel AI SDK](https://ai-sdk.dev/) call: `generateText`, `streamText`, `generateObject`, `streamObject`, `embed`, tool calls, and provider-level request and response payloads.
+Laminar is OpenTelemetry-native, so it captures full traces of every [Vercel AI SDK](https://ai-sdk.dev/) call: `generateText`, `streamText`, `embed`, tool calls, and provider-level request and response payloads.
 
 What Laminar captures:
 
@@ -74,7 +74,7 @@ const { text } = await generateText({
 });
 ```
 
-The same applies to `streamText`, `generateObject`, `streamObject`, and `embed`.
+The same applies to `streamText` and `embed`.
 
 </Step>
 </Steps>
