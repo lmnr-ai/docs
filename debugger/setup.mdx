@@ -46,7 +46,30 @@ The [debugger process](/debugger/process) page walks through using these variabl
 
 ## AI SDK caching
 
-For the [AI SDK](/tracing/integrations/vercel-ai-sdk) (TypeScript), caching needs one extra step on top of the normal telemetry integration: wrap each model with `wrapLanguageModel`. The wrapper is what hashes the span input and consults the Laminar backend for a cached response. Without it, your AI SDK calls are traced and replayable as part of the transcript, but they will not serve from cache.
+For the [AI SDK](/tracing/integrations/vercel-ai-sdk) (TypeScript), caching needs one extra step on top of the normal telemetry integration: wrap each model with `wrapLanguageModel`. The wrapper is what hashes the span input and consults the Laminar backend for a cached response. Without it, your AI SDK calls are traced and replayable as part of the transcript, but they will not serve from cache. The `wrapLanguageModel` step is the same across AI SDK versions; only the telemetry wiring differs.
+
+<Tabs>
+<Tab title="AI SDK v7">
+
+```typescript
+import { generateText, gateway, registerTelemetry } from 'ai';
+// or
+import { anthropic } from '@ai-sdk/anthropic';
+import { wrapLanguageModel, LaminarAiSdkTelemetry } from '@lmnr-ai/lmnr';
+
+registerTelemetry(new LaminarAiSdkTelemetry());
+
+await generateText({
+  // this line is what enables debugger caching
+  model: wrapLanguageModel(gateway('openai/gpt-5')),
+  // or
+  // model: wrapLanguageModel(anthropic('claude-opus-4-5')),
+  // ... other params. No per-call telemetry needed.
+});
+```
+
+</Tab>
+<Tab title="AI SDK v5 and v6">
 
 ```typescript
 import { generateText, gateway } from 'ai';
@@ -71,32 +94,8 @@ await generateText({
 });
 ```
 
-<Accordion title="AI SDK v7 (pre-release canary)">
-AI SDK v7 replaces `experimental_telemetry` with a `telemetry` option that takes integrations. The `wrapLanguageModel` step is the same; only the telemetry wiring changes.
-
-```typescript
-import { generateText, gateway } from 'ai';
-// or
-import { anthropic } from '@ai-sdk/anthropic';
-import { Laminar, wrapLanguageModel, LaminarAiSdkTelemetry } from '@lmnr-ai/lmnr';
-
-Laminar.initialize();
-
-await generateText({
-  // this line is what enables debugger caching
-  model: wrapLanguageModel(gateway('openai/gpt-5')),
-  // or
-  // model: wrapLanguageModel(anthropic('claude-opus-4-5')),
-  // ... other params
-
-  // general Laminar telemetry integration
-  telemetry: {
-    isEnabled: true,
-    integrations: [new LaminarAiSdkTelemetry()],
-  },
-});
-```
-</Accordion>
+</Tab>
+</Tabs>
 
 ## What's next
 
