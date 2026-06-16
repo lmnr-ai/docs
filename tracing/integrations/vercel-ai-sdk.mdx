@@ -1,14 +1,13 @@
 ---
 title: Observability and Tracing for Vercel AI SDK in Next.js and Node.js
 sidebarTitle: Vercel AI SDK
-description: Trace every generateText, streamText, generateObject, and tool call in the Vercel AI SDK with Laminar. Open-source, OpenTelemetry-native observability for AI SDK apps.
 ---
 
 import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
 
 ## Overview
 
-The [Vercel AI SDK](https://ai-sdk.dev/) exposes OpenTelemetry hooks via `experimental_telemetry`. Laminar is OpenTelemetry-native, so you get full traces of `generateText`, `streamText`, `generateObject`, `streamObject`, tool calls, and provider-level request and response payloads with a single tracer wired in.
+Laminar is OpenTelemetry-native, so it captures full traces of every [Vercel AI SDK](https://ai-sdk.dev/) call: `generateText`, `streamText`, `generateObject`, `streamObject`, `embed`, tool calls, and provider-level request and response payloads.
 
 What Laminar captures:
 
@@ -18,9 +17,70 @@ What Laminar captures:
 - Token counts, latency, and cost per call.
 - Provider identity (OpenAI, Anthropic, Google, Mistral, and others) and model name.
 
-This page covers both Node.js and Next.js setups. If you are using the AI SDK inside Next.js, scroll to [Next.js setup](#nextjs-setup): the order of imports and file placement matters.
+The AI SDK changed its telemetry API in v7. The setup below shows both styles. On AI SDK v7 you register Laminar once and every call is traced. On v5 and v6 you initialize Laminar and pass its tracer per call. Pick the tab that matches your `ai` version.
 
-## Node.js setup
+## Getting Started
+
+<Tabs>
+<Tab title="AI SDK v7">
+
+<Steps>
+<Step title="Install">
+
+```bash
+npm install @lmnr-ai/lmnr@latest ai@latest @ai-sdk/openai@latest
+```
+
+Swap `@ai-sdk/openai` for any provider adapter you use ([full list](https://ai-sdk.dev/providers/ai-sdk-providers)).
+
+</Step>
+<Step title="Set environment variables">
+
+```bash
+# .env
+LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+OPENAI_API_KEY=your-openai-api-key
+```
+
+<GetProjectApiKey />
+
+</Step>
+<Step title="Register Laminar telemetry">
+
+Register Laminar once at the entry point of your application, before the first AI SDK call. This one line initializes all of Laminar's tracing and wires it into the AI SDK.
+
+```typescript
+import { registerTelemetry } from 'ai';
+import { LaminarAiSdkTelemetry } from '@lmnr-ai/lmnr';
+import 'dotenv/config';
+
+registerTelemetry(new LaminarAiSdkTelemetry());
+```
+
+`new LaminarAiSdkTelemetry()` initializes Laminar for you (it calls `Laminar.initialize()` internally if Laminar isn't already initialized), so you don't need a separate `Laminar.initialize()` call. Pass options to the constructor to configure it: see [Configure the integration](#configure-the-integration).
+
+</Step>
+<Step title="Use the AI SDK as usual">
+
+No per-call configuration. Every `generate*` and `stream*` call is traced automatically.
+
+```typescript
+import { openai } from '@ai-sdk/openai';
+import { generateText } from 'ai';
+
+const { text } = await generateText({
+  model: openai('gpt-5-mini'),
+  prompt: 'What is laminar flow?',
+});
+```
+
+The same applies to `streamText`, `generateObject`, `streamObject`, and `embed`.
+
+</Step>
+</Steps>
+
+</Tab>
+<Tab title="AI SDK v5 and v6">
 
 <Steps>
 <Step title="Install">
@@ -79,7 +139,113 @@ The same pattern works for `streamText`, `generateObject`, `streamObject`, and `
 </Step>
 </Steps>
 
+</Tab>
+</Tabs>
+
+## Turn telemetry off for one call
+
+With `registerTelemetry`, tracing is on for every call by default. To disable it for a single call site, pass a `telemetry` block with `isEnabled: false`. This overrides the global registration for that call only.
+
+```typescript
+import { openai } from '@ai-sdk/openai';
+import { generateText } from 'ai';
+
+const { text } = await generateText({
+  model: openai('gpt-5-mini'),
+  prompt: 'Summarize this internal document.',
+  // not traced, even though Laminar is registered globally
+  telemetry: { isEnabled: false },
+});
+```
+
+The same `telemetry` block also carries `functionId` and `metadata` if you want to name a span or attach metadata to one call:
+
+```typescript
+const { text } = await generateText({
+  model: openai('gpt-5-mini'),
+  prompt: 'Draft a release note.',
+  telemetry: {
+    functionId: 'release-notes',
+    metadata: { env: 'production' },
+  },
+});
+```
+
+<Note>
+On AI SDK v5 and v6, the equivalent control is the `experimental_telemetry` block: omit it (or set `isEnabled: false`) to skip tracing for a call, and pass `functionId` / `metadata` there.
+</Note>
+
+## Configure the integration
+
+`LaminarAiSdkTelemetry` takes an options object. All options are optional.
+
+<AccordionGroup>
+<Accordion title="laminarOptions: configure the Laminar SDK">
+
+`laminarOptions` accepts exactly what you would pass to `Laminar.initialize()`. Use it to set the project API key, base URL, or any other init option in one place, so you don't need a separate `Laminar.initialize()` call.
+
+```typescript
+import { registerTelemetry } from 'ai';
+import { LaminarAiSdkTelemetry } from '@lmnr-ai/lmnr';
+
+registerTelemetry(
+  new LaminarAiSdkTelemetry({
+    laminarOptions: {
+      projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+    },
+  }),
+);
+```
+
+If Laminar is already initialized when the integration is constructed, `laminarOptions` is ignored.
+
+</Accordion>
+<Accordion title="recordInputs and recordOutputs: control payload capture">
+
+Both default to `true`. Set either to `false` to keep prompt or response content off your spans (for sensitive data or to reduce payload size). Token counts, finish reasons, latency, and cost are always recorded, regardless of these flags.
+
+```typescript
+registerTelemetry(
+  new LaminarAiSdkTelemetry({
+    recordInputs: false,
+    recordOutputs: false,
+  }),
+);
+```
+
+</Accordion>
+<Accordion title="createStepSpan: add a span per step">
+
+Defaults to `false`. Set it to `true` to emit an extra span for each step of a multi-step generation, so the trace shows the step boundaries explicitly in addition to the LLM and tool spans.
+
+```typescript
+registerTelemetry(
+  new LaminarAiSdkTelemetry({
+    createStepSpan: true,
+  }),
+);
+```
+
+</Accordion>
+</AccordionGroup>
+
+## Flush spans before exit
+
+In short-lived scripts and serverless runtimes, the process can exit before Laminar finishes sending its last batch of spans. Call `Laminar.shutdown()` at the end of a script, or `Laminar.flush()` at a checkpoint you want to force out, to make sure the final spans land.
+
+```typescript
+import { Laminar } from '@lmnr-ai/lmnr';
+
+// ... your AI SDK calls ...
+
+await Laminar.shutdown();
+```
+
+This applies to both integration styles. Long-running servers don't need it: the batch processor flushes on its own schedule.
+
 ## Next.js setup
+
+In Next.js, Laminar lives in `instrumentation.ts`, which Next.js auto-loads before any route or server component runs.
 
 <Steps>
 <Step title="Install">
@@ -90,8 +256,6 @@ npm install @lmnr-ai/lmnr@latest ai@latest @ai-sdk/openai@latest
 
 </Step>
 <Step title="Set environment variables">
-
-Add your keys to `.env.local`:
 
 ```bash
 # .env.local
@@ -115,9 +279,30 @@ export default nextConfig;
 More on this option in the [Next.js docs](https://nextjs.org/docs/app/api-reference/config/next-config-js/serverExternalPackages).
 
 </Step>
-<Step title="Initialize Laminar in instrumentation.ts">
+<Step title="Initialize in instrumentation.ts">
 
-Create `instrumentation.ts` at the project root. Next.js auto-loads this file before any route or server component runs.
+Create `instrumentation.ts` at the project root.
+
+<Tabs>
+<Tab title="AI SDK v7">
+
+```typescript instrumentation.ts
+export async function register() {
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+    const { registerTelemetry } = await import('ai');
+    const { LaminarAiSdkTelemetry } = await import('@lmnr-ai/lmnr');
+
+    registerTelemetry(
+      new LaminarAiSdkTelemetry({
+        laminarOptions: { projectApiKey: process.env.LMNR_PROJECT_API_KEY },
+      }),
+    );
+  }
+}
+```
+
+</Tab>
+<Tab title="AI SDK v5 and v6">
 
 ```typescript instrumentation.ts
 export async function register() {
@@ -131,6 +316,9 @@ export async function register() {
 }
 ```
 
+</Tab>
+</Tabs>
+
 <Note>
 Laminar only runs in the `nodejs` runtime. The guard skips Edge runtime routes automatically.
 </Note>
@@ -141,6 +329,29 @@ If you already use `@vercel/otel` or `@sentry/nextjs`, initialize them first, th
 
 </Step>
 <Step title="Use the AI SDK in a route handler">
+
+<Tabs>
+<Tab title="AI SDK v7">
+
+```typescript app/api/chat/route.ts
+import { openai } from '@ai-sdk/openai';
+import { streamText } from 'ai';
+
+export async function POST(req: Request) {
+  const { messages } = await req.json();
+
+  const result = streamText({
+    model: openai('gpt-5-mini'),
+    system: 'You are a helpful assistant.',
+    messages,
+  });
+
+  return result.toTextStreamResponse();
+}
+```
+
+</Tab>
+<Tab title="AI SDK v5 and v6">
 
 ```typescript app/api/chat/route.ts
 import { openai } from '@ai-sdk/openai';
@@ -164,6 +375,9 @@ export async function POST(req: Request) {
 }
 ```
 
+</Tab>
+</Tabs>
+
 </Step>
 </Steps>
 
@@ -178,7 +392,6 @@ Two shapes are common. `generateText` with `tools` and `stopWhen` is the workhor
 ```typescript
 import { openai } from '@ai-sdk/openai';
 import { generateText, stepCountIs, tool } from 'ai';
-import { getTracer } from '@lmnr-ai/lmnr';
 import { z } from 'zod';
 
 const result = await generateText({
@@ -212,9 +425,7 @@ const result = await generateText({
     }),
   },
   stopWhen: stepCountIs(5),
-  experimental_telemetry: {
-    isEnabled: true,
-    tracer: getTracer(),
+  telemetry: {
     functionId: 'travel-assistant',
     metadata: { env: 'production' },
   },
@@ -226,6 +437,10 @@ console.log(`Completed in ${result.steps.length} steps`);
 
 `stopWhen: stepCountIs(5)` caps the loop at five model-and-tool rounds. You can combine conditions (`stopWhen: [stepCountIs(20), hasToolCall('finalize')]`) or pass a custom predicate.
 
+<Note>
+On AI SDK v5 and v6, replace the `telemetry` block with `experimental_telemetry: { isEnabled: true, tracer: getTracer(), functionId: 'travel-assistant', metadata: { env: 'production' } }`.
+</Note>
+
 ### ToolLoopAgent
 
 Reuse the same configuration across calls by constructing a `ToolLoopAgent` once:
@@ -233,7 +448,6 @@ Reuse the same configuration across calls by constructing a `ToolLoopAgent` once
 ```typescript
 import { openai } from '@ai-sdk/openai';
 import { ToolLoopAgent, stepCountIs } from 'ai';
-import { getTracer } from '@lmnr-ai/lmnr';
 import { weather, timezone } from './tools';
 
 const travelAgent = new ToolLoopAgent({
@@ -242,11 +456,6 @@ const travelAgent = new ToolLoopAgent({
     'You are a concise travel assistant. Call tools to look up weather and local time before answering.',
   tools: { weather, timezone },
   stopWhen: stepCountIs(5),
-  experimental_telemetry: {
-    isEnabled: true,
-    tracer: getTracer(),
-    functionId: 'travel-agent',
-  },
 });
 
 const result = await travelAgent.generate({
@@ -255,6 +464,24 @@ const result = await travelAgent.generate({
 ```
 
 Both shapes produce the same trace structure in Laminar: one parent span per call, nested tool-call spans, and the final model output in the transcript.
+
+## Debugging with the replay debugger
+
+The [Laminar debugger](/debugger/introduction) records a run, lets you edit your code, and replays from a cached checkpoint so unchanged LLM calls are served from cache. For the AI SDK, caching needs one extra step: wrap each model with `wrapLanguageModel`, which hashes the call's input and asks the Laminar backend for a cached response. The telemetry wiring above is unchanged.
+
+```typescript
+import { openai } from '@ai-sdk/openai';
+import { generateText } from 'ai';
+import { wrapLanguageModel } from '@lmnr-ai/lmnr';
+
+const { text } = await generateText({
+  // wrapLanguageModel is what enables debugger caching
+  model: wrapLanguageModel(openai('gpt-5-mini')),
+  prompt: 'What is laminar flow?',
+});
+```
+
+See [AI SDK caching](/debugger/setup#ai-sdk-caching) for the full debugger setup, including the v5 and v6 telemetry variant.
 
 ## See what happened in a trace
 
@@ -288,7 +515,7 @@ If a single route makes multiple LLM calls, wrap them in `observe` to group them
 ```typescript app/api/chat/route.ts
 import { openai } from '@ai-sdk/openai';
 import { generateText } from 'ai';
-import { getTracer, observe } from '@lmnr-ai/lmnr';
+import { observe } from '@lmnr-ai/lmnr';
 import { NextResponse } from 'next/server';
 
 export const POST = async (req: Request) => {
@@ -297,18 +524,14 @@ export const POST = async (req: Request) => {
   const result = await observe(
     { name: 'POST /api/chat' },
     async () => {
-      const tracer = getTracer();
-
       const { text: outline } = await generateText({
         model: openai('gpt-5-mini'),
         prompt: `Outline an article about ${topic}.`,
-        experimental_telemetry: { isEnabled: true, tracer },
       });
 
       const { text: draft } = await generateText({
         model: openai('gpt-5-mini'),
         prompt: `Write a draft based on: ${outline}`,
-        experimental_telemetry: { isEnabled: true, tracer },
       });
 
       return { outline, draft };
@@ -344,13 +567,94 @@ export async function register() {
 }
 ```
 
+On AI SDK v7, register Laminar telemetry after this so calls are traced without a per-call tracer. On v5 and v6, keep passing `getTracer()` per call.
+
+## Migrating from v5 or v6 to v7
+
+If you already trace the AI SDK with the `experimental_telemetry` + `getTracer()` pattern, here is how to move to the v7 style. The trace shapes are nearly identical, so your existing traces, Signals, and dashboards keep working.
+
+<Steps>
+<Step title="Upgrade the AI SDK">
+
+```bash
+npm install ai@latest @lmnr-ai/lmnr@latest
+```
+
+</Step>
+<Step title="Register Laminar once instead of initializing">
+
+Replace the `Laminar.initialize()` call at your entry point with a single `registerTelemetry` call. The integration initializes Laminar for you, so move any `Laminar.initialize()` options into `laminarOptions`.
+
+```typescript
+// Before (v5 / v6)
+import { Laminar } from '@lmnr-ai/lmnr';
+Laminar.initialize({ projectApiKey: process.env.LMNR_PROJECT_API_KEY });
+
+// After (v7)
+import { registerTelemetry } from 'ai';
+import { LaminarAiSdkTelemetry } from '@lmnr-ai/lmnr';
+registerTelemetry(
+  new LaminarAiSdkTelemetry({
+    laminarOptions: { projectApiKey: process.env.LMNR_PROJECT_API_KEY },
+  }),
+);
+```
+
+</Step>
+<Step title="Drop experimental_telemetry from your call sites">
+
+Once Laminar is registered, every call is traced. Remove the per-call `experimental_telemetry` block.
+
+```typescript
+// Before (v5 / v6)
+const { text } = await generateText({
+  model: openai('gpt-5-mini'),
+  prompt: 'What is laminar flow?',
+  experimental_telemetry: { isEnabled: true, tracer: getTracer() },
+});
+
+// After (v7)
+const { text } = await generateText({
+  model: openai('gpt-5-mini'),
+  prompt: 'What is laminar flow?',
+});
+```
+
+</Step>
+<Step title="Move any per-call settings to the telemetry block">
+
+If a call passed `functionId` or `metadata` through `experimental_telemetry`, or you want to turn tracing off for it, use the `telemetry` block instead.
+
+```typescript
+const { text } = await generateText({
+  model: openai('gpt-5-mini'),
+  prompt: 'Draft a release note.',
+  telemetry: { functionId: 'release-notes', metadata: { env: 'production' } },
+  // or: telemetry: { isEnabled: false } to skip this call
+});
+```
+
+</Step>
+<Step title="Keep wrapLanguageModel for the debugger">
+
+The [debugger](/debugger/setup#ai-sdk-caching) still needs `wrapLanguageModel` around each model for caching. That step is unchanged across versions.
+
+</Step>
+<Step title="Keep flushing at exit">
+
+`await Laminar.shutdown()` (or `Laminar.flush()`) is still required at the end of short-lived scripts and serverless runtimes so the last spans are sent.
+
+</Step>
+</Steps>
+
 ## Troubleshooting
 
 <AccordionGroup>
   <Accordion title="I don't see any traces in Laminar">
     - Confirm `LMNR_PROJECT_API_KEY` is set in the runtime environment, not just your shell.
-    - `Laminar.initialize()` must run before the first AI SDK call. In Next.js, that means it lives in `instrumentation.ts`.
-    - `experimental_telemetry` is opt-in per call. If you forget to pass `{ isEnabled: true, tracer: getTracer() }`, the call is not traced.
+    - Laminar must be registered (v7: `registerTelemetry(new LaminarAiSdkTelemetry())`) or initialized (v5/v6: `Laminar.initialize()`) before the first AI SDK call. In Next.js, that means it lives in `instrumentation.ts`.
+    - On v5 and v6, `experimental_telemetry` is opt-in per call. If you forget to pass `{ isEnabled: true, tracer: getTracer() }`, the call is not traced. On v7, check you didn't pass `telemetry: { isEnabled: false }`.
+    - Short-lived scripts can exit before spans flush. Call `await Laminar.shutdown()` at the end.
     - Edge runtime is not supported. Make sure your route runs in `nodejs`.
   </Accordion>
   <Accordion title="Build fails with OpenTelemetry / require errors">
