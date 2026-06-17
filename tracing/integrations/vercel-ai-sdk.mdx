@@ -554,15 +554,20 @@ If you already register a tracer provider with `@vercel/otel`, do not call `Lami
 import { registerOTel } from '@vercel/otel';
 
 export async function register() {
-  if (process.env.NEXT_RUNTIME === 'nodejs') {
-    const { LaminarSpanProcessor, initializeLaminarInstrumentations } =
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    const { registerTelemetry } = await import("ai");
+    const { initializeLaminarInstrumentations, LaminarAiSdkTelemetry } =
       await import('@lmnr-ai/lmnr');
 
+    // Next.js telemetry
     registerOTel({
       serviceName: 'my-service',
-      spanProcessors: [new LaminarSpanProcessor()],
       instrumentations: initializeLaminarInstrumentations(),
     });
+
+    // Laminar AI SDK telemetry. Or `Laminar.initialize()`
+    // for AI SDK before v7.
+    registerTelemetry(new LaminarAiSdkTelemetry());
   }
 }
 ```
