@@ -23,13 +23,13 @@ The `instrumentModules` option is required to instrument the modules you need.
 ```javascript {7-11}
 import { Laminar } from '@lmnr-ai/lmnr';
 import { OpenAI } from 'openai';
-import anthropic from 'anthropic';
+import Anthropic from '@anthropic-ai/sdk';
 
 Laminar.initialize({
   projectApiKey: process.env.LMNR_PROJECT_API_KEY,
   instrumentModules: {
     OpenAI: OpenAI,
-    anthropic: anthropic,
+    anthropic: Anthropic,
     // ... other modules you want to instrument
   }
 });
