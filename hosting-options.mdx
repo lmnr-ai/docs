@@ -58,20 +58,18 @@ For production self-hosting options, see the [GitHub repository](https://github.
 
 ### Access control
 
-By default, any user can access your self-hosted instance. To restrict access to specific GitHub users, enable GitHub OAuth:
+By default, a self-hosted instance accepts sign-in from anyone who can reach it. To require users to authenticate through an OAuth provider, set that provider's credentials. GitHub and Google are configured directly:
 
 ```bash
 AUTH_GITHUB_ID=your_github_oauth_app_id
 AUTH_GITHUB_SECRET=your_github_oauth_app_secret
+
+AUTH_GOOGLE_ID=your_google_oauth_client_id
+AUTH_GOOGLE_SECRET=your_google_oauth_client_secret
 ```
 
-Then create an `allowed-emails.json` file in your project root:
+Enterprise SSO providers (Azure Entra ID, Okta, Keycloak) are also supported through their own `AUTH_*` variables.
 
-```json
-{
-  "emails": [
-    "user1@example.com",
-    "user2@example.com"
-  ]
-}
-```
+<Note>
+Configuring a provider controls *how* users sign in, not *who* can sign in: anyone with an account at that provider can still create an account on your instance. There is no built-in email allow-list.
+</Note>
