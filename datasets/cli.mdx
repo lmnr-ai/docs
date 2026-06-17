@@ -64,13 +64,7 @@ data,target
 
 <Step title="Authenticate and link your project">
 
-The CLI authenticates as you, the signed-in user. Log in once:
-
-```bash
-lmnr-cli login
-```
-
-This opens a browser to authorize the CLI. Every dataset command then runs against the project linked to the current directory. Run `lmnr-cli setup` once in your project to write the `.lmnr/project.json` link file:
+The CLI authenticates as you, the signed-in user. Run `lmnr-cli setup` once in your project: it logs you in (opens a browser to authorize the CLI) and links the current directory to a project by writing `.lmnr/project.json`. Every dataset command then runs against that linked project.
 
 ```bash
 lmnr-cli setup
@@ -143,10 +137,10 @@ This will overwrite the contents of the current file `my-cli-dataset.json`.
 <Steps>
 <Step title="Authenticate and link your project">
 
-Log in and make sure the current directory is linked to your project (see [above](#creating-a-new-dataset-and-iterating-on-it)):
+Run `lmnr-cli setup` once to log in and link the current directory to your project (see [above](#creating-a-new-dataset-and-iterating-on-it)):
 
 ```bash
-lmnr-cli login
+lmnr-cli setup
 ```
 
 </Step>
