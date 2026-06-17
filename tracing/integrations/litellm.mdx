@@ -12,7 +12,7 @@ sidebarTitle: LiteLLM
 <Steps>
 <Step title="Ensure you have the latest version of Laminar">
 ```sh
-pip install -U lmnr[all]
+pip install -U 'lmnr[all]'
 ```
 </Step>
 <Step title="Initialize Laminar">
@@ -20,27 +20,30 @@ pip install -U lmnr[all]
 Laminar auto-instruments LiteLLM. No callback is required.
 
 ```python
+import os
 import litellm
 from lmnr import Laminar
 
-Laminar.initialize(project_api_key="LMNR_PROJECT_API_KEY")
+Laminar.initialize(project_api_key=os.environ["LMNR_PROJECT_API_KEY"])
 ```
-</Step>
+
 <Note>
 `LaminarLiteLLMCallback` is deprecated and does nothing. Remove it if you already use it.
 </Note>
+</Step>
 <Step title="Run your code and see traces in Laminar">
 
 Example code:
 
 ```python
+import os
 import litellm
 from lmnr import Laminar
 
-Laminar.initialize(project_api_key="LMNR_PROJECT_API_KEY")
+Laminar.initialize(project_api_key=os.environ["LMNR_PROJECT_API_KEY"])
 
 response = litellm.completion(
-    model="gpt-4.1-nano",
+    model="gpt-5-nano",
     messages=[
       {"role": "user", "content": "What is the capital of France?"}
     ],

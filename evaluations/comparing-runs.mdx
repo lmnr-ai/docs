@@ -70,18 +70,15 @@ For anything beyond CSV, query the underlying table with SQL:
 
 ```sql
 SELECT
-    e.name,
-    e.created_at,
-    AVG(ed.scores['accuracy']) AS avg_accuracy,
-    AVG(ed.scores['length_ok']) AS avg_length_ok
-FROM evaluation_datapoints ed
-JOIN evaluations e ON ed.evaluation_id = e.id
-WHERE e.group_name = 'capitals'
-GROUP BY e.id, e.name, e.created_at
-ORDER BY e.created_at DESC
+    evaluation_id,
+    AVG(scores['accuracy']) AS avg_accuracy,
+    AVG(scores['length_ok']) AS avg_length_ok
+FROM evaluation_datapoints
+GROUP BY evaluation_id
+ORDER BY avg_accuracy DESC
 ```
 
-See the [SQL editor](/platform/sql-editor) page for more.
+The SQL editor exposes `evaluation_datapoints` (one row per datapoint, with `scores`, `target`, `executor_output`, and the joined trace). Each run's name and group live in a separate Postgres table that the SQL editor does not expose, so filter and group by `evaluation_id` here and map ids back to runs in the UI. See the [SQL editor](/platform/sql-editor) page for more.
 
 ## Next steps
 

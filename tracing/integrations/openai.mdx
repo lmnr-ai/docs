@@ -60,7 +60,7 @@ Laminar automatically instruments the official OpenAI package with a single line
     ```typescript
     // Make API calls to OpenAI as you normally would
     const response = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
+      model: "gpt-5-mini",
       messages: [
         { role: "system", content: "You are a helpful assistant." },
         { role: "user", content: "Hello, how are you?" }
@@ -118,7 +118,7 @@ Laminar automatically instruments the official OpenAI package with a single line
     ```python
     # Make API calls to OpenAI as you normally would
     response = client.chat.completions.create(
-        model="gpt-4.1-mini",
+        model="gpt-5-mini",
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": "Hello, how are you?"}
@@ -160,7 +160,7 @@ Laminar automatically traces image inputs (data URLs and external URLs) sent to 
   <Tab title="TypeScript">
     ```typescript
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-5-mini',
       messages: [
         {
           role: 'user',
@@ -184,7 +184,7 @@ Laminar automatically traces image inputs (data URLs and external URLs) sent to 
   <Tab title="Python">
     ```python
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-5-mini",
         messages=[
             {
                 "role": "user",
