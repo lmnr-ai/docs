@@ -5,9 +5,13 @@ sidebarTitle: Langfuse
 
 ## Overview
 
-Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. The Langfuse bridge lets you keep your existing Langfuse instrumentation and send the same spans to Laminar at the same time, so you can compare the two platforms on your own traces without rewriting any code. Self-host via Helm or use managed cloud.
+If you already instrument your agent with Langfuse and want to try Laminar, you can, without rewriting or migrating anything. Add one line and the same spans flow to both platforms at once, so you can evaluate Laminar on your own real traces:
 
-[Langfuse](https://langfuse.com) is an LLM observability platform whose Python SDK (v3 and up) is built on OpenTelemetry. Because both Langfuse and Laminar speak OpenTelemetry, Laminar can attach its own span processor to Langfuse's tracer provider: every span Langfuse emits, from `@observe`, `langfuse.openai`, or `langfuse.langchain`, is dual-exported to Laminar and translated into Laminar's conventions. You do not migrate anything to try Laminar. You add one line, run side by side, and decide later.
+- **No code changes.** Your `@observe` functions, `langfuse.openai` calls, and `langfuse.langchain` runs stay exactly as they are.
+- **Side by side.** Langfuse keeps receiving everything it does today; Laminar receives a copy in parallel.
+- **Reversible.** It is one specifier you can remove whenever you want, so there is no commitment to evaluate.
+
+Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. [Langfuse](https://langfuse.com) is an LLM observability platform whose Python SDK (v3 and up) is also built on OpenTelemetry. Because both speak OpenTelemetry, Laminar attaches its own span processor to Langfuse's tracer provider: every span Langfuse emits is dual-exported to Laminar and translated into Laminar's conventions.
 
 What the bridge captures:
 
@@ -47,13 +51,11 @@ export LANGFUSE_SECRET_KEY=sk-lf-...
 </Step>
 <Step title="Initialize Laminar with the Langfuse instrument">
 
-Call `Laminar.initialize()` with `instruments={Instruments.LANGFUSE}` before you build your Langfuse client. That single argument attaches Laminar to Langfuse's tracer provider. Everything else in your code stays the same.
+Call `Laminar.initialize()` with `instruments={Instruments.LANGFUSE}`. That single argument attaches Laminar to Langfuse's tracer provider, whether the Langfuse client is built before or after this call. Everything else in your code stays the same.
 
-```python {1,5}
+```python {1,4}
 from lmnr import Laminar, Instruments
 
-# Initialize Laminar BEFORE importing the Langfuse OpenAI wrapper so the
-# bridge is attached to Langfuse's tracer provider from the first span.
 Laminar.initialize(instruments={Instruments.LANGFUSE})
 
 from langfuse import observe
@@ -154,19 +156,6 @@ print(agent("What's the weather in Tokyo, and how much is 100 USD in JPY?"))
 </Step>
 </Steps>
 
-## Connecting when you don't control initialization
-
-If your Langfuse client is created somewhere you can't easily edit, or you want to attach the bridge imperatively, call `Laminar.connect_to_langfuse()` after `Laminar.initialize()` instead of passing the instrument.
-
-```python
-from lmnr import Laminar
-
-Laminar.initialize()
-Laminar.connect_to_langfuse()  # returns True once the bridge is attached
-```
-
-It returns `True` on success, or `False` if Laminar isn't initialized or `langfuse` is missing or older than 3.0.
-
 ## See what happened in a trace
 
 Open a bridged run in Laminar and you land on the transcript view: the user prompt at the top, each model turn as a conversation line, and every tool call inline with its arguments and result. The bridge rewrites Langfuse's observations into Laminar's message format, so an LLM turn with tool calls reads as a conversation rather than a raw attribute blob. The span tree tells you the shape of the run; the transcript tells you what actually happened.
@@ -181,7 +170,7 @@ More on the trace UX: [Viewing traces](/platform/viewing-traces).
 
 The point of the bridge is that you don't have to commit up front. Once you decide Laminar is what you want, remove the Langfuse-specific code at your own pace:
 
-1. Drop the `Instruments.LANGFUSE` specifier (or the `connect_to_langfuse()` call) and enable Laminar's native instrumentors instead. For the example above, that is `Laminar.initialize()` with the default instruments, which auto-instruments the OpenAI SDK.
+1. Drop the `Instruments.LANGFUSE` specifier and enable Laminar's native instrumentors instead. For the example above, that is `Laminar.initialize()` with the default instruments, which auto-instruments the OpenAI SDK.
 2. Replace `from langfuse.openai import OpenAI` with `from openai import OpenAI`, and swap `@observe` from `langfuse` for [Laminar's own `observe`](/tracing/structure/observe-decorator).
 3. Remove the Langfuse client and credentials.
 
@@ -207,9 +196,8 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
 <AccordionGroup>
   <Accordion title="I don't see any traces in Laminar">
     - Confirm `LMNR_PROJECT_API_KEY` is set in the same process that runs the agent.
-    - The bridge is opt-in. It is NOT enabled merely because `langfuse` is installed. You must pass `instruments={Instruments.LANGFUSE}` or call `Laminar.connect_to_langfuse()`.
-    - Call `Laminar.initialize()` (or `connect_to_langfuse()`) **before** you construct the Langfuse client. The bridge also attaches to clients created afterward, but initializing first is the reliable order.
-    - The bridge requires `langfuse >= 3.0.0`. On `langfuse` 2.x there's nothing OpenTelemetry-native to attach to, and `connect_to_langfuse()` returns `False`.
+    - The bridge is opt-in. It is NOT enabled merely because `langfuse` is installed. You must pass `instruments={Instruments.LANGFUSE}` to `Laminar.initialize()`.
+    - The bridge requires `langfuse >= 3.0.0`. On `langfuse` 2.x there's nothing OpenTelemetry-native to attach to.
   </Accordion>
   <Accordion title="The same call shows up twice in Laminar">
     Opting into the bridge does not turn off Laminar's other instrumentors. If you enable `Instruments.LANGFUSE` while the default instruments are still active, a `langfuse.openai` call can be traced once by the bridge and once by Laminar's native OpenAI instrumentor. Pass an explicit `instruments` set listing only what you want, for example `instruments={Instruments.LANGFUSE}`, so the bridge is the single source.
