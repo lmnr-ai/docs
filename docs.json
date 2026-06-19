@@ -39,6 +39,7 @@
                   "tracing/integrations/langchain",
                   "tracing/integrations/deepagents",
                   "tracing/integrations/litellm",
+                  "tracing/integrations/langfuse",
                   "tracing/integrations/mastra",
                   "tracing/integrations/pydantic-ai",
                   "tracing/integrations/temporal",
