@@ -1,0 +1,51 @@
+---
+title: Self-hosting Laminar
+sidebarTitle: Overview
+---
+
+Laminar is [open-source](https://github.com/lmnr-ai/lmnr), so you can run the full observability and debugging stack in your own infrastructure instead of (or alongside) Laminar Cloud. Self-host with [Docker Compose](/self-hosting/docker-compose) for local and single-node setups, or the [Kubernetes Helm chart](/self-hosting/kubernetes) for production. Both run the same stack: frontend, app server, query engine, PostgreSQL, ClickHouse, Redis, RabbitMQ, and Quickwit.
+
+## Cloud or self-host
+
+| | Laminar Cloud | Self-hosted |
+|---|---|---|
+| Setup | Sign up, copy an API key | Run Docker Compose or install the Helm chart |
+| Infrastructure | Managed by Laminar | Your cluster, your storage |
+| Data residency | Laminar Cloud | Stays in your infrastructure |
+| AI features (chat-with-trace, SQL-with-AI, [Signals](/signals/introduction)) | Included | Bring your own LLM provider key |
+| [Slack](/signals/alerts) notifications and alerts | Included | Requires an enterprise license key |
+| Upgrades | Automatic | You run `helm upgrade` / `docker compose pull` |
+
+If you just want to start tracing, [Laminar Cloud](https://laminar.sh) is the fastest path: sign up, create a project, copy the project API key, and set `LMNR_PROJECT_API_KEY`. The rest of this section covers running Laminar yourself.
+
+## Choose a deployment
+
+<CardGroup cols={2}>
+  <Card title="Docker Compose" icon="container" href="/self-hosting/docker-compose">
+    Single-node setup for local development and small deployments. One command brings up the whole stack.
+  </Card>
+  <Card title="Kubernetes (Helm)" icon="server" href="/self-hosting/kubernetes">
+    Production deployments on EKS or GKE. Persistent storage, S3-backed ClickHouse, load balancers, and TLS.
+  </Card>
+</CardGroup>
+
+## Configure your deployment
+
+The Helm chart exposes every paid and optional feature through values in `laminar.yaml`. See the [configuration reference](/self-hosting/configuration) for the full surface:
+
+- **[AI features](/self-hosting/configuration#ai-features-and-llm-provider)**: chat-with-trace, SQL-with-AI, and Signals all run through one LLM provider (Gemini, OpenAI, or Bedrock).
+- **[Signals](/self-hosting/configuration#signals)**: natural-language outcome and failure extraction, on by default once an LLM key is set.
+- **[Slack notifications](/self-hosting/configuration#slack-notifications)**: brokered through Laminar Cloud with an enterprise license key.
+- **[OAuth login](/self-hosting/configuration#oauth-login)**: GitHub, Google, Azure AD, Okta, and Keycloak.
+- **[Storage](/self-hosting/configuration#storage)**, **[TLS and ingress](/self-hosting/configuration#tls-and-ingress)**, **[PII redaction](/self-hosting/configuration#pii-redaction)**, **[secrets management](/self-hosting/configuration#secrets-management)**, and **[image pinning](/self-hosting/configuration#container-images)**.
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Start tracing" icon="play" href="/tracing/introduction">
+    Point the SDK at your instance and send your first traces.
+  </Card>
+  <Card title="View traces" icon="eye" href="/platform/viewing-traces">
+    Read the transcript view instead of a tree of span names.
+  </Card>
+</CardGroup>

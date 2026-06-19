@@ -1,0 +1,141 @@
+---
+title: Self-host Laminar on Kubernetes with Helm
+sidebarTitle: Kubernetes (Helm)
+---
+
+For production deployments, run Laminar on Kubernetes with the [Laminar Helm chart](https://github.com/lmnr-ai/lmnr-helm). The chart deploys the full stack: frontend, app server, query engine, PostgreSQL, ClickHouse, Redis, RabbitMQ, and Quickwit. EKS and GKE are the recommended clusters.
+
+This page covers a minimal install. For AI features, Signals, Slack, OAuth, storage, and TLS, see the [configuration reference](/self-hosting/configuration).
+
+## Prerequisites
+
+- A Kubernetes cluster (EKS or GKE recommended)
+- Helm 3.x
+- An S3-compatible bucket for ClickHouse and Quickwit storage (AWS S3, or GCS with HMAC credentials)
+- **AWS**: the [AWS Load Balancer Controller](https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html) and [EBS CSI Driver](https://docs.aws.amazon.com/eks/latest/userguide/ebs-csi.html)
+- **GCP**: the built-in GCE Ingress controller and GCE Persistent Disk CSI Driver
+
+## Install
+
+Add the Helm repository, then clone the chart repo to get the `laminar.yaml` values file you'll edit:
+
+```bash
+helm repo add laminar https://lmnr-ai.github.io/lmnr-helm
+helm repo update
+
+git clone https://github.com/lmnr-ai/lmnr-helm.git
+cd lmnr-helm
+```
+
+Edit `laminar.yaml` and replace every placeholder value (`<region>`, `<bucket-name>`, and so on) with your real cloud provider, credentials, buckets, and availability zones. At minimum, set:
+
+- `global.cloudProvider` to `aws` or `gcp`.
+- Cloud credentials and the S3 bucket for ClickHouse storage.
+- `AEAD_SECRET_KEY`, generated with `openssl rand -hex 32`. This encrypts project API keys and model API keys.
+- `NEXTAUTH_SECRET`, any random string.
+- `LLM_API_KEY` if you want AI features (chat-with-trace, SQL-with-AI, Signals) active out of the box.
+- ClickHouse and Quickwit S3 bucket endpoints and regions.
+- Availability zones (required for AWS EBS volumes).
+
+<Warning>
+Angle-bracket placeholders like `<region>` produce invalid XML in the ClickHouse config and cause `CrashLoopBackOff` errors if left unchanged. Replace all of them before installing.
+</Warning>
+
+Install the chart, then point the frontend at its load balancer once the address is provisioned:
+
+```bash
+# 1. Install
+helm upgrade -i laminar laminar/laminar -f laminar.yaml
+
+# 2. Get the frontend ALB URL (wait 1-2 minutes for provisioning)
+ALB_URL=$(kubectl get ingress laminar-frontend-ingress -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+
+# 3. Configure frontend URLs
+helm upgrade -i laminar laminar/laminar -f laminar.yaml \
+  --set frontend.env.nextauthUrl="http://$ALB_URL" \
+  --set frontend.env.nextPublicUrl="http://$ALB_URL"
+```
+
+On GCP without a custom hostname, the frontend is exposed through a `LoadBalancer` Service instead of an Ingress: read the address with `kubectl get svc laminar-frontend-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}'`.
+
+## Verify the install
+
+Check that every pod is running:
+
+```bash
+kubectl get pods
+```
+
+You should see `app-server`, `app-server-consumer`, `clickhouse`, `frontend`, `postgres`, `query-engine`, the five `quickwit-*` pods, `rabbitmq`, and `redis` all `Running`. If a pod is stuck in `Init`, it is waiting on a dependency: inspect with `kubectl logs <pod> -c wait-for-postgres` (or `-c wait-for-redis`).
+
+## Point the SDK to your cluster
+
+Get the app server's load balancer address and use it as the SDK base URL:
+
+```bash
+LMNR_BASE_URL=$(kubectl get svc laminar-app-server-load-balancer -o jsonpath='{.status.loadBalancer.ingress[0].hostname}') && echo $LMNR_BASE_URL
+```
+
+The app server exposes HTTP trace ingestion on port `443` and gRPC on `8443`. Both default in the SDK, so you only pass `baseUrl` / `base_url`:
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { Laminar } from '@lmnr-ai/lmnr';
+
+    Laminar.initialize({
+      projectApiKey: "<YOUR_PROJECT_API_KEY>",
+      baseUrl: "http://<LMNR_BASE_URL>",
+    });
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import Laminar
+
+    Laminar.initialize(
+        project_api_key="<YOUR_PROJECT_API_KEY>",
+        base_url="http://<LMNR_BASE_URL>",
+    )
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+SDK clients running inside the same cluster can skip the load balancer and talk to the app server directly at `http://laminar-app-server-service:8000`.
+</Note>
+
+## Upgrade
+
+The standard upgrade rolls Deployments over and restarts StatefulSet pods one at a time:
+
+```bash
+helm upgrade -i laminar laminar/laminar -f laminar.yaml
+```
+
+Some releases change immutable StatefulSet fields and need extra steps (for example, upgrading from `<= 0.1.11` to `>= 0.1.12` requires deleting the RabbitMQ and Quickwit StatefulSets with `--cascade=orphan` first). Check the [chart's upgrade notes](https://github.com/lmnr-ai/lmnr-helm/blob/main/CONFIGURATION.md#upgrading-the-chart) before upgrading across minor versions.
+
+## More detail
+
+The chart repo holds the canonical step-by-step references:
+
+- [QUICKSTART](https://github.com/lmnr-ai/lmnr-helm/blob/main/QUICKSTART.md): install walkthrough and troubleshooting.
+- [CONFIGURATION](https://github.com/lmnr-ai/lmnr-helm/blob/main/CONFIGURATION.md): every value, including secrets management, OAuth, storage, and upgrades.
+- [NETWORKING](https://github.com/lmnr-ai/lmnr-helm/blob/main/NETWORKING.md): how the frontend and app server are exposed, TLS, and DNS.
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Configuration reference" icon="sliders" href="/self-hosting/configuration">
+    AI features, Signals, Slack, OAuth, storage, TLS, and PII redaction.
+  </Card>
+  <Card title="Start tracing" icon="play" href="/tracing/introduction">
+    Point the SDK at your cluster and send traces.
+  </Card>
+  <Card title="Signals" icon="radio" href="/signals/introduction">
+    Define outcome and failure detectors over your traces.
+  </Card>
+  <Card title="View traces" icon="eye" href="/platform/viewing-traces">
+    Read the transcript view instead of a tree of span names.
+  </Card>
+</CardGroup>

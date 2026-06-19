@@ -17,8 +17,7 @@
             "group": "Overview",
             "pages": [
               "overview",
-              "getting-started",
-              "hosting-options"
+              "getting-started"
             ]
           },
           {
@@ -140,6 +139,15 @@
               "queues/quickstart",
               "playground"
             ]
+          },
+          {
+            "group": "Self-hosting",
+            "pages": [
+              "self-hosting/overview",
+              "self-hosting/docker-compose",
+              "self-hosting/kubernetes",
+              "self-hosting/configuration"
+            ]
           }
         ]
       },
@@ -207,6 +215,12 @@
       ]
     }
   },
+  "redirects": [
+    {
+      "source": "/hosting-options",
+      "destination": "/self-hosting/overview"
+    }
+  ],
   "logo": "/logo/logo.png",
   "appearance": {
     "default": "dark",

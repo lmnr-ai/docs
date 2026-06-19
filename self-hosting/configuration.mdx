@@ -1,0 +1,393 @@
+---
+title: Helm Configuration Reference for Self-hosted Laminar
+sidebarTitle: Configuration
+---
+
+Every feature of a self-hosted Laminar is configured through values in `laminar.yaml`, the overrides file you pass to `helm upgrade -i laminar laminar/laminar -f laminar.yaml`. This page covers the settings most deployments need: AI features, Signals, Slack, OAuth login, storage, TLS, PII redaction, secrets, and image pinning. For the full value list, see [`values.yaml`](https://github.com/lmnr-ai/lmnr-helm/blob/main/charts/laminar/values.yaml) in the chart repo.
+
+Apply any change by re-running the install command:
+
+```bash
+helm upgrade -i laminar laminar/laminar -f laminar.yaml
+```
+
+## AI features and LLM provider
+
+Chat-with-trace, SQL-with-AI, and [Signals](/signals/introduction) all run through one unified LLM provider configuration. Set the provider on all three application pods (they default to `gemini`), and supply the key:
+
+- `LLM_PROVIDER`: `gemini` (default), `openai`, or `bedrock`. Set via `frontend.env.llmProvider`, `appServer.env.llmProvider`, and `appServerConsumer.env.llmProvider`.
+- `LLM_API_KEY`: the key for `gemini` or `openai`. Set via `secrets.data`.
+- `LLM_BASE_URL`: optional, for OpenAI-compatible gateways (LiteLLM, OpenRouter, vLLM) or custom Gemini endpoints. Set via `*.env.llmBaseUrl`.
+- `LLM_MODEL_SMALL` / `LLM_MODEL_MEDIUM` / `LLM_MODEL_LARGE`: optional per-tier model overrides. Per-provider defaults apply when unset. For Bedrock, these are Inference Profile IDs.
+
+AI features in the frontend activate as soon as `LLM_API_KEY` (or AWS credentials for Bedrock) is populated.
+
+### Gemini (default)
+
+Just supply the key:
+
+```yaml
+secrets:
+  data:
+    LLM_API_KEY: "your-gemini-key"
+```
+
+### OpenAI or OpenAI-compatible gateway
+
+```yaml
+frontend:
+  env:
+    llmProvider: "openai"
+    # Optional gateway (LiteLLM, OpenRouter, vLLM):
+    # llmBaseUrl: "http://my-gateway:4000"
+
+appServer:
+  env:
+    llmProvider: "openai"
+
+appServerConsumer:
+  env:
+    llmProvider: "openai"
+
+secrets:
+  data:
+    LLM_API_KEY: "your-openai-or-gateway-key"
+```
+
+### AWS Bedrock
+
+Bedrock uses AWS credentials from `secrets.data` instead of `LLM_API_KEY`:
+
+```yaml
+frontend:
+  env:
+    llmProvider: "bedrock"
+
+appServer:
+  env:
+    llmProvider: "bedrock"
+
+appServerConsumer:
+  env:
+    llmProvider: "bedrock"
+
+secrets:
+  data:
+    AWS_ACCESS_KEY_ID: "your-aws-access-key-id"
+    AWS_SECRET_ACCESS_KEY: "your-secret-access-key"
+    AWS_REGION: "us-east-1"
+```
+
+### Model overrides
+
+Pin specific models per size tier (for Bedrock, values are Inference Profile IDs):
+
+```yaml
+appServerConsumer:
+  env:
+    llmModelSmall: "gemini-3-flash-preview"
+    llmModelMedium: "gemini-3-flash-preview"
+    llmModelLarge: "gemini-3-pro-preview"
+```
+
+## Signals
+
+[Signals](/signals/introduction) extract structured events from your traces using the LLM provider configured above. They are **enabled by default** in the frontend once an `LLM_API_KEY` (or Bedrock credentials) is set. No separate flag is required to turn them on.
+
+To disable Signals:
+
+```yaml
+frontend:
+  env:
+    signalsEnabled: "false"
+```
+
+To disable chat-with-trace independently:
+
+```yaml
+frontend:
+  env:
+    agentChatEnabled: "false"
+```
+
+<Note>
+Signal extraction runs in the `app-server-consumer` pod, so its `llmProvider` (and any model overrides) governs how Signals are computed. Keep the provider consistent across `frontend`, `appServer`, and `appServerConsumer` unless you have a reason to split them.
+</Note>
+
+## Slack notifications
+
+Laminar posts [alerts](/signals/alerts) and notifications to Slack through a broker run by Laminar Cloud: your instance uses Laminar Cloud's official Slack app, so you do not register a Slack app of your own. Laminar Cloud runs both legs of the OAuth flow on your behalf; the bot token is returned to your instance server-to-server and encrypted at rest. Your instance authenticates to the broker with an **enterprise license key**.
+
+Set the license key in `laminar.yaml`:
+
+```yaml
+secrets:
+  data:
+    LMNR_LICENSE_KEY: "your-enterprise-license-key"
+```
+
+When the license key is set, the "Connect Slack" button in workspace settings uses the brokered flow. `SLACK_BROKER_URL` defaults to Laminar Cloud's origin (`https://laminar.sh`), so you normally only set the license key. To get a license key, contact [founders@lmnr.ai](mailto:founders@lmnr.ai).
+
+Slack bot tokens are encrypted at rest with `SLACK_ENCRYPTION_KEY`. You do not normally set this: when left empty, the chart defaults it to your `AEAD_SECRET_KEY` so there is one encryption key to manage. Set it explicitly in `secrets.data` only if you want Slack tokens encrypted under a separate key.
+
+## OAuth login
+
+Laminar supports OAuth login with GitHub, Google, Azure AD, Okta, and Keycloak. Add provider credentials to `secrets.data` and set the frontend URLs to your real domain. Omit a provider's credentials to disable it.
+
+<Warning>
+Callback / redirect URLs must match your `nextauthUrl` exactly, or the OAuth flow fails after the provider redirects back.
+</Warning>
+
+```yaml
+secrets:
+  data:
+    NEXTAUTH_SECRET: "your-nextauth-secret"
+
+    # GitHub: callback https://app.yourdomain.com/api/auth/callback/github
+    AUTH_GITHUB_ID: "your-github-client-id"
+    AUTH_GITHUB_SECRET: "your-github-client-secret"
+
+    # Google: redirect https://app.yourdomain.com/api/auth/callback/google
+    AUTH_GOOGLE_ID: "your-google-client-id"
+    AUTH_GOOGLE_SECRET: "your-google-client-secret"
+
+    # Azure AD: redirect https://app.yourdomain.com/api/auth/callback/azure-ad
+    AUTH_AZURE_AD_CLIENT_ID: "your-azure-client-id"
+    AUTH_AZURE_AD_CLIENT_SECRET: "your-azure-client-secret"
+    AUTH_AZURE_AD_TENANT_ID: "your-azure-tenant-id"
+
+    # Okta OIDC
+    AUTH_OKTA_CLIENT_ID: "your-okta-client-id"
+    AUTH_OKTA_CLIENT_SECRET: "your-okta-client-secret"
+    AUTH_OKTA_ISSUER: "https://your-okta-domain.com/oauth2/default"
+
+    # Keycloak OIDC
+    AUTH_KEYCLOAK_ID: "your-keycloak-id"
+    AUTH_KEYCLOAK_SECRET: "your-keycloak-secret"
+    AUTH_KEYCLOAK_ISSUER: "https://your-keycloak-domain.com/realms/My_Realm"
+
+frontend:
+  env:
+    nextauthUrl: "https://app.yourdomain.com"
+    nextPublicUrl: "https://app.yourdomain.com"
+```
+
+If your provider credentials already live in a Kubernetes Secret (created by the Keycloak operator, sealed-secrets, or external-secrets-operator), reference them with [`extraEnv`](#secrets-management) instead of inlining them.
+
+## Secrets management
+
+The chart reads secrets from three backends:
+
+1. **Kubernetes Secrets** (default): values in `secrets.data`.
+2. **AWS Secrets Manager**: for EKS with IRSA, via the Secrets Store CSI Driver.
+3. **HashiCorp Vault**: for on-premises or multi-cloud.
+
+To pull a secret from AWS Secrets Manager, list its keys under `secrets.awsSecretsManager` and leave placeholders in `secrets.data`:
+
+```yaml
+secrets:
+  awsSecretsManager:
+    enabled: true
+    region: "us-east-1"
+    serviceAccount:
+      create: false
+      name: "lmnr-secrets-sa"
+    clusterName: "production"
+    secretKeys:
+      - NEXTAUTH_SECRET
+      - POSTGRES_PASSWORD
+  data:
+    NEXTAUTH_SECRET: ""
+    POSTGRES_PASSWORD: ""
+    AWS_REGION: "us-east-1"
+```
+
+You can mix backends (auth tokens from AWS, database passwords from Vault, the rest from `secrets.data`). See the chart's [Secrets Management guide](https://github.com/lmnr-ai/lmnr-helm/blob/main/CONFIGURATION.md#secrets-management) for the Vault and mixed-source setups.
+
+### Referencing existing Secrets with extraEnv
+
+`extraEnv` injects environment variables into `frontend`, `appServer`, or `appServerConsumer`, supporting plain values, `secretKeyRef`, `configMapKeyRef`, and `fieldRef`. Entries override matching keys from `secrets.data`, so you can selectively swap individual values without restructuring the secrets config:
+
+```yaml
+frontend:
+  extraEnv:
+    - name: AUTH_KEYCLOAK_ID
+      valueFrom:
+        secretKeyRef:
+          name: keycloak-realm
+          key: client-id
+    - name: AUTH_KEYCLOAK_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: keycloak-realm
+          key: client-secret
+    - name: AUTH_KEYCLOAK_ISSUER
+      value: "https://keycloak.example.com/realms/my-realm"
+```
+
+## Container images
+
+The three Laminar containers (frontend, app server, query engine) are pulled from public `ghcr.io/lmnr-ai/*-ee` images, so most installs never touch this section. For production, pin a specific tag instead of `latest` so a pod restart does not pick up a newer build. The three are released together: keep their tags in sync.
+
+```yaml
+images:
+  pullPolicy: IfNotPresent
+  frontend:
+    tag: "0.1.546"
+  appServer:
+    tag: "0.1.546"
+  queryEngine:
+    tag: "0.1.546"
+```
+
+Available tags are listed under the [Packages tab on GitHub](https://github.com/orgs/lmnr-ai/packages). To mirror images into a private registry, retag and push each image, point `images.repository` at the mirror, and attach `imagePullSecrets` to the default ServiceAccount (the chart does not template this; see the [chart reference](https://github.com/lmnr-ai/lmnr-helm/blob/main/CONFIGURATION.md#container-images)).
+
+## Storage
+
+ClickHouse and Quickwit hold the bulk of Laminar's data, and both can be backed by S3.
+
+### ClickHouse on S3
+
+```yaml
+clickhouse:
+  s3:
+    enabled: true
+    endpoint: "https://my-bucket.s3.us-east-1.amazonaws.com/"
+    region: "us-east-1"
+    useEnvironmentCredentials: true  # use the node IAM role on EKS
+    cache:
+      enabled: true
+      maxSize: "50Gi"
+```
+
+On GCP, ClickHouse's S3 backend needs **HMAC credentials** (the GKE metadata server returns OAuth2 tokens that GCS's S3 API rejects). Point the endpoint at `https://storage.googleapis.com/YOUR_BUCKET/` and supply HMAC keys. The chart is designed for one HMAC key pair to back both ClickHouse and Quickwit. See the chart's [ClickHouse S3 guide](https://github.com/lmnr-ai/lmnr-helm/blob/main/CONFIGURATION.md#clickhouse-s3-storage).
+
+### Quickwit (full-text search)
+
+Quickwit powers full-text [search](/platform/search) over spans. `quickwit.s3.defaultIndexRootUri` is the master switch for the whole Quickwit stack: leave it empty and the Quickwit workloads are skipped and search degrades gracefully (the rest of the platform is unaffected). Set it to a bucket you own to enable search:
+
+```yaml
+quickwit:
+  s3:
+    defaultIndexRootUri: "s3://my-bucket/indexes"
+    region: "us-east-1"
+```
+
+When `global.cloudProvider: gcp`, the chart auto-fills the GCS flavor and endpoint for you; supply the same HMAC keys used for ClickHouse via `quickwit.extraEnv`.
+
+### Persistent volumes
+
+The chart creates an EBS storage class scoped to the availability zones you list. Pods with persistent volumes can only schedule on nodes in the same zone, so make sure your nodes run in these zones:
+
+```yaml
+storage:
+  storageClass:
+    type: "gp3"
+    reclaimPolicy: "Retain"
+    zones:
+      - "us-east-1a"
+      - "us-east-1b"
+      - "us-east-1c"
+```
+
+Each stateful service (`postgres`, `clickhouse`, `rabbitmq`) can override its storage class and size independently under `<service>.persistence`.
+
+## TLS and ingress
+
+Laminar exposes two public endpoints: the frontend (web UI) and the app server (HTTP trace ingestion on `443`, gRPC on `8443`). TLS has three paths.
+
+### cert-manager (automatic, recommended for GCP and generic clusters)
+
+cert-manager provisions and renews free Let's Encrypt certificates. The hostname must be publicly DNS-resolvable so Let's Encrypt can complete the HTTP-01 challenge:
+
+```yaml
+frontend:
+  ingress:
+    hostname: "app.yourdomain.com"
+    className: "traefik"
+    tls:
+      enabled: true
+      clusterIssuer: "letsencrypt"
+      secretName: "laminar-frontend-tls"
+  env:
+    nextauthUrl: "https://app.yourdomain.com"
+    nextPublicUrl: "https://app.yourdomain.com"
+```
+
+### AWS ACM (recommended for AWS)
+
+On AWS, the NLB and ALB terminate TLS via an ACM certificate ARN annotation, with no in-cluster cert management:
+
+```yaml
+frontend:
+  ingress:
+    hostname: "app.yourdomain.com"
+    annotations:
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+      alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:region:account:certificate/xxx"
+      alb.ingress.kubernetes.io/ssl-redirect: '443'
+  env:
+    nextauthUrl: "https://app.yourdomain.com"
+    nextPublicUrl: "https://app.yourdomain.com"
+```
+
+### Pre-existing certificate
+
+Import a PEM certificate as a Kubernetes TLS secret and reference it with an empty `clusterIssuer`. See the chart's [NETWORKING guide](https://github.com/lmnr-ai/lmnr-helm/blob/main/NETWORKING.md) for the full app-server TLS and DNS options, including external-dns automation.
+
+<Note>
+On AWS, the app server's NLB already exposes HTTP (`443`) and gRPC (`8443`) externally; you usually do not need a separate app-server Ingress. On GCP the load balancer is pure TCP passthrough and cannot terminate TLS: front the app server with Traefik (or another ingress controller) to get TLS on both ports.
+</Note>
+
+## PII redaction
+
+The [PII redactor](/platform/pii-redaction) is an optional CPU-only gRPC service that strips personally identifiable information from spans before they are persisted. It is **disabled by default** and has no database or secret dependencies (the detection model is baked into the image). When enabled, the chart injects `PII_REDACTOR_URL` into the `app-server` and `app-server-consumer` pods, activating redaction during span processing.
+
+```yaml
+piiRedactor:
+  enabled: true
+```
+
+PII detection is CPU-intensive ONNX inference, so pin it to a dedicated compute-optimized node and size it generously:
+
+```yaml
+piiRedactor:
+  enabled: true
+  nodeSelector:
+    node.kubernetes.io/instance-type: c8i.2xlarge
+  resources:
+    requests:
+      cpu: "2"
+      memory: "4Gi"
+    limits:
+      cpu: "8"
+      memory: "16Gi"
+```
+
+## Sharing a Postgres database
+
+By default Laminar puts its tables in the `public` schema. To share a Postgres database with another service, point it at a dedicated schema with `global.postgresSchema`. The single value is dispatched to all three application pods, so they resolve the same `search_path`. Set it before the first deploy:
+
+```yaml
+global:
+  postgresSchema: "laminar"
+```
+
+On first boot the frontend runs `CREATE SCHEMA IF NOT EXISTS` for a non-`public` schema. If the schema is pre-provisioned or the DB role lacks `CREATE`, disable that step with `frontend.env.postgresCreateSchema: "false"`.
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Kubernetes (Helm)" icon="server" href="/self-hosting/kubernetes">
+    Back to the install walkthrough.
+  </Card>
+  <Card title="Signals" icon="radio" href="/signals/introduction">
+    Outcome and failure extraction over your traces.
+  </Card>
+  <Card title="PII redaction" icon="shield" href="/platform/pii-redaction">
+    How redaction renders in the UI and SQL.
+  </Card>
+  <Card title="Start tracing" icon="play" href="/tracing/introduction">
+    Send your first traces to your instance.
+  </Card>
+</CardGroup>
