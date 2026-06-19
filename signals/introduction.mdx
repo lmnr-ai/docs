@@ -9,7 +9,7 @@ When your agent goes into production, the questions you care about are things li
 **Signals are how Laminar answers them.** A Signal is an instruction, written in plain language, that reads every trace and produces a structured record when it sees what you described. The result is a stream of events you can **[query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on**.
 
 <Frame caption="A Signal's events tab: each row is one detected event linked back to a trace">
-  <img src="/images/signals/signal-detail.png" alt="Signal detail view with events list, per-event payload, and cluster sidebar" />
+  <img src="/images/signals/signal-detail.png" alt="Signal detail view with events list and per-event payload" />
 </Frame>
 
 ## What Signals can help you answer
@@ -46,7 +46,7 @@ Signal events are accessible via the `signal_events` table and can be easily que
 Each Signal can run in two modes, configured independently:
 
 - **Triggers** run the Signal on new traces as they arrive. Use Triggers for anything you want to watch in real time (live error rates, live success counts, anything that feeds Alerts). Trigger filters are AND-combined and are evaluated against accumulated trace state, so Signals fire once per matching trace.
-- **Jobs** run the Signal across a historical slice of traces. Use Jobs to backfill a new Signal, re-run a changed prompt over last week's traffic, or investigate a window of traces that match a filter.
+- **Backfill** runs the Signal across a historical slice of traces. Use a backfill to seed a new Signal, re-run a changed prompt over last week's traffic, or investigate a window of traces that match a filter.
 
 Both paths produce the same kind of signal event; the only difference is when and which traces the Signal reads.
 

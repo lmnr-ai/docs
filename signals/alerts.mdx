@@ -9,7 +9,7 @@ sidebarTitle: Alerts
   <img src="/images/signals/alerts.png" alt="Project alerts settings page showing configured alerts and Slack connection" />
 </Frame>
 
-Alerts live at the project level. Open **Project Settings > Alerts** to see every alert configured for the project, or create one from scratch.
+Alerts live at the project level. Open **Project Settings > Alerts** to see every alert configured for the project, or create one from scratch. You can also manage a single Signal's alerts in place: open the Signal, click **Settings**, and switch to the **Alerts** section to see and edit the alerts scoped to that Signal without leaving the page.
 
 ## Defaults on signal creation
 
@@ -38,6 +38,21 @@ Both trigger types are scoped to a single Signal. To cover multiple Signals, cre
 - **Critical**: the highest severity. This is the default for alerts auto-created with a Signal.
 
 The severity of each individual event is set by the Signal's extractor based on the Signal's prompt. A good way to learn what each level looks like on your data is to inspect a few events on the Signal detail page.
+
+## Output schema filters
+
+`New event` alerts can narrow further than severity. **Output schema filters only notify when an event's extracted output matches the conditions you set.** The available fields come straight from the Signal's structured output schema, so an alert can fire on, say, `error_type = "timeout"` while ignoring every other error.
+
+<Frame caption="New-event alert with an output schema filter group: notify only when isFailure = True">
+  <img src="/images/signals/alert-output-filters.png" alt="New alert form with trigger, severity, and an output schema filter condition group" />
+</Frame>
+
+- Click **Add filter** to start a condition group, then **Add condition** to add more conditions within it.
+- Conditions inside one group are AND-combined: all of them must match (the group header reads **All conditions must match**).
+- Add more groups to OR them together: an event triggers the alert if it matches any one group.
+- Field types follow the schema: numbers compare with `=`, `>`, `<`; booleans and enums offer their allowed values; strings match on substring.
+
+With no filters, the alert fires on every matching event. If the Signal has no output fields, there is nothing to filter on and the section stays empty.
 
 ## Skip notifications for similar events
 
