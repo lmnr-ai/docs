@@ -38,7 +38,9 @@ To drive it yourself instead, add `LMNR_DEBUG=true` to your run command to recor
 | `LMNR_DEBUG_REPLAY_TRACE_ID` | For replay | Trace id of the run to replay from. |
 | `LMNR_DEBUG_CACHE_UNTIL` | For replay | Span id of the last LLM call to replay (inclusive); calls after it run live. Accepts a full UUID, the last two UUID groups, the 16-char OTel id, or any hex suffix. |
 | `LMNR_DEBUG_SESSION_ID` | Optional | Pin a run to a specific session. You rarely need this: after the first run, `.lmnr/debug-session.json` rejoins the same session automatically. Set it to override the file or to join a session created elsewhere. |
-| `LMNR_TRACE_METADATA` | Optional | JSON object attached to the trace. Use key `rollout.note` for the pre-run annotation. |
+| `LMNR_DEBUG_RUN_NOTES_FILE` | Optional | Path to a file holding the pre-run note as raw markdown. The SDK reads the file and attaches its contents to the trace. Takes precedence over `LMNR_DEBUG_RUN_NOTES`. Only read when `LMNR_DEBUG` is on. |
+| `LMNR_DEBUG_RUN_NOTES` | Optional | Pre-run note as inline raw markdown. Use the file variable instead when the note is more than a line. Only read when `LMNR_DEBUG` is on. |
+| `LMNR_TRACE_METADATA` | Optional | JSON object attached to the trace. The `rollout.note` key holds the pre-run annotation, but the run-note variables above set it for you without hand-stringifying JSON. |
 
 The first `LMNR_DEBUG=true` run mints a session, registers it with Laminar, writes `.lmnr/debug-session.json`, and opens the session in your browser. Later runs in the same directory read that file and rejoin the session silently (no second browser tab). To start a clean session on purpose, run [`lmnr-cli debug session new`](/platform/cli#debug-session-new), which resets the file.
 
