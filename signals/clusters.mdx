@@ -5,8 +5,8 @@ sidebarTitle: Clusters
 
 When a Signal has fired across thousands of traces, reading the event list by hand stops working. **Clusters group similar events so you see patterns instead of scrolling.**
 
-<Frame caption="Clusters panel alongside the events list on a Signal detail page">
-  <img src="/images/signals/clusters.png" alt="Signal detail page showing event chart, event table, and the cluster sidebar" />
+<Frame caption="The clusters view under the events table: cluster list on the left, stacked frequency chart on the right">
+  <img src="/images/signals/clusters.png" alt="Signal events page showing the cluster list with proportion bars next to a stacked frequency chart" />
 </Frame>
 
 ## What a cluster is
@@ -21,9 +21,12 @@ Clustering is performed automatically. No additional configuration is needed.
 
 ## Where to find them
 
-On any Signal detail page, open the **Events** tab. The right-hand panel lists clusters for the current filter and time window.
+On any Signal detail page, open the **Events** tab. The clusters view sits below the events table, split into two resizable panels:
 
-Clicking a cluster filters the events list to that cluster's members. Clicking a sub-cluster narrows further. From any event you can jump to the trace that produced it.
+- **Left: the cluster list.** Each row shows the cluster name, a proportion bar sized to its share of events, and the event count. Rows with sub-clusters expand in place; leaf clusters and the unclustered bucket have their own icons. Hover a row to see how many sub-clusters it has, its event count in the selected range, and when it was created and last updated.
+- **Right: a stacked frequency chart.** Each cluster is a stacked series over time, with a **Signal runs** overlay so you can read cluster volume against how often the Signal ran.
+
+Both panels respect the page-level **time range**. Clicking a cluster filters the events table to that cluster's members; clicking a sub-cluster narrows further. From any event you can jump to the trace that produced it.
 
 ## When clusters earn their keep
 
