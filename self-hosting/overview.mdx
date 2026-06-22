@@ -3,54 +3,64 @@ title: Self-hosting Laminar
 sidebarTitle: Overview
 ---
 
-Laminar is [open-source](https://github.com/lmnr-ai/lmnr), so you can run the full observability and debugging stack in your own infrastructure instead of (or alongside) Laminar Cloud. Self-host with [Docker Compose](/self-hosting/docker-compose) for local and single-node setups, or the [Kubernetes Helm chart](/self-hosting/kubernetes) for production. Both run the same stack: frontend, app server, query engine, PostgreSQL, ClickHouse, Redis, RabbitMQ, and Quickwit.
+Laminar is [open-source](https://github.com/lmnr-ai/lmnr), so you can run the full observability and debugging stack in your own infrastructure. Self-host with [Docker Compose](/self-hosting/docker-compose) for local and single-node setups, or the [Kubernetes Helm chart](/self-hosting/kubernetes) for production. Both run the same stack: frontend, app server, query engine, PostgreSQL, ClickHouse, Redis, RabbitMQ, and Quickwit.
 
 ## OSS, Helm, or Laminar Cloud
 
-There are three ways to run Laminar, and they differ only in how Signals and Slack are packaged. Everything else (tracing, search, dashboards, evaluations, the debugger, AI features) is identical across all three.
+There are four ways to run Laminar, and they differ only in how Signals and Slack are packaged and in the support that comes with them. Everything else (tracing, search, dashboards, evaluations, the debugger, AI features) is identical across all of them.
 
 - **OSS**: the [open-source images](https://github.com/lmnr-ai/lmnr), run with [Docker Compose](/self-hosting/docker-compose). Signals and the Slack integration are not included.
 - **Helm**: the [Kubernetes Helm chart](/self-hosting/kubernetes). Adds Signals, signal event clusters, and the Slack integration. These sit behind a license-key check but are free to use without a paid license.
+- **Helm + license**: the same chart with an [enterprise license key](mailto:founders@lmnr.ai). Adds priority support and the option to have Laminar fully manage, scale, and update your deployment in your own AWS or GCP infrastructure.
 - **Laminar Cloud**: the fully managed service at [laminar.sh](https://laminar.sh). Everything is included and kept up to date for you.
 
 ### Feature comparison
 
-| Tracing & platform | OSS | Helm | Laminar Cloud |
-|---|:---:|:---:|:---:|
-| Trace ingestion (OTLP) | ✓ | ✓ | ✓ |
-| Full-text trace search | ✓ | ✓ | ✓ |
-| Custom dashboards | ✓ | ✓ | ✓ |
-| SQL editor | ✓ | ✓ | ✓ |
-| Evaluations | ✓ | ✓ | ✓ |
-| Datasets | ✓ | ✓ | ✓ |
-| Labeling queues | ✓ | ✓ | ✓ |
-| Browser session recording | ✓ | ✓ | ✓ |
-| Agent debugger | ✓ | ✓ | ✓ |
-| MCP access | ✓ | ✓ | ✓ |
+| Tracing & platform | OSS | Helm | Helm + license | Laminar Cloud |
+|---|:---:|:---:|:---:|:---:|
+| Trace ingestion (OTLP) | ✓ | ✓ | ✓ | ✓ |
+| Full-text trace search | ✓ | ✓ | ✓ | ✓ |
+| Custom dashboards | ✓ | ✓ | ✓ | ✓ |
+| SQL editor | ✓ | ✓ | ✓ | ✓ |
+| CLI | ✓ | ✓ | ✓ | ✓ |
+| Evaluations | ✓ | ✓ | ✓ | ✓ |
+| Datasets | ✓ | ✓ | ✓ | ✓ |
+| Labeling queues | ✓ | ✓ | ✓ | ✓ |
+| Browser session recording | ✓ | ✓ | ✓ | ✓ |
+| Agent debugger | ✓ | ✓ | ✓ | ✓ |
+| MCP access | ✓ | ✓ | ✓ | ✓ |
 
-| AI features | OSS | Helm | Laminar Cloud |
-|---|:---:|:---:|:---:|
-| Chat-with-trace | ✓ | ✓ | ✓ |
-| SQL-with-AI | ✓ | ✓ | ✓ |
-| [Signals](/signals/introduction) extraction | - | ✓ | ✓ |
-| Signal event clusters | - | ✓ | ✓ |
+| AI features | OSS | Helm | Helm + license | Laminar Cloud |
+|---|:---:|:---:|:---:|:---:|
+| Chat-with-trace | ✓ | ✓ | ✓ | ✓ |
+| SQL-with-AI | ✓ | ✓ | ✓ | ✓ |
+| [Signals](/signals/introduction) extraction | - | ✓ | ✓ | ✓ |
+| Signal event clusters | - | ✓ | ✓ | ✓ |
 
-| Alerting & integrations | OSS | Helm | Laminar Cloud |
-|---|:---:|:---:|:---:|
-| Email alerts | - | ✓ | ✓ |
-| [Slack](/signals/alerts) notifications and alerts | - | ✓ | ✓ |
+| Alerting & integrations | OSS | Helm | Helm + license | Laminar Cloud |
+|---|:---:|:---:|:---:|:---:|
+| Email alerts | - | ✓ | ✓ | ✓ |
+| [Slack](/signals/alerts) notifications and alerts | - | ✓ | ✓ | ✓ |
 
-| Security & operations | OSS | Helm | Laminar Cloud |
-|---|:---:|:---:|:---:|
-| OAuth sign-in (GitHub, Google, Azure AD, Okta, Keycloak) | ✓ | ✓ | ✓ |
-| [Server-side PII redaction](/self-hosting/configuration#pii-redaction) | ✓ | ✓ | ✓ |
-| Data stays in your infrastructure | ✓ | ✓ | - |
-| Managed upgrades | - | - | ✓ |
+| Security & operations | OSS | Helm | Helm + license | Laminar Cloud |
+|---|:---:|:---:|:---:|:---:|
+| OAuth sign-in (GitHub, Google, Azure AD, Okta, Keycloak) | ✓ | ✓ | ✓ | ✓ |
+| [Server-side PII redaction](/self-hosting/configuration#pii-redaction) | ✓ | ✓ | ✓ | ✓ |
+| Data stays in your infrastructure | ✓ | ✓ | ✓ | - |
+| Managed upgrades | - | - | - | ✓ |
+
+| Support | OSS | Helm | Helm + license | Laminar Cloud |
+|---|:---:|:---:|:---:|:---:|
+| Community (Discord) | ✓ | ✓ | ✓ | ✓ |
+| Priority support | - | - | ✓ | ✓ |
+| Fully managed in your AWS or GCP infra | - | - | ✓ | - |
 
 <Note>
 On Helm, Signals, signal event clusters, and the Slack integration are gated behind a license-key check but free to use without a paid license. The Slack integration additionally uses Laminar Cloud's brokered OAuth flow: set `LMNR_LICENSE_KEY` to enable it. See the [configuration reference](/self-hosting/configuration#slack-notifications) for details.
 
 AI features (chat-with-trace, SQL-with-AI, and Signals) need an LLM provider key on self-hosted deployments; on Laminar Cloud they are included. See [AI features and LLM provider](/self-hosting/configuration#ai-features-and-llm-provider).
+
+With an enterprise license, Laminar can fully manage your deployment, including scaling and updates, inside your own AWS or GCP account under scoped access, close to a forward-deployed model. [Contact us](mailto:founders@lmnr.ai) to set this up.
 </Note>
 
 If you just want to start tracing, [Laminar Cloud](https://laminar.sh) is the fastest path: sign up, create a project, copy the project API key, and set `LMNR_PROJECT_API_KEY`. The rest of this section covers running Laminar yourself.
