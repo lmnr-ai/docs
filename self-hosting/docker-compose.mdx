@@ -3,7 +3,7 @@ title: Self-host Laminar with Docker Compose
 sidebarTitle: Docker Compose
 ---
 
-Docker Compose runs the full Laminar stack on a single machine: frontend, app server, PostgreSQL, ClickHouse, Redis, RabbitMQ, and Quickwit. It is the fastest way to self-host for local development and small single-node deployments. For production on Kubernetes, use the [Helm chart](/self-hosting/kubernetes) instead.
+Docker Compose runs a lightweight, single-node Laminar on one machine: frontend, app server, PostgreSQL, ClickHouse, and Quickwit for full-text search. It is the fastest way to self-host for local development and small deployments. For the full production stack (with RabbitMQ, Redis, and a dedicated processing consumer), use the [Helm chart](/self-hosting/kubernetes) on Kubernetes.
 
 ## Install
 
@@ -14,6 +14,10 @@ docker compose up -d
 ```
 
 The dashboard is available at `http://localhost:5667/`. Create a project through the onboarding flow, then grab your project API key from project settings.
+
+<Note>
+`docker compose up -d` brings up the lightweight stack. For a heavier single-node setup closer to production, the repo also ships `docker-compose-full.yml` (`docker compose -f docker-compose-full.yml up -d`), which adds RabbitMQ for queued span processing.
+</Note>
 
 ## Point the SDK to your instance
 
