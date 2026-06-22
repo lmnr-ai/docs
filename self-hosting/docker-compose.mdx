@@ -1,0 +1,99 @@
+---
+title: Self-host Laminar with Docker Compose
+sidebarTitle: Docker Compose
+---
+
+Docker Compose runs a lightweight, single-node Laminar on one machine: frontend, app server, PostgreSQL, ClickHouse, and Quickwit for full-text search. It is the fastest way to self-host for local development and small deployments. For the full production stack (with RabbitMQ, Redis, and a dedicated processing consumer), use the [Helm chart](/self-hosting/kubernetes) on Kubernetes.
+
+## Install
+
+```bash
+git clone https://github.com/lmnr-ai/lmnr
+cd lmnr
+docker compose up -d
+```
+
+The dashboard is available at `http://localhost:5667/`. Create a project through the onboarding flow, then grab your project API key from project settings.
+
+<Note>
+`docker compose up -d` brings up the lightweight stack. For a heavier single-node setup closer to production, the repo also ships `docker-compose-full.yml` (`docker compose -f docker-compose-full.yml up -d`), which adds RabbitMQ for queued span processing.
+</Note>
+
+## Point the SDK to your instance
+
+Initialize the SDK with the local app server's host and ports. `baseUrl` / `base_url` is the scheme and host only; the ports go in `httpPort` / `grpcPort`.
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { Laminar } from '@lmnr-ai/lmnr';
+
+    Laminar.initialize({
+      projectApiKey: "<YOUR_PROJECT_API_KEY>",
+      baseUrl: "http://localhost",
+      httpPort: 8000,
+      grpcPort: 8001,
+    });
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import Laminar
+
+    Laminar.initialize(
+        project_api_key="<YOUR_PROJECT_API_KEY>",
+        base_url="http://localhost",
+        http_port=8000,
+        grpc_port=8001,
+    )
+    ```
+  </Tab>
+</Tabs>
+
+## Access control
+
+By default, any user can sign in to your self-hosted instance. To restrict access to specific GitHub users, enable GitHub OAuth:
+
+```bash
+AUTH_GITHUB_ID=your_github_oauth_app_id
+AUTH_GITHUB_SECRET=your_github_oauth_app_secret
+```
+
+Then create an `allowed-emails.json` file in your project root:
+
+```json
+{
+  "emails": [
+    "user1@example.com",
+    "user2@example.com"
+  ]
+}
+```
+
+## AI features
+
+Chat-with-trace, SQL-with-AI, and [Signals](/signals/introduction) need an LLM provider. Set the provider and key in your environment before bringing the stack up:
+
+```bash
+LLM_PROVIDER=gemini       # gemini (default), openai, or bedrock
+LLM_API_KEY=your-llm-key
+```
+
+The Helm chart exposes the same variables plus per-tier model overrides and OpenAI-compatible gateways. See the [configuration reference](/self-hosting/configuration#ai-features-and-llm-provider) for the full set.
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Kubernetes (Helm)" icon="server" href="/self-hosting/kubernetes">
+    Move to a production Kubernetes deployment when you outgrow a single node.
+  </Card>
+  <Card title="Configuration reference" icon="sliders" href="/self-hosting/configuration">
+    AI features, Signals, Slack, OAuth, storage, and TLS.
+  </Card>
+  <Card title="Start tracing" icon="play" href="/tracing/introduction">
+    Send your first traces to the local instance.
+  </Card>
+  <Card title="View traces" icon="eye" href="/platform/viewing-traces">
+    Read the transcript view instead of a tree of span names.
+  </Card>
+</CardGroup>
