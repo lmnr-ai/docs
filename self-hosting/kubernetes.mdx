@@ -3,7 +3,7 @@ title: Self-host Laminar on Kubernetes with Helm
 sidebarTitle: Kubernetes (Helm)
 ---
 
-For production deployments, run Laminar on Kubernetes with the [Laminar Helm chart](https://github.com/lmnr-ai/lmnr-helm). The chart deploys the full stack: frontend, app server, query engine, PostgreSQL, ClickHouse, Redis, RabbitMQ, and Quickwit. EKS and GKE are the recommended clusters.
+For production deployments, run Laminar on Kubernetes with the [Laminar Helm chart](https://github.com/lmnr-ai/lmnr-helm). The chart deploys the full stack: frontend, app server, PostgreSQL, ClickHouse, Redis, RabbitMQ, and Quickwit. EKS and GKE are the recommended clusters.
 
 This page covers a minimal install. For AI features, Signals, Slack, OAuth, storage, and TLS, see the [configuration reference](/self-hosting/configuration).
 
@@ -66,7 +66,7 @@ Check that every pod is running:
 kubectl get pods
 ```
 
-You should see `app-server`, `app-server-consumer`, `clickhouse`, `frontend`, `postgres`, `query-engine`, the five `quickwit-*` pods, `rabbitmq`, and `redis` all `Running`. If a pod is stuck in `Init`, it is waiting on a dependency: inspect with `kubectl logs <pod> -c wait-for-postgres` (or `-c wait-for-redis`).
+You should see `app-server`, `app-server-consumer`, `clickhouse`, `frontend`, `postgres`, the five `quickwit-*` pods, `rabbitmq`, and `redis` all `Running`. If a pod is stuck in `Init`, it is waiting on a dependency: inspect with `kubectl logs <pod> -c wait-for-postgres` (or `-c wait-for-redis`).
 
 ## Point the SDK to your cluster
 

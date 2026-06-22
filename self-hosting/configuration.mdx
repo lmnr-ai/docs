@@ -227,18 +227,20 @@ frontend:
 
 ## Container images
 
-The three Laminar containers (frontend, app server, query engine) are pulled from public `ghcr.io/lmnr-ai/*-ee` images, so most installs never touch this section. For production, pin a specific tag instead of `latest` so a pod restart does not pick up a newer build. The three are released together: keep their tags in sync.
+The two Laminar containers (frontend and app server) are pulled from public `ghcr.io/lmnr-ai/*-ee` images, so most installs never touch this section. For production, pin a specific tag instead of `latest` so a pod restart does not pick up a newer build. The two are released together: keep their tags in sync.
 
 ```yaml
 images:
   pullPolicy: IfNotPresent
   frontend:
-    tag: "0.1.546"
+    tag: "0.1.628"
   appServer:
-    tag: "0.1.546"
-  queryEngine:
-    tag: "0.1.546"
+    tag: "0.1.628"
 ```
+
+<Note>
+Chart `0.2.0` and newer require an app-server tag of `0.1.628` or newer and will fail at render time if you pin an older one. Earlier charts shipped a separate query-engine container; it has since been folded into the app-server image, so there is no longer a `queryEngine` image to pin.
+</Note>
 
 Available tags are listed under the [Packages tab on GitHub](https://github.com/orgs/lmnr-ai/packages). To mirror images into a private registry, retag and push each image, point `images.repository` at the mirror, and attach `imagePullSecrets` to the default ServiceAccount (the chart does not template this; see the [chart reference](https://github.com/lmnr-ai/lmnr-helm/blob/main/CONFIGURATION.md#container-images)).
 
