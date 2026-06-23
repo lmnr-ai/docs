@@ -3,36 +3,35 @@ title: Laminar
 sidebarTitle: Laminar
 ---
 
-Laminar is an [**open-source**](https://github.com/lmnr-ai/lmnr) observability platform purpose-built for AI agents. You can trace every call to an LLM, tool execution and custom functions.
+Laminar is an [**open-source**](https://github.com/lmnr-ai/lmnr), OpenTelemetry-native observability platform built for AI agents. **[Trace](/tracing/introduction) every LLM call, tool call, and subagent handoff, read runs as [transcripts](/platform/viewing-traces) instead of span trees, and [query, cluster, and alert](/signals/introduction) on the patterns that matter across thousands of traces.**
 
-Laminar goes beyond tracing and is deeply focused on helping you properly use captured data and extract insights from it:
-- **During development**, Laminar allows you to rollout and replay agents from different parts of the captured trace significantly speeding up the development process.
-
-- **In production**, with Laminar you can describe patterns and errors in natural language and track it across all your traces, to measure real behavior and user interactions with your agents.
+<Frame caption="Transcript view: agent input, LLM turns, tool calls, and each subagent as a collapsible card, rendered in reading order.">
+  <img src="/images/transcript-view/multi-agent.png" alt="Multi-agent trace rendered as a transcript" />
+</Frame>
 
 <CardGroup cols={2}>
 
-<Card title="Tracing" icon="list-tree" href="/tracing/introduction">
-  Trace LLM calls, tool use, and custom functions. First-class support for **AI SDK, LangChain, Browser Use, Stagehand**, and more.
+<Card title="Tracing for agentic frameworks" icon="list-tree" href="/tracing/introduction">
+  First-class support for **Claude Agent SDK, OpenAI Agents SDK, Mastra, Pydantic AI, LangGraph, AI SDK, Browser Use, and Stagehand**. Every major LLM provider is auto-instrumented via OpenTelemetry.
 </Card>
 
 <Card title="Signals" icon="radio" href="/signals/introduction">
-  Describe outcomes and failures in plain language. Laminar reads every trace and produces structured events you can query, cluster, and alert on.
+  Describe an outcome or failure in plain language (*did it get stuck, did the user give up, did checkout succeed*). Laminar reads every trace and produces structured events you can query, cluster, and alert on.
+</Card>
+
+<Card title="Transcript view" icon="message-lines" href="/platform/viewing-traces">
+  Read an agent run as a conversation: auto-extracted `Input` block, inline previews on every LLM turn and tool call, subagents as collapsible cards you expand in place.
+</Card>
+
+<Card title="Raw SQL access" icon="database" href="/platform/sql-editor">
+  Query every span, trace, and signal event directly with ClickHouse SQL from the in-app editor, the HTTP API, or a [Laminar MCP server](/platform/mcp) your agents can call.
 </Card>
 
 <Card title="Evaluations" icon="chart-line" href="/evaluations">
-  Run evals against datasets locally or in CI. Catch regressions before they ship.
-</Card>
-
-<Card title="Datasets & Labeling" icon="database" href="/datasets">
-  Build evaluation datasets from production traces.
+  Run evals against datasets locally or in CI. Compare runs side by side and catch regressions before they ship.
 </Card>
 
 <Card title="Playground" icon="play" href="/playground">
-  Replay any traced span. Swap prompts or models and compare results side by side.
-</Card>
-
-<Card title="Platform" icon="layers" href="/platform">
-  Realtime traces, full-text search, raw SQL access to all your data, and dashboards for exploring traces however you need to.
+  Replay any traced span. Swap prompts or models and compare outputs side by side.
 </Card>
 </CardGroup>
