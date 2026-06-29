@@ -160,6 +160,22 @@ lmnr-cli ask "List the 5 slowest traces in the last hour and explain the slowest
 lmnr-cli ask "How much did we spend on LLM calls today, broken down by model?" --project-id <uuid>
 ```
 
+### Continue a conversation
+
+Each answer prints a conversation id after it. Pass that id to `--conversation` on your next question to continue the same conversation, so the agent keeps the earlier context and you can ask follow-ups:
+
+```bash
+lmnr-cli ask "What failed in the most recent run for my dev-claude session?"
+# ...answer, then: continue with: lmnr-cli ask "<question>" --conversation <id>
+lmnr-cli ask "and which model did it use?" --conversation <id>
+```
+
+With `--json`, the conversation id comes back as `conversationId` in the output (`{ answer, conversationId, tools }`), so a script can capture it and thread it through a multi-turn exchange:
+
+```bash
+lmnr-cli ask "summarize the most expensive trace today" --json
+```
+
 See [Laminar Agent](/platform/laminar-agent) for the full list of what it can do and the other surfaces (MCP, Slack) it runs on.
 
 ## Manage datasets

@@ -52,7 +52,13 @@ Ask the agent from your terminal:
 lmnr-cli ask "What failed in the most recent run for my dev-claude session?"
 ```
 
-The command runs against the project linked to the current directory (the same `.lmnr/project.json` resolution every CLI command uses), authenticated as the signed-in user. See [CLI](/platform/cli#ask-the-agent).
+Each answer comes back with a conversation id (printed after the answer). Pass it to `--conversation` on the next question to continue the same conversation, so the agent keeps the prior context and you can ask follow-ups:
+
+```bash
+lmnr-cli ask "and which model did it use?" --conversation <id>
+```
+
+With `--json`, the conversation id is returned as `conversationId` in the output (`{ answer, conversationId, tools }`) for scripting multi-turn flows. The command runs against the project linked to the current directory (the same `.lmnr/project.json` resolution every CLI command uses), authenticated as the signed-in user. See [CLI](/platform/cli#ask-the-agent).
 
 ### Slack
 
