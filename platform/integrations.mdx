@@ -39,4 +39,23 @@ The Laminar Slack app requests permission to post messages to public channels in
 
 ### What you can do with Slack connected
 
-- **[Alerts](/signals/alerts)** — Create per-project alerts that send Slack notifications to a channel of your choice whenever a signal event is detected.
+- **[Alerts](/signals/alerts)** - Create per-project alerts that send Slack notifications to a channel of your choice whenever a signal event is detected.
+- **[Laminar Agent](/platform/laminar-agent)** - Mention `@Laminar` in a connected channel to ask about your traces, costs, signals, and more in plain language. The agent queries your project's data and replies in the thread.
+
+### Use the agent in Slack
+
+Once Slack is connected, mention `@Laminar` in any channel and the agent replies in that thread. Ask it the same kinds of questions you would ask it in the [CLI](/platform/cli) or an [MCP client](/platform/mcp):
+
+> @Laminar what failed in the most recent run, and why?
+
+The agent runs read-only SQL and reads trace context to ground its answer, then posts the reply back into the thread. Follow-up mentions in the same thread continue the conversation.
+
+#### Connect a channel to a project
+
+The agent answers about one Laminar project per channel, so each channel is connected to a project before the agent can query its data:
+
+1. Mention `@Laminar` in a channel that is not yet connected.
+2. The agent replies with a project picker listing the projects available to your workspace. Choose one.
+3. The channel is now connected to that project. Mention the agent again and it answers from that project's data.
+
+A workspace admin can also connect a channel to a project from **Workspace → Integrations**. Each channel maps to a single project; pick the project whose traces the people in that channel care about.

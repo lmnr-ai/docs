@@ -130,6 +130,7 @@
               "platform/table-views",
               "platform/integrations",
               "platform/live-tracing",
+              "platform/laminar-agent",
               "platform/mcp",
               "platform/sql-editor",
               "platform/cli",
