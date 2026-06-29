@@ -3,30 +3,8 @@ title: Laminar Agent
 sidebarTitle: Laminar Agent
 ---
 
-Laminar Agent is an AI agent that lives inside your project and answers questions about your data by querying it directly. Ask it about your traces, spans, LLM costs and tokens, evaluations, signals, clusters, and tags in plain language, and it runs read-only SQL and inspects trace context to ground every answer in your real data. It never guesses a number it has not queried.
+Laminar Agent is an AI agent that lives inside your project and answers questions about your data by querying it directly. Ask it about your traces, spans, LLM costs and tokens, evaluations, signals, clusters, and tags. It runs SQL and inspects trace context to ground every answer in your data. 
 
-The agent is available in three places: the [MCP server](/platform/mcp) (from Claude Code, Cursor, or Codex), the [CLI](/platform/cli), and [Slack](/platform/integrations#slack). It is the same agent everywhere, scoped to a single project, so a question you ask in your IDE and the same question asked in a Slack thread run against the same data.
-
-## What it can do
-
-The agent works by calling a small set of read-only tools against your project:
-
-- **Run SQL.** It writes and runs read-only ClickHouse `SELECT` queries across your traces, spans, signal events, clusters, evaluations, and tags. Queries are automatically scoped to your project. This is how it answers aggregate questions ("how many", "top N", "cost over time") and locates specific traces.
-- **Read a trace.** Given a trace, it pulls a compact view of the full span structure: agent inputs, LLM turns, tool calls, and errors. This is how it explains, summarizes, or debugs a specific run.
-- **Search inside a trace.** It fuzzy-matches a string across one trace's span inputs and outputs and returns the matching snippets with surrounding context.
-- **Fetch full span content.** When a preview is truncated, it pulls the complete input and output for specific spans.
-
-It chains these together: run a query to find the trace you mean, read that trace's structure, then drill into the spans that matter.
-
-## Example questions
-
-- "What failed in the most recent run for my `dev-claude` session?"
-- "Find the latest error trace and summarize the root cause."
-- "Which tool call failed first in the last 20 minutes?"
-- "List the 5 slowest traces from the last hour and explain why the slowest one was slow."
-- "Compare token usage between the last two successful runs."
-- "How much did we spend on LLM calls today, broken down by model?"
-- "Which signal fired most often this week, and show me an example event."
 
 ## Where you can use it
 
@@ -41,6 +19,26 @@ It chains these together: run a query to find the trace you mean, read that trac
     Mention `@Laminar` in a connected channel and it replies in the thread.
   </Card>
 </CardGroup>
+
+## What it can do
+
+The agent works by calling a set of tools against your project:
+
+- **Run SQL.** It writes and runs read-only ClickHouse `SELECT` queries across your traces, spans, signal events, clusters, evaluations, and tags. Queries are automatically scoped to your project. 
+- **Read a trace.** Given a trace, it pulls a compact view of the full span structure: agent inputs, LLM turns, tool calls, and errors. This is how it explains, summarizes, or debugs a specific run.
+- **Search inside a trace.** It fuzzy-matches a string across one trace's span inputs and outputs and returns the matching snippets with surrounding context.
+- **Fetch full span content.** When a preview is truncated, it pulls the complete input and output for specific spans.
+
+## Example questions
+
+- "What failed in the most recent run for my `dev-claude` session?"
+- "Find the latest error trace and summarize the root cause."
+- "Which tool call failed first in the last 20 minutes?"
+- "List the 5 slowest traces from the last hour and explain why the slowest one was slow."
+- "Compare token usage between the last two successful runs."
+- "How much did we spend on LLM calls today, broken down by model?"
+- "Which signal fired most often this week, and show me an example event."
+
 
 ### MCP
 
@@ -59,13 +57,6 @@ The command runs against the project linked to the current directory (the same `
 ### Slack
 
 In Slack, the agent answers in-thread when you mention it. Replies are posted as Slack messages, so you get the answer where your team is already talking. Each Slack channel is connected to one Laminar project, which is how the agent knows whose data to query. See [Project binding](/platform/integrations#use-the-agent-in-slack) for how a channel is connected to a project.
-
-## Read-only and project-scoped
-
-Every surface enforces the same two guarantees:
-
-- **Read-only.** The agent only runs `SELECT` queries and read tools. It never writes, updates, or deletes your data.
-- **Project-scoped.** The agent operates inside a single project and automatically scopes its queries to that project. It cannot reach across projects in one conversation.
 
 ## What's next
 
