@@ -111,6 +111,7 @@
               "evaluations/comparing-runs",
               "evaluations/datasets",
               "evaluations/manual-evaluation",
+              "evaluations/eve",
               "evaluations/self-hosted"
             ]
           },
