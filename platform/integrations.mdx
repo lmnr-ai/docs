@@ -1,32 +1,66 @@
 ---
-title: Integrations
-sidebarTitle: Integrations
+title: Slack integration
+sidebarTitle: Slack integration
 ---
 
-Connect third-party services to your Laminar workspace to receive notifications and stay up to date with what is happening across your projects.
+Connect Slack to your Laminar workspace to get [signal](/signals/introduction) alerts in your channels and to talk to [Laminar Agent](/platform/laminar-agent) where your team already works. Once connected, Slack works across every project in the workspace.
 
-<Frame caption="Workspace integrations page">
-  <img src="/images/integrations/workspace-integrations.png" alt="Workspace integrations page showing Slack connection card" />
-</Frame>
-
-## Slack
-
-The Slack integration lets you receive real-time notifications in your Slack channels when [signal](/signals/introduction) events occur. Once connected, notifications work across all projects in the workspace.
 
 <Note>
-  Slack integration is available on paid plans only.
+  Slack is available on paid plans only.
 </Note>
 
-### Connect Slack
+## Connect Slack
 
-1. Go to your **Workspace** page and select **Integrations** from the sidebar.
+1. Go to the **Settings** page and select **Integrations** from the sidebar.
 2. Find the **Slack** card and click **Connect to Slack**.
 3. You will be redirected to Slack's authorization page. Select the Slack workspace you want to connect and click **Allow**.
-4. After authorization, you will be redirected back to Laminar. The Slack card will show a **Connected** badge with your Slack workspace name.
+4. After authorization, you will be redirected back to Laminar. The Slack card will show a **Connected** badge.
 
-The Laminar Slack app requests permission to post messages to public channels in your Slack workspace. It does not access private channels.
+<Frame caption="Workspace integrations page">
+  <img src="/images/integrations/workspace-integrations.png" alt="Workspace integrations page showing Slack connection card" style={{ width: "100%", height: "auto" }} />
+</Frame>
 
-### Remove Slack integration
+## Alerts
+
+Create per-project [alerts](/signals/alerts) that post to a Slack channel of your choice whenever a signal event is detected. Each message contains the signal name, the extracted payload fields, and a link to the trace, so you find out the moment something you care about happens and can jump straight to the run.
+
+<Frame caption="Slack alerts in a connected channel">
+  <img src="/images/integrations/slack-alert-notification.png" alt="Slack channel showing two Laminar alerts: a Failure Detector new event with category, description, and a View Trace button, and a new cluster with event counts and a View Cluster button" />
+</Frame>
+
+Pick the Slack channel for an alert from the [Alerts](/signals/alerts) settings page on any project. [Reports](/signals/reports) can post to Slack the same way for scheduled rollups.
+
+## Laminar Agent
+
+[Laminar Agent](/platform/laminar-agent) answers questions about your project's data in plain language, and Slack is one of the places it lives. Mention `@Laminar` in a connected channel and it replies in the thread:
+
+> @Laminar what failed in the most recent run, and why?
+
+The agent runs SQL and reads trace context to ground its answer, then posts the reply back into the thread as a Slack message. Follow-up mentions in the same thread continue the conversation. 
+
+See how else you can interact with [Laminar Agent](/platform/laminar-agent). 
+
+### Respond to an alert for more context
+
+When an alert posts to a Slack channel, reply in that thread and mention `@Laminar` to dig into what happened. The agent picks up the alert's signal event and trace from the thread, so you can ask it to explain the root cause, pull the full trace, or run a follow-up query without leaving Slack:
+
+> @Laminar why did this fire? Walk me through the trace.
+
+### Connect a channel to a project
+
+The agent answers about one Laminar project per channel, so each channel is connected to a project before the agent can query its data. There are two ways to connect one:
+
+- **From Slack.** Mention `@Laminar` in a channel that is not yet connected. The agent replies with a project picker listing the projects available to your workspace. Choose one, and the channel is connected. Mention the agent again and it answers from that project's data.
+- **From Laminar.** A workspace admin can connect a channel to a project from **Workspace → Integrations**.
+
+<Frame caption="Connecting Slack channels to projects from Workspace Integrations">
+  <img src="/images/integrations/slack-channel-projects.png" alt="Workspace integrations page showing Slack channels connected to Laminar projects" style={{ width: "100%", height: "auto" }} />
+</Frame>
+
+Each channel maps to a single project, so pick the project whose traces the people in that channel care about.
+
+## Remove Slack integration
 
 1. Go to your **Workspace** page and select **Integrations** from the sidebar.
 2. On the connected Slack card, click the dropdown menu (three dots).
@@ -36,7 +70,3 @@ The Laminar Slack app requests permission to post messages to public channels in
 <Warning>
   Removing the integration deletes all alert subscriptions connected to that Slack workspace. This action cannot be undone.
 </Warning>
-
-### What you can do with Slack connected
-
-- **[Alerts](/signals/alerts)** — Create per-project alerts that send Slack notifications to a channel of your choice whenever a signal event is detected.

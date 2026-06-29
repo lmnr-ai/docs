@@ -7,6 +7,8 @@ Laminar ships an MCP (Model Context Protocol) server so AI assistants can query 
 
 ## Available Tools
 
+- `ask_agent`  
+  Ask [Laminar Agent](/platform/laminar-agent) a question in plain language and get a grounded answer back. The agent runs read-only SQL and reads trace context for you, so you do not have to write the queries yourself. Pass a `prompt`; the response returns a `conversationId` you can pass back on the next call to continue the conversation.
 - `query_laminar_sql`  
   Run read-only ClickHouse SQL across Laminar data and get JSON back. Use this to find trace IDs, filter by time/session/status, or pull raw span fields (`input`, `output`, `attributes`).
 - `get_trace_context`  
@@ -15,6 +17,10 @@ Laminar ships an MCP (Model Context Protocol) server so AI assistants can query 
 <Note>
   The SQL tool is read-only (`SELECT` only) and automatically scoped to your project. If trace context truncates long inputs or outputs, use SQL to fetch full fields.
 </Note>
+
+<Tip>
+  Use `ask_agent` when you want a quick answer without writing SQL; use `query_laminar_sql` and `get_trace_context` when your assistant should pull raw rows or trace structure to reason over itself.
+</Tip>
 
 ## Connect Your Client
 
