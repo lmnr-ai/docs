@@ -61,11 +61,6 @@ Your prompt doesn't run as a one-shot classification. Laminar runs it as an **ag
 - It can **fetch the full input and output of any span** by its reference id when the compressed view isn't enough.
 - When it has seen enough, it **submits its findings** and the run ends.
 
-{/* DIAGRAM PLACEHOLDER: agent investigation loop.
-    Center: [Signal agent]. Inputs: [Your prompt + schema] and [Compressed transcript].
-    Loop arrows from the agent to [Search span content] and [Fetch full span by id], both pointing back to the agent.
-    Exit arrow: [Submit findings] → zero, one, or many findings. */}
-
 This is what makes Signals reliable on long traces. A checkout failure buried in step 40 of a 200-step run isn't lost to truncation: the agent can search for it, pull the exact tool output, and base its answer on the actual content.
 
 A run ends in one of two ways:
