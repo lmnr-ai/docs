@@ -21,16 +21,6 @@ Connect Slack to your Laminar workspace to get [signal](/signals/introduction) a
   <img src="/images/integrations/workspace-integrations.png" alt="Workspace integrations page showing Slack connection card" style={{ width: "100%", height: "auto" }} />
 </Frame>
 
-## Alerts
-
-Create per-project [alerts](/signals/alerts) that post to a Slack channel of your choice whenever a signal event is detected. Each message contains the signal name, the extracted payload fields, and a link to the trace, so you find out the moment something you care about happens and can jump straight to the run.
-
-<Frame caption="Slack alerts in a connected channel">
-  <img src="/images/integrations/slack-alert-notification.png" alt="Slack channel showing two Laminar alerts: a Failure Detector new event with category, description, and a View Trace button, and a new cluster with event counts and a View Cluster button" style={{ width: "100%", height: "auto" }} />
-</Frame>
-
-Pick the Slack channel for an alert from the [Alerts](/signals/alerts) settings page on any project. [Reports](/signals/reports) can post to Slack the same way for scheduled rollups.
-
 ## Laminar Agent
 
 [Laminar Agent](/platform/laminar-agent) answers questions about your project's data in plain language, and Slack is one of the places it lives. Mention `@Laminar` in a connected channel and it replies in the thread:
@@ -59,6 +49,16 @@ The agent answers about one Laminar project per channel, so each channel is conn
 </Frame>
 
 Each channel maps to a single project, so pick the project whose traces the people in that channel care about.
+
+## Alerts
+
+Create per-project [alerts](/signals/alerts) that post to a Slack channel of your choice whenever a signal event is detected. Each message contains the signal name, the extracted payload fields, and a link to the trace, so you find out the moment something you care about happens and can jump straight to the run.
+
+<Frame caption="Slack alerts in a connected channel">
+  <img src="/images/integrations/slack-alert-notification.png" alt="Slack channel showing two Laminar alerts: a Failure Detector new event with category, description, and a View Trace button, and a new cluster with event counts and a View Cluster button" style={{ width: "100%", height: "auto" }} />
+</Frame>
+
+Pick the Slack channel for an alert from the [Alerts](/signals/alerts) settings page on any project. [Reports](/signals/reports) can post to Slack the same way for scheduled rollups.
 
 ## Remove Slack integration
 
