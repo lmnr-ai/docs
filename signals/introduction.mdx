@@ -24,7 +24,7 @@ If you can describe it to a colleague, you can write a Signal for it.
  
 Essentially, **anything you've ever had to ask a teammate to skim traces for**. If you've written a Slack message that starts with "can you look through today's runs and tell me how often...", that's a Signal.
 
-## Anatomy of a Signal run
+## Anatomy of a Signal
 
 A Signal has three parts:
 
@@ -32,13 +32,59 @@ A Signal has three parts:
 - **Structured output schema**: a JSON schema the extracted payload must conform to.
 - **Triggers**: trace conditions that must be met for the Signal to run.
 
-When a trace that matches trigger conditions, Laminar reads the full trace and runs your prompt against it, attempting to extract a structured payload that conforms to your schema. This produces one of two outcomes:
+That's everything you configure. The rest of this page explains what Laminar does with those three parts when a trace arrives.
 
-- A **signal event** linked to the trace, carrying the structured payload that matches the user-defined schema.
-- No event, which means the Signal wasn't found in that trace.
+## How a Signal run works
+
+When a trace matches a Signal's trigger conditions, Laminar doesn't just paste the raw trace into a single LLM call. A Signal run is a small investigation, and it moves through three stages: compress the trace, let an agent investigate it, then turn what the agent found into events.
+
+{/* DIAGRAM PLACEHOLDER: full pipeline overview.
+    Left to right: [Trace arrives] → [Trigger match] → [Trace compression] → [Signal agent investigates: search spans / fetch full spans] → [Findings submitted] → [Signal events] → fan-out to [Alerts] and [Clusters].
+    One box per stage, single flow line, with the agent stage drawn as a loop (investigate ↔ trace) before it exits to findings. */}
+
+### 1. The trace is compressed
+
+Agent traces are long. A single run can contain hundreds of spans, megabytes of tool output, and the same system prompt repeated on every LLM call. Before anything reads the trace, Laminar compresses it into a compact transcript:
+
+- **LLM turns and tool calls are kept.** These carry the story of what the agent did.
+- **Repeated system prompts are deduplicated and summarized**, so the transcript states them once instead of on every turn.
+- **The user's original request is extracted** and placed up front, so the Signal always knows what the agent was asked to do.
+- **Plumbing spans are dropped** unless they carry errors or match the Signal's relevance rules.
+
+Compression is lossy on purpose, but nothing is out of reach: every span in the transcript keeps a short reference id, and the agent can use it to pull the full, uncompressed content of any span on demand.
+
+### 2. An agent investigates the trace
+
+Your prompt doesn't run as a one-shot classification. Laminar runs it as an **agent with tools**, working over the compressed transcript across multiple steps:
+
+- It can **search within span content** to find where something happened.
+- It can **fetch the full input and output of any span** by its reference id when the compressed view isn't enough.
+- When it has seen enough, it **submits its findings** and the run ends.
+
+{/* DIAGRAM PLACEHOLDER: agent investigation loop.
+    Center: [Signal agent]. Inputs: [Your prompt + schema] and [Compressed transcript].
+    Loop arrows from the agent to [Search span content] and [Fetch full span by id], both pointing back to the agent.
+    Exit arrow: [Submit findings] → zero, one, or many findings. */}
+
+This is what makes Signals reliable on long traces. A checkout failure buried in step 40 of a 200-step run isn't lost to truncation: the agent can search for it, pull the exact tool output, and base its answer on the actual content.
+
+A run ends in one of two ways:
+
+- The agent submits **one or more findings**. Each finding contains a payload that conforms to your schema, a short summary of what was found, and a severity (`critical`, `warning`, or `info`).
+- The agent submits **nothing**, meaning the behavior you described wasn't present in that trace. No event is created.
+
+A single trace can legitimately produce multiple findings: an agent that retried a broken tool three times produces three retry events, not one.
+
+### 3. Findings become signal events
+
+Each finding becomes a **signal event** linked back to the trace that produced it. From there, every event independently flows into the rest of the platform:
+
+- It's **indexed for search**, so you can find it from the Signals UI.
+- It's checked against your **alert rules** (severity and custom payload filters), and matching events fire [Alerts](/signals/alerts).
+- It's queued for **clustering**, where Laminar groups it with similar events from other traces so patterns surface as [Clusters](/signals/clusters).
 
 <Note>
-Signal events are accessible via the `signal_events` table and can be easily queried using the [SQL Editor](/platform/sql-editor). All signal events are linked to the traces that produced them. You can use event payloads to query corresponding traces. In a sense, you can think of signal event payload being an additional column of traces table.
+Signal events are accessible via the `signal_events` table and can be easily queried using the [SQL Editor](/platform/sql-editor). All signal events are linked to the traces that produced them. You can use event payloads to query corresponding traces. In a sense, you can think of a signal event payload as an additional column of the traces table.
 </Note>
 
 ## Run a Signal on new traces or historical traces
