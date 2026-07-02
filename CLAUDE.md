@@ -215,6 +215,11 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - `signal_events` gained `summary` (migration 21), `severity` (39), and `clusters` (40, a JOIN-synthesized `Array(UUID)` that filters out L0 clusters). `signal_events_all` is the L0-inclusive sibling with the same schema. `signal_runs` has `mode` (31) materialized as `'BATCH'` / `'REALTIME'` / `'UNKNOWN'`, and `error_message`. `traces` has `trace_tags` (separate from span-level `tags`, migration 36), `span_names` (15), `root_span_input` / `root_span_output` (26). Keep the column tables on `/platform/sql-editor` in sync with these when a new migration lands.
 - `evaluation_datapoints` is defined TWICE in `query_validator.py` (lines ~101 and ~191); the second definition (27 columns, including trace-joined `duration` / costs / tokens / `trace_status` / `trace_metadata` / `trace_tags` / `trace_spans` / `top_span_id` / `updated_at`) is the live one. Match the second set, not the first, when documenting columns.
 
+## Signals clusters page (`/signals/clusters.mdx`)
+
+- The clusters page is the canonical public coverage of clustering queueing + hierarchy (LAM-1889). Public-safe framing rules for the internals (implementation lives in lmnr-private, never say so): the hidden unnamed accumulation layer below named clusters may be described vaguely ("internal accumulation layer of small, unnamed groups"), but never name level numbers (L0/L1), batch sizes, flush intervals, promotion thresholds, queue/lock topology, or embedding details. Translate timings to user-observable terms ("typically within a minute", "a couple of similar events").
+- Events not yet in a named cluster surface in the UI as the **Unclustered** bucket — use that name in prose, not "L0" or "pending".
+
 ## Temporal integration
 
 - **Bilingual page (Python + TypeScript).** Getting Started, "How the wiring fits together", Troubleshooting, and the self-hosting accordion are all `<Tabs>` with a TypeScript tab and a Python tab. **TypeScript tab is first** in every `<Tabs>` block (TS-first is the convention across the docs; Robert asked for it explicitly on this page). The title is generic (`Observability for Temporal Workflows`). Page is `tracing/integrations/temporal.mdx`, listed in `docs.json` between `pydantic-ai` and `openrouter`.
