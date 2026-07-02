@@ -37,10 +37,6 @@ That's everything you configure. The rest of this page explains what Laminar doe
 
 When a trace matches a Signal's trigger conditions, Laminar doesn't just paste the raw trace into a single LLM call. A Signal run is a small investigation, and it moves through three stages: compress the trace, let an agent investigate it, then turn what the agent found into events.
 
-{/* DIAGRAM PLACEHOLDER: full pipeline overview.
-    Left to right: [Trace arrives] → [Trigger match] → [Trace compression] → [Signal agent investigates: search spans / fetch full spans] → [Findings submitted] → [Signal events] → fan-out to [Alerts] and [Clusters].
-    One box per stage, single flow line, with the agent stage drawn as a loop (investigate ↔ trace) before it exits to findings. */}
-
 <Frame>
   ![Chat GPT Image Jul 2, 2026, 05 33 30 PM](/images/ChatGPT-Image-Jul-2,-2026,-05_33_30-PM.png)
 </Frame>
