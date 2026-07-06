@@ -8,7 +8,7 @@ Building an agent is a loop: run it, see what it did, change something, run it a
 **The Laminar debugger is that loop, built for a coding agent to run.** Claude Code, Cursor, or Codex runs your agent, reads the resulting trace in Laminar to understand what worked and what didn't, changes your code, and runs again, with each rerun served from cache up to the point it's testing so the turn is fast and cheap. Every run, evaluation, and note lands in one [session](/debugger/process) you watch live.
 
 <Frame>
-  <img src="/images/debugger-session-view.png" alt="Debugger session view showing a named investigation with a markdown note and expandable trace segments" />
+  <img src="/images/debugger-session-view.png" alt="Debugger session timeline showing a note with a span reference, a replay run, an eval card with per-score results, and a closing note" />
 </Frame>
 
 ## The iteration loop
