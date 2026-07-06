@@ -20,7 +20,7 @@ One turn of the loop has four steps. A coding agent with the [Laminar skill](htt
 3. **Change.** Edit the agent: the prompt, a tool, the control flow, whatever the trace pointed at.
 4. **Run again.** Rerun against the recorded trace. Everything before the call you're testing comes back from cache instantly; only your change and what follows it run live. The new run is a fresh trace in the same session, next to the last one.
 
-The point is the turnaround. An agent run can take minutes end to end, and the call you're fixing is often three-quarters of the way through. Caching the prefix means the coding agent can take that turn dozens of times in the span it would take one live run to finish. See [how caching works](/debugger/caching) for the mechanism.
+The point is the turnaround. An agent run can take minutes end to end, and the call you're fixing is often three-quarters of the way through. Caching the prefix means the coding agent can take that turn dozens of times in the span it would take one live run to finish. See [how caching works](/debugger/caching) for the mechanism, or walk the whole loop on a real bug in the [end-to-end guide](/guides/debugger-end-to-end).
 
 ## Prove the fix with an eval
 
