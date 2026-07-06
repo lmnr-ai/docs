@@ -25,7 +25,9 @@ Connect Slack to your Laminar workspace to get [signal](/signals/introduction) a
 
 [Laminar Agent](/platform/laminar-agent) answers questions about your project's data in plain language, and Slack is one of the places it lives. Mention `@Laminar` in a connected channel and it replies in the thread:
 
-> @Laminar what failed in the most recent run, and why?
+<Frame>
+  <img src="/images/integrations/slack-agent-thread.png" alt="Slack thread where a user asks Laminar to compare cost per trace and token usage between Gemini and Deepseek traces, and the Laminar app replies with a per-trace cost breakdown, token averages, and analysis" style={{ width: "100%", height: "auto" }} />
+</Frame>
 
 The agent runs SQL and reads trace context to ground its answer, then posts the reply back into the thread as a Slack message. Follow-up mentions in the same thread continue the conversation. 
 
@@ -54,8 +56,8 @@ Each channel maps to a single project, so pick the project whose traces the peop
 
 Create per-project [alerts](/signals/alerts) that post to a Slack channel of your choice whenever a signal event is detected. Each message contains the signal name, the extracted payload fields, and a link to the trace, so you find out the moment something you care about happens and can jump straight to the run.
 
-<Frame caption="Slack alerts in a connected channel">
-  <img src="/images/integrations/slack-alert-notification.png" alt="Slack channel showing two Laminar alerts: a Failure Detector new event with category, description, and a View Trace button, and a new cluster with event counts and a View Cluster button" style={{ width: "100%", height: "auto" }} />
+<Frame caption="A critical Failure Detector alert in Slack, with the event details and a link to the trace">
+  <img src="/images/integrations/slack-alert-notification.png" alt="Slack message from Laminar showing a critical Failure Detector event with category, description, and recommendation fields and Open trace, View similar events, and Manage alerts buttons" style={{ width: "100%", height: "auto" }} />
 </Frame>
 
 Pick the Slack channel for an alert from the [Alerts](/signals/alerts) settings page on any project. [Reports](/signals/reports) can post to Slack the same way for scheduled rollups.

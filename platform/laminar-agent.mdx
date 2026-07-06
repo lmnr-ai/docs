@@ -9,14 +9,14 @@ Laminar Agent is an AI agent that lives inside your project and answers question
 ## Where you can use it
 
 <CardGroup cols={3}>
+  <Card title="Slack" href="/platform/integrations#laminar-agent">
+    Mention `@Laminar` in a connected channel and it replies in the thread.
+  </Card>
   <Card title="MCP server" href="/platform/mcp">
     Ask the agent from Claude Code, Cursor, or Codex with the `ask_agent` tool.
   </Card>
   <Card title="CLI" href="/platform/cli">
     Ask the agent from your terminal with `lmnr-cli ask`.
-  </Card>
-  <Card title="Slack" href="/platform/integrations#laminar-agent">
-    Mention `@Laminar` in a connected channel and it replies in the thread.
   </Card>
 </CardGroup>
 
@@ -40,6 +40,10 @@ The agent works by calling a set of tools against your project:
 - "Which signal fired most often this week, and show me an example event."
 
 
+### Slack
+
+In Slack, the agent answers in-thread when you mention it. Replies are posted as Slack messages, so you get the answer where your team is already talking. Each Slack channel is connected to one Laminar project, which is how the agent knows whose data to query. See [Slack integration](/platform/integrations#connect-a-channel-to-a-project) for how a channel is connected to a project.
+
 ### MCP
 
 The MCP server exposes the agent as the `ask_agent` tool. Your coding assistant calls it with a natural-language `prompt` and gets a grounded answer back, alongside the lower-level `query_laminar_sql` and `get_trace_context` tools it can also call directly. See [MCP Server](/platform/mcp) to connect a client.
@@ -59,10 +63,6 @@ lmnr-cli ask "and which model did it use?" --conversation <id>
 ```
 
 With `--json`, the conversation id is returned as `conversationId` in the output (`{ answer, conversationId, tools }`) for scripting multi-turn flows. The command runs against the project linked to the current directory (the same `.lmnr/project.json` resolution every CLI command uses), authenticated as the signed-in user. See [CLI](/platform/cli#ask-the-agent).
-
-### Slack
-
-In Slack, the agent answers in-thread when you mention it. Replies are posted as Slack messages, so you get the answer where your team is already talking. Each Slack channel is connected to one Laminar project, which is how the agent knows whose data to query. See [Slack integration](/platform/integrations#connect-a-channel-to-a-project) for how a channel is connected to a project.
 
 ## What's next
 
