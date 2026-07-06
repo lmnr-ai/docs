@@ -123,6 +123,10 @@ The run rejoins the session automatically, so you only set the replay variables.
 
 Each replay produces a new trace in the same session, so attempts appear sequentially in the UI.
 
+<Note>
+A replay run persists `replay_trace_id` and `cache_until` into `.lmnr/debug-session.json`, so subsequent `LMNR_DEBUG=true` runs in the same directory replay against the same trace without re-passing the env vars. Env vars always override the file per field. `npx lmnr-cli debug session new` clears the replay state along with minting a fresh session.
+</Note>
+
 ## 5. Prove the fix with an eval
 
 A replay shows the fix works on one input. To show it holds in general, run your [evaluation](/evaluations/introduction) under the same debug session:
