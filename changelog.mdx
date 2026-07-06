@@ -4,6 +4,10 @@ title: Changelog
 
 New releases and improvements.
 
+## July 2026
+
+- **Evals in the debugger** - Run an [evaluation](/evaluations/introduction) with `LMNR_DEBUG=true` and it joins the current [debug session](/debugger/process#5-prove-the-fix-with-an-eval) automatically, rendered as a card with per-score averages and their change against the previous eval in the session. A session is now one timeline of runs, evals, and notes; `lmnr-cli debug session add-note` attaches markdown notes to it, and `lmnr-cli debug session summary` prints the whole timeline for a coding agent to re-orient from.
+
 ## June 2026
 
 - **Signal settings, backfill, and refreshed clusters** - Every Signal now has a **Settings** tab with four sections: **General** (definition and triggers), **Alerts**, **Backfill**, and **Activity**. Run a Signal across historical traces from [Backfill](/signals/quickstart#4-run-the-signal-triggers-and-backfill), watch each run's status in **Activity**, and configure a Signal's [alerts](/signals/alerts) in place, including output schema filters that fire only when an event's extracted output matches. The [clusters](/signals/clusters) view is rebuilt as a two-panel cluster list and stacked frequency chart below the events table.

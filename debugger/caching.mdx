@@ -34,7 +34,7 @@ Caching is supported in these integrations:
 - [Anthropic](/tracing/integrations/anthropic) (Python)
 - [Google GenAI](/tracing/integrations/gemini) (Python)
 - [LiteLLM](/tracing/integrations/litellm) (Python)
-- [AI SDK](/tracing/integrations/vercel-ai-sdk) (TypeScript, all providers): requires `wrapLanguageModel`, see [setup](/debugger/setup#special-case-ai-sdk)
+- [AI SDK](/tracing/integrations/vercel-ai-sdk) (TypeScript, all providers): requires `wrapLanguageModel`, see [setup](/debugger/setup#ai-sdk-caching)
 
 In TypeScript, the AI SDK is the only caching integration today; it covers all providers the AI SDK supports. The other integrations are Python-only.
 
@@ -44,7 +44,7 @@ The debugger itself runs with **many more integrations than this**. Recording, i
 
 <CardGroup cols={2}>
   <Card title="The debugger process" href="/debugger/process" icon="repeat">
-    The full loop your coding agent runs: record, inspect, and replay.
+    The full loop your coding agent runs: record, inspect, replay, and evaluate.
   </Card>
   <Card title="Setup" href="/debugger/setup" icon="wrench">
     Environment variables and the AI SDK special case.

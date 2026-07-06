@@ -147,6 +147,7 @@
         "tab": "Guides",
         "pages": [
           "guides/fastapi",
+          "guides/debugger-end-to-end",
           "guides/browser-use-debugger",
           "guides/nextjs-aisdk",
           "guides/nextjs",
