@@ -3,13 +3,13 @@ title: How the Debugger Runs
 sidebarTitle: The debugger process
 ---
 
-This is the loop your coding agent runs for you. With the [Laminar skill](https://github.com/lmnr-ai/lmnr-skills) installed, Claude Code, Cursor, or Codex drives every step below on its own: it records a run, names and annotates the session, inspects the traces with SQL, and replays from a checkpoint to iterate fast. Each step is also a plain CLI command or environment variable, so you can run any step by hand or take over at any point. Make sure you've completed [setup](/debugger/setup) first.
+This is the loop your coding agent runs for you. With the [Laminar skill](https://github.com/lmnr-ai/lmnr-skills) installed, Claude Code, Cursor, or Codex drives every step below on its own: it records a run, names and annotates the session, inspects the traces with SQL, replays from a checkpoint to iterate fast, and runs an eval to prove the fix. Each step is also a plain CLI command or environment variable, so you can run any step by hand or take over at any point. Make sure you've completed [setup](/debugger/setup) first.
 
 ## See your agent runs in browser
 
 Watch your agent work from the Laminar UI while it drives the loop from the terminal. Open **Debugger** in your project and select the session, or click the `debugger_url` the SDK prints (it opens automatically when a debug run starts).
 
-The session view streams every debug run as your coding agent works. Each segment renders Laminar's auto-extracted user inputs, LLM turns, tool calls, and collapsed sub-agent cards. Notes the agent attaches via `lmnr-cli trace append-note` (more on this below) render as markdown above each run's transcript, so you can follow its reasoning in real time.
+A session is a timeline of blocks: runs (traces), evaluations, and notes, interleaved by time. The view streams every block live as your coding agent works. Each run renders Laminar's auto-extracted user inputs, LLM turns, tool calls, and collapsed sub-agent cards. Evals render as cards with per-score averages, and notes render as markdown between them, so you can follow the agent's reasoning in real time.
 
 <Frame>
   <img src="/images/debugger-session-view.png" alt="Debugger session view showing a named investigation with a markdown note and expandable trace segments" />
@@ -44,13 +44,13 @@ The JSON on that line looks like:
 }
 ```
 
-You don't need to copy any of these ids. The same payload is saved to `.lmnr/debug-session.json`, and every later `LMNR_DEBUG=true` run in this directory reads that file and rejoins the same session automatically (no browser reopens). Your traces stay grouped without passing a session id around.
+You don't need to copy any of these ids. The same payload is saved to `.lmnr/debug-session.json`, and every later `LMNR_DEBUG=true` run in this directory (or any subdirectory) reads that file and rejoins the same session automatically (no browser reopens). Your traces stay grouped without passing a session id around.
 
 <Note>
 Continuation is not replay. Rejoining the session records another fresh run; it does not replay the previous trace. Replay is armed explicitly in [step 4](#4-replay-to-iterate-fast). To start a clean session instead of continuing, run `npx lmnr-cli debug session new`, which mints a new session and resets the file.
 </Note>
 
-## 2. Name the session and annotate each run
+## 2. Name the session and write notes
 
 Name the investigation so it's easy to find later. Click the session title in the session-view header and type a name inline, or set it from the CLI. The CLI commands below target the session in `.lmnr/debug-session.json` by default, so you don't pass a session id:
 
@@ -58,33 +58,19 @@ Name the investigation so it's easy to find later. Click the session title in th
 npx lmnr-cli debug session set-name "Fix report length + search tool"
 ```
 
-Write a note **before** each run to explain what you are about to test. Write the note as raw markdown to a file and point `LMNR_DEBUG_RUN_NOTES_FILE` at it:
+Write a note before each run to explain what you are about to test, and another after it with what the run showed:
 
 ```bash
-cat > .lmnr/run-note.md <<'EOF'
-## What I am testing
-Replaying calls 1-3, running call 4 live with the new length cap.
-EOF
+npx lmnr-cli debug session add-note "## Testing the length cap
+Replaying calls 1-3, running call 4 live with the new cap."
 
-LMNR_DEBUG=true \
-LMNR_DEBUG_RUN_NOTES_FILE=.lmnr/run-note.md \
-npx tsx my_agent.ts 2>&1 | tee run.log
-```
+LMNR_DEBUG=true npx tsx my_agent.ts 2>&1 | tee run.log
 
-A file keeps the markdown readable and avoids hand-stringifying it into JSON. For a one-line note, set `LMNR_DEBUG_RUN_NOTES` inline instead. Both variables are only read when `LMNR_DEBUG` is on, and the file wins when both are set. The note still lands on the trace's `rollout.note` metadata key; set that key directly through `LMNR_TRACE_METADATA` if you prefer.
-
-The run rejoins the session from `.lmnr/debug-session.json`, so no `LMNR_DEBUG_SESSION_ID` is needed.
-
-The note appears in the session view above the run's transcript, so the human watching sees what you're testing before the trace arrives.
-
-After the run completes, append a follow-up:
-
-```bash
-npx lmnr-cli trace append-note "## What this run showed
+npx lmnr-cli debug session add-note "## What this run showed
 Length cap is working (~180 words, was ~600). Next: check citations."
 ```
 
-The note lands on the latest trace of the current debug session; pass `--trace-id <trace-id>` to annotate a specific run. Notes are append-only: each call adds a paragraph to the existing note.
+Notes are markdown. Each `add-note` call adds a standalone note to the session, slotted into the timeline at the moment it was written, between the runs and evals it comments on. The human watching the session view sees your notes appear live, in order, without opening a terminal.
 
 In notes, reference a specific span with an XML tag. The UI renders it as a clickable chip that opens that span:
 
@@ -137,16 +123,53 @@ The run rejoins the session automatically, so you only set the replay variables.
 
 Each replay produces a new trace in the same session, so attempts appear sequentially in the UI.
 
-## 5. Re-orient with a session summary
+## 5. Prove the fix with an eval
 
-After a context reset or to catch up on an ongoing session, dump all trace notes in order:
+A replay shows the fix works on one input. To show it holds in general, run your [evaluation](/evaluations/introduction) under the same debug session:
+
+```bash
+LMNR_DEBUG=true npx lmnr eval my_agent.eval.ts
+```
+
+```bash
+LMNR_DEBUG=true lmnr eval my_agent_eval.py
+```
+
+There is no eval-specific setup: any Laminar evaluation run with `LMNR_DEBUG=true` resolves the session from `.lmnr/debug-session.json` the same way agent runs do, and links itself to it. The eval appears in the session timeline as a card showing its name and per-score averages. When the session contains more than one eval, each score also shows its change against the previous eval, green for up, red for down, so *did the fix move the numbers* is answered at a glance. Click the card to open the full evaluation with its datapoints and traces.
+
+A typical closing sequence: note what you're about to verify, run the eval, note the outcome.
+
+```bash
+npx lmnr-cli debug session add-note "Running the report-quality eval to confirm the length fix."
+LMNR_DEBUG=true npx lmnr eval report_quality.eval.ts
+npx lmnr-cli debug session add-note "Accuracy 0.82 → 0.91, length_ok 1.0. Fix confirmed."
+```
+
+## 6. Re-orient with a session summary
+
+After a context reset or to catch up on an ongoing session, dump the session's full timeline:
 
 ```bash
 npx lmnr-cli debug session summary
 npx lmnr-cli debug session summary --json
 ```
 
-This defaults to the current session; pass `--session-id <session-id>` for another. Output is one block per trace, oldest first: the markdown note followed by a `<trace id="…" end-time="…"/>` tag you can feed into SQL queries.
+This defaults to the current session; pass `--session-id <session-id>` for another. Output is one entry per block, oldest first: traces and evals print as self-closing tags you can feed into SQL queries, and notes print as their raw markdown.
+
+```text
+<trace id="…"/>
+
+## Testing the length cap
+Replaying calls 1-3, running call 4 live with the new cap.
+
+<trace id="…"/>
+
+<evaluation id="…"/>
+
+Accuracy 0.82 → 0.91, length_ok 1.0. Fix confirmed.
+```
+
+This is the same timeline the session view renders, so a coding agent that reads the summary and a human who watches the browser see the same story.
 
 ## What's next
 
@@ -154,13 +177,13 @@ This defaults to the current session; pass `--session-id <session-id>` for anoth
   <Card title="Viewing traces" href="/platform/viewing-traces" icon="eye">
     Read the full transcript view: inputs, LLM turns, tool calls, and sub-agent cards.
   </Card>
+  <Card title="Evaluations" href="/evaluations/introduction" icon="flask-conical">
+    Write the evals the debugger runs: datapoints, executors, and evaluators.
+  </Card>
   <Card title="SQL editor" href="/platform/sql-editor" icon="database">
     Query spans, traces, and signal events with ClickHouse SQL directly in the browser.
   </Card>
   <Card title="CLI reference" href="/platform/cli" icon="terminal">
-    Full reference for `lmnr-cli sql`, `dataset`, `debug`, and `trace` commands.
-  </Card>
-  <Card title="Browser Use debugger guide" href="/guides/browser-use-debugger" icon="globe">
-    End-to-end walkthrough debugging a Browser Use agent with the debugger.
+    Full reference for `lmnr-cli sql`, `dataset`, and `debug session` commands.
   </Card>
 </CardGroup>

@@ -40,9 +40,8 @@ Wrap functions with Laminar to capture inputs, outputs, and errors automatically
     | `ignoreInput` | `boolean` | `false` | Don't record input |
     | `ignoreOutput` | `boolean` | `false` | Don't record output |
     | `parentSpanContext` | `string` &#124; `LaminarSpanContext` | — | Parent context for distributed tracing |
-    | `rolloutEntrypoint` | `boolean` | `false` | Return a wrapped function for debugger instead of executing immediately |
 
-    **Returns:** `Promise<ReturnType<F>>` (default) or wrapped function when `rolloutEntrypoint: true`
+    **Returns:** `Promise<ReturnType<F>>`
 
     **Behavior:**
     - If one non-Map object argument, records that object as input; otherwise records array
@@ -50,22 +49,6 @@ Wrap functions with Laminar to capture inputs, outputs, and errors automatically
     - Exceptions recorded via `recordException` and re-thrown
     - Anonymous function name becomes `""` if `name` not provided
     - Works with both sync and async functions
-    - When `rolloutEntrypoint` is true, returns a wrapped function and does not execute immediately
-    - In debugger, Laminar attaches `rollout.session_id` from `LMNR_ROLLOUT_SESSION_ID`
-
-    **Examples: Rollout entrypoint**
-
-    ```typescript
-    import { observe } from '@lmnr-ai/lmnr';
-
-    export const generateStream = observe(
-      { name: 'generateStream', rolloutEntrypoint: true },
-      async (messages: string[]) => {
-        // Your agent code here.
-      },
-    );
-    // Start a session with: npx lmnr-cli@latest dev path/to/entrypoint.js
-    ```
 
     **Examples: Group multiple LLM calls under one parent span**
 
@@ -165,7 +148,6 @@ Wrap functions with Laminar to capture inputs, outputs, and errors automatically
     | `input_formatter` | `Callable` | `None` | Custom input formatting function |
     | `output_formatter` | `Callable` | `None` | Custom output formatting function |
     | `preserve_global_context` | `bool` | `False` | Use global OTEL context instead of isolated |
-    | `rollout_entrypoint` | `bool` | `False` | Register function as rollout entrypoint when running in rollout mode |
 
     **Returns:** Decorator
 
@@ -229,16 +211,5 @@ Wrap functions with Laminar to capture inputs, outputs, and errors automatically
         pass
     ```
 
-    **Examples: Rollout entrypoint**
-
-    ```python
-    from lmnr import observe
-
-    @observe(rollout_entrypoint=True)
-    def generate_stream(messages):
-        # Your agent code here.
-        pass
-    # Start a session with: lmnr dev path/to/entrypoint.py
-    ```
   </Tab>
 </Tabs>

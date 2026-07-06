@@ -1,11 +1,11 @@
 ---
-title: AI Agent Debugger for Long-Running Agents
+title: "AI Agent Debugger: Record, Replay, Evaluate"
 sidebarTitle: Introduction
 ---
 
 Building an agent is a loop: run it, see what it did, change something, run it again. When your coding agent drives that loop, it needs to see what the agent did as clearly as you would, and it can't afford to wait minutes for a full run on every change.
 
-**The Laminar debugger is that loop, built for a coding agent to run.** Claude Code, Cursor, or Codex runs your agent, reads the resulting trace in Laminar to understand what worked and what didn't, changes your code, and runs again, with each rerun served from cache up to the point it's testing so the turn is fast and cheap. Every run lands in one [session](/debugger/process) you watch live.
+**The Laminar debugger is that loop, built for a coding agent to run.** Claude Code, Cursor, or Codex runs your agent, reads the resulting trace in Laminar to understand what worked and what didn't, changes your code, and runs again, with each rerun served from cache up to the point it's testing so the turn is fast and cheap. Every run, evaluation, and note lands in one [session](/debugger/process) you watch live.
 
 <Frame>
   <img src="/images/debugger-session-view.png" alt="Debugger session view showing a named investigation with a markdown note and expandable trace segments" />
@@ -20,18 +20,23 @@ One turn of the loop has four steps. A coding agent with the [Laminar skill](htt
 3. **Change.** Edit the agent: the prompt, a tool, the control flow, whatever the trace pointed at.
 4. **Run again.** Rerun against the recorded trace. Everything before the call you're testing comes back from cache instantly; only your change and what follows it run live. The new run is a fresh trace in the same session, next to the last one.
 
-The point is the turnaround. A long-running agent can take minutes end to end, and the call you're fixing is often three-quarters of the way through. Caching the prefix means the coding agent can take that turn dozens of times in the span it would take to run the agent live once. See [how caching works](/debugger/caching) for the mechanism.
+The point is the turnaround. An agent run can take minutes end to end, and the call you're fixing is often three-quarters of the way through. Caching the prefix means the coding agent can take that turn dozens of times in the span it would take one live run to finish. See [how caching works](/debugger/caching) for the mechanism.
+
+## Prove the fix with an eval
+
+A single replay shows the fix works on one input. To show it works in general, run your [evaluation](/evaluations/introduction) with `LMNR_DEBUG=true`: the eval joins the same session automatically and renders as a card with per-score averages, each score marked with its change against the previous eval in the session. Fix, replay, eval, compare: the whole arc of an investigation sits in one timeline. See [the debugger process](/debugger/process#5-prove-the-fix-with-an-eval) for the commands.
 
 ## Who drives the loop
 
-The loop is the same whoever runs it, and you watch it from the same session view either way. Hand it to a **coding agent** and watch: with the [Laminar skill](https://github.com/lmnr-ai/lmnr-skills) it runs your agent, reads the trace, edits your code, and reruns on its own, writing a note before each turn so you can follow along without touching the terminal. Stay **in the loop** by reading each run as it lands and pointing the agent at the span that's wrong, or **drive it yourself**: every step is a CLI command or an environment variable, no coding agent required.
+The loop is the same whoever runs it, and you watch it from the same session view either way. Hand it to a **coding agent** and watch: with the [Laminar skill](https://github.com/lmnr-ai/lmnr-skills) it runs your agent, reads the trace, edits your code, and reruns on its own, leaving notes so you can follow along without touching the terminal. Stay **in the loop** by reading each run as it lands and pointing the agent at the span that's wrong, or **drive it yourself**: every step is a CLI command or an environment variable, no coding agent required.
 
-## Sessions and replay
+## Sessions, replay, and blocks
 
-Two primitives make the loop work:
+Three primitives make the loop work:
 
-- **Sessions** group every run from one investigation so the turns sit together. The traces appear in order in the Laminar UI, so you (or your coding agent) can compare attempts and follow the notes on each one. The first `LMNR_DEBUG=true` run starts a session and writes `.lmnr/debug-session.json`; every later run in the same directory rejoins it automatically, so neither you nor the agent copies a session id between runs.
-- **Replay** is what makes a turn fast. Rerunning against a recorded trace serves cached LLM responses up to the boundary you pick and runs everything past it live, so you only pay for the calls your change actually touched. See [how caching works](/debugger/caching) for the mechanism.
+- **Sessions** group everything from one investigation. The first `LMNR_DEBUG=true` run starts a session and writes `.lmnr/debug-session.json`; every later run in the same directory (or any subdirectory) rejoins it automatically, so neither you nor the agent copies a session id between runs.
+- **Replay** is what makes a turn fast. Rerunning against a recorded trace serves cached LLM responses up to the boundary you pick and runs everything past it live, so you only pay for the calls your change actually touched. See [how caching works](/debugger/caching).
+- **Blocks** are what a session contains: an ordered timeline of runs (traces), evaluations, and notes, sorted by time. The UI renders the same timeline the CLI prints with [`lmnr-cli debug session summary`](/platform/cli#debug-session-summary), so a human and a coding agent read the same story.
 
 ## What's next
 
@@ -40,12 +45,12 @@ Two primitives make the loop work:
     Install the CLI, run setup, and let your coding agent take it from there.
   </Card>
   <Card title="The debugger process" href="/debugger/process" icon="repeat">
-    The full run, read, change, and rerun loop your coding agent runs, step by step.
+    The full run, read, change, rerun, and eval loop, step by step.
   </Card>
   <Card title="How caching works" href="/debugger/caching" icon="database">
     What gets cached, how the input hash works, and which integrations support it.
   </Card>
-  <Card title="Browser Use debugger guide" href="/guides/browser-use-debugger" icon="globe">
-    End-to-end walkthrough debugging a Browser Use agent.
+  <Card title="CLI reference" href="/platform/cli" icon="terminal">
+    Full reference for the `lmnr-cli debug session` commands.
   </Card>
 </CardGroup>
