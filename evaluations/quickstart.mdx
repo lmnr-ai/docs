@@ -207,14 +207,10 @@ When the run finishes, the SDK prints a link to the evaluation page in Laminar.
 
 Every datapoint becomes one trace. Every trace gets one score per evaluator.
 
-<Frame caption="Single evaluation run: average score at the top, per-datapoint table below">
-  <img src="/images/evaluations/eval-detail.png" alt="Evaluation detail page showing 1.00 average on length_ok and six datapoints, each with accuracy and length_ok columns set to 1" />
-</Frame>
+The evaluation page is a split view: the datapoint table on the left, the trace for the selected row on the right. Pick a score dimension in the top-left dropdown to see its aggregate for the run; for non-binary scores an aggregation picker appears next to it (Average by default; Sum, Min, Max, Median, and percentiles). Score chips above the trace show every score for the selected datapoint.
 
-Click any datapoint row to open the trace in a side panel. The trace shows the extracted input, the executor span, the LLM call nested under it, and the evaluator spans with their scores.
-
-<Frame caption="Drill-down into a single datapoint: the executor span, nested model span, and evaluator scores">
-  <img src="/images/evaluations/eval-transcript.png" alt="Transcript view of a single evaluation datapoint with the Input block, executor span, model span, and accuracy and length_ok evaluator scores" />
+<Frame caption="One evaluation run: datapoint table on the left with a score per evaluator, the selected datapoint's trace on the right. The transcript shows the input, the executor span, the model call, and both evaluator scores">
+  <img src="/images/evaluations/eval-detail.png" alt="Evaluation detail page with six datapoints scoring 1 on accuracy and length_ok, and a transcript view of the selected datapoint's trace showing the executor, model span, and evaluator scores" />
 </Frame>
 
 ## Change something and run it again
@@ -232,8 +228,8 @@ For example, change the prompt so the model returns a full explanatory sentence:
 
 Rerun. Because the output is now longer than 50 characters, `length_ok` drops from 1.0 to 0.0 for every datapoint while `accuracy` stays at 1.0. That's a regression you caught before production.
 
-<Frame caption="The capitals group after three runs. length_ok goes from 1.0 on v1 and v2 to 0.0 on v3 (gpt-3.5 with a chatty prompt); accuracy stays flat">
-  <img src="/images/evaluations/eval-list.png" alt="Evaluations list filtered by capitals group with a progression chart at the top showing length_ok dropping to zero on the most recent run" />
+<Frame caption="The capitals group after three runs. length_ok goes from 1.0 on v1 and v2 to 0.0 on v3 (the chatty prompt); accuracy stays flat">
+  <img src="/images/evaluations/eval-list.png" alt="Evaluations page with the capitals group selected in the sidebar and a progression chart showing length_ok dropping to zero on the most recent run" />
 </Frame>
 
 See [Compare runs](/evaluations/comparing-runs) for side-by-side diffs and per-datapoint deltas.
