@@ -3,7 +3,7 @@ title: Viewing Traces
 sidebarTitle: Viewing traces
 ---
 
-A Laminar trace can have thousands of spans. The trace view gives you several ways to read it: **Transcript** (the default), **Tree**, and **Timeline** (via the view-mode dropdown), plus **Metadata** and **Chat with trace** side panels. Selecting any span in any view opens the full span detail pane on the right.
+A Laminar trace can have thousands of spans. The trace view gives you several ways to read it: **Transcript** (the default), **Tree**, [custom render templates](#custom-views-with-render-templates), and **Timeline**, plus **Metadata** and **Chat with trace** side panels. Selecting any span in any view opens the full span detail pane on the right.
 
 ## Transcript view
 
@@ -66,6 +66,16 @@ Transcript is the default, but Tree view is one click away and useful when you n
 - **Synced minimap**: Jump to spans and scrub the shared session-time cursor.
 
 Use Tree view when you want to understand structure: what called what, and where time or cost sits in the hierarchy.
+
+## Custom views with render templates
+
+The same view-mode dropdown lists your project's [trace render templates](/platform/render-templates#trace-templates) under **Custom**. A trace template is a small JSX component plus a SQL filter over the trace's spans: it receives the matching spans and renders the whole trace however you define, instead of as a transcript or a tree.
+
+<Frame caption="An evaluation trace rendered through a custom SQL diff template: the question, the scores, and a word diff between the model's output and the target, built from the executor and evaluator spans.">
+  <img src="/images/evaluations/eval-custom-renderer.png" alt="Trace rendered through a custom template showing a side-by-side SQL diff between model output and target" />
+</Frame>
+
+This is what the trace view is built for when you review the same shape of trace over and over: eval runs, extraction pipelines, agent runs with a known plan/act structure. The pane remembers the view you picked, so clicking through a run's datapoints keeps your custom view open. See [Render templates](/platform/render-templates#trace-templates) for the payload shape and a full worked example.
 
 ## Timeline
 
