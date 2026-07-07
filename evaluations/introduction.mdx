@@ -7,8 +7,8 @@ Evaluations are how you answer one question before shipping a prompt, model, or 
 
 **Laminar evaluations are the offline testing layer for your agents and LLM pipelines.** You define a list of inputs, a function that produces an output, and one or more functions that score it. Laminar runs them in parallel, traces every call, stores the scores, and **[compares them](/evaluations/comparing-runs) across [runs](/evaluations/concepts) and [groups](/evaluations/comparing-runs#group-runs-to-compare-them)**.
 
-<Frame caption="Three runs of the same evaluation, grouped: the progression chart shows length_ok dropping from 1.0 to 0.0 on the third run">
-  <img src="/images/evaluations/eval-list.png" alt="Evaluation list for the capitals group with a trend chart at the top showing accuracy flat at 1.0 and length_ok falling to 0.0" />
+<Frame caption="A single run: the datapoint table with a score per evaluator, and the selected datapoint's trace showing the executor, the model call, and both evaluator scores">
+  <img src="/images/evaluations/eval-detail.png" alt="Evaluation run page with a datapoint table on the left and the selected datapoint's transcript on the right" />
 </Frame>
 
 ## What an evaluation can help you answer
@@ -22,12 +22,14 @@ Evaluations are for questions you can answer with a score. Some of them are obvi
 
 If you've ever changed a prompt and hoped nothing broke, this is the answer to that hope.
 
-## Track progress, then drill into a run
+## Explore a run, then track progress across runs
 
-The chart above answers *did the score move*. The run view answers *why*: it's a split view with every datapoint and its scores on the left and the selected datapoint's full trace on the right, so you go from an aggregate number to the exact model call behind it in one click.
+The run view above answers *why a datapoint scored the way it did*: every datapoint and its scores on the left, the selected datapoint's full trace on the right, so you go from a score to the exact model call behind it in one click.
 
-<Frame caption="A single run: the datapoint table with a score per evaluator, and the selected datapoint's trace showing the executor, the model call, and both evaluator scores">
-  <img src="/images/evaluations/eval-detail.png" alt="Evaluation run page with a datapoint table on the left and the selected datapoint's transcript on the right" />
+The group view answers *did the score move*: runs sharing a group name are charted together, one line per score dimension, so a regression on any dimension is visible the moment the run lands.
+
+<Frame caption="Three runs of the same evaluation, grouped: the progression chart shows length_ok dropping from 1.0 to 0.0 on the third run">
+  <img src="/images/evaluations/eval-list.png" alt="Evaluation list for the capitals group with a trend chart at the top showing accuracy flat at 1.0 and length_ok falling to 0.0" />
 </Frame>
 
 ## Anatomy of an evaluation
