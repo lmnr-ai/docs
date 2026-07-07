@@ -22,6 +22,14 @@ Evaluations are for questions you can answer with a score. Some of them are obvi
 
 If you've ever changed a prompt and hoped nothing broke, this is the answer to that hope.
 
+## Track progress, then drill into a run
+
+The chart above answers *did the score move*. The run view answers *why*: it's a split view with every datapoint and its scores on the left and the selected datapoint's full trace on the right, so you go from an aggregate number to the exact model call behind it in one click.
+
+<Frame caption="A single run: the datapoint table with a score per evaluator, and the selected datapoint's trace showing the executor, the model call, and both evaluator scores">
+  <img src="/images/evaluations/eval-detail.png" alt="Evaluation run page with a datapoint table on the left and the selected datapoint's transcript on the right" />
+</Frame>
+
 ## Anatomy of an evaluation
 
 An evaluation has four parts:
