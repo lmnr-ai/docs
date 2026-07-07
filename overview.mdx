@@ -3,28 +3,37 @@ title: Laminar
 sidebarTitle: Laminar
 ---
 
-Laminar is an [**open-source**](https://github.com/lmnr-ai/lmnr) observability platform purpose-built for AI agents. You can trace every call to an LLM, tool execution and custom functions.
+Laminar is an [**open-source**](https://github.com/lmnr-ai/lmnr), OpenTelemetry-native observability and debugging platform built for AI agents. Trace, debug, and monitor every LLM call, tool call, and sub-agent your agent runs, whether it finishes in one turn or works through hundreds of steps across parallel sub-agents. Use managed Laminar Cloud or [self-host](/self-hosting/overview) the whole platform.
 
-Laminar goes beyond tracing and is deeply focused on helping you properly use captured data and extract insights from it:
-- **During development**, Laminar allows you to rollout and replay agents from different parts of the captured trace significantly speeding up the development process.
+Agents produce enormous amounts of data, and a tree of span names tells you little about what the agent actually did. Laminar is built to turn that data into answers:
 
-- **In production**, with Laminar you can describe patterns and errors in natural language and track it across all your traces, to measure real behavior and user interactions with your agents.
+- **During development**, the [debugger](/debugger/introduction) records a run and replays it with everything before your change served from cache, so each iteration takes seconds instead of a full live run. Your coding agent can drive the whole loop.
+
+- **In production**, [Signals](/signals/introduction) let you describe outcomes and failures in plain language and extract structured events across all your traces, so you're notified when your agent breaks and know why in seconds.
 
 <CardGroup cols={2}>
 
 <Card title="Tracing" icon="list-tree" href="/tracing/introduction">
-  Trace LLM calls, tool use, and custom functions. First-class support for **AI SDK, LangChain, Browser Use, Stagehand**, and more.
+  Trace LLM calls, tool use, and custom functions. First-class support for **AI SDK, Claude Agent SDK, LangChain, Browser Use**, and more.
+</Card>
+
+<Card title="Viewing traces" icon="message-square-text" href="/platform/viewing-traces">
+  Read each trace as a transcript: agent inputs, LLM turns, tool calls, and sub-agents collapsed into cards. Not a span tree.
+</Card>
+
+<Card title="Debugger" icon="bug" href="/debugger/introduction">
+  Record a run, replay it from cache up to the point you're testing, and prove the fix with an eval. Built for a coding agent to run.
 </Card>
 
 <Card title="Signals" icon="radio" href="/signals/introduction">
   Describe outcomes and failures in plain language. Laminar reads every trace and produces structured events you can query, cluster, and alert on.
 </Card>
 
-<Card title="Evaluations" icon="chart-line" href="/evaluations">
+<Card title="Evaluations" icon="chart-line" href="/evaluations/introduction">
   Run evals against datasets locally or in CI. Catch regressions before they ship.
 </Card>
 
-<Card title="Datasets & Labeling" icon="database" href="/datasets">
+<Card title="Datasets & Labeling" icon="database" href="/datasets/introduction">
   Build evaluation datasets from production traces.
 </Card>
 
@@ -33,6 +42,6 @@ Laminar goes beyond tracing and is deeply focused on helping you properly use ca
 </Card>
 
 <Card title="Platform" icon="layers" href="/platform">
-  Realtime traces, full-text search, raw SQL access to all your data, and dashboards for exploring traces however you need to.
+  Realtime traces, full-text search, raw SQL access from the UI, CLI, or MCP, and custom dashboards.
 </Card>
 </CardGroup>
