@@ -109,6 +109,7 @@
               "evaluations/quickstart",
               "evaluations/concepts",
               "evaluations/comparing-runs",
+              "evaluations/custom-rendering",
               "evaluations/datasets",
               "evaluations/manual-evaluation",
               "evaluations/self-hosted"
@@ -268,6 +269,6 @@
     }
   },
   "icons": {
-  "library": "lucide"
+    "library": "lucide"
   }
 }

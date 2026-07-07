@@ -34,13 +34,13 @@ The group view answers *did the score move*: runs sharing a group name are chart
 
 ## Render eval traces your way
 
-Every datapoint in a run has the same trace shape, so reviewing a run means reading the same few fields over and over. [Trace render templates](/platform/render-templates#trace-templates) let you replace the default trace view with one built for your eval: a small JSX component that receives the executor and evaluator spans and renders exactly what you need to judge a row.
+Every datapoint in a run has the same trace shape, so reviewing a run means reading the same few fields over and over. [Custom rendering](/evaluations/custom-rendering) lets you replace the default trace view with one built for your eval: a small JSX component that receives the executor and evaluator spans and renders exactly what you need to judge a row.
 
 <Frame caption="A text-to-SQL eval datapoint rendered through a custom template: the question, the scores, and a word diff between the model's SQL and the target">
   <img src="/images/evaluations/eval-custom-renderer.png" alt="Evaluation trace rendered through a custom template showing a side-by-side SQL diff between model output and target" />
 </Frame>
 
-The view sticks as you click through datapoints, so reviewing a whole run takes seconds per row. See the [full worked example](/platform/render-templates#example-diff-an-eval-output-against-its-target) and [how it fits into a regression workflow](/evaluations/comparing-runs#see-why-a-score-moved-with-a-render-template).
+The view sticks as you click through datapoints, so reviewing a whole run takes seconds per row. See [Custom rendering](/evaluations/custom-rendering) for the full walkthrough.
 
 ## Anatomy of an evaluation
 
