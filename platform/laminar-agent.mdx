@@ -1,0 +1,76 @@
+---
+title: Laminar Agent
+sidebarTitle: Laminar Agent
+---
+
+Laminar Agent is an AI agent that lives inside your project and answers questions about your data by querying it directly. Ask it about your traces, spans, LLM costs and tokens, evaluations, signals, clusters, and tags. It runs SQL and inspects trace context to ground every answer in your data. 
+
+
+## Where you can use it
+
+<CardGroup cols={3}>
+  <Card title="Slack" href="/platform/integrations#laminar-agent">
+    Mention `@Laminar` in a connected channel and it replies in the thread.
+  </Card>
+  <Card title="MCP server" href="/platform/mcp">
+    Ask the agent from Claude Code, Cursor, or Codex with the `ask_agent` tool.
+  </Card>
+  <Card title="CLI" href="/platform/cli">
+    Ask the agent from your terminal with `lmnr-cli ask`.
+  </Card>
+</CardGroup>
+
+## What it can do
+
+The agent works by calling a set of tools against your project:
+
+- **Run SQL.** It writes and runs read-only ClickHouse `SELECT` queries across your traces, spans, signal events, clusters, evaluations, and tags. Queries are automatically scoped to your project. 
+- **Read a trace.** Given a trace, it pulls a compact view of the full span structure: agent inputs, LLM turns, tool calls, and errors. This is how it explains, summarizes, or debugs a specific run.
+- **Search inside a trace.** It fuzzy-matches a string across one trace's span inputs and outputs and returns the matching snippets with surrounding context.
+- **Fetch full span content.** When a preview is truncated, it pulls the complete input and output for specific spans.
+
+## Example questions
+
+- "What failed in the most recent run for my `dev-claude` session?"
+- "Find the latest error trace and summarize the root cause."
+- "Which tool call failed first in the last 20 minutes?"
+- "List the 5 slowest traces from the last hour and explain why the slowest one was slow."
+- "Compare token usage between the last two successful runs."
+- "How much did we spend on LLM calls today, broken down by model?"
+- "Which signal fired most often this week, and show me an example event."
+
+
+### Slack
+
+In Slack, the agent answers in-thread when you mention it. Replies are posted as Slack messages, so you get the answer where your team is already talking. Each Slack channel is connected to one Laminar project, which is how the agent knows whose data to query. See [Slack integration](/platform/integrations#connect-a-channel-to-a-project) for how a channel is connected to a project.
+
+### MCP
+
+The MCP server exposes the agent as the `ask_agent` tool. Your coding assistant calls it with a natural-language `prompt` and gets a grounded answer back, alongside the lower-level `query_laminar_sql` and `get_trace_context` tools it can also call directly. See [MCP Server](/platform/mcp) to connect a client.
+
+### CLI
+
+Ask the agent from your terminal:
+
+```bash
+lmnr-cli ask "What failed in the most recent run for my dev-claude session?"
+```
+
+Each answer comes back with a conversation id (printed after the answer). Pass it to `--conversation` on the next question to continue the same conversation, so the agent keeps the prior context and you can ask follow-ups:
+
+```bash
+lmnr-cli ask "and which model did it use?" --conversation <id>
+```
+
+With `--json`, the conversation id is returned as `conversationId` in the output (`{ answer, conversationId, tools }`) for scripting multi-turn flows. The command runs against the project linked to the current directory (the same `.lmnr/project.json` resolution every CLI command uses), authenticated as the signed-in user. See [CLI](/platform/cli#ask-the-agent).
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="SQL Editor" href="/platform/sql-editor">
+    The full schema and query reference the agent uses under the hood.
+  </Card>
+  <Card title="Signals" href="/signals/introduction">
+    Define the outcomes and failures the agent can then query and explain.
+  </Card>
+</CardGroup>

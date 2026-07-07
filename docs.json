@@ -3,9 +3,9 @@
   "theme": "mint",
   "name": "Laminar documentation",
   "colors": {
-    "primary": "#ED6E40",
-    "light": "#ED6E40",
-    "dark": "#ED6E40"
+    "primary": "#d0754e",
+    "light": "#d0754e",
+    "dark": "#d0754e"
   },
   "favicon": "/favicon.png",
   "navigation": {
@@ -130,6 +130,7 @@
               "platform/table-views",
               "platform/integrations",
               "platform/live-tracing",
+              "platform/laminar-agent",
               "platform/mcp",
               "platform/sql-editor",
               "platform/cli",
@@ -223,7 +224,10 @@
       "destination": "/self-hosting/overview"
     }
   ],
-  "logo": "/logo/logo.png",
+  "logo": "/logo/laminar-wordmark.svg",
+  "thumbnails": {
+    "background": "/images/og-background.png"
+  },
   "appearance": {
     "default": "dark",
     "strict": true
