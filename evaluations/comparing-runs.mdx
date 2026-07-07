@@ -38,29 +38,56 @@ Pick one name per *thing you're testing*, not per *version*. The capitals eval s
 
 ## Read the progression chart
 
-The evaluations page shows every run in a group, newest first, with the group's average score for each dimension plotted across the top.
+The evaluations page lists every group in a sidebar, with a run count and the time of the latest run. Select a group and the right side shows its progression chart and run list, newest first.
 
 <Frame caption="Three runs in the capitals group. accuracy holds at 1.0 across every run; length_ok drops to 0.0 on the most recent run">
-  <img src="/images/evaluations/eval-list.png" alt="Evaluations list for the capitals group with a progression chart showing accuracy flat at 1.0 and length_ok falling to 0.0" />
+  <img src="/images/evaluations/eval-list.png" alt="Evaluations page with the capitals group selected in the sidebar and a progression chart showing accuracy flat at 1.0 and length_ok falling to 0.0" />
 </Frame>
 
-One line per score dimension. Each point is the average of that dimension for one run. A sudden drop on one line means a regression on that dimension.
+One line per score dimension. Each point is one run's aggregate for that dimension. A sudden drop on one line means a regression on that dimension.
+
+A few controls worth knowing:
+
+- **Aggregation dropdown** next to the group name. Average by default; switch to Sum, Min, Max, Median, p90, p95, or p99. Percentiles are the right choice when a few catastrophic rows hide behind a healthy average.
+- **Legend toggles**. Click a score name in the chart legend to hide or show that line. Useful when one dimension's scale dwarfs another's.
+- **Eye icons** on run rows. Click the eye to exclude a run from the chart, for example a half-finished run or a known-bad experiment that distorts the y-axis.
 
 In the screenshot above, `length_ok` fell from 1.0 to 0.0 on the most recent run because the prompt was changed to ask for a one-sentence fun fact instead of a one-word answer. Every output now exceeds the 50-character limit the evaluator checks for.
 
 ## Side-by-side comparison
 
-Click any run to open its detail page. Use the **Select compared evaluation** dropdown to pick a second run from the same group. Laminar renders both score distributions on top of each other and shows per-row deltas.
+Click any run to open its detail page, then use the **Select compared evaluation** dropdown in the header to pick a baseline run from the same group. The comparison is in the URL (`?targetId=<evaluation-id>`), so you can share the link. Hit **Reset** to drop the baseline.
 
-<Frame caption="Comparing the regressed run (v3) against v1. The length_ok histogram shows the full population moved from 1 to 0; the table shows per-row deltas (0 → 1 on length_ok, 1 → 1 on accuracy)">
-  <img src="/images/evaluations/eval-compare.png" alt="Comparison view with the length_ok distribution chart and a datapoints table showing per-row score deltas from v3 to v1" />
+With a baseline selected:
+
+- The score card shows `old → new` with a colored delta badge, for example `0.83 → 0.74` with `▼ 11.5%`. Switch the score dropdown to see the delta for each dimension.
+- Every row in the datapoint table shows its own `old → new` delta per score column, so you can see exactly which datapoints moved.
+
+<Frame caption="Comparing a text-to-SQL run without a style guide against the baseline with one. token_f1 drops from 0.83 to 0.74 (-11.5%); per-row deltas show which questions regressed">
+  <img src="/images/evaluations/eval-compare.png" alt="Comparison view with the score card showing 0.83 to 0.74 and a datapoints table with per-row score deltas" />
 </Frame>
 
-The big-number summary at the top (`0.00 → 1.00`) tells you the direction. The per-row deltas below tell you exactly which datapoints moved.
+The score card tells you the direction. The per-row deltas tell you exactly which datapoints moved. The trace panel on the right shows you *why*: click a regressed row and read what the model actually produced.
+
+## See why a score moved with a render template
+
+Per-row deltas point at the regressed datapoints, but the answer to "what actually changed" is buried in the executor's output. For evals where the output is comparable to the target (SQL generation, structured extraction, translation), a [trace render template](/platform/render-templates#trace-templates) turns the trace panel into a purpose-built diff view.
+
+The example below is a text-to-SQL eval. The template pulls the question from the executor's input, the generated SQL from its output, and the target SQL from the evaluator's input, then renders a word-level diff:
+
+<Frame caption="A trace render template on an eval trace: the question, both scores, and a word diff between the model's SQL and the target. Red tokens exist only in the output, orange only in the target">
+  <img src="/images/evaluations/eval-custom-renderer.png" alt="Evaluation trace rendered through a custom SQL diff template showing model output and target side by side with highlighted differing tokens" />
+</Frame>
+
+Reading this view across a few rows answers the regression in seconds: without the style guide, the model stopped aliasing tables and switched join strategies, so `token_f1` dropped even where the SQL was semantically fine.
+
+To build one, open any datapoint's trace, click the view dropdown (where **Transcript** and **Tree** live), and pick **+ New template**. Templates are scoped to the whole trace: you give them a SQL `WHERE` filter over the trace's spans (here `span_type IN ('EXECUTOR', 'EVALUATOR')`) and a JSX function that receives the matched spans. Once created, the template appears in the same dropdown for every trace in the project, and the pane remembers your pick, so clicking through datapoints keeps the diff view open.
+
+The full template source and the span payload shape are on the [render templates](/platform/render-templates#trace-templates) page.
 
 ## Filter by group in the list
 
-The evaluations list at `/evaluations` groups runs by default. Click a group in the sidebar, or visit `/evaluations?groupId=<group-name>` directly. The progression chart and run list scope to the selected group.
+The evaluations page groups runs by default. Click a group in the sidebar, or visit `/evaluations?groupId=<group-name>` directly. The progression chart and run list scope to the selected group.
 
 ## Export comparisons
 
@@ -83,14 +110,14 @@ The SQL editor exposes `evaluation_datapoints` (one row per datapoint, with `sco
 ## Next steps
 
 <CardGroup cols={2}>
+  <Card title="Render templates" href="/platform/render-templates" icon="paintbrush">
+    Build custom trace views like the SQL diff above.
+  </Card>
   <Card title="Datasets" href="/evaluations/datasets" icon="database">
     Keep the dataset constant across runs so comparisons are apples-to-apples.
   </Card>
   <Card title="SQL editor" href="/platform/sql-editor" icon="code">
     Query `evaluation_datapoints` for bespoke comparisons and dashboards.
-  </Card>
-  <Card title="Manual API" href="/evaluations/manual-evaluation" icon="wrench">
-    The lower-level API when `evaluate()` is too opinionated.
   </Card>
   <Card title="SDK reference" href="/sdk/evaluations" icon="code">
     Full parameters for `evaluate`, `LaminarDataset`, and `EvaluationDataset`.

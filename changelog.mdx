@@ -6,6 +6,8 @@ New releases and improvements.
 
 ## July 2026
 
+- **Evaluations UI refresh** - The [evaluations page](/evaluations/comparing-runs) now has a groups sidebar with run counts, a combined progression chart with one line per score dimension (legend toggles, per-run eye icons to exclude runs), and an aggregation picker (Average, Sum, Min, Max, Median, p90/p95/p99). The run detail page is a split view with the datapoint table next to an always-open trace panel, and side-by-side comparison shows `old → new` deltas on the score card and on every row.
+- **Trace render templates** - [Render templates](/platform/render-templates#trace-templates) can now render a whole trace, not just one span's input or output. A SQL `WHERE` filter picks which spans the template receives, so one view can combine data across spans, like diffing an eval executor's output against the evaluator's target. Available from the view dropdown on any trace, next to Tree and Transcript.
 - **Evals in the debugger** - Run an [evaluation](/evaluations/introduction) with `LMNR_DEBUG=true` and it joins the current [debug session](/debugger/process#5-prove-the-fix-with-an-eval) automatically, rendered as a card with per-score averages and their change against the previous eval in the session. A session is now one timeline of runs, evals, and notes; `lmnr-cli debug session add-note` attaches markdown notes to it, and `lmnr-cli debug session summary` prints the whole timeline for a coding agent to re-orient from.
 
 ## June 2026
