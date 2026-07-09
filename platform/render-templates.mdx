@@ -3,7 +3,7 @@ title: Render Templates for Custom Data Views
 sidebarTitle: Render templates
 ---
 
-Render templates let you write a small JSX component that takes trace data as `data` and renders it however you want. Use them when the default views don't show your data the way you want to read it.
+Render templates show trace data through a small JSX component that receives the data as `data` and renders it however you want. Describe the view you want and Laminar generates the component for you, or write the JSX by hand. Use them when the default views don't show your data the way you want to read it.
 
 Templates come in two scopes:
 
@@ -20,27 +20,27 @@ Every input/output viewer in Laminar has a mode picker in the top-left corner. A
 
 <br/>
 
-<Frame caption="Same span, rendered through a Flights list template instead of raw JSON. The Edit template button next to the picker opens the editor without leaving the trace.">
-  <img src="/images/render-templates/custom-mode-rendered.png" alt="Span Output rendered through a custom Flights list template" />
+<Frame caption="Same span, rendered through a Flights table template instead of raw JSON. The Edit template button next to the picker opens the editor without leaving the trace.">
+  <img src="/images/render-templates/custom-mode-rendered.png" alt="Span Output rendered through a custom Flights table template" />
 </Frame>
 
-## Write a template with AI
+## Generate a template
 
-Open any I/O view, pick the mode dropdown, and click **+ New template**. In the dialog:
+Open any I/O view, pick the mode dropdown, and click **+ New template**. The dialog opens with the pane's payload already loaded under the **Sample data** tab, so Laminar knows the shape of your data before you type anything. Then:
 
-1. Paste a sample payload into the **Data** tab on the left.
-2. Click **Copy prompt**.
-3. Paste it into Claude, ChatGPT, or any other LLM, add a line describing the view you want, and send.
-4. Paste the returned JSX into the code editor. The preview updates live.
-5. Name the template and click **Create**.
+1. Name the template.
+2. Describe the view you want in the text field, like "a table of flights with price, airline, and departure time, cheapest first".
+3. Click **Generate**. Laminar writes the JSX against your sample data and the **Preview** tab renders it live.
+4. Not quite right? Describe the change and click **Request changes**. Each iteration edits the existing template instead of starting over.
+5. Click **Save**.
 
-<Frame caption="The template editor: Preview/Data tabs on the left, name input and Save on the right, Copy prompt above the JSX code editor.">
-  <img src="/images/render-templates/edit-dialog.png" alt="Render template edit dialog with live preview and JSX editor" />
+<Frame caption="The template editor: name and description on the left, Preview / Sample data / Code tabs on the right. Generate writes the JSX and the preview renders it against the pane's real payload.">
+  <img src="/images/render-templates/edit-dialog.png" alt="Render template dialog with a describe field, Generate button, and live preview" />
 </Frame>
 
-The prompt already covers Laminar's style guide and the output shape, so you only need to describe the view.
+The generated code follows Laminar's style guide (theme tokens, Tailwind classes), so templates match the rest of the UI without extra prompting.
 
-You can also write JSX by hand if you prefer.
+You can also write or edit the JSX by hand in the **Code** tab. The same tab has a **Copy prompt** button that packages the style guide and your sample data into a prompt for an external AI tool, if you'd rather generate the code elsewhere and paste it back.
 
 ## Manage templates
 
@@ -83,13 +83,19 @@ Open any trace and click the view dropdown in the trace pane (where **Tree** and
   <img src="/images/render-templates/trace-view-dropdown.png" alt="Trace view dropdown showing default Tree and Transcript modes and custom trace templates" />
 </Frame>
 
-The editor adds one field on top of the span-template flow: **Span filter (SQL WHERE)**. Whatever you write is appended to `SELECT * FROM spans WHERE trace_id = <trace> AND (...)`. Leave it empty to include every span. **Test** runs the filter against the trace you opened the editor from and refreshes the preview and the **Data** tab with the real result.
+The flow is the same describe-and-generate as for span templates, with one addition: a trace template has a **Span filter (SQL WHERE)** that picks which spans it receives. Whatever the filter says is appended to `SELECT * FROM spans WHERE trace_id = <trace> AND (...)`; empty means every span. When you click **Generate**, Laminar reads an outline of the trace you opened the editor from and writes both the filter and the JSX to match your description: ask for "executor output diffed against the evaluator's target" and the filter comes back matching only those span types.
 
-<Frame caption="The trace template editor. The span filter matches only EXECUTOR and EVALUATOR spans; Test confirms 3 spans matched and the preview renders the SQL diff live.">
-  <img src="/images/render-templates/trace-template-dialog.png" alt="Render template dialog with a span filter, JSX editor, and live preview of a SQL diff view" />
+The filter lives under the **Sample data** tab. Edit it by hand there if you want, and click **Test** to run it against the current trace and reload the sample data and preview with the real result. After each generation, the sample data refreshes automatically against the new filter.
+
+<Frame caption="The trace template editor after generating: the description produced both the span filter and the JSX, and the preview renders the SQL diff against the real trace.">
+  <img src="/images/render-templates/trace-template-dialog.png" alt="Render template dialog with a describe field, Generate button, and live preview of a SQL diff view" />
 </Frame>
 
-**Copy prompt** works here too: the prompt includes Laminar's style guide plus an outline of the current trace's spans, so an LLM can write the template against your real data shape.
+<br/>
+
+<Frame caption="The Sample data tab of the same template: the generated span filter on top, the Test button to rerun it, and the real spans it returned below.">
+  <img src="/images/render-templates/trace-template-sample-data.png" alt="Sample data tab showing the generated SQL span filter, a Test button, and the JSON spans payload" />
+</Frame>
 
 The pane remembers which view you picked. Once you switch a trace to a template, every trace you open next renders through it until you switch back, which makes paging through eval datapoints or similar traces fast.
 
@@ -190,7 +196,7 @@ evaluate({
 });
 ```
 
-`token_f1` tells you *how far* the output is from the target, but not *where* it differs. A trace template can show that: on an eval trace, the executor span's input holds the question and its output holds the generated SQL, and each evaluator span's input is `[output, target]`, so the target is right there in the trace.
+`token_f1` tells you *how far* the output is from the target, but not *where* it differs. A trace template can show that: on an eval trace, the executor span's input holds the question and its output holds the generated SQL, and each evaluator span's input is `[output, target]`, so the target is right there in the trace. A description like "diff the executor's SQL output against the evaluator's target, word by word, with the scores on top" generates a template like the one below.
 
 Span filter:
 

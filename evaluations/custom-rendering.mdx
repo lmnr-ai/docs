@@ -3,7 +3,7 @@ title: Custom Rendering for Evaluation Traces
 sidebarTitle: Custom rendering
 ---
 
-Every datapoint in an evaluation run produces the same trace shape, so reviewing a run means reading the same few fields over and over: the input, the output, the target, the scores. [Trace render templates](/platform/render-templates#trace-templates) let you replace the default trace view with one built for exactly that: a small JSX component that receives the run's executor and evaluator spans and renders what you need to judge a row at a glance.
+Every datapoint in an evaluation run produces the same trace shape, so reviewing a run means reading the same few fields over and over: the input, the output, the target, the scores. [Trace render templates](/platform/render-templates#trace-templates) let you replace the default trace view with one built for exactly that: a small JSX component that receives the run's executor and evaluator spans and renders what you need to judge a row at a glance. Describe the view you want and Laminar generates the template from the trace's real spans.
 
 <Frame caption="A text-to-SQL eval datapoint rendered through a custom template: the question, both scores, and a word diff between the model's SQL and the target">
   <img src="/images/evaluations/eval-custom-renderer.png" alt="Evaluation trace rendered through a custom template showing a side-by-side SQL diff between model output and target" />
@@ -31,17 +31,15 @@ So the three things you need to judge a row (input, output, target) are always i
   <img src="/images/render-templates/trace-view-dropdown.png" alt="Trace view dropdown showing default modes and custom trace templates" />
 </Frame>
 
-3. Set the **Span filter (SQL WHERE)** so the template only receives the spans it needs. For most eval templates:
+3. Name the template and describe what you want to see, like "show the question, both scores, and a word diff between the model's SQL and the target".
+4. Click **Generate**. Laminar reads an outline of the eval trace and writes both the span filter and the JSX: for a template like this it filters to `span_type IN ('EXECUTOR', 'EVALUATOR')`, pulls the real spans, and renders the preview against them. If the view isn't right, describe the change and click **Request changes**.
+5. Click **Save**.
 
-```sql
-span_type IN ('EXECUTOR', 'EVALUATOR')
-```
-
-4. Click **Test** to run the filter against this trace and load the real spans into the preview, then write the JSX (or click **Copy prompt** and let an LLM write it against your actual data shape).
-
-<Frame caption="The template editor on an eval trace. The span filter matches only EXECUTOR and EVALUATOR spans; Test confirms 3 spans matched and the preview renders live.">
-  <img src="/images/render-templates/trace-template-dialog.png" alt="Render template dialog with a span filter, JSX editor, and live preview" />
+<Frame caption="The template editor on an eval trace after generating. The description produced the span filter and the JSX, and the preview renders against the trace's real executor and evaluator spans.">
+  <img src="/images/render-templates/trace-template-dialog.png" alt="Render template dialog with a describe field, Generate button, and live preview" />
 </Frame>
+
+To tweak things by hand, the **Code** tab holds the JSX and the **Sample data** tab holds the span filter; **Test** reruns the filter against this trace and reloads the preview data.
 
 Once created, the template appears in the view dropdown under **Custom** for every trace in the project.
 

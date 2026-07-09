@@ -75,13 +75,13 @@ Per-row deltas point at the regressed datapoints, but the answer to "what actual
 
 The example below is a text-to-SQL eval. The template pulls the question from the executor's input, the generated SQL from its output, and the target SQL from the evaluator's input, then renders a word-level diff:
 
-<Frame caption="A trace render template on an eval trace: the question, both scores, and a word diff between the model's SQL and the target. Red tokens exist only in the output, orange only in the target">
+<Frame caption="A trace render template on an eval trace: the question, both scores, and a word diff between the model's SQL and the target. Red tokens exist only in the output, green only in the target">
   <img src="/images/evaluations/eval-custom-renderer.png" alt="Evaluation trace rendered through a custom SQL diff template showing model output and target side by side with highlighted differing tokens" />
 </Frame>
 
 Reading this view across a few rows answers the regression in seconds: without the style guide, the model stopped aliasing tables and switched join strategies, so `token_f1` dropped even where the SQL was semantically fine.
 
-To build one, open any datapoint's trace, click the view dropdown (where **Transcript** and **Tree** live), and pick **+ New template**. Templates are scoped to the whole trace: you give them a SQL `WHERE` filter over the trace's spans (here `span_type IN ('EXECUTOR', 'EVALUATOR')`) and a JSX function that receives the matched spans. Once created, the template appears in the same dropdown for every trace in the project, and the pane remembers your pick, so clicking through datapoints keeps the diff view open.
+To build one, open any datapoint's trace, click the view dropdown (where **Transcript** and **Tree** live), pick **+ New template**, and describe the view: Laminar generates both the span filter (here `span_type IN ('EXECUTOR', 'EVALUATOR')`) and the JSX from the trace's real spans. Once created, the template appears in the same dropdown for every trace in the project, and the pane remembers your pick, so clicking through datapoints keeps the diff view open.
 
 The full walkthrough, template source, and span payload shape are on the [Custom rendering](/evaluations/custom-rendering) page.
 
