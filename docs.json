@@ -35,6 +35,7 @@
                   "tracing/integrations/openai-agents-sdk",
                   "tracing/integrations/opencode",
                   "tracing/integrations/vercel-ai-sdk",
+                  "tracing/integrations/eve",
                   "tracing/integrations/langchain",
                   "tracing/integrations/deepagents",
                   "tracing/integrations/litellm",
