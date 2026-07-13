@@ -59,6 +59,18 @@ registerTelemetry(new LaminarAiSdkTelemetry());
 
 `new LaminarAiSdkTelemetry()` initializes Laminar for you (it calls `Laminar.initialize()` internally if Laminar isn't already initialized), so you don't need a separate `Laminar.initialize()` call. Pass options to the constructor to configure it: see [Configure the integration](#configure-the-integration).
 
+<Note>
+`@lmnr-ai/lmnr` also exports `registerAiSdkTelemetry()`, a one-line equivalent that registers the same integration without importing `registerTelemetry` from `ai`:
+
+```typescript
+import { registerAiSdkTelemetry } from '@lmnr-ai/lmnr';
+
+registerAiSdkTelemetry(); // same as registerTelemetry(new LaminarAiSdkTelemetry())
+```
+
+It takes the same options object as `LaminarAiSdkTelemetry` (including `laminarOptions`). Reach for it when you want to register telemetry before the AI SDK is loaded, or to keep the import surface to a single package.
+</Note>
+
 </Step>
 <Step title="Use the AI SDK as usual">
 

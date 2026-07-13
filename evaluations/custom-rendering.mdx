@@ -1,0 +1,173 @@
+---
+title: Custom Rendering for Evaluation Traces
+sidebarTitle: Custom rendering
+---
+
+Every datapoint in an evaluation run produces the same trace shape, so reviewing a run means reading the same few fields over and over: the input, the output, the target, the scores. [Trace render templates](/platform/render-templates#trace-templates) let you replace the default trace view with one built for exactly that: a small JSX component that receives the run's executor and evaluator spans and renders what you need to judge a row at a glance. Describe the view you want and Laminar generates the template from the trace's real spans.
+
+<Frame caption="A text-to-SQL eval datapoint rendered through a custom template: the question, both scores, and a word diff between the model's SQL and the target">
+  <img src="/images/evaluations/eval-custom-renderer.png" alt="Evaluation trace rendered through a custom template showing a side-by-side SQL diff between model output and target" />
+</Frame>
+
+The view sticks as you click through datapoints, so reviewing a whole run takes seconds per row instead of expanding spans on every trace.
+
+## What an eval trace gives you
+
+Every datapoint becomes one trace with a predictable structure:
+
+- An `EVALUATION` root span.
+- An `EXECUTOR` span: its `input` is the datapoint's `data`, its `output` is whatever your executor returned.
+- Any auto-instrumented LLM or tool spans nested under the executor.
+- One `EVALUATOR` span per scoring function: its `input` is `[output, target]`, its `output` is the score.
+
+So the three things you need to judge a row (input, output, target) are always in the same two span types. A template that reads them works on every datapoint of every run of that eval.
+
+## Create a template from an eval trace
+
+1. Open any datapoint of the run: its trace shows in the right-hand panel.
+2. Click the view dropdown in the trace pane (where **Transcript** and **Tree** live) and pick **+ New template**.
+
+<Frame caption="The trace view dropdown on an eval trace: Tree and Transcript on top, existing templates under Custom, and + New template at the bottom.">
+  <img src="/images/render-templates/trace-view-dropdown.png" alt="Trace view dropdown showing default modes and custom trace templates" />
+</Frame>
+
+3. Name the template and describe what you want to see, like "show the question, both scores, and a word diff between the model's SQL and the target".
+4. Click **Generate**. Laminar reads an outline of the eval trace and writes both the span filter and the JSX: for a template like this it filters to `span_type IN ('EXECUTOR', 'EVALUATOR')`, pulls the real spans, and renders the preview against them. If the view isn't right, describe the change and click **Request changes**.
+5. Click **Save**.
+
+<Frame caption="The template editor on an eval trace after generating. The description produced the span filter and the JSX, and the preview renders against the trace's real executor and evaluator spans.">
+  <img src="/images/render-templates/trace-template-dialog.png" alt="Render template dialog with a describe field, Generate button, and live preview" />
+</Frame>
+
+To tweak things by hand, the **Code** tab holds the JSX and the **Sample data** tab holds the span filter; **Test** reruns the filter against this trace and reloads the preview data.
+
+Once created, the template appears in the view dropdown under **Custom** for every trace in the project.
+
+## Example: diff the output against the target
+
+The screenshot at the top comes from a text-to-SQL eval: the executor generates SQL from an analytics question, and `exact_match` / `token_f1` evaluators score it against a target query. `token_f1` tells you *how far* the output is from the target, but not *where* it differs. The template below shows exactly where: it pulls the question from the executor's input, the generated SQL from its output, and the target from the evaluator's input, then renders a word-level diff.
+
+```jsx
+function({ data }) {
+  const spans = data?.spans ?? [];
+  const executor = spans.find((s) => s.spanType === "EXECUTOR");
+  const evaluators = spans.filter((s) => s.spanType === "EVALUATOR");
+
+  const question = executor?.input?.question ?? "";
+  const output = typeof executor?.output === "string" ? executor.output : "";
+  const evalWithTarget = evaluators.find((s) => Array.isArray(s.input) && s.input.length > 1);
+  const target = evalWithTarget ? String(evalWithTarget.input[1] ?? "") : "";
+
+  const tokenize = (sql) => sql.split(/(\s+)/).filter((t) => t.length > 0);
+
+  // Word-level LCS diff between output and target
+  const diff = (a, b) => {
+    const n = a.length, m = b.length;
+    const dp = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+    for (let i = n - 1; i >= 0; i--) {
+      for (let j = m - 1; j >= 0; j--) {
+        dp[i][j] = a[i].trim().toLowerCase() === b[j].trim().toLowerCase()
+          ? dp[i + 1][j + 1] + 1
+          : Math.max(dp[i + 1][j], dp[i][j + 1]);
+      }
+    }
+    const left = [], right = [];
+    let i = 0, j = 0;
+    while (i < n && j < m) {
+      if (a[i].trim().toLowerCase() === b[j].trim().toLowerCase()) {
+        left.push({ t: a[i], k: "same" });
+        right.push({ t: b[j], k: "same" });
+        i++; j++;
+      } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+        left.push({ t: a[i], k: "del" });
+        i++;
+      } else {
+        right.push({ t: b[j], k: "add" });
+        j++;
+      }
+    }
+    while (i < n) { left.push({ t: a[i], k: "del" }); i++; }
+    while (j < m) { right.push({ t: b[j], k: "add" }); j++; }
+    return { left, right };
+  };
+
+  const { left, right } = diff(tokenize(output), tokenize(target));
+
+  const Chunk = ({ part }) => {
+    if (part.k === "same") return <span>{part.t}</span>;
+    if (part.k === "del")
+      return <span className="bg-destructive/20 text-destructive rounded-sm">{part.t}</span>;
+    return <span className="bg-primary/20 text-primary rounded-sm">{part.t}</span>;
+  };
+
+  return (
+    <div className="w-full min-h-full p-4 space-y-4 text-sm text-foreground bg-background">
+      <div>
+        <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">
+          Question
+        </div>
+        <div className="text-base">{question}</div>
+      </div>
+
+      <div className="flex gap-2">
+        {evaluators.map((s) => (
+          <div key={s.spanId} className="rounded-md border border-border px-2 py-1 text-xs">
+            <span className="text-muted-foreground mr-1">{s.name}</span>
+            <span className="font-medium">{String(s.output)}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-md border border-border">
+          <div className="border-b border-border px-3 py-1.5 text-xs font-medium text-muted-foreground">
+            Model output
+          </div>
+          <pre className="p-3 text-xs whitespace-pre-wrap font-mono">
+            {left.map((part, idx) => <Chunk key={idx} part={part} />)}
+          </pre>
+        </div>
+        <div className="rounded-md border border-border">
+          <div className="border-b border-border px-3 py-1.5 text-xs font-medium text-muted-foreground">
+            Target
+          </div>
+          <pre className="p-3 text-xs whitespace-pre-wrap font-mono">
+            {right.map((part, idx) => <Chunk key={idx} part={part} />)}
+          </pre>
+        </div>
+      </div>
+
+      {data?.truncated && (
+        <div className="text-xs text-destructive">Span list truncated.</div>
+      )}
+    </div>
+  );
+}
+```
+
+The template receives `{ spans, truncated }`: the spans matched by your filter (with `spanType`, `input`, `output`, and more, JSON-parsed when possible), and a flag that's `true` when the trace had more than 256 matching spans. See [Trace templates](/platform/render-templates#trace-templates) for the full payload contract.
+
+The same pattern covers any eval where output and target are comparable text or structure: extraction pipelines (render both JSON objects side by side), translation (sentence diff), classification (predicted vs expected label with the model's reasoning underneath).
+
+## Where this pays off
+
+- **Reviewing a fresh run**: click through rows and read the rendered view instead of expanding executor and evaluator spans on each trace.
+- **Debugging a regression**: after [comparing two runs](/evaluations/comparing-runs#side-by-side-comparison), open the rows whose scores dropped and the template shows what changed in the output. See [the regression workflow](/evaluations/comparing-runs#see-why-a-score-moved-with-a-render-template).
+- **Sharing a run**: anyone on the project gets the same template from the same dropdown; no local setup.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Render templates" href="/platform/render-templates" icon="paintbrush">
+    The full mechanism: span templates, trace templates, payload contract, and the AI-assisted editor.
+  </Card>
+  <Card title="Compare runs" href="/evaluations/comparing-runs" icon="chart-line">
+    Progression charts, side-by-side deltas, and where custom rendering fits the review loop.
+  </Card>
+  <Card title="Quickstart" href="/evaluations/quickstart" icon="play">
+    Write and run your first evaluation.
+  </Card>
+  <Card title="Concepts" href="/evaluations/concepts" icon="boxes">
+    Datapoints, executors, evaluators, and how they map to trace spans.
+  </Card>
+</CardGroup>

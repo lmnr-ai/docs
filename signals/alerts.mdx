@@ -66,7 +66,7 @@ Every alert posts to the in-app notification center by default. Slack and email 
 
 ### Slack
 
-Slack messages contain the signal name, the extracted payload fields, and a link to the trace. Connect Slack once per workspace from **Workspace > Integrations** (see [Integrations](/platform/integrations)) or from the Alerts settings page.
+Slack messages contain the signal name, the extracted payload fields, and a link to the trace. Connect Slack once per workspace from **Workspace > Integrations** (see [Slack integration](/platform/integrations)) or from the Alerts settings page.
 
 <Note>
 Slack alerts require a paid plan.
@@ -93,6 +93,18 @@ Email alerts go to the subscribed user's address. Each user manages their own em
 
 In **Project Settings > Alerts**, use the row actions to edit or delete an alert. Edits take effect on the next matching event; deletes are immediate.
 
+## Enable or disable an alert
+
+Every alert card in **Project Settings > Alerts** has a switch that turns the alert on or off in place. Turn it off to pause notifications without losing the alert's configuration: the trigger, severity set, filters, and channels are all kept, and the card moves to a dimmed state with the switch off. Turn it back on and notifications resume on the next matching event.
+
+<Frame caption="Each alert card has an on/off switch; disabled alerts render dimmed">
+  <img src="/images/signals/alerts-toggle.png" alt="Project alerts settings with three alert cards, one toggled off and dimmed" />
+</Frame>
+
+The same control is available as an **Active** switch at the top of the alert's edit form.
+
+Disabling an alert only silences notifications. The Signal it watches keeps evaluating traces and producing events; to pause the Signal itself, use the Signal's own [Active switch](/signals/quickstart#pause-and-resume-a-signal).
+
 ## Reports vs Alerts
 
 Alerts fire on individual signal events or new clusters. [Reports](/signals/reports) send periodic summaries of signal activity across a workspace. Use alerts to *page on things you need to see now*; use reports to *keep a daily or weekly pulse*.
@@ -100,7 +112,7 @@ Alerts fire on individual signal events or new clusters. [Reports](/signals/repo
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Integrations" href="/platform/integrations" icon="plug">
+  <Card title="Slack integration" href="/platform/integrations" icon="plug">
     Connect Slack so alerts can post to a channel.
   </Card>
   <Card title="Reports" href="/signals/reports" icon="mail">

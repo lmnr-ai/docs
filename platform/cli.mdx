@@ -73,7 +73,7 @@ lmnr-cli logout   # Remove the stored credentials
 
 ## Self-hosting
 
-For a self-hosted deployment, point the CLI at your instance. `login` talks to your frontend (the auth issuer); the data commands (`sql`, `dataset`, `project`, `trace`, `debug`) talk to your API.
+For a self-hosted deployment, point the CLI at your instance. `login` talks to your frontend (the auth issuer); the data commands (`sql`, `dataset`, `project`, `debug`) talk to your API.
 
 The cleanest way is to set the URLs once via environment variables. The CLI reads them from your environment and from a `.env` or `.env.local` file in the current directory.
 ```bash
@@ -102,7 +102,7 @@ The CLI does not use a project API key. The `LMNR_PROJECT_API_KEY` that `lmnr-cl
 
 ## Directory-scoped projects
 
-Every project command (`sql`, `dataset`, `project`, `trace`, `debug`) resolves which project it targets from the directory you run in. `lmnr-cli setup` writes a `.lmnr/project.json` link file at the project root (it holds the project id and display details, never secrets). Commands then resolve the project in this order:
+Every project command (`sql`, `dataset`, `project`, `debug`) resolves which project it targets from the directory you run in. `lmnr-cli setup` writes a `.lmnr/project.json` link file at the project root (it holds the project id and display details, never secrets). Commands then resolve the project in this order:
 
 1. `--project-id <id>` flag.
 2. The nearest `.lmnr/project.json`, walking up from the current directory.
@@ -145,6 +145,39 @@ For the full schema and query guide, see [SQL Editor](/platform/sql-editor).
 Only `SELECT` queries are allowed. The query runs scoped to your project automatically; no tenant filter is needed in your WHERE clause.
 </Note>
 
+## Ask the agent
+
+When you do not want to write the SQL yourself, ask [Laminar Agent](/platform/laminar-agent) a question in plain language. It runs read-only SQL and reads trace context for you, then answers grounded in your project's data:
+
+```bash
+lmnr-cli ask "What failed in the most recent run for my dev-claude session?"
+```
+
+Like the other commands, `ask` runs against the linked project and authenticates as the signed-in user, so `lmnr-cli login` plus a linked directory (or `--project-id`) is all you need.
+
+```bash
+lmnr-cli ask "List the 5 slowest traces in the last hour and explain the slowest one"
+lmnr-cli ask "How much did we spend on LLM calls today, broken down by model?" --project-id <uuid>
+```
+
+### Continue a conversation
+
+Each answer prints a conversation id after it. Pass that id to `--conversation` on your next question to continue the same conversation, so the agent keeps the earlier context and you can ask follow-ups:
+
+```bash
+lmnr-cli ask "What failed in the most recent run for my dev-claude session?"
+# ...answer, then: continue with: lmnr-cli ask "<question>" --conversation <id>
+lmnr-cli ask "and which model did it use?" --conversation <id>
+```
+
+With `--json`, the conversation id comes back as `conversationId` in the output (`{ answer, conversationId, tools }`), so a script can capture it and thread it through a multi-turn exchange:
+
+```bash
+lmnr-cli ask "summarize the most expensive trace today" --json
+```
+
+See [Laminar Agent](/platform/laminar-agent) for the full list of what it can do and the other surfaces (MCP, Slack) it runs on.
+
 ## Manage datasets
 
 List, push, pull, and create datasets from files on disk. Supported formats: `.jsonl`, `.json`, `.csv`. Like `sql`, these commands run against the linked project.
@@ -167,27 +200,27 @@ See [Datasets CLI](/datasets/cli) for the full dataset workflow including versio
 
 ## Annotate debug sessions
 
-These commands are the operational layer for the [Debugger](/debugger/process): you run the agent with `LMNR_DEBUG=true`, then use these to name the session, write per-trace notes, and open the session view. Like the other commands, they run against the linked project.
+These commands are the operational layer for the [Debugger](/debugger/process): you run the agent with `LMNR_DEBUG=true`, then use these to name the session, write notes, and open the session view. Like the other commands, they run against the linked project.
 
 <Note>
-None of these commands need an id passed in. By default they target the session in `.lmnr/debug-session.json` (the most recent `LMNR_DEBUG=true` run in this directory), and `trace append-note` targets that session's latest trace. Pass `--session-id` or `--trace-id` to target a different one.
+None of these commands need an id passed in. By default they target the session in `.lmnr/debug-session.json` (the most recent `LMNR_DEBUG=true` run in this directory). Pass `--session-id` to target a different one.
 </Note>
 
-### trace append-note
+### debug session add-note
 
-Append a markdown note to a trace (stored in `rollout.note` trace metadata). Notes are append-only: each call adds a paragraph to the existing note. The note text is the only required argument; the note lands on the latest trace of the current debug session unless you pass `--trace-id`.
+Attach a markdown note to the debug session. Each call adds a standalone note, slotted into the session timeline by time between the session's runs and evaluations, both in the session view and in `debug session summary`. The note text is the only required argument.
 
 ```bash
-lmnr-cli trace append-note "## What this run showed
+lmnr-cli debug session add-note "## What this run showed
 Length cap is working. Next: check citations."
 
-lmnr-cli trace append-note "Length cap is working." --trace-id <trace-id>
+lmnr-cli debug session add-note "Length cap is working." --session-id <session-id>
 ```
 
 Span references in the note are written as XML tags; the Laminar UI renders them as clickable chips:
 
 ```bash
-lmnr-cli trace append-note "<span id='<spanId>' name='synthesis call' />"
+lmnr-cli debug session add-note "<span id='<spanId>' name='synthesis call' />"
 ```
 
 ### debug session new
@@ -222,14 +255,14 @@ lmnr-cli debug session set-name "Fix report length" --session-id <session-id>
 
 ### debug session summary
 
-Print every trace in the debug session with its note, oldest first. Use this to re-orient in an ongoing session after a context reset. Defaults to the current session; pass `--session-id` for another.
+Print the debug session's full timeline, oldest first: every run, evaluation, and note. Use this to re-orient in an ongoing session after a context reset. Defaults to the current session; pass `--session-id` for another.
 
 ```bash
 lmnr-cli debug session summary
 lmnr-cli debug session summary --session-id <session-id> --json
 ```
 
-Output is one block per trace: the markdown note followed by a `<trace id="..." end-time="..."/>` tag you can feed into SQL queries.
+Traces and evaluations print as self-closing `<trace id="..."/>` and `<evaluation id="..."/>` tags you can feed into SQL queries; notes print as their raw markdown. With `--json`, the output is an array of `{"id","createdAt","type","content"}` blocks.
 
 See [Debugger](/debugger/process) for the full record/replay process.
 
@@ -254,7 +287,6 @@ lmnr-cli project --help
 lmnr-cli sql --help
 lmnr-cli sql query --help
 lmnr-cli dataset --help
-lmnr-cli trace --help
 lmnr-cli debug --help
 lmnr-cli debug session --help
 lmnr-cli debug session new --help
@@ -274,6 +306,6 @@ lmnr-cli debug session open --help
     End-to-end example of pulling, editing, and pushing a dataset.
   </Card>
   <Card title="Debugger" href="/debugger/introduction">
-    Rerun long-running agents from a checkpoint without leaving the page.
+    Rerun your agent from a checkpoint and prove the fix with an eval.
   </Card>
 </CardGroup>

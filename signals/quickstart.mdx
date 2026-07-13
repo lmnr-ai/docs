@@ -131,6 +131,29 @@ Runs appear in the **Activity** section with a status (Pending, Completed, Faile
   <img src="/images/signals/signal-activity.png" alt="Signal activity table listing runs with run id, trace id, event id, source, and status" />
 </Frame>
 
+### Pause and resume a Signal
+
+A Signal you're not ready to delete can be paused. Open the Signal's **Settings > General** section and flip the **Active** switch off.
+
+<Frame caption="The Active switch at the top of Settings > General pauses and resumes the Signal">
+  <img src="/images/signals/signal-active-switch.png" alt="Signal settings General section with the Active switch at the top of the form" />
+</Frame>
+
+While a Signal is paused:
+
+- New traces are not evaluated, even if they match the Signal's triggers.
+- Backfills are rejected until the Signal is re-enabled.
+- Existing events and clusters are kept, and stay queryable in SQL and the UI.
+- Alerts on the Signal stay configured but have nothing to fire on.
+
+Paused Signals show a **Disabled** badge on the Signals list and are grouped separately from active ones. Flip the switch back on and the Signal resumes evaluating new traces immediately.
+
+<Frame caption="The Signals list groups paused Signals under a Disabled section">
+  <img src="/images/signals/signals-list-disabled.png" alt="Signals list with an Active section and a Disabled section, the disabled Signal card dimmed with a Disabled badge" />
+</Frame>
+
+You can also pause a single [alert](/signals/alerts#enable-or-disable-an-alert) instead of the whole Signal, to keep collecting events while silencing notifications.
+
 ## 5. Inspect events
 
 Open the Signal detail page and switch to the **Events** tab. Each row is one detected event, linked back to the trace that produced it.

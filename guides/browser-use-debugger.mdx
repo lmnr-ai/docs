@@ -1,11 +1,11 @@
 ---
-title: Debugger with Browser Use
+title: Debug a Browser Use Agent with Laminar
 sidebarTitle: Browser Use Debugger
 ---
 
-This guide is an end-to-end setup for running a `browser-use` agent with the Laminar Debugger so you can rerun from checkpoints.
+This guide sets up a `browser-use` agent with the [Laminar debugger](/debugger/introduction) end to end: record a run, find the step that went wrong, and rerun from that point with the earlier LLM calls served from cache. Browser runs are slow and every rerun costs real minutes, which makes Browser Use exactly the kind of agent the debugger is built for.
 
-## 1) Install prerequisites
+## 1. Install prerequisites
 
 Install `uv` if you do not already have it:
 
@@ -27,95 +27,105 @@ Install the Browser Use Chromium bundle:
 uvx browser-use install
 ```
 
-If your Browser Use LLM provider needs extra packages or env vars, follow the provider setup in Browser Use docs.
+If your Browser Use LLM provider needs extra packages or env vars, follow the provider setup in the Browser Use docs.
 
-## 2) Set environment variables
-
-Create a `.env` file in your project root:
+## 2. Run Laminar setup
 
 ```bash
-LMNR_PROJECT_API_KEY=your_laminar_project_api_key
+npx lmnr-cli@latest setup
 ```
 
-If you are using **ChatBrowserUse** (recommended), add:
+`setup` logs you in, links the directory to a Laminar project, and writes `LMNR_PROJECT_API_KEY` to your `.env` file. See [debugger setup](/debugger/setup) for what else it does.
 
-```bash
-BROWSER_USE_API_KEY=your_browser_use_api_key
-```
-
-If you prefer **Claude**, add:
+Add your LLM provider key to the same `.env`. For **Claude**:
 
 ```bash
 ANTHROPIC_API_KEY=your_anthropic_api_key
-CLAUDE_MODEL=your_claude_model_name
 ```
 
-## 3) Create the entrypoint
+<Note>
+Replay caching is served through Laminar's [provider integrations](/debugger/caching#supported-caching-integrations). With `ChatAnthropic` or `ChatOpenAI`, cached calls on a replay run come back instantly. With other providers (including `ChatBrowserUse`), recording and rerunning still work, but every LLM call on a rerun goes live.
+</Note>
 
-```python
-import os
+## 3. Create the entrypoint
+
+Instrumentation is one call: `Laminar.initialize()` before the agent is created. Browser Use is auto-instrumented, so every LLM step and browser action lands in the trace, along with a session recording of the browser synced to the trace.
+
+```python agent.py {5,8}
 import asyncio
 from dotenv import load_dotenv
-from browser_use import Agent, ChatBrowserUse, ChatAnthropic
-from lmnr import observe, Laminar
+
+from browser_use import Agent, ChatAnthropic
+from lmnr import Laminar
 
 load_dotenv()
-Laminar.initialize(project_api_key=os.getenv("LMNR_PROJECT_API_KEY"))
+Laminar.initialize()
 
-@observe(rollout_entrypoint=True)
 async def main(prompt: str):
-    provider = os.getenv("LLM_PROVIDER", "chatbrowseruse")
-    if provider == "anthropic":
-        llm = ChatAnthropic(model=os.getenv("CLAUDE_MODEL"), temperature=0.0)
-    else:
-        llm = ChatBrowserUse()
-
+    llm = ChatAnthropic(model="claude-opus-4-5", temperature=0.0)
     agent = Agent(task=prompt, llm=llm)
     history = await agent.run()
     print(history.final_result())
 
 if __name__ == "__main__":
     asyncio.run(
-        main(
-            "go to ycombinator.com, summarize 3 startups from the summer 2025 batch."
-            # "go to laminar.sh, summarize the pricing page."
-        )
+        main("go to ycombinator.com, summarize 3 startups from the summer 2025 batch.")
     )
 ```
 
-Notes:
+## 4. Record a run
 
-- The `rollout_entrypoint=True` flag marks this function for debugger sessions.
-- Keep the CLI running while you iterate; the debugger will rerun using the latest code on disk.
-
-## 4) Start a debugger session
+Run the agent with debug mode on:
 
 ```bash
-npx lmnr-cli@latest dev path/to/entrypoint.py
+LMNR_DEBUG=true python agent.py 2>&1 | tee run.log
+grep 'LMNR_DEBUG_RUN' run.log
 ```
 
-If the file exposes multiple debugger entrypoints, pass `--function main`.
+The SDK starts a debug session, opens it in your browser, and writes `.lmnr/debug-session.json` so later runs in this directory rejoin the same session automatically. When the run finishes, the `LMNR_DEBUG_RUN` line carries the run's `trace_id`.
 
-> [Screenshot: terminal output with debugger session link]
+## 5. Find the step that went wrong
 
-## 5) Open the debugger in Laminar
+Open the trace from the session view and read the transcript: each Browser Use step is an LLM turn with the actions it chose, and the synced browser recording shows what the page actually looked like at that moment. Find the LLM call **before** the step you want to change and copy its span id (hover the span row and click **Copy span ID**), or locate it with SQL:
 
-Open **Debugger** in your project, select the session, provide input arguments as JSON, and click **Run**.
+```bash
+npx lmnr-cli sql query "
+  SELECT span_id, name, start_time
+  FROM spans
+  WHERE trace_id = '<trace-id>' AND span_type = 'LLM'
+  ORDER BY start_time ASC"
+```
 
-![Debugger session view](/images/debugger-view.png)
+## 6. Change and rerun from the checkpoint
 
-## 6) Make a change and rerun (Debugger workflow)
+Edit the agent (the task prompt, the model, `Agent` settings, your own tool code), then rerun with replay armed:
 
-Use the Debugger to iterate without restarting your local process.
+```bash
+LMNR_DEBUG=true \
+LMNR_DEBUG_REPLAY_TRACE_ID=<trace-id> \
+LMNR_DEBUG_CACHE_UNTIL=<span-id> \
+python agent.py 2>&1 | tee run.log
+```
 
-1. Open the trace in **Transcript** or **Tree** view.
-2. Click the checkpoint icon on a span and choose **Run from here**.
-3. Expand **System Prompts** and toggle **Override System Prompt** on for the Browser Automation Agent.
+LLM calls up to and including that span are served from the recorded trace; everything after runs live against the real browser. The rerun lands as a new trace in the same session, next to the original, so you compare attempts side by side. Repeat until the step behaves, then run the loop again from step 4 whenever a new issue shows up.
 
-![System prompt override toggle](/images/debugger-view-toggle.png)
+<Tip>
+This whole loop is what a coding agent runs for you with the [Laminar skill](https://github.com/lmnr-ai/lmnr-skills) installed: it records, reads the trace, edits the code, and replays on its own. See [the debugger process](/debugger/process).
+</Tip>
 
-4. Edit the prompt in place, then click **Run** again to rerun with the updated instructions.
+## What's next
 
-Notes:
-- Keep the CLI running while you iterate; the debugger reruns using the latest code on disk.
-- If you changed dependencies, restart the CLI.
+<CardGroup cols={2}>
+  <Card title="The debugger process" href="/debugger/process" icon="repeat">
+    Sessions, notes, SQL inspection, replay, and evals, step by step.
+  </Card>
+  <Card title="How caching works" href="/debugger/caching" icon="database">
+    What gets cached, the input hash, and which integrations support it.
+  </Card>
+  <Card title="Browser Use integration" href="/tracing/integrations/browser-use" icon="globe">
+    Full tracing reference for Browser Use, including session recordings.
+  </Card>
+  <Card title="Viewing traces" href="/platform/viewing-traces" icon="eye">
+    Read the transcript view: inputs, LLM turns, tool calls, and recordings.
+  </Card>
+</CardGroup>

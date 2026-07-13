@@ -1,0 +1,158 @@
+---
+title: Observability and Tracing for eve Durable Agents in TypeScript
+sidebarTitle: eve
+---
+
+import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
+
+## Overview
+
+Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. [eve](https://eve.dev/docs/introduction) is Vercel's framework for durable AI agents, built on the Workflow SDK and the Vercel AI SDK. eve emits OpenTelemetry spans for every agent turn, model call, and tool call through its `instrumentation.ts` file, so Laminar captures the full run without any per-call wiring.
+
+What Laminar captures from an eve agent:
+
+- User messages and system instructions sent to the model.
+- Model output and reasoning for each turn.
+- Tool calls, their arguments, and tool results.
+- Token counts, latency, and cost per call.
+- The model name and provider behind each call.
+
+eve uses the AI SDK's OpenTelemetry support under the hood, so its spans follow the GenAI semantic conventions. Laminar reads those directly and renders the run as a transcript: the user question, each `gpt-5-mini` turn, the `get_weather` tool call, and the final answer, in order.
+
+## Getting Started
+
+eve discovers `agent/instrumentation.ts` automatically and runs its `setup` function once when the agent server starts. You register Laminar's span processor there.
+
+<Steps>
+<Step title="Install">
+
+```bash
+npm install @lmnr-ai/lmnr@latest @vercel/otel@latest
+```
+
+`@vercel/otel` is eve's recommended way to register an OpenTelemetry tracer provider. Laminar plugs into it as a span processor.
+
+</Step>
+<Step title="Set environment variables">
+
+```bash
+# .env
+LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+OPENAI_API_KEY=your-openai-api-key
+```
+
+<GetProjectApiKey />
+
+</Step>
+<Step title="Register Laminar in agent/instrumentation.ts">
+
+Create `agent/instrumentation.ts` (or edit the one eve generated). Add `LaminarSpanProcessor` to the `spanProcessors` array you pass to `registerOTel`. The processor reads `LMNR_PROJECT_API_KEY` from the environment and sends spans to Laminar.
+
+```typescript agent/instrumentation.ts
+import { defineInstrumentation } from "eve/instrumentation";
+import { LaminarSpanProcessor } from "@lmnr-ai/lmnr";
+import { registerOTel } from "@vercel/otel";
+
+export default defineInstrumentation({
+  setup: ({ agentName }) =>
+    registerOTel({
+      serviceName: agentName,
+      spanProcessors: [new LaminarSpanProcessor()],
+    }),
+});
+```
+
+`setup` runs at server startup, before the first agent turn. eve passes the agent name in, which becomes the OpenTelemetry service name on every span.
+
+<Note>
+Do not call `Laminar.initialize()` here. `registerOTel` already installs a tracer provider, and `LaminarSpanProcessor` attaches to it. Calling `Laminar.initialize()` as well would register a second provider.
+</Note>
+
+</Step>
+<Step title="Run your agent">
+
+Build and start the agent as usual. Every turn is traced.
+
+```bash
+eve build
+eve start
+```
+
+Send the agent a message and the trace appears in Laminar.
+
+</Step>
+</Steps>
+
+## Keeping payloads off your spans
+
+eve enables input and output recording by default, so prompts and responses are captured on the spans. To keep that content out of Laminar (for sensitive data or to reduce payload size), turn it off in the instrumentation file. Token counts, latency, and cost are still recorded.
+
+```typescript agent/instrumentation.ts
+export default defineInstrumentation({
+  recordInputs: false,
+  recordOutputs: false,
+  setup: ({ agentName }) =>
+    registerOTel({
+      serviceName: agentName,
+      spanProcessors: [new LaminarSpanProcessor()],
+    }),
+});
+```
+
+## See what happened in a trace
+
+Open the trace in Laminar and you get the transcript view: the user message, each model turn, tool calls with their arguments, and tool results laid out as a conversation. The timeline on the right shows how the turn's spans overlap in time, so you see where the agent spent its time.
+
+<Frame caption="An eve agent turn in Laminar: the user question, the gpt-5-mini turns, the get_weather tool call, and the final answer rendered as a transcript, with the span timeline on the right.">
+<img src="/images/integrations/eve-trace-view.png" alt="eve durable agent trace in Laminar" />
+</Frame>
+
+eve also emits its durable-workflow spans (workflow start, step execution, hooks). These show up in the trace tree but stay out of the transcript, so the conversation reads cleanly. More on the trace UX: [Viewing traces](/platform/viewing-traces).
+
+## Track outcomes with Signals
+
+Traces answer *what happened on this run*. **[Signals](/signals/introduction) answer the cross-trace question**: *how often does the agent call a tool that returns an empty result, when does a turn run more steps than expected, how often does the agent answer without calling the tool it should have*. A Signal pairs a plain-language prompt with a JSON output schema. Laminar runs it live on new traces (Triggers) or backfills it across history (Jobs) and records a structured event every time it matches. From there you [query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on events across every run.
+
+<Note>
+Every new project ships with a **Failure Detector** Signal that categorizes issues on any trace over 1000 tokens. Open it from the Signals sidebar to see events as soon as your eve traces arrive.
+</Note>
+
+## Query across traces
+
+- **[SQL editor](/platform/sql-editor)** for ad-hoc queries across traces, spans, signals, and evals.
+- **SQL API** for programmatic access from scripts and pipelines.
+- **[CLI](/platform/cli)** (`lmnr-cli sql query`) for terminal-driven queries and piping JSON into shell tools or coding agents.
+- **[MCP server](/platform/mcp)** to query Laminar from Claude Code, Cursor, or Codex.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="I don't see any traces in Laminar">
+    - Confirm `LMNR_PROJECT_API_KEY` is set in the environment the agent server runs in, not just your shell.
+    - The processor must be registered in `agent/instrumentation.ts`. eve only runs the `setup` function from a default-exported `defineInstrumentation` call, so make sure that is the file's default export.
+    - Restart the agent after editing `instrumentation.ts`. `setup` runs once at startup, so changes only take effect on a fresh `eve start`.
+  </Accordion>
+  <Accordion title="I see the model and tool calls but no message content">
+    Check that you did not set `recordInputs` or `recordOutputs` to `false` in `defineInstrumentation`. Both default to on; setting either to `false` strips that content from the spans.
+  </Accordion>
+  <Accordion title="I see two tracer providers or duplicated spans">
+    Remove any `Laminar.initialize()` call. With eve, `registerOTel` owns the tracer provider and `LaminarSpanProcessor` attaches to it. `Laminar.initialize()` would register a second provider.
+  </Accordion>
+</AccordionGroup>
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Viewing traces" href="/platform/viewing-traces">
+    Read the transcript view, filter, and search across traces.
+  </Card>
+  <Card title="Signals" href="/signals/introduction">
+    Detect behaviors and failures across every run, then query, cluster, and alert on them.
+  </Card>
+  <Card title="SQL editor and MCP server" href="/platform/sql-editor">
+    Query traces programmatically from the UI, API, or your IDE.
+  </Card>
+  <Card title="Vercel AI SDK" href="/tracing/integrations/vercel-ai-sdk">
+    eve is built on the AI SDK. Trace `generateText` and `streamText` directly here.
+  </Card>
+</CardGroup>
