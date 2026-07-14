@@ -31,6 +31,8 @@
                   "tracing/integrations/anthropic",
                   "tracing/integrations/openai",
                   "tracing/integrations/gemini",
+                  "tracing/integrations/claude-code",
+                  "tracing/integrations/codex",
                   "tracing/integrations/claude-agent-sdk",
                   "tracing/integrations/openai-agents-sdk",
                   "tracing/integrations/opencode",
