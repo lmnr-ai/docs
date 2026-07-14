@@ -1,22 +1,11 @@
 ---
-title: Claude Code Observability, Trace Sessions in Laminar
+title: Claude Code Plugin
 sidebarTitle: Claude Code
 ---
 
 ## Overview
 
-Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. Trace, debug, and monitor every [Claude Code](https://claude.com/claude-code) session: each conversational turn lands in Laminar as a full trace with LLM calls, tool executions, and subagents. Self-host via Helm or use managed cloud.
-
-The integration is a Claude Code plugin. It hooks into the end of each assistant response, reads the session transcript, and exports spans to Laminar. It fails open: if Laminar is unreachable, Claude Code is never blocked.
-
-What Laminar captures:
-
-- One trace per conversational turn, with your prompt and the final assistant response on the root span.
-- Every LLM call with input and output messages, model name, and token usage (including cache reads and writes).
-- Tool calls (`Read`, `Write`, `Edit`, `Bash`, MCP tools, and the rest) with arguments and results.
-- Subagents as nested spans under the tool call that spawned them, including agents that finish in the background.
-- Session grouping: all turns of one Claude Code session show up under one [session](/tracing/structure/sessions) in Laminar.
-- Context on every trace: working directory, git branch, and Claude Code version as queryable metadata.
+The Claude Code plugin traces every local [Claude Code](https://claude.com/claude-code) session: each turn becomes a full trace with its LLM calls, tool executions, and subagents, sent to Laminar Cloud or your self-hosted Helm deployment.
 
 ## Install
 
@@ -27,7 +16,7 @@ What Laminar captures:
 npx lmnr-cli@latest plugin add claude-code
 ```
 
-The CLI logs you in (browser device flow), lets you pick the Laminar project that should receive your Claude Code traces, mints a project API key named after the plugin and your machine, writes it to `~/.config/lmnr/claude-code-plugin.json`, and installs the plugin through Claude Code's own plugin marketplace. No `npm install` is needed inside the plugin.
+The CLI logs you in (browser device flow), lets you pick the Laminar project that should receive your Claude Code traces, mints a project API key named after the plugin and your machine, writes it to `~/.config/lmnr/claude-code-plugin.json`, and installs the plugin through Claude Code's own plugin marketplace.
 
 <Tip>
 Pick a dedicated project for coding-agent traces so they don't mix with your application's traces. The setup is global and directory-independent: it never touches `.lmnr/project.json` or your `.env`.
@@ -54,8 +43,6 @@ npx lmnr-cli@latest plugin add claude-code \
   --frontend-url https://laminar.example.com \
   --base-url https://api.laminar.example.com
 ```
-
-For a local [Docker Compose](/self-hosting/docker-compose) deployment, that's `--frontend-url http://localhost:5667 --base-url http://localhost:8000`. The `--base-url` value is written to the plugin's config file verbatim and the plugin sends traces to `<base-url>/v1/traces`, so include the port when your API doesn't listen on 443. Already installed and pointing at the wrong place? Edit `baseUrl` in `~/.config/lmnr/claude-code-plugin.json`.
 </Note>
 
 ### Manual install
@@ -69,12 +56,8 @@ claude plugin install lmnr@lmnr --scope user
 
 Then create `~/.config/lmnr/claude-code-plugin.json` with a project API key. Get one from the Laminar dashboard under **Settings → Project API Keys** (create a dedicated key so it's clear it belongs to the plugin):
 
-```bash
-mkdir -p ~/.config/lmnr
-cat > ~/.config/lmnr/claude-code-plugin.json <<'EOF'
+```json ~/.config/lmnr/claude-code-plugin.json
 { "projectApiKey": "your-project-api-key", "baseUrl": "https://api.lmnr.ai" }
-EOF
-chmod 600 ~/.config/lmnr/claude-code-plugin.json
 ```
 
 `projectApiKey` is required. `baseUrl` is optional and defaults to `https://api.lmnr.ai`; self-hosters set it to their instance's API URL (for example `http://localhost:8000`).
@@ -88,55 +71,3 @@ The plugin reads its config from `~/.config/lmnr/claude-code-plugin.json`, writt
 ```
 
 The environment variables `LMNR_PROJECT_API_KEY` and `LMNR_BASE_URL` override the file when set, which is handy for CI or a shell you already have configured. Traces are attributed to the identity from `lmnr-cli login` when present; set `LMNR_USER_ID` to override the user id attached to traces.
-
-## See what happened in a trace
-
-Open any turn in [Viewing traces](/platform/viewing-traces). Laminar extracts your prompt, the LLM outputs, tool calls, and subagent runs into a transcript view, so you read the conversation instead of a span tree. Subagents render as collapsible cards showing their input and final output.
-
-## Track outcomes with Signals
-
-Traces answer *what happened on this turn*. **[Signals](/signals/introduction) answer the cross-trace question**: *how often does Claude Code edit a file it wasn't asked to touch, when does a Bash call fail three times in a row, which sessions burn tokens without producing a diff*. A Signal pairs a plain-language prompt with a JSON output schema. Laminar runs it live on new traces (Triggers) or backfills it across history (Jobs) and records a structured event every time it matches. From there you [query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on events across every trace.
-
-<Note>
-Every new project ships with a **Failure Detector** Signal that categorizes issues on any trace over 1000 tokens. Open it from the Signals sidebar to see events as soon as your Claude Code traces arrive.
-</Note>
-
-## Query across traces
-
-- **[SQL editor](/platform/sql-editor)** for ad-hoc queries across traces, spans, signals, and evals.
-- **SQL API** for programmatic access from scripts and pipelines.
-- **[CLI](/platform/cli)** (`lmnr-cli sql query`) for terminal-driven queries and piping JSON into shell tools or coding agents.
-- **[MCP server](/platform/mcp)** to query Laminar directly from Claude Code itself, Cursor, or Codex.
-
-## Troubleshooting
-
-<AccordionGroup>
-  <Accordion title="I don't see any traces in Laminar">
-    - Confirm `~/.config/lmnr/claude-code-plugin.json` exists and contains a valid `projectApiKey`. Without a key the plugin exits silently.
-    - Make sure the plugin is active: restart Claude Code in a new terminal window, or run `/reload-plugins`.
-    - Check that you're looking at the project you picked during `plugin add`. The key is named `Claude Code plugin @ <hostname>` in **Settings → Project API Keys**, which tells you which project it belongs to.
-  </Accordion>
-  <Accordion title="The installer printed commands instead of running them">
-    `lmnr-cli plugin add` runs the install through the `claude` CLI. When `claude` isn't on your PATH or is too old to have plugin support, the CLI prints the `claude plugin ...` commands for you to run by hand after updating. Your API key is already minted and written to the config file at that point, so running the two printed commands finishes the setup.
-  </Accordion>
-  <Accordion title="Self-hosting Laminar">
-    Re-run the installer with `--frontend-url` and `--base-url` pointing at your instance (see the note in [Install](#install)), or edit `baseUrl` in `~/.config/lmnr/claude-code-plugin.json` directly. The plugin exports traces to `<baseUrl>/v1/traces`, so the URL must include your API's HTTP port when it isn't 443.
-  </Accordion>
-</AccordionGroup>
-
-## What's next
-
-<CardGroup cols={2}>
-  <Card title="Viewing traces" href="/platform/viewing-traces">
-    Read the transcript view, filter, and search across traces.
-  </Card>
-  <Card title="Signals" href="/signals/introduction">
-    Detect behaviors and failures across every Claude Code turn, then query, cluster, and alert on them.
-  </Card>
-  <Card title="Codex" href="/tracing/integrations/codex">
-    Also using OpenAI Codex CLI? Install its Laminar plugin the same way.
-  </Card>
-  <Card title="Claude Agent SDK" href="/tracing/integrations/claude-agent-sdk">
-    Calling the Claude Code agent from your own code? Trace it with the SDK integration.
-  </Card>
-</CardGroup>
