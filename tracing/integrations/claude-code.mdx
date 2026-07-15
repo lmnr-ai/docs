@@ -1,0 +1,73 @@
+---
+title: Claude Code Plugin
+sidebarTitle: Claude Code
+---
+
+## Overview
+
+The Claude Code plugin traces every local [Claude Code](https://claude.com/claude-code) session: each turn becomes a full trace with its LLM calls, tool executions, and subagents, sent to Laminar.
+
+## Install
+
+<Steps>
+<Step title="Run the installer">
+
+```bash
+npx lmnr-cli@latest plugin add claude-code
+```
+
+The CLI logs you in (browser device flow), lets you pick the Laminar project that should receive your Claude Code traces, mints a project API key named after the plugin and your machine, writes it to `~/.config/lmnr/claude-code-plugin.json`, and installs the plugin through Claude Code's own plugin marketplace.
+
+<Tip>
+Pick a dedicated project for coding-agent traces so they don't mix with your application's traces. The setup is global and directory-independent: it never touches `.lmnr/project.json` or your `.env`.
+</Tip>
+
+</Step>
+<Step title="Activate the plugin">
+
+Run `/reload-plugins` in an open Claude Code session, or quit Claude Code and start it in a new terminal window.
+
+</Step>
+<Step title="Use Claude Code as usual">
+
+Every turn becomes a trace in the project you picked. Open the Laminar dashboard to watch them land in realtime.
+
+</Step>
+</Steps>
+
+<Note>
+**Self-hosting Laminar?** The same command works against your instance: pass your frontend URL (the auth issuer) and your API URL, including the API port:
+
+```bash
+npx lmnr-cli@latest plugin add claude-code \
+  --frontend-url https://laminar.example.com \
+  --base-url https://api.laminar.example.com
+```
+</Note>
+
+### Manual install
+
+If you'd rather not use `lmnr-cli`, install the plugin with Claude Code's plugin commands and create the config file yourself:
+
+```bash
+claude plugin marketplace add lmnr-ai/lmnr-claude-code-plugin
+claude plugin install lmnr@lmnr --scope user
+```
+
+Then create `~/.config/lmnr/claude-code-plugin.json` with a project API key. Get one from the Laminar dashboard under **Settings → Project API Keys** (create a dedicated key so it's clear it belongs to the plugin):
+
+```json ~/.config/lmnr/claude-code-plugin.json
+{ "projectApiKey": "your-project-api-key", "baseUrl": "https://api.lmnr.ai" }
+```
+
+`projectApiKey` is required. `baseUrl` is optional and defaults to `https://api.lmnr.ai`; self-hosters set it to their instance's API URL (for example `http://localhost:8000`).
+
+## Configuration
+
+The plugin reads its config from `~/.config/lmnr/claude-code-plugin.json`, written by `lmnr-cli plugin add claude-code`:
+
+```json
+{ "projectApiKey": "...", "baseUrl": "https://api.lmnr.ai" }
+```
+
+The environment variables `LMNR_PROJECT_API_KEY` and `LMNR_BASE_URL` override the file when set, which is handy for CI or a shell you already have configured. Traces are attributed to the identity from `lmnr-cli login` when present; set `LMNR_USER_ID` to override the user id attached to traces.

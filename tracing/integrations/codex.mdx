@@ -1,0 +1,73 @@
+---
+title: Codex Plugin
+sidebarTitle: Codex
+---
+
+## Overview
+
+The Codex plugin traces every local [OpenAI Codex CLI](https://github.com/openai/codex) session: each turn becomes a full trace with its LLM calls and tool executions, sent to Laminar.
+
+## Install
+
+<Steps>
+<Step title="Run the installer">
+
+```bash
+npx lmnr-cli@latest plugin add codex
+```
+
+The CLI logs you in (browser device flow), lets you pick the Laminar project that should receive your Codex traces, mints a project API key named after the plugin and your machine, writes it to `~/.config/lmnr/codex-plugin.json`, and installs the plugin through Codex's native plugin marketplace.
+
+<Tip>
+Pick a dedicated project for coding-agent traces so they don't mix with your application's traces. The setup is global and directory-independent: it never touches `.lmnr/project.json` or your `.env`.
+</Tip>
+
+</Step>
+<Step title="Restart Codex">
+
+Codex loads plugins at startup, so restart it to activate the plugin.
+
+</Step>
+<Step title="Use Codex as usual">
+
+Every turn becomes a trace in the project you picked. Open the Laminar dashboard to watch them land in realtime.
+
+</Step>
+</Steps>
+
+<Note>
+**Self-hosting Laminar?** The same command works against your instance: pass your frontend URL (the auth issuer) and your API URL, including the API port:
+
+```bash
+npx lmnr-cli@latest plugin add codex \
+  --frontend-url https://laminar.example.com \
+  --base-url https://api.laminar.example.com
+```
+</Note>
+
+### Manual install
+
+If you'd rather not use `lmnr-cli`, install the plugin with Codex's plugin commands and create the config file yourself:
+
+```bash
+codex plugin marketplace add lmnr-ai/lmnr-codex-plugin
+codex plugin add lmnr@lmnr
+```
+
+Then create `~/.config/lmnr/codex-plugin.json` with a project API key. Get one from the Laminar dashboard under **Settings → Project API Keys** (create a dedicated key so it's clear it belongs to the plugin):
+
+```json ~/.config/lmnr/codex-plugin.json
+{ "projectApiKey": "your-project-api-key", "baseUrl": "https://api.lmnr.ai" }
+```
+
+`projectApiKey` is required. `baseUrl` is optional and defaults to `https://api.lmnr.ai`; self-hosters set it to their instance's API URL (for example `http://localhost:8000`).
+
+## Configuration
+
+The plugin reads its config from `~/.config/lmnr/codex-plugin.json`, written by `lmnr-cli plugin add codex`:
+
+```json
+{ "projectApiKey": "...", "baseUrl": "https://api.lmnr.ai" }
+```
+
+The environment variables `LMNR_PROJECT_API_KEY` and `LMNR_BASE_URL` override the file when set, which is handy for CI or a shell you already have configured. Traces are attributed to the identity from `lmnr-cli login` when present; set `LMNR_USER_ID` to override the user id attached to traces.
