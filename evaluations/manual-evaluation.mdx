@@ -256,10 +256,6 @@ Because `update_datapoint` can be called any time after `create_datapoint`, exec
 
 Both writes target the same `datapoint_id`. The UI updates in place each time.
 
-## Renaming or re-tagging a finished run
-
-A long-running evaluation often doesn't know its own name or final state up front: the run is created when work starts, and only later do you know the model version, the git SHA, or whether it completed cleanly. [`POST /v1/evals/{eval_id}`](#update-an-evaluation) updates an evaluation's `name` and `metadata` after the fact. There is no SDK method for this yet, so call the endpoint directly.
-
 ## Backfilling without running the executor
 
 For pure backfills (rows you already have outputs and scores for, no live executor), loop `create_datapoint` + `update_datapoint` over the pre-scored rows:
