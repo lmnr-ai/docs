@@ -1,9 +1,9 @@
 ---
-title: Manual evaluation API
+title: Manual Evaluation API for Python, TypeScript, and HTTP
 sidebarTitle: Manual API
 ---
 
-`evaluate()` is the right entry point for 95% of cases. For the other 5% (wiring evaluations into an existing pipeline, streaming datapoints from a long-running job, scoring production traffic after the fact) use the lower-level `LaminarClient.evals` API.
+`evaluate()` is the right entry point for 95% of cases. For the other 5% (wiring evaluations into an existing pipeline, streaming datapoints from a long-running job, scoring production traffic after the fact) use the lower-level `LaminarClient.evals` API, or call the HTTP endpoints directly if you're not on a Laminar SDK.
 
 ## When to use this
 
@@ -13,6 +13,7 @@ Reach for the manual API when you need to:
 - Register a datapoint in the UI *before* the executor runs, so a row is visible while the run is still in progress.
 - Run the executor in one process and write scores from another (for example, an async judge that posts results back later).
 - Score production traces without re-running the call: save the executor output and scores against a new datapoint.
+- Write evaluations from a language or runtime with no Laminar SDK. Every phase below has an **HTTP** tab, and the [HTTP API reference](#http-api-reference) documents each endpoint against Laminar Cloud or your own self-hosted instance.
 
 If none of those apply, use [`evaluate()`](/evaluations/quickstart).
 
@@ -25,6 +26,15 @@ The manual API is designed around three distinct moments in an evaluation's life
 3. **Update the datapoint** with `update_datapoint`: link it to a trace, then (once the executor and evaluators finish) write the executor output and scores.
 
 Pre-registering is the pattern that matters. It's how a long-running evaluation stays observable while it runs, and how a separate scoring process can write results back to rows created by the executor.
+
+Each phase is one HTTP call:
+
+| Phase | SDK method | Endpoint |
+|-------|-----------|----------|
+| Create the evaluation | `create` / `create_evaluation` | `POST /v1/evals` |
+| Pre-register datapoints | `create_datapoint` | `POST /v1/evals/{eval_id}/datapoints` |
+| Write output and scores | `update_datapoint` | `POST /v1/evals/{eval_id}/datapoints/{datapoint_id}` |
+| Rename or re-tag the run | HTTP only | `POST /v1/evals/{eval_id}` |
 
 ## Setup
 
@@ -55,11 +65,27 @@ Laminar.initialize(project_api_key=os.environ["LMNR_PROJECT_API_KEY"])
 client = LaminarClient(project_api_key=os.environ["LMNR_PROJECT_API_KEY"])
 openai_client = AsyncOpenAI()
 ```
+
+```bash HTTP
+export LMNR_PROJECT_API_KEY="<your project API key>"
+export LMNR_BASE_URL="https://api.lmnr.ai"
+
+AUTH="Authorization: Bearer ${LMNR_PROJECT_API_KEY}"
+JSON="Content-Type: application/json"
+```
 </CodeGroup>
+
+<Note>
+On a self-hosted instance, `LMNR_BASE_URL` is your app-server's HTTP origin including the port, for example `http://localhost:8000`. The endpoints and payloads are identical. See [Self-hosted evaluations](/evaluations/self-hosted).
+</Note>
 
 ## Build executor and evaluator spans
 
 Wrap the executor and each evaluator in `observe()` with the matching `spanType`. The evaluation UI uses `EXECUTOR` and `EVALUATOR` to know which spans hold the input, output, and score for each row.
+
+<Note>
+This step is SDK-only: spans are emitted over OpenTelemetry, not over the evaluation HTTP API. If you're calling the endpoints directly, skip ahead. Your datapoints still get `data`, `target`, `executorOutput`, and `scores`, which is everything the list view, progression chart, and comparison UI need. To also get per-row transcripts, emit the spans with any OTel SDK (see [OpenTelemetry](/tracing/otel)) and pass the same `traceId` on the datapoint.
+</Note>
 
 <CodeGroup>
 ```typescript TypeScript
@@ -231,6 +257,63 @@ async def main():
 
     Laminar.flush()
 ```
+
+```bash HTTP
+# 1. Create the evaluation. The response body carries the eval id.
+EVAL_ID=$(curl -sS -X POST "${LMNR_BASE_URL}/v1/evals" \
+  -H "${AUTH}" -H "${JSON}" \
+  --data-raw '{
+    "name": "HTTP capitals eval",
+    "groupName": "capitals-http",
+    "metadata": { "model": "gpt-5-mini", "runBy": "http-api-demo" }
+  }' | jq -r .id)
+
+INDEX=0
+for PAIR in "France:Paris" "Germany:Berlin" "Japan:Tokyo"; do
+  COUNTRY="${PAIR%%:*}"; TARGET="${PAIR##*:}"
+  DP_ID=$(python3 -c 'import uuid; print(uuid.uuid4())')
+
+  # 2. Pre-register the datapoint. The row shows up in the UI now,
+  #    before your executor runs. You mint the datapoint id yourself.
+  curl -sS -X POST "${LMNR_BASE_URL}/v1/evals/${EVAL_ID}/datapoints" \
+    -H "${AUTH}" -H "${JSON}" \
+    --data-raw "{
+      \"groupName\": \"capitals-http\",
+      \"points\": [
+        {
+          \"id\": \"${DP_ID}\",
+          \"index\": ${INDEX},
+          \"data\": { \"country\": \"${COUNTRY}\" },
+          \"target\": \"${TARGET}\"
+        }
+      ]
+    }"
+
+  # 3. Run your executor and evaluators here, however you like.
+  OUTPUT="${TARGET}"
+
+  # Write the output and scores back to the same datapoint id.
+  curl -sS -X POST \
+    "${LMNR_BASE_URL}/v1/evals/${EVAL_ID}/datapoints/${DP_ID}" \
+    -H "${AUTH}" -H "${JSON}" \
+    --data-raw "{
+      \"executorOutput\": { \"response\": \"${OUTPUT}\", \"model\": \"gpt-5-mini\" },
+      \"scores\": { \"accuracy\": 1, \"length_ok\": 1 }
+    }"
+  INDEX=$((INDEX + 1))
+done
+
+# 4. Mark the run finished.
+curl -sS -X POST "${LMNR_BASE_URL}/v1/evals/${EVAL_ID}" \
+  -H "${AUTH}" -H "${JSON}" \
+  --data-raw '{
+    "metadata": {
+      "model": "gpt-5-mini",
+      "runBy": "http-api-demo",
+      "status": "complete"
+    }
+  }'
+```
 </CodeGroup>
 
 <Note>
@@ -246,11 +329,43 @@ Because `update_datapoint` can be called any time after `create_datapoint`, exec
 
 Both writes target the same `datapoint_id`. The UI updates in place each time.
 
+Over HTTP, `scores` is a required field on the datapoint update, so the executor-side write sends an empty object and the judge fills it in later:
+
+```bash
+# Worker: record the output, no scores yet.
+curl -sS -X POST \
+  "${LMNR_BASE_URL}/v1/evals/${EVAL_ID}/datapoints/${DP_ID}" \
+  -H "${AUTH}" -H "${JSON}" \
+  --data-raw '{ "executorOutput": { "response": "Paris" }, "scores": {} }'
+
+# Judge, later: fill in the scores. The output is preserved.
+curl -sS -X POST \
+  "${LMNR_BASE_URL}/v1/evals/${EVAL_ID}/datapoints/${DP_ID}" \
+  -H "${AUTH}" -H "${JSON}" \
+  --data-raw '{ "scores": { "accuracy": 1 } }'
+```
+
+## Renaming or re-tagging a finished run
+
+A long-running evaluation often doesn't know its own name or final state up front: the run is created when work starts, and only later do you know the model version, the git SHA, or whether it completed cleanly. `POST /v1/evals/{eval_id}` updates the evaluation's `name` and `metadata` after the fact.
+
+```bash
+curl -sS -X POST "${LMNR_BASE_URL}/v1/evals/${EVAL_ID}" \
+  -H "${AUTH}" -H "${JSON}" \
+  --data-raw '{
+    "name": "capitals @ a1b2c3d",
+    "metadata": { "model": "gpt-5-mini", "commit": "a1b2c3d", "status": "complete" }
+  }'
+```
+
+Fields you leave out are unchanged, so you can rename without touching metadata. `metadata` is replaced wholesale rather than merged: send the whole object, including keys you want to keep. `groupId` is immutable, because only runs sharing a group name can be [compared](/evaluations/comparing-runs) and datapoints already carry the group they were written with.
+
 ## Backfilling without running the executor
 
 For pure backfills (rows you already have outputs and scores for, no live executor), loop `create_datapoint` + `update_datapoint` over the pre-scored rows:
 
-```python
+<CodeGroup>
+```python Python
 eval_id = client.evals.create_evaluation(
     name="Backfilled capitals",
     group_name="capitals",
@@ -271,7 +386,119 @@ for i, row in enumerate(rows):
     )
 ```
 
+```bash HTTP
+# The datapoints endpoint takes a batch, so a backfill is one call per chunk.
+curl -sS -X POST "${LMNR_BASE_URL}/v1/evals/${EVAL_ID}/datapoints" \
+  -H "${AUTH}" -H "${JSON}" \
+  --data-raw '{
+    "groupName": "capitals",
+    "points": [
+      {
+        "index": 0,
+        "data": { "country": "France" },
+        "target": "Paris",
+        "executorOutput": { "response": "Paris" },
+        "scores": { "accuracy": 1 }
+      },
+      {
+        "index": 1,
+        "data": { "country": "Germany" },
+        "target": "Munich",
+        "executorOutput": { "response": "Munich" },
+        "scores": { "accuracy": 0 }
+      }
+    ]
+  }'
+```
+</CodeGroup>
+
+Over HTTP a backfill skips the update phase entirely: `POST /v1/evals/{eval_id}/datapoints` accepts `executorOutput` and `scores` on each point, so a fully-scored row lands in one call. Batch the points instead of looping one request per row.
+
 No `EVALUATION` span is opened, so no trace is attached. The row shows `data`, `target`, `executor_output`, and `scores`, which is enough for the list view, progression chart, and side-by-side comparison. Use this when you want the numbers in Laminar but don't need per-row transcript drill-down.
+
+## HTTP API reference
+
+All four endpoints authenticate with a project API key as a Bearer token and take a JSON body. Base URL is `https://api.lmnr.ai` on Laminar Cloud, or your app-server's HTTP origin (including port) when [self-hosting](/evaluations/self-hosted).
+
+**Headers**
+
+| Header | Value |
+|--------|-------|
+| `Authorization` | `Bearer <PROJECT_API_KEY>` |
+| `Content-Type` | `application/json` |
+
+All request and response field names are camelCase. A bad or revoked key returns `401`.
+
+### Create an evaluation
+
+`POST /v1/evals`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | no | Name shown in the UI. A readable name is generated when omitted. |
+| `groupName` | string | no | Group identifier. Only runs sharing a group name can be compared. Defaults to `default`. |
+| `metadata` | object | no | Arbitrary JSON on the evaluation row, filterable in the UI. |
+
+Returns `200` with the created evaluation:
+
+```json
+{
+  "id": "c381a582-6ae0-4b62-81a4-55d450d9d65d",
+  "createdAt": "2026-07-27T12:42:33.209382Z",
+  "name": "HTTP capitals eval",
+  "projectId": "0cce3ee3-d6bb-437d-a2fa-bbfd72a935e2",
+  "groupId": "capitals-http",
+  "metadata": { "model": "gpt-5-mini", "runBy": "http-api-demo" }
+}
+```
+
+Keep the `id`: every later call is scoped to it.
+
+### Update an evaluation
+
+`POST /v1/evals/{eval_id}`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | no | New name. Omit to leave unchanged. |
+| `metadata` | object | no | Replaces the existing metadata object wholesale. Omit to leave unchanged. |
+
+Returns `200` with the updated evaluation in the same shape as create, or `404` when the id doesn't exist in the project. `groupId` cannot be changed.
+
+### Add datapoints
+
+`POST /v1/evals/{eval_id}/datapoints`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `points` | array | yes | One or more datapoints. Batch them rather than sending one request per row. |
+| `points[].data` | any JSON | yes | The executor input, shown in the datapoint table. |
+| `points[].id` | UUID | no | Datapoint id. Mint it yourself so you can update the row later; otherwise the server generates one and does not return it. |
+| `points[].index` | integer | no | Row order in the table. Defaults to `0`, so set it explicitly when adding more than one point. |
+| `points[].target` | any JSON | no | Expected output, for evaluators and side-by-side diffing. |
+| `points[].executorOutput` | any JSON | no | Skip the update phase and write the output now. |
+| `points[].scores` | object | no | Score name → number. Same shortcut as `executorOutput`. |
+| `points[].metadata` | object | no | Arbitrary JSON on the datapoint. |
+| `points[].traceId` | UUID | no | Trace that owns this row. Clicking the row opens that trace's transcript. |
+| `groupName` | string | no | Group written onto these datapoints. Pass the evaluation's group name: it defaults to `default` per request, and a mismatch leaves the rows out of the group's progression chart. |
+
+Returns `200` with the evaluation id.
+
+<Warning>
+`groupName` is not inherited from the evaluation. If you created the evaluation with a `groupName`, send the same value on every datapoints call, or those rows are written under `default` and won't show up in the group's progression chart.
+</Warning>
+
+### Update a datapoint
+
+`POST /v1/evals/{eval_id}/datapoints/{datapoint_id}`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `scores` | object | yes | Score name → number. Send `{}` when you only have the output so far. |
+| `executorOutput` | any JSON | no | The executor's output. Omit to keep the stored value. |
+| `traceId` | UUID | no | Links (or re-links) the row to a trace. |
+
+Returns `200` with the datapoint id. Scores are merged into the existing scores, so a second call adding a new score name keeps the earlier ones. Call it as many times as you like against the same `datapoint_id`; the UI updates in place.
 
 ## Result
 
