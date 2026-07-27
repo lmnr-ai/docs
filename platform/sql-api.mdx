@@ -1,0 +1,167 @@
+---
+title: SQL API
+---
+
+Query your Laminar data programmatically over HTTP. The SQL API is the same SQL surface as the [SQL Editor](/platform/sql-editor), the [CLI](/platform/cli), and the [MCP server](/platform/mcp), exposed as a single REST endpoint so scripts, pipelines, and services can pull spans, traces, signals, and evaluations directly from your project.
+
+## Endpoint
+
+```
+POST https://api.lmnr.ai/v1/sql/query
+```
+
+For self-hosted deployments, replace the base URL with your instance (for example, `http://localhost:8000/v1/sql/query`).
+
+## Authenticate
+
+Every request is authorized with a project API key in the `Authorization` header:
+
+```
+Authorization: Bearer <YOUR_PROJECT_API_KEY>
+```
+
+Grab one from **Settings → Project API Keys** in the Laminar dashboard. The key scopes the query to its project automatically; you do not need a project id or tenant filter in the request or the `WHERE` clause.
+
+## Request and response
+
+Request body:
+
+```json
+{
+  "query": "SELECT name, duration FROM spans WHERE start_time > now() - INTERVAL 1 HOUR LIMIT 20",
+  "parameters": { }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `query` | `string` | ClickHouse SQL. `SELECT` only. |
+| `parameters` | `object` | Optional. Map of typed parameters referenced from the query (e.g. `{evaluation_id: "..."}` matches `{evaluation_id:UUID}` in the query). |
+
+Response body:
+
+```json
+{
+  "data": [
+    { "name": "openai.chat", "duration": 1.23 },
+    { "name": "tool.search", "duration": 0.41 }
+  ]
+}
+```
+
+`data` is an array of rows, each row a JSON object keyed by column name. Errors return a non-`2xx` status with `{"error": "..."}`.
+
+## Examples
+
+<Tabs items={['curl', 'Python', 'TypeScript']}>
+  <Tab title="curl">
+    ```bash
+    curl -X POST https://api.lmnr.ai/v1/sql/query \
+      -H "Authorization: Bearer $LMNR_PROJECT_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "query": "SELECT name, total_cost FROM spans WHERE span_type = {span_type:String} AND start_time > now() - INTERVAL 1 DAY LIMIT 10",
+        "parameters": { "span_type": "LLM" }
+      }'
+    ```
+  </Tab>
+  <Tab title="Python">
+    The `LaminarClient` in the `lmnr` Python SDK exposes the SQL API as `client.sql.query(...)`:
+
+    ```python
+    from lmnr import LaminarClient
+
+    client = LaminarClient(project_api_key="<YOUR_PROJECT_API_KEY>")
+
+    rows = client.sql.query(
+        "SELECT name, total_cost FROM spans "
+        "WHERE span_type = 'LLM' AND start_time > now() - INTERVAL 1 DAY "
+        "LIMIT 10"
+    )
+
+    for row in rows:
+        print(row["name"], row["total_cost"])
+    ```
+
+    Parameterized queries pass typed placeholders in the SQL and a matching dict:
+
+    ```python
+    rows = client.sql.query(
+        "SELECT id, scores FROM evaluation_datapoints "
+        "WHERE evaluation_id = {evaluation_id:UUID}",
+        parameters={"evaluation_id": "98765432-1098-4654-9210-987654321098"},
+    )
+    ```
+
+    The async variant `AsyncLaminarClient` exposes the same `client.sql.query(...)` method and returns a coroutine.
+  </Tab>
+  <Tab title="TypeScript">
+    The `LaminarClient` in `@lmnr-ai/lmnr` exposes the SQL API as `client.sql.query(...)`:
+
+    ```typescript
+    import { LaminarClient } from "@lmnr-ai/lmnr";
+
+    const client = new LaminarClient({
+      projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+    });
+
+    const rows = await client.sql.query(
+      "SELECT name, total_cost FROM spans " +
+      "WHERE span_type = 'LLM' AND start_time > now() - INTERVAL 1 DAY " +
+      "LIMIT 10",
+    );
+
+    for (const row of rows) {
+      console.log(row.name, row.total_cost);
+    }
+    ```
+
+    Parameterized queries pass typed placeholders in the SQL and a matching object:
+
+    ```typescript
+    const rows = await client.sql.query(
+      "SELECT id, scores FROM evaluation_datapoints " +
+      "WHERE evaluation_id = {evaluation_id:UUID}",
+      { evaluation_id: "98765432-1098-4654-9210-987654321098" },
+    );
+    ```
+  </Tab>
+</Tabs>
+
+## What you can query
+
+The API queries the same logical tables as the SQL Editor: `spans`, `traces`, `signal_events`, `signal_runs`, `logs`, `dataset_datapoints`, `dataset_datapoint_versions`, and `evaluation_datapoints`. See [SQL Editor](/platform/sql-editor) for the full schema reference, example queries, and ClickHouse-specific tips (time filters, JSON extraction, tuple fields).
+
+<Note>
+Only `SELECT` queries are allowed. Queries are scoped to the project associated with the API key; cross-project access is not possible.
+</Note>
+
+## Self-hosted
+
+Swap the base URL for your instance and (optionally) a custom port:
+
+```bash
+curl -X POST http://localhost:8000/v1/sql/query \
+  -H "Authorization: Bearer $LMNR_PROJECT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "SELECT count() FROM traces WHERE start_time > now() - INTERVAL 1 DAY"}'
+```
+
+The Python and TypeScript SDK clients accept `baseUrl` / `base_url` (and `port`) so you can point them at a self-hosted app-server.
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="SQL Editor" href="/platform/sql-editor">
+    Full schema reference, writing-queries guide, and example queries.
+  </Card>
+  <Card title="CLI" href="/platform/cli">
+    Run the same SQL from your terminal with `lmnr-cli sql query`.
+  </Card>
+  <Card title="MCP Server" href="/platform/mcp">
+    Let Claude Code, Cursor, or Codex query Laminar directly.
+  </Card>
+  <Card title="Client SDK" href="/sdk/client">
+    `LaminarClient` reference for Python and TypeScript.
+  </Card>
+</CardGroup>
