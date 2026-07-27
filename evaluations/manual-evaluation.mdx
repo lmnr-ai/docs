@@ -382,7 +382,7 @@ Fields you leave out are unchanged, so you can rename a run without touching its
 | `points` | array | yes | One or more datapoints. Batch them rather than sending one request per row. |
 | `points[].data` | any JSON | yes | The executor input, shown in the datapoint table. |
 | `points[].id` | UUID | no | Datapoint id. Mint it yourself so you can update the row later; otherwise the server generates one and does not return it. |
-| `points[].index` | integer | no | Row order in the table. Defaults to `0`, so set it explicitly when adding more than one point. |
+| `points[].index` | integer | no | Position of the row within the run. Also the key rows are matched on when comparing two runs. Defaults to `0` and is **not** auto-incremented, so number your points yourself. |
 | `points[].target` | any JSON | no | Expected output, for evaluators and side-by-side diffing. |
 | `points[].executorOutput` | any JSON | no | Skip the update phase and write the output now. |
 | `points[].scores` | object | no | Score name → number. Same shortcut as `executorOutput`. |
@@ -415,7 +415,10 @@ curl -sS -X POST "${LMNR_BASE_URL}/v1/evals/${EVAL_ID}/datapoints" \
 Returns `200` with the evaluation id.
 
 <Warning>
-`groupName` is not inherited from the evaluation. If you created the evaluation with a `groupName`, send the same value on every datapoints call, or those rows are written under `default` and won't show up in the group's progression chart.
+Two fields the SDKs fill in for you and the API does not:
+
+- **`groupName` is not inherited from the evaluation.** It defaults to `default` on every request, so if you created the evaluation with a `groupName`, send the same value on each datapoints call. Otherwise the rows land in a different group and won't appear in the group's progression chart.
+- **`index` is not auto-incremented.** Every point you send without one gets `0`. Since [comparing runs](/evaluations/comparing-runs) matches rows across runs on `index`, leaving them all at `0` makes each row match every row in the other run instead of its counterpart. Number your points as you build the batch.
 </Warning>
 
 ### Update a datapoint
