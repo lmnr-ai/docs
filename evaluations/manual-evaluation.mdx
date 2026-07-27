@@ -269,7 +269,7 @@ client.evals.update_evaluation(
 ```
 </CodeGroup>
 
-Fields you leave out are unchanged, so you can rename a run without touching its metadata. When you do send `metadata`, it replaces the stored object wholesale rather than merging: include the keys you want to keep, as the examples above do. The group cannot be changed, because only runs sharing a group can be [compared](/evaluations/comparing-runs) and existing datapoints already carry the group they were written with.
+Fields you leave out are unchanged, so you can rename a run without touching its metadata. When you do send `metadata`, it replaces the stored object wholesale rather than merging: include the keys you want to keep, as the examples above do. The group cannot be changed.
 
 ## Decoupling the executor from the scorer
 
@@ -389,7 +389,7 @@ curl -sS -X POST "${LMNR_BASE_URL}/v1/evals/${EVAL_ID}" \
 
 Returns `200` with the updated evaluation in the same shape as create, or `404` when the id doesn't exist in the project.
 
-Fields you leave out are unchanged, so you can rename a run without touching its metadata. `metadata` is replaced wholesale rather than merged: send the whole object, including keys you want to keep. `groupId` cannot be changed, because only runs sharing a group can be [compared](/evaluations/comparing-runs) and existing datapoints already carry the group they were written with.
+Fields you leave out are unchanged, so you can rename a run without touching its metadata. `metadata` is replaced wholesale rather than merged: send the whole object, including keys you want to keep. `groupId` cannot be changed.
 
 ### Add datapoints
 
