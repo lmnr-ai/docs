@@ -34,7 +34,7 @@ Each phase is one HTTP call underneath, so the same lifecycle is available witho
 | Create the evaluation | `create` / `create_evaluation` | [`POST /v1/evals`](#create-an-evaluation) |
 | Pre-register datapoints | `create_datapoint` | [`POST /v1/evals/{eval_id}/datapoints`](#add-datapoints) |
 | Write output and scores | `update_datapoint` | [`POST /v1/evals/{eval_id}/datapoints/{datapoint_id}`](#update-a-datapoint) |
-| Update the evaluation | None | [`POST /v1/evals/{eval_id}`](#update-an-evaluation) |
+| Update the evaluation | `update` / `update_evaluation` | [`POST /v1/evals/{eval_id}`](#update-an-evaluation) |
 
 ## Setup
 
@@ -246,6 +246,30 @@ async def main():
 <Note>
 The two SDKs link traces to datapoints in slightly different places. TypeScript accepts `traceId` on `createDatapoint` only, so call it from inside the `EVALUATION` span and pass `Laminar.getTraceId()` there. Python's `update_datapoint` accepts `trace_id`, so you can register the datapoint *before* the span opens and link the trace once it's running. The Python pattern is what you want when the row needs to be visible before you know which trace will own it.
 </Note>
+
+## Renaming or re-tagging a finished run
+
+A long-running job often doesn't know everything about itself when the run is created: the final status, the git SHA it ends up testing, how many rows it processed. `update` (TypeScript) / `update_evaluation` (Python) writes the evaluation's `name` and `metadata` after the fact, any time after `create`:
+
+<CodeGroup>
+```typescript TypeScript
+await client.evals.update({
+  evalId,
+  name: 'Manual capitals eval (complete)',
+  metadata: { model: 'gpt-5-mini', run_by: 'manual-api-demo', status: 'complete' },
+});
+```
+
+```python Python
+client.evals.update_evaluation(
+    eval_id=eval_id,
+    name="Manual capitals eval (complete)",
+    metadata={"model": "gpt-5-mini", "run_by": "manual-api-demo", "status": "complete"},
+)
+```
+</CodeGroup>
+
+Fields you leave out are unchanged, so you can rename a run without touching its metadata. When you do send `metadata`, it replaces the stored object wholesale rather than merging: include the keys you want to keep, as the examples above do. The group cannot be changed, because only runs sharing a group can be [compared](/evaluations/comparing-runs) and existing datapoints already carry the group they were written with.
 
 ## Decoupling the executor from the scorer
 
