@@ -312,20 +312,7 @@ AUTH="Authorization: Bearer ${LMNR_PROJECT_API_KEY}"
 JSON="Content-Type: application/json"
 ```
 
-### Attaching traces to datapoints
-
-Spans are the one thing this API does not carry. The `EVALUATION` / `EXECUTOR` / `EVALUATOR` spans behind per-row transcripts travel over OpenTelemetry, not over these endpoints, and nothing links a datapoint to a trace implicitly. A datapoint gets a trace only because you passed its `traceId`.
-
-The SDKs hide this: `Laminar.getTraceId()` / `Laminar.get_trace_id()` read the active span, so the walkthrough above can hand the id straight to `createDatapoint`. Without an SDK you capture it yourself from whatever emits your spans, then send it on the datapoint.
-
-Laminar stores trace ids as UUIDs while OpenTelemetry uses 32 hex characters. Both forms are accepted on `traceId`, and the hyphenated UUID is what you'll see in the UI and in SQL:
-
-```
-OpenTelemetry   4bf92f3577b34da6a3ce929d0e0e4736
-Laminar UUID    4bf92f35-77b3-4da6-a3ce-929d0e0e4736
-```
-
-Datapoints written without a `traceId` are still complete rows: `data`, `target`, `executorOutput`, and `scores` are everything the list view, progression chart, and side-by-side comparison read. Only the per-row transcript drill-down needs a trace. To get that too, emit your spans with any OTel SDK (see [OpenTelemetry](/tracing/otel)) and pass that trace's id here.
+Spans are the one thing these endpoints don't carry: emit them with any [OpenTelemetry](/tracing/otel) SDK and pass that trace's id as `traceId` on the datapoint to get per-row transcripts.
 
 ### Create an evaluation
 
@@ -398,7 +385,7 @@ Fields you leave out are unchanged, so you can rename a run without touching its
 | `points[].executorOutput` | any JSON | no | Skip the update phase and write the output now. |
 | `points[].scores` | object | no | Score name → number. Same shortcut as `executorOutput`. |
 | `points[].metadata` | object | no | Arbitrary JSON on the datapoint. |
-| `points[].traceId` | UUID | no | Trace that owns this row, so clicking it opens that trace's transcript. You supply this: nothing links a datapoint to a trace on its own. Omit it and the row simply has no trace attached. |
+| `points[].traceId` | UUID | no | Trace that owns this row. Clicking the row opens that trace's transcript. |
 | `groupName` | string | no | Group written onto these datapoints. Pass the evaluation's group name: it defaults to `default` per request, and a mismatch leaves the rows out of the group's progression chart. |
 
 ```bash
