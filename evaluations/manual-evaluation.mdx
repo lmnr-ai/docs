@@ -34,7 +34,7 @@ Each phase is one HTTP call underneath, so the same lifecycle is available witho
 | Create the evaluation | `create` / `create_evaluation` | [`POST /v1/evals`](#create-an-evaluation) |
 | Pre-register datapoints | `create_datapoint` | [`POST /v1/evals/{eval_id}/datapoints`](#add-datapoints) |
 | Write output and scores | `update_datapoint` | [`POST /v1/evals/{eval_id}/datapoints/{datapoint_id}`](#update-a-datapoint) |
-| Rename or re-tag the run | none yet | [`POST /v1/evals/{eval_id}`](#update-an-evaluation) |
+| Update the evaluation | None | [`POST /v1/evals/{eval_id}`](#update-an-evaluation) |
 
 ## Setup
 
