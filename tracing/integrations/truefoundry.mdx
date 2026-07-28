@@ -1,0 +1,114 @@
+---
+title: LLM Observability for TrueFoundry
+sidebarTitle: TrueFoundry
+---
+
+import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
+
+## Overview
+
+Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. Export [TrueFoundry AI Gateway](https://docs.truefoundry.com/gateway/quick-start) traces to Laminar over OTLP/HTTP — no Laminar SDK in your applications. Configure export once in TrueFoundry; every gateway request shows up in Laminar as `litellm.completion` spans with model, tokens, latency, cost, and prompt/response content.
+
+<Note>
+This guide is also published on [TrueFoundry's documentation](https://docs.truefoundry.com/ai-gateway/laminar).
+</Note>
+
+**You need:** a [TrueFoundry account](https://www.truefoundry.com/register) with the AI Gateway set up ([quick start](https://docs.truefoundry.com/gateway/quick-start)), a [Laminar account](https://lmnr.ai/) (or [self-hosted](https://github.com/lmnr-ai/lmnr) instance), and a Laminar project API key.
+
+<Steps>
+<Step title="Get your Laminar project API key">
+
+1. Log into the [Laminar app](https://www.lmnr.ai/) and open your project.
+2. Go to **Settings** → **Project API keys** and create or copy a key.
+
+<GetProjectApiKey />
+
+<Frame caption="Project API keys in Laminar project settings.">
+  <img src="/images/traces/truefoundry-api-keys.avif" alt="Laminar settings showing Project API keys with table of keys and plus API Key button for creating trace ingestion credentials" />
+</Frame>
+
+</Step>
+
+<Step title="Configure OTEL export in TrueFoundry">
+
+1. In TrueFoundry, go to **AI Engineering** → **Settings** → **OTEL Config** (under **Organisation**).
+
+<Frame caption="TrueFoundry navigation to Organisation OTEL Config.">
+  <img src="/images/traces/truefoundry-otel-nav.avif" alt="TrueFoundry AI Engineering and Settings navigation to Organisation OTEL Config showing traces endpoint and authorization header" />
+</Frame>
+
+2. Click **edit**, enable **OTEL Traces Exporter Configuration**, and select **HTTP Configuration**.
+3. Set the endpoint to `https://api.lmnr.ai/v1/traces` and **Encoding** to `Proto`.
+4. Add the auth header and save:
+
+| Header          | Value                                   |
+| --------------- | --------------------------------------- |
+| `Authorization` | `Bearer <YOUR_LAMINAR_PROJECT_API_KEY>` |
+
+<Frame caption="TrueFoundry OTEL traces exporter with Laminar HTTP endpoint and Proto encoding.">
+  <img src="/images/traces/truefoundry-otel-config.avif" alt="TrueFoundry OTEL Traces Exporter Configuration with HTTP endpoint https://api.lmnr.ai/v1/traces, Proto encoding, and Authorization Bearer header for Laminar" />
+</Frame>
+
+</Step>
+
+<Step title="Verify traces in Laminar">
+
+1. Send a few requests through the TrueFoundry AI Gateway.
+2. Confirm traces in TrueFoundry **Monitor**, then in your Laminar project.
+
+<Frame caption="Gateway traces in the Laminar traces table.">
+  <img src="/images/traces/truefoundry-traces-dashboard.avif" alt="Laminar traces view showing recent gateway spans in the table and activity over time" />
+</Frame>
+
+Each trace includes a `litellm.completion` span with model, tokens, latency, and the full prompt:
+
+<div style={{ border: '1px solid #2B2B30', borderRadius: '8px', overflow: 'hidden' }}>
+  <img src="/images/traces/litellm.png" alt="TrueFoundry gateway litellm.completion span in Laminar showing model, tokens, latency, and user prompt" style={{ margin: '0px' }}/>
+</div>
+
+</Step>
+</Steps>
+
+## Configuration reference
+
+| Configuration       | Value                                     |
+| ------------------- | ----------------------------------------- |
+| **Traces endpoint** | `https://api.lmnr.ai/v1/traces`           |
+| **Protocol**        | HTTP                                      |
+| **Encoding**        | `Proto`                                   |
+| **Authentication**  | `Authorization: Bearer <project API key>` |
+
+For OTLP/gRPC or self-hosted Laminar, see [OpenTelemetry tracing](/tracing/otel). For ingestion issues, see [Troubleshooting OpenTelemetry](/tracing/troubleshooting-opentelemetry).
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="No traces in Laminar">
+    - Confirm the OTEL exporter toggle is on, endpoint is `https://api.lmnr.ai/v1/traces`, encoding is **Proto**, and the `Authorization` header is `Bearer <key>` with no extra quotes.
+    - Send a test request, wait a few seconds, and check TrueFoundry **Monitor** first.
+  </Accordion>
+  <Accordion title="Traces in TrueFoundry but not Laminar">
+    - Verify the API key matches the Laminar project you are viewing.
+    - See [Troubleshooting OpenTelemetry](/tracing/troubleshooting-opentelemetry).
+  </Accordion>
+  <Accordion title="Self-hosting Laminar">
+    Use `http://<your-host>:8000/v1/traces` instead of the cloud endpoint. Details in [OpenTelemetry tracing](/tracing/otel).
+  </Accordion>
+</AccordionGroup>
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Viewing traces" href="/platform/viewing-traces">
+    Transcript view, filters, and search across gateway traces.
+  </Card>
+  <Card title="Signals" href="/signals/introduction">
+    Detect patterns across traces, then query, cluster, and alert.
+  </Card>
+  <Card title="OpenTelemetry tracing" href="/tracing/otel">
+    gRPC endpoints, self-hosted setup, and SDK exporters.
+  </Card>
+  <Card title="LiteLLM" href="/tracing/integrations/litellm">
+    Trace LiteLLM calls directly with the Laminar SDK.
+  </Card>
+</CardGroup>
