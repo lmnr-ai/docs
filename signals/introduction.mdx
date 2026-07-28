@@ -24,13 +24,23 @@ Most interesting failures in a long agent run are invisible from the output alon
 
 Scoring the last LLM span cannot see any of these, because by the time the agent writes its final message the evidence is dozens of spans upstream. Signals look there. That's why a Signal can tell you *which tool failed, what the agent did about it, and what the user ended up believing as a result*, instead of just *the answer looks fine*.
 
+## Anatomy of a Signal
+
+A Signal has three parts, and you configure all three:
+
+- **Prompt**: plain-language instructions describing what to detect or extract from a trace.
+- **Structured output schema**: a JSON schema the extracted payload must conform to. You name the fields you want pulled out of every match, which is what makes the resulting events filterable and queryable instead of a wall of prose.
+- **Triggers**: trace conditions that must be met for the Signal to run, so you're not analyzing traces you don't care about.
+
+That's everything. Laminar handles the rest.
+
 ## A concrete example
 
-Here's a real run, and the Signal event it produced.
+Here are those parts on a real run, and the event they produced.
 
 A travel agent was asked to plan a trip and return a flight and a hotel with the nightly price. `search_flights` returned real results. `get_hotel_availability` returned `upstream_timeout` three times in a row. The agent then wrote a well-formatted itinerary containing three named hotels with nightly prices, none of which came from a tool result.
 
-The whole Signal is this, written in plain language:
+The **prompt** describes the failure in plain language:
 
 ```
 The agent presented information to the user that was not supported by the tool
@@ -39,7 +49,7 @@ no data, and the agent filled the gap with its own numbers, prices, or facts
 instead of telling the user the data was unavailable.
 ```
 
-Plus three fields to extract for each occurrence: `unsupported_claim`, `failed_tool`, and `user_impact`. This is the event it produced on that trace:
+The **output schema** names three fields to extract for each occurrence: `unsupported_claim`, `failed_tool`, and `user_impact`. And this is the event Laminar produced on that trace:
 
 ```json wrap
 {
@@ -56,16 +66,6 @@ Plus three fields to extract for each occurrence: `unsupported_claim`, `failed_t
 Nothing in the agent's final message says "the hotel API never answered." To connect the fabricated prices back to the timeout, you have to read the tool result in the middle of the run, which is exactly what the Signal did.
 
 Now multiply that by every trace you produce. One row per occurrence, filterable by `failed_tool`, [queryable](/platform/sql-editor) in SQL, [clustered](/signals/clusters) with the other traces that failed the same way, and wired to an [alert](/signals/alerts) the next time it happens.
-
-## Anatomy of a Signal
-
-Generalizing from that example, a Signal has three parts:
-
-- **Prompt**: plain-language instructions that describe what the Signal should detect or extract from an agent trace.
-- **Structured output schema**: a JSON schema the extracted payload must conform to. Naming the fields up front is what makes events filterable and queryable instead of a wall of prose.
-- **Triggers**: trace conditions that must be met for the Signal to run, so you're not paying to analyze traces you don't care about.
-
-That's everything you configure. Laminar handles the rest.
 
 ## What else Signals can help you answer
 
