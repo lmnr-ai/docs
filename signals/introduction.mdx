@@ -11,6 +11,66 @@ When your agent goes into production, the questions you care about are things li
   ![Signal detail view with events list and per-event payload](/images/signals/signal-detail.png)
 </Frame>
 
+## Signals read the whole trace, not the final answer
+
+**A Signal is not a grader pointed at your agent's last LLM output. Every Signal reads the entire trace: every LLM turn, every tool call, every subagent, every retry, and every error, from the first span to the last.**
+
+Most interesting failures in a long agent run are invisible from the output alone:
+
+- A tool returned an error in step 12 and the agent quietly worked around it. The final answer still reads as confident and complete.
+- The agent issued the same search three times with the same arguments. The answer is right and cost three times what it should have.
+- A subagent came back with nothing usable, and the parent filled the gap with a plausible substitute.
+- The agent violated a rule from its system prompt forty steps ago, and the only trace of it is a subtly wrong deliverable.
+
+Scoring the last LLM span cannot see any of these, because by the time the agent writes its final message the evidence is dozens of spans upstream. Signals look there. That's why a Signal can tell you *which tool failed, what the agent did about it, and what the user ended up believing as a result*, instead of just *the answer looks fine*.
+
+## A concrete example
+
+Here's a real run, and the Signal event it produced.
+
+A travel agent was asked to plan a trip and return a flight and a hotel with the nightly price. `search_flights` returned real results. `get_hotel_availability` returned `upstream_timeout` three times in a row. The agent then wrote a well-formatted itinerary containing three named hotels with nightly prices, none of which came from a tool result.
+
+This is the Signal prompt:
+
+```
+The agent presented information to the user that was not supported by the tool
+results it actually received. Look for cases where a tool call failed or returned
+no data, and the agent filled the gap with its own numbers, prices, or facts
+instead of telling the user the data was unavailable.
+```
+
+With this output schema:
+
+```json
+{
+  "type": "object",
+  "required": ["unsupported_claim", "failed_tool", "user_impact"],
+  "properties": {
+    "unsupported_claim": { "type": "string" },
+    "failed_tool": { "type": "string" },
+    "user_impact": { "type": "string" }
+  }
+}
+```
+
+And this is the signal event it produced on that trace:
+
+```json wrap
+{
+  "summary": "Agent hallucinated hotel options and estimated prices after API timeout",
+  "severity": "warning",
+  "payload": {
+    "unsupported_claim": "Specific hotel recommendations (Ibis Paris Montmartre, Hotel Eiffel Seine, Pullman Paris Tour Eiffel) with estimated prices (€130, €200, €420)",
+    "failed_tool": "get_hotel_availability",
+    "user_impact": "The user might believe these specific hotels are viable options for their dates and budget, even though the agent hallucinated the options and prices from its training data."
+  }
+}
+```
+
+Nothing in the agent's final message says "the hotel API never answered." To connect the fabricated prices back to the timeout, you have to read the tool result in the middle of the run, which is exactly what the Signal did.
+
+Now multiply that by every trace you produce. One row per occurrence, filterable by `failed_tool`, [queryable](/platform/sql-editor) in SQL, [clustered](/signals/clusters) with the other traces that failed the same way, and wired to an [alert](/signals/alerts) the next time it happens.
+
 ## What Signals can help you answer
 
 If you can describe it to a colleague, you can write a Signal for it.
