@@ -255,16 +255,53 @@ lmnr-cli debug session set-name "Fix report length" --session-id <session-id>
 
 ### debug session summary
 
-Print the debug session's full timeline, oldest first: every run, evaluation, and note. Use this to re-orient in an ongoing session after a context reset. Defaults to the current session; pass `--session-id` for another.
+Print the debug session's full timeline, oldest first: every run, evaluation, note, and tracked command. Use this to re-orient in an ongoing session after a context reset. Defaults to the current session; pass `--session-id` for another.
 
 ```bash
 lmnr-cli debug session summary
 lmnr-cli debug session summary --session-id <session-id> --json
 ```
 
-Traces and evaluations print as self-closing `<trace id="..."/>` and `<evaluation id="..."/>` tags you can feed into SQL queries; notes print as their raw markdown. With `--json`, the output is an array of `{"id","createdAt","type","content"}` blocks.
+Traces and evaluations print as self-closing `<trace id="..."/>` and `<evaluation id="..."/>` tags you can feed into SQL queries; [tracked commands](#tracking-cli-commands-in-the-debugger) print as `<command exitCode="..." reasoning="...">...</command>` tags; notes print as their raw markdown. With `--json`, the output is an array of `{"id","createdAt","type","content"}` blocks.
 
 See [Debugger](/debugger/process) for the full record/replay process.
+
+## Tracking CLI commands in the debugger
+
+When a debug session is active in the current directory (any `LMNR_DEBUG=true` run has written `.lmnr/debug-session.json`), your investigative commands are recorded into that session automatically. A reviewer watching the session then sees exactly what the agent asked, not just the runs and notes around it.
+
+Two commands are tracked: [`sql query`](#query-data-with-sql) and [`ask`](#ask-the-agent). Each tracked run becomes a `command` block in the session timeline, carrying:
+
+- The command and its arguments (the raw SQL or the raw question).
+- The exit code.
+- The captured stdout/stderr output.
+
+The block renders as a terminal-style row in the session view (red-accented when the command exited non-zero) and as a `<command>` tag in [`debug session summary`](#debug-session-summary). Tracking is best-effort: it never changes a command's output or exit code, and it stays silent on a normal run.
+
+### Explain the intent with `--reasoning`
+
+Pass `--reasoning "<why you're running this>"` to attach a short explanation to the command block. It shows in the UI on the block (and in the session summary), so a human following the session understands *why* the agent ran a query without reading the raw SQL. Keep it to a short phrase, about 15 words.
+
+```bash
+lmnr-cli sql query "SELECT status, count(*) FROM traces GROUP BY status" \
+  --reasoning "checking how many runs errored in this session"
+
+lmnr-cli ask "why did the most recent run fail?" \
+  --reasoning "triaging the failure before editing the prompt"
+```
+
+<Note>
+`--reasoning` is recorded only when a debug session is active in the directory. With no active session the flag is ignored and the CLI warns you; start one with `lmnr-cli debug session new`.
+</Note>
+
+### Disable tracking
+
+Tracking is on by default whenever a session is active. Turn it off for a single command with `--no-track`, or for the whole shell by setting `LMNR_NO_COMMAND_TRACKING=1`:
+
+```bash
+lmnr-cli sql query "SELECT 1" --no-track      # this command only
+export LMNR_NO_COMMAND_TRACKING=1             # every command in this shell
+```
 
 ## Piping and agent-friendly output
 
