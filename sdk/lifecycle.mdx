@@ -113,7 +113,7 @@ title: SDK Lifecycle
 
     <Heading level={2} id="py-edge-cases">Edge Cases</Heading>
 
-    - **Input/output size:** Values >10MB replaced with `"Laminar: ... too large to record"`
+    - **Input/output size:** Values >10MB are truncated to the 10MB limit with a trailing `...[Laminar: truncated]` marker. The recorded value is no longer valid JSON, but the start of the payload is preserved.
     - **Uninitialized:** If `Laminar.initialize()` not called:
       - `@observe()` returns original function unchanged
       - Manual span methods return `NonRecordingSpan`
