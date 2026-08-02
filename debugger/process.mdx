@@ -9,7 +9,7 @@ This is the loop your coding agent runs for you. With the [Laminar skill](https:
 
 Watch your agent work from the Laminar UI while it drives the loop from the terminal. Open **Debugger** in your project and select the session, or click the `debugger_url` the SDK prints (it opens automatically when a debug run starts).
 
-A session is a timeline of blocks: runs (traces), evaluations, and notes, interleaved by time. The view streams every block live as your coding agent works. Each run renders Laminar's auto-extracted user inputs, LLM turns, tool calls, and collapsed sub-agent cards. Evals render as cards with per-score averages, and notes render as markdown between them, so you can follow the agent's reasoning in real time.
+A session is a timeline of blocks: runs (traces), evaluations, notes, and CLI commands the agent ran, interleaved by time. The view streams every block live as your coding agent works. Each run renders Laminar's auto-extracted user inputs, LLM turns, tool calls, and collapsed sub-agent cards. Evals render as cards with per-score averages, notes render as markdown between them, and tracked commands render as terminal-style rows, so you can follow the agent's reasoning in real time.
 
 <Frame>
   <img src="/images/debugger-session-view.png" alt="Debugger session timeline showing a note with a span reference, a replay run, an eval card with per-score results, and a closing note" />
@@ -90,7 +90,7 @@ npx lmnr-cli sql query "
   FROM traces
   WHERE simpleJSONExtractString(metadata, 'rollout.session_id') = '<session-id>'
   ORDER BY start_time DESC
-  LIMIT 10"
+  LIMIT 10" --reasoning "listing this session's runs to find the failing trace"
 ```
 
 Locate the bad span:
@@ -100,10 +100,12 @@ npx lmnr-cli sql query "
   SELECT span_id, name, span_type, start_time, status
   FROM spans
   WHERE trace_id = '<trace-id>'
-  ORDER BY start_time ASC"
+  ORDER BY start_time ASC" --reasoning "finding the LLM call before the buggy one to set the replay boundary"
 ```
 
 `span_type` is `LLM`, `TOOL`, `DEFAULT`, or `CACHED` (a replayed call in a replay run). Find the LLM call **before** the buggy one; its `span_id` is the replay boundary you'll pass as `LMNR_DEBUG_CACHE_UNTIL`.
+
+Every `sql query` (and `ask`) run in a directory with an active debug session is recorded into that session as a `command` block, so a reviewer sees what the agent investigated. Use `--reasoning "<why you're running this>"` to attach a short explanation of the command's intent; it renders in the UI on the command block (and in the [session summary](#6-re-orient-with-a-session-summary)), so a human watching the session can follow the agent's reasoning without reading the raw query. Keep it to a short phrase (about 15 words). Pass `--no-track` (or set `LMNR_NO_COMMAND_TRACKING=1`) to skip recording a command.
 
 Run `npx lmnr-cli sql schema` to see all available tables.
 
@@ -158,13 +160,15 @@ npx lmnr-cli debug session summary
 npx lmnr-cli debug session summary --json
 ```
 
-This defaults to the current session; pass `--session-id <session-id>` for another. Output is one entry per block, oldest first: traces and evals print as self-closing tags you can feed into SQL queries, and notes print as their raw markdown.
+This defaults to the current session; pass `--session-id <session-id>` for another. Output is one entry per block, oldest first: traces and evals print as self-closing tags you can feed into SQL queries, commands print as `<command>` tags carrying their exit code and any `--reasoning`, and notes print as their raw markdown.
 
 ```text
 <trace id="…"/>
 
 ## Testing the length cap
 Replaying calls 1-3, running call 4 live with the new cap.
+
+<command exitCode="0" reasoning="finding the LLM call before the buggy one to set the replay boundary">sql query SELECT span_id, name, span_type FROM spans WHERE trace_id = '…'</command>
 
 <trace id="…"/>
 
