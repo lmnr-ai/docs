@@ -1,0 +1,97 @@
+---
+title: Pi Extension
+sidebarTitle: Pi
+---
+
+## Overview
+
+The Pi extension traces every local [Pi](https://pi.dev) coding agent session: each prompt becomes a full trace with its LLM calls and tool executions, sent to Laminar. Traces from the same Pi session are grouped into one Laminar [session](/tracing/structure/sessions).
+
+The extension subscribes to Pi's own lifecycle events, so spans open and close in process. Traces appear in Laminar while the run is still going.
+
+## Install
+
+<Steps>
+<Step title="Run the installer">
+
+```bash
+npx lmnr-cli@latest plugin add pi
+```
+
+The CLI logs you in (browser device flow), lets you pick the Laminar project that should receive your Pi traces, mints a project API key named after the extension and your machine, writes it to `~/.config/lmnr/pi-extension.json`, and installs the extension with `pi install npm:@lmnr-ai/pi-extension`.
+
+<Tip>
+Pick a dedicated project for coding-agent traces so they don't mix with your application's traces. The setup is global and directory-independent: it never touches `.lmnr/project.json` or your `.env`.
+</Tip>
+
+</Step>
+<Step title="Restart Pi">
+
+Pi loads extensions at startup, so restart it to activate the extension.
+
+</Step>
+<Step title="Use Pi as usual">
+
+Every prompt becomes a trace in the project you picked. Open the Laminar dashboard to watch them land in realtime.
+
+</Step>
+</Steps>
+
+<Note>
+**Self-hosting Laminar?** The same command works against your instance: pass your frontend URL (the auth issuer) and your API URL, including the API port:
+
+```bash
+npx lmnr-cli@latest plugin add pi \
+  --frontend-url https://laminar.example.com \
+  --base-url https://api.laminar.example.com
+```
+</Note>
+
+### Manual install
+
+If you'd rather not use `lmnr-cli`, install the package with Pi's own command and set the key in your environment:
+
+```bash
+pi install npm:@lmnr-ai/pi-extension
+export LMNR_PROJECT_API_KEY="..."
+```
+
+Get a key from the Laminar dashboard under **Settings → Project API Keys** (create a dedicated key so it's clear it belongs to the extension).
+
+`pi install` adds the package to your global settings (`~/.pi/agent/settings.json`) and installs it under `~/.pi/agent/npm/`. Add `-l` to scope it to the current project (`.pi/settings.json`) instead. You can also add the package to `settings.json` by hand:
+
+```json ~/.pi/agent/settings.json
+{ "packages": ["npm:@lmnr-ai/pi-extension"] }
+```
+
+## What you get
+
+One trace covers one prompt. Pi can run its agent loop more than once for a single prompt: an auto-retry, an auto-compaction retry, and a queued follow-up each start another pass. Every pass lands in the same trace. Inside it you get one LLM span per model call and one tool span per tool call.
+
+Spans open when the work starts, not when it finishes. An LLM span opens as Pi hands the request to the model, so its duration is the real call latency.
+
+## Configuration
+
+The extension reads its config from `~/.config/lmnr/pi-extension.json`, written by `lmnr-cli plugin add pi`:
+
+```json
+{ "projectApiKey": "...", "baseUrl": "https://api.lmnr.ai" }
+```
+
+`projectApiKey` is required. `baseUrl` is optional and defaults to `https://api.lmnr.ai`; self-hosters set it to their instance's API URL (for example `http://localhost:8000`).
+
+These environment variables override the file when set, which is handy for CI or a shell you already have configured. The extension is fail-open: with no key from either source it disables itself and Pi runs untouched. Traces are attributed to the identity from `lmnr-cli login` when present; set `LMNR_USER_ID` to override the user id attached to traces.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `LMNR_PROJECT_API_KEY` | config file | Laminar project API key. |
+| `LMNR_BASE_URL` | config file, else `https://api.lmnr.ai` | Laminar API base URL, for self-hosted deployments. |
+| `LMNR_USER_ID` | `lmnr-cli login` identity | User id to attach to every trace. |
+| `LMNR_MAX_CHARS` | `20000` | Character cap for span input and output values. The system prompt gets its own budget of this size, so a turn's input can reach about twice the cap. |
+| `LMNR_DEBUG` | — | Set to `true` to attach runs to a debugger session and write a log file. |
+
+## Debugger sessions
+
+Set `LMNR_DEBUG=true` and each run also joins a Laminar [debugger session](/debugger/introduction), so you can inspect and replay it. The SDK resolves the session id in this order: `LMNR_DEBUG_SESSION_ID`, then the nearest `.lmnr/debug-session.json` written by `lmnr-cli debug session new`, then a fresh id.
+
+`LMNR_DEBUG=true` also turns on file logging to `~/.pi/agent/lmnr-pi-extension.log`. Pi is a terminal UI, so the extension never writes diagnostics to stdout. Read that file when traces do not arrive.
