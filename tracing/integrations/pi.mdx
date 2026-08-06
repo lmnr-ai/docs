@@ -70,22 +70,6 @@ One trace covers one prompt. Pi can run its agent loop more than once for a sing
 
 Spans open when the work starts, not when it finishes. An LLM span opens as Pi hands the request to the model, so its duration is the real call latency.
 
-### What each LLM span reports
-
-**The messages Pi actually sent.** `gen_ai.input.messages` is the list Pi assembled for that call, so a turn shows the full session history: earlier prompts, and the state after a compaction.
-
-**The system prompt**, as a `system` message at the head of every turn. This is the prompt Pi sent, after each extension has had its say.
-
-**The active tool definitions**, as `gen_ai.tool.definitions`: the name, description, and JSON schema of every tool the run can call. Laminar reads these into its tool-definitions column.
-
-**Tokens and cost**, from Pi's own numbers, which are correct for every provider and model Pi supports. Input, output, cache reads, cache writes, reasoning tokens, and Anthropic's one-hour cache-write split all come through. Cache costs fold into the input cost, so the input and output costs add up to the total that Pi reports.
-
-**Errors.** A turn that ends in an error, or that you abort, marks its LLM span failed and carries Pi's error message. The root span is failed when the run's last turn failed, so a successful retry clears it. A tool span is failed when the tool reports an error. Filter on either to find broken runs.
-
-Together with the model, the provider, and the finish reason, that makes each run read end to end in [transcript view](/platform/viewing-traces#transcript-view). Messages use Anthropic-style content blocks, the same shape as every other Laminar integration: reasoning stays its own `thinking` block instead of being folded into the reply, and tool calls and results keep their own blocks. Images appear as `[image <mime type>]` rather than re-embedded payloads.
-
-The root span records Pi's session id and the working directory. Use the session id to group a whole conversation, and the working directory to tell one repository's runs from another's.
-
 ## Configuration
 
 The extension reads its config from `~/.config/lmnr/pi-extension.json`, written by `lmnr-cli plugin add pi`:
