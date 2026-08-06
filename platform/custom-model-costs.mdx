@@ -1,0 +1,104 @@
+---
+title: Custom Model Costs for Self-Hosted and Fine-Tuned Models
+sidebarTitle: Custom model costs
+---
+
+Laminar prices every LLM span from a built-in table covering the major providers. **Custom model costs let you define your own per-project pricing for models that table doesn't know about**: fine-tuned deployments, self-hosted open-weight models, private inference endpoints, or a negotiated rate that differs from list price. Set a price once in project settings and every matching span, past and future, is costed with it.
+
+<Frame caption="Project settings: two custom prices, one scoped to a provider and one matching spans that carry no provider">
+  <img src="/images/platform/custom-model-costs-table.png" alt="Model costs settings page listing two custom model cost entries with input, cache read, and output prices" />
+</Frame>
+
+Custom prices are **per project** and take priority over the built-in table. They apply at ingestion, so a price change affects spans ingested from that point on, not spans already stored.
+
+## Add a custom price
+
+<Steps>
+  <Step title="Open Model costs">
+    Go to **Settings > Model costs** in the project sidebar, under **Project settings**.
+  </Step>
+  <Step title="Create the entry">
+    Click **Model cost** and fill in the form.
+
+    <Frame caption="The add dialog: prices are entered in dollars per million tokens">
+      <img src="/images/platform/custom-model-cost-dialog.png" alt="Add custom model cost dialog with provider, model, and input, cache read, and output price fields" />
+    </Frame>
+
+    | Field | Notes |
+    |---|---|
+    | **Provider** | Optional. Must match `gen_ai.system` on your spans. Leave blank to match spans that carry no provider. |
+    | **Model** | Required. Must match the model name on your spans exactly. |
+    | **Input** | Price for input (prompt) tokens. |
+    | **Cache read** | Price for tokens read from a prompt cache. Usually a fraction of the input price. |
+    | **Output** | Price for output (completion) tokens. |
+
+    Enter every price in **dollars per million tokens**, matching how providers publish their rates. Laminar converts to a per-token rate internally. At least one of **Input** or **Output** is required; leave a field blank and that token class is not charged.
+  </Step>
+  <Step title="Confirm on a span">
+    Send a request through the model, open the trace, and check the cost on the LLM span. If it reads `$0`, the provider or model string doesn't match: see [Why isn't my custom price applying?](#why-isnt-my-custom-price-applying) below.
+  </Step>
+</Steps>
+
+Edit and delete are the pencil and trash icons on each row. Both take effect on the next ingested span.
+
+## Names must match your span attributes exactly
+
+This is the one thing that causes a custom price to silently not apply. **The model and provider you enter are matched exactly against the values on your spans**, with no normalization beyond case-insensitivity:
+
+- **Model** is matched against `gen_ai.response.model`, falling back to `gen_ai.request.model` when there is no response model. A date or version suffix is part of the name: an entry for `acme-llm-v1` does **not** match a span reporting `acme-llm-v1-2026-01-01`. Add a separate entry per deployed variant.
+- **Provider** is matched against `gen_ai.system`, after stripping anything past the first dot (a span reporting `anthropic.messages` matches an entry of `anthropic`). Enter `anthropic`, not `anthropic.messages`.
+- **A blank Provider means blank, not "any"**. An entry with no provider matches only spans that carry no `gen_ai.system` at all. If your spans set a provider, the entry must set the same one.
+
+Case doesn't matter: both sides are lowercased before matching. To read the exact strings your spans carry, query them:
+
+```sql
+SELECT DISTINCT provider, model
+FROM spans
+WHERE span_type = 'LLM'
+```
+
+Run this in the [SQL editor](/platform/sql-editor) and copy the values straight into the form. See the [span attribute reference](/tracing/structure/span-attribute-reference) for the full list of attributes Laminar reads.
+
+## How Laminar picks a price
+
+For each LLM span, in order:
+
+1. **Explicit cost attributes on the span.** If a span sets `gen_ai.usage.input_cost`, `output_cost`, or `cost`, Laminar uses those numbers and consults no price table. This is the escape hatch when you compute cost yourself: see [LLM cost tracking](/tracing/structure/llm-cost-tracking).
+2. **Your project's custom prices**, matched exactly as described above.
+3. **The built-in price table**, which does normalize: it strips date snapshots and tries provider-prefixed variants, so `gpt-5-mini-2026-04-01` still resolves to `gpt-5-mini` pricing.
+
+If none match, the span's cost is `0`.
+
+## Copy prices to another project
+
+Once a project has at least one custom price, a **Copy to project** button appears. Pick a target project in the same workspace and Laminar copies every entry across. This is the fast path when several projects share the same self-hosted models.
+
+<Warning>
+  Copying **replaces** all custom model costs in the target project. Any entries that exist there are deleted first, not merged.
+</Warning>
+
+## Why isn't my custom price applying?
+
+Work through these in order:
+
+- **The span costs `$0`.** The provider or model doesn't match. Run the SQL query above and compare character for character, watching for date suffixes and a provider you didn't expect.
+- **The span has a cost you didn't configure.** Either your instrumentation sets explicit cost attributes (which win outright) or the model resolved against the built-in table. Check whether your code sets `gen_ai.usage.*_cost`.
+- **Only older spans are wrong.** Prices apply at ingestion. Spans stored before you added the price keep their original cost.
+- **Token counts are missing.** Any price needs token counts to multiply. If `input_tokens` and `output_tokens` are `0`, fix the instrumentation first: [LLM cost tracking](/tracing/structure/llm-cost-tracking) covers the attributes to set.
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="LLM cost tracking" href="/tracing/structure/llm-cost-tracking">
+    Instrument a custom provider by hand and set token counts or explicit costs.
+  </Card>
+  <Card title="Span attribute reference" href="/tracing/structure/span-attribute-reference">
+    Every attribute Laminar reads, including the model and provider keys.
+  </Card>
+  <Card title="SQL editor" href="/platform/sql-editor">
+    Query cost and token totals across traces and spans.
+  </Card>
+  <Card title="Dashboards" href="/custom-dashboards/overview">
+    Chart spend over time, grouped by model or provider.
+  </Card>
+</CardGroup>

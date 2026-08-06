@@ -178,9 +178,10 @@ Use the exact model string as returned by the provider API.
 
 ## Custom Providers and Explicit Costs
 
-If Laminar can’t look up pricing for your provider/model, you can still attach explicit cost attributes (see the example above).
+If Laminar can’t look up pricing for your provider/model, you have two options:
 
-If explicit cost attributes are present, they take precedence over calculated costs.
+- **Define a price once in the UI.** Add a per-project rate under **Settings > Model costs** and Laminar prices every matching span from it, so you don't set cost attributes on every span. See [Custom model costs](/platform/custom-model-costs).
+- **Attach explicit cost attributes** per span (see the example above). These take precedence over every price table, including your custom prices.
 
 ## How Laminar Calculates Cost
 
@@ -202,7 +203,7 @@ Costs show up in the Laminar UI on:
 
 ## Pricing Data
 
-Laminar maintains current pricing for supported providers. A snapshot of pricing seed data is available in the open-source repo at `frontend/lib/db/initial-data.json` (table `llm_prices`).
+Laminar maintains current pricing for supported providers and keeps it up to date automatically. For a model that isn't covered, or a rate that differs from list price, define your own under [Custom model costs](/platform/custom-model-costs).
 
 ## Best Practices
 

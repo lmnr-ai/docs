@@ -140,6 +140,7 @@
               "platform/cli",
               "platform/search",
               "platform/render-templates",
+              "platform/custom-model-costs",
               "platform/pii-redaction",
               "custom-dashboards/overview",
               "queues/quickstart",
