@@ -5,7 +5,7 @@ sidebarTitle: Pi
 
 ## Overview
 
-The Pi extension traces every local [Pi](https://pi.dev) coding agent session: each agent run becomes a full trace with its LLM calls and tool executions, sent to Laminar. Runs from the same Pi session are grouped into one Laminar [session](/tracing/structure/sessions).
+The Pi extension traces every local [Pi](https://pi.dev) coding agent session: each prompt becomes a full trace with its LLM calls and tool executions, sent to Laminar. Traces from the same Pi session are grouped into one Laminar [session](/tracing/structure/sessions).
 
 The extension subscribes to Pi's own lifecycle events, so spans open and close in process. Traces appear in Laminar while the run is still going.
 
@@ -32,7 +32,7 @@ Pi loads extensions at startup, so restart it to activate the extension.
 </Step>
 <Step title="Use Pi as usual">
 
-Every agent run becomes a trace in the project you picked. Open the Laminar dashboard to watch them land in realtime.
+Every prompt becomes a trace in the project you picked. Open the Laminar dashboard to watch them land in realtime.
 
 </Step>
 </Steps>
@@ -66,9 +66,23 @@ Get a key from the Laminar dashboard under **Settings → Project API Keys** (cr
 
 ## What you get
 
-One trace covers one Pi agent run, with an LLM span per turn and a tool span per tool call. Spans open on Pi's start events and close on its end events, so the trace fills in as the run progresses.
+One trace covers one prompt. Pi can run its agent loop more than once for a single prompt: an auto-retry, an auto-compaction retry, and a queued follow-up each start another pass. Every pass lands in the same trace. Inside it you get one LLM span per model call and one tool span per tool call.
 
-Each LLM span carries the model, the provider, the finish reason, and the full input and output messages for that turn, so the run reads end to end in [transcript view](/platform/viewing-traces#transcript-view). Token counts, cache reads, and cost come straight from Pi's own usage numbers, which are accurate for every provider and model Pi supports. Tool spans carry the tool name, its arguments, and its result, and are marked as errors when the tool fails.
+Spans open when the work starts, not when it finishes. An LLM span opens as Pi hands the request to the model, so its duration is the real call latency.
+
+### What each LLM span reports
+
+**The messages Pi actually sent.** `gen_ai.input.messages` is the list Pi assembled for that call, so a turn shows the full session history: earlier prompts, and the state after a compaction.
+
+**The system prompt**, as a `system` message at the head of every turn. This is the prompt Pi sent, after each extension has had its say.
+
+**The active tool definitions**, as `gen_ai.tool.definitions`: the name, description, and JSON schema of every tool the run can call. Laminar reads these into its tool-definitions column.
+
+**Tokens and cost**, from Pi's own numbers, which are correct for every provider and model Pi supports. Input, output, cache reads, cache writes, reasoning tokens, and Anthropic's one-hour cache-write split all come through. Cache costs fold into the input cost, so the input and output costs add up to the total that Pi reports.
+
+**Errors.** A turn that ends in an error, or that you abort, marks its LLM span failed and carries Pi's error message. The root span is failed when the run's last turn failed, so a successful retry clears it. A tool span is failed when the tool reports an error. Filter on either to find broken runs.
+
+Together with the model, the provider, and the finish reason, that makes each run read end to end in [transcript view](/platform/viewing-traces#transcript-view). Messages use Anthropic-style content blocks, the same shape as every other Laminar integration: reasoning stays its own `thinking` block instead of being folded into the reply, and tool calls and results keep their own blocks. Images appear as `[image <mime type>]` rather than re-embedded payloads.
 
 The root span records Pi's session id and the working directory. Use the session id to group a whole conversation, and the working directory to tell one repository's runs from another's.
 
@@ -82,14 +96,14 @@ The extension reads its config from `~/.config/lmnr/pi-extension.json`, written 
 
 `projectApiKey` is required. `baseUrl` is optional and defaults to `https://api.lmnr.ai`; self-hosters set it to their instance's API URL (for example `http://localhost:8000`).
 
-These environment variables override the file when set, which is handy for CI or a shell you already have configured. The extension is fail-open: with no key from either source it disables itself and Pi runs untouched.
+These environment variables override the file when set, which is handy for CI or a shell you already have configured. The extension is fail-open: with no key from either source it disables itself and Pi runs untouched. Traces are attributed to the identity from `lmnr-cli login` when present; set `LMNR_USER_ID` to override the user id attached to traces.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `LMNR_PROJECT_API_KEY` | config file | Laminar project API key. |
 | `LMNR_BASE_URL` | config file, else `https://api.lmnr.ai` | Laminar API base URL, for self-hosted deployments. |
-| `LMNR_USER_ID` | — | User id to attach to every trace. |
-| `LMNR_MAX_CHARS` | `20000` | Character cap for span input and output values. |
+| `LMNR_USER_ID` | `lmnr-cli login` identity | User id to attach to every trace. |
+| `LMNR_MAX_CHARS` | `20000` | Character cap for span input and output values. The system prompt gets its own budget of this size, so a turn's input can reach about twice the cap. |
 | `LMNR_DEBUG` | — | Set to `true` to attach runs to a debugger session and write a log file. |
 
 ## Debugger sessions
