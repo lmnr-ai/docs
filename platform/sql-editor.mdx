@@ -10,6 +10,7 @@ Query all your Laminar data directly with SQL. Find patterns, debug issues, and 
 |-------|----------|
 | spans | Individual spans (LLM/tool/custom/eval spans) with events and tags |
 | traces | Trace-level aggregates derived from spans |
+| trace_outputs | Extracted final agent output per trace |
 | signal_events | Signal-triggered events and payloads (excludes L0-cluster membership) |
 | signal_events_all | Same as signal_events but with L0-cluster membership included |
 | signal_runs | Signal execution runs and statuses |
@@ -19,6 +20,7 @@ Query all your Laminar data directly with SQL. Find patterns, debug issues, and 
 | dataset_datapoints | Dataset datapoints (latest version per datapoint) |
 | dataset_datapoint_versions | Dataset datapoints (all versions/history) |
 | evaluation_datapoints | Evaluation datapoints with scores, executor output, dataset links, and associated trace data |
+| labeling_queue_items | Per-item rows of labeling queues |
 
 Only `SELECT` queries are allowed.
 
@@ -183,6 +185,7 @@ LIMIT 10
 | `String` | Text, JSON stored as strings, and enum-like columns (`span_type`, `trace_type`, `status`) |
 | `LowCardinality(String)` | Low-cardinality enums |
 | `Float64` | Floating point numbers |
+| `Decimal(18, 9)` | Span-level durations in seconds (`spans.duration`, `evaluation_datapoints.duration`) |
 | `Int64` | Counts, token numbers |
 | `UInt8` | Small numeric enums (for example, `logs.severity_number`) |
 | `UInt32` | Flags and bitmasks (for example, `logs.flags`) |
@@ -206,7 +209,7 @@ These are the logical tables exposed in the SQL Editor. The schemas below reflec
 | `span_type` | `String` | `"LLM"` |
 | `start_time` | `DateTime64(9, 'UTC')` | `"2021-01-01 00:00:00"` |
 | `end_time` | `DateTime64(9, 'UTC')` | `"2021-01-01 00:00:00"` |
-| `duration` | `Float64` | `1.23` |
+| `duration` | `Decimal(18, 9)` | `1.23` |
 | `input_cost` | `Float64` | `0.5667` |
 | `output_cost` | `Float64` | `0.123` |
 | `total_cost` | `Float64` | `0.6897` |
@@ -348,6 +351,9 @@ LIMIT 100
 | `input_tokens` | `Int64` | `150` |
 | `output_tokens` | `Int64` | `100` |
 | `total_tokens` | `Int64` | `250` |
+| `cache_read_input_tokens` | `UInt64` | `33042` |
+| `cache_creation_input_tokens` | `UInt64` | `1200` |
+| `reasoning_tokens` | `UInt64` | `512` |
 | `input_cost` | `Float64` | `0.5667` |
 | `output_cost` | `Float64` | `0.123` |
 | `total_cost` | `Float64` | `0.6897` |
@@ -363,8 +369,7 @@ LIMIT 100
 | `tags` | `Array(String)` | `["needs-review", "production"]` |
 | `trace_tags` | `Array(String)` | `["reviewed", "flagged"]` |
 | `span_names` | `Array(String)` | `["run", "openai.chat", "tool.search"]` |
-| `root_span_input` | `String` | `"[{\"role\": \"user\", \"content\": \"Hello\"}]"` |
-| `root_span_output` | `String` | `"[{\"role\": \"assistant\", \"content\": \"Hi\"}]"` |
+| `agent_input` | `String` | `"[{\"role\": \"user\", \"content\": \"Hello\"}]"` |
 | `has_browser_session` | `Bool` | `true` |
 
 `id` is the trace ID; join to spans with `spans.trace_id = traces.id`.
@@ -377,9 +382,15 @@ LIMIT 100
 
 `span_names` is the de-duplicated list of span names produced anywhere in the trace. Useful for filtering traces that contain (or don't contain) a specific operation: `has(span_names, 'tool.search')`.
 
-#### Root span input and output
+#### Agent input
 
-`root_span_input` and `root_span_output` mirror the `input` and `output` of the trace's top span. Same parsing rules apply as [span input/output](#input-and-output): try to parse as JSON, fall back to raw string.
+`agent_input` is the extracted agent task / user input for the trace. Same parsing rules apply as [span input/output](#input-and-output): try to parse as JSON, fall back to raw string.
+
+There is no matching output column on `traces`. The trace's final agent output lives in [trace_outputs](#trace_outputs).
+
+#### Cache and reasoning tokens
+
+`cache_read_input_tokens` and `cache_creation_input_tokens` count prompt-cache reads and writes. `reasoning_tokens` counts reasoning tokens. All three are `UInt64` and are `0` when the provider reports nothing.
 
 #### Trace type
 
@@ -402,6 +413,31 @@ Status is set to `error` if any span in the trace has status `error`, otherwise 
 #### Metadata
 
 Metadata is stored as a string in JSON format. That is, you can safely `JSON.parse` / `json.loads` it. In addition, you can use JSON* and simpleJSON* functions on it right in the queries. Metadata is guaranteed to be a valid JSON object.
+
+### trace_outputs
+
+The extracted final agent output per trace: the output-message array of the last LLM call on the trace's main-agent path. One row per trace.
+
+| Column | Type | Example value |
+|--------|------|---------------|
+| `trace_id` | `UUID` | `"01234567-1234-4def-8234-426614174000"` |
+| `start_time` | `DateTime64(9, 'UTC')` | `"2021-01-01 00:00:00"` |
+| `agent_output` | `Array(String)` | `["{\"role\": \"assistant\", \"content\": \"Hi\"}"]` |
+
+Join to traces with `trace_outputs.trace_id = traces.id`.
+
+#### Agent output
+
+`agent_output` holds one stringified JSON message per array element. Parse each element separately; the array itself is not JSON.
+
+```sql
+-- Final agent output for recent traces
+SELECT t.id, o.agent_output
+FROM traces t
+JOIN trace_outputs o ON o.trace_id = t.id
+WHERE t.start_time > now() - INTERVAL 1 DAY
+LIMIT 10
+```
 
 ### signal_events
 
@@ -467,6 +503,9 @@ Same schema as `signal_events`, but the `clusters` column includes L0-cluster me
 | `event_id` | `UUID` | `"55555555-6666-4777-8888-999999999999"` |
 | `error_message` | `String` | `"Timed out waiting for model response"` |
 | `updated_at` | `DateTime64(9, 'UTC')` | `"2021-01-01 00:00:00"` |
+| `input_tokens` | `UInt32` | `4200` |
+| `cache_read_tokens` | `UInt32` | `3100` |
+| `output_tokens` | `UInt32` | `180` |
 
 #### Status
 
@@ -475,6 +514,10 @@ Same schema as `signal_events`, but the `clusters` column includes L0-cluster me
 #### Mode
 
 `mode` is one of `"BATCH"` (historical backfill job) or `"REALTIME"` (live trigger against a new trace).
+
+#### Tokens
+
+`input_tokens`, `cache_read_tokens`, and `output_tokens` count what the signal agent spent evaluating the signal. `cache_read_tokens` is a subset of `input_tokens`, not an addition to it.
 
 
 ### clusters
@@ -554,7 +597,7 @@ The `attributes` column is stored as a string in JSON format. That is, you can s
 | `dataset_id` | `UUID` | `"00000000-0000-0000-0000-000000000000"` |
 | `dataset_datapoint_id` | `UUID` | `"00000000-0000-0000-0000-000000000000"` |
 | `dataset_datapoint_created_at` | `DateTime64(9, 'UTC')` | `"1970-01-01 00:00:00"` |
-| `duration` | `Float64` | `1.23` |
+| `duration` | `Decimal(18, 9)` | `1.23` |
 | `input_cost` | `Float64` | `0.5667` |
 | `output_cost` | `Float64` | `0.123` |
 | `total_cost` | `Float64` | `0.6897` |
@@ -563,7 +606,7 @@ The `attributes` column is stored as a string in JSON format. That is, you can s
 | `input_tokens` | `Int64` | `150` |
 | `output_tokens` | `Int64` | `100` |
 | `total_tokens` | `Int64` | `250` |
-| `trace_status` | `String` | `"success"` |
+| `trace_status` | `LowCardinality(String)` | `"success"` |
 | `trace_metadata` | `String` | `"{\"key\": \"value\"}"` |
 | `trace_tags` | `Array(String)` | `["production", "experiment-a"]` |
 | `trace_spans` | `Array(Tuple(name String, duration Float64, type String))` | `[Tuple('openai.chat', 1.23, 'LLM'), ...]` |
@@ -594,6 +637,28 @@ The trace-related columns (`duration`, `input_cost`, `output_cost`, `total_cost`
 ### dataset_datapoint_versions
 
 Same schema as `dataset_datapoints`, but includes all versions and history for each datapoint.
+
+
+### labeling_queue_items
+
+One row per item in a labeling queue.
+
+| Column | Type | Example value |
+|--------|------|---------------|
+| `id` | `UUID` | `"01234567-89ab-4def-8234-426614174000"` |
+| `queue_id` | `UUID` | `"11111111-2222-4333-a444-555555555555"` |
+| `payload` | `String` | `"{\"data\": {...}, \"target\": {...}, \"metadata\": {...}}"` |
+| `metadata` | `String` | `"{\"source\": \"prod\"}"` |
+| `status` | `UInt8` | `0` |
+| `edit` | `String` | `"{\"answer\": \"4\"}"` |
+| `created_at` | `DateTime64(3, 'UTC')` | `"2021-01-01 00:00:00"` |
+| `updated_at` | `DateTime64(3, 'UTC')` | `"2021-01-01 00:00:00"` |
+
+`payload` is the original seeded `{data, target, metadata}` as stringified JSON. `edit` is the current canonical target as stringified JSON.
+
+`status` is `0` (unlabeled) or `1` (approved).
+
+Note the timestamps here are `DateTime64(3, 'UTC')` (millisecond precision), not the `DateTime64(9, 'UTC')` used by the other tables.
 
 ## Example Queries
 
