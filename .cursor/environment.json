@@ -1,0 +1,17 @@
+{
+  "name": "Laminar documentation",
+  "install": "npm install -g mintlify --prefix \"$HOME/.npm-global\"",
+  "terminals": [
+    {
+      "name": "mintlify-dev",
+      "command": "export PATH=\"$HOME/.npm-global/bin:$PATH\" && mintlify dev --port 3000",
+      "description": "Mintlify docs preview server on http://localhost:3000 (hot-reloads .mdx/docs.json edits)."
+    }
+  ],
+  "ports": [
+    {
+      "name": "mintlify-dev",
+      "port": 3000
+    }
+  ]
+}
