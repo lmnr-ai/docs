@@ -183,15 +183,11 @@ Each eval writes a datapoint as soon as eve grades it. Open the URL the reporter
 
 `t.judge.autoevals.*` assertions run in the runner process, not in the agent, so the agent's instrumentation never sees them. To capture the judge's model call, register Laminar's AI SDK telemetry in the eval config. eve calls the AI SDK from inside its own bundle, and AI SDK v7 reads registered telemetry from a global registry, so this one registration reaches it.
 
-```typescript evals/evals.config.ts {1-2,5-9}
-import { Laminar, LaminarAiSdkTelemetry, LaminarReporter } from "@lmnr-ai/lmnr";
+```typescript evals/evals.config.ts {1-2,5}
+import { LaminarAiSdkTelemetry, LaminarReporter } from "@lmnr-ai/lmnr";
 import { registerTelemetry } from "ai";
 import { defineEvalConfig } from "eve/evals";
 
-Laminar.initialize({
-  projectApiKey: process.env.LMNR_PROJECT_API_KEY,
-  disableBatch: true,
-});
 registerTelemetry(new LaminarAiSdkTelemetry());
 
 export default defineEvalConfig({
@@ -199,9 +195,7 @@ export default defineEvalConfig({
 });
 ```
 
-<Warning>
-Pass `disableBatch: true` here. eve ends the eval command with `process.exit()`, which drops anything still queued in a batching span processor.
-</Warning>
+That one line is the whole setup. Judge spans and eval spans share a single tracer provider in the runner: whichever of the reporter or the telemetry integration runs first initializes it, and the other reuses it. The reporter flushes it when the run finishes, so nothing is lost to the `process.exit()` that ends `eve eval`.
 
 Each judge call lands as its own span under the eval trace. Without this step the scores are still recorded; only the judge's model call is missing.
 
@@ -264,13 +258,15 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
     The datapoint metadata records which path was used under `traceResolution`. A value of `reporter-fallback` means no trace context reached the agent.
   </Accordion>
   <Accordion title="I see the eval scores but no judge model call">
-    Add `Laminar.initialize({ disableBatch: true })` and `registerTelemetry(new LaminarAiSdkTelemetry())` to `evals/evals.config.ts`. Judge assertions run in the eval runner, which the agent's instrumentation never sees.
+    Add `registerTelemetry(new LaminarAiSdkTelemetry())` to `evals/evals.config.ts`. Judge assertions run in the eval runner, which the agent's instrumentation never sees.
   </Accordion>
   <Accordion title="A running eval row stays pending in the UI">
     Reload the evaluation page. Rows written by the eve reporter do not stream their result into an open page yet. The stored data is complete, so a reload shows every score.
   </Accordion>
   <Accordion title="I see two tracer providers or duplicated spans">
-    Remove any `Laminar.initialize()` call. With eve, `registerOTel` owns the tracer provider and `LaminarSpanProcessor` attaches to it. `Laminar.initialize()` would register a second provider.
+    Remove any `Laminar.initialize()` call from `agent/instrumentation.ts`. In the agent, `registerOTel` owns the tracer provider and `LaminarSpanProcessor` attaches to it, so `Laminar.initialize()` would register a second provider.
+
+    This does not apply to `evals/evals.config.ts`. That file runs in the eval runner, which has no `registerOTel`, and the reporter and the AI SDK telemetry integration share one provider there.
   </Accordion>
 </AccordionGroup>
 
