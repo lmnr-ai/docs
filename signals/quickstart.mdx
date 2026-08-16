@@ -82,7 +82,7 @@ Fill in the form:
 2. **Template** (optional): pick a starting point. Laminar ships templates for task completion, user friction, safety, hallucination, and intent. Templates prefill the prompt and schema; edit both before saving.
 3. **Prompt**: describe what the Signal should detect or extract from the trace. *Be concrete.* "The agent answered the user's question correctly and completely" is a better prompt than "good response".
 4. **Structured output**: define the JSON schema for the payload. Keep fields small and stable; they become filterable columns on `signal_events`.
-5. **Triggers**: toggle on to run this Signal automatically on new traces. Add filters to narrow which traces it runs against.
+5. **Trigger**: when this Signal is evaluated on a new trace, either once the trace finishes or when a named span arrives. Add filters to narrow which traces it runs against.
 6. **Sampling** (optional): cap how many matching traces the trigger consumes per time window. Useful when a high-volume filter would otherwise fan out across every trace.
 
 <Frame caption="Create Signal dialog filled in with a Task-template Signal">
@@ -105,11 +105,15 @@ A Signal can run in two modes, independent of each other. Open a Signal and clic
 
 ### Triggers (live)
 
-Triggers run the Signal automatically on new traces that match your filter set. **This is what feeds live dashboards and Alerts.**
+Triggers run the Signal automatically on new traces. **This is what feeds live dashboards and Alerts.**
 
-- Open the Signal's **Settings > General** section and turn on **Triggers** (or configure Triggers while creating the Signal).
-- Add one or more filters. All filters are AND-combined.
+A trigger decides two things. First, **when** to evaluate a trace: either once the trace finishes (the default, and the right choice for most agents) or when a span with a name you pick arrives. The second option matters when spans keep arriving after the root span closes, as in a distributed trace where a background worker reports back later. Second, **whether** a trace is worth a run, which is what the filters do: only errored runs, only runs above a token count, only runs that touched a particular tool.
+
+- Open the Signal's **Settings > General** section and find **Trigger** (or configure it while creating the Signal).
+- Pick when it should be evaluated, then add filters to narrow which traces qualify. Filters are AND-combined, and with none the Signal runs on every triggered trace.
 - Save. Every matching trace now produces a Run; runs that detect the Signal produce events.
+
+Each trigger also has a **Processing mode**: batch (results within several hours) or realtime (results in minutes, billed as two signal runs). Use realtime for Signals that feed an alert someone acts on. The same trigger can be configured from the [CLI](/signals/cli#triggers).
 
 ### Backfill (historical)
 
