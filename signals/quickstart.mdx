@@ -68,7 +68,7 @@ Click **Signals** in the project sidebar. If this is a new project, the **Failur
   <img src="/images/signals/signals-list.png" alt="Signals list view with cards for each Signal and recent event counts" />
 </Frame>
 
-To write your own, click **Create signal**.
+To write your own, click **Create signal**. If you would rather script it, or hand the job to an AI coding agent, the same Signal can be created from your terminal with [`lmnr-cli signal create`](/signals/cli).
 
 <Frame caption="Empty Create Signal dialog">
   <img src="/images/signals/create-signal-empty.png" alt="Empty signal creation form" />
@@ -231,5 +231,11 @@ LIMIT 100
   </Card>
   <Card title="Alerts" href="/signals/alerts" icon="bell">
     Send Slack or email notifications on new signal events.
+  </Card>
+  <Card title="Signals CLI" href="/signals/cli" icon="terminal">
+    Create, update, and delete Signals from your terminal or a coding agent.
+  </Card>
+  <Card title="Query events in SQL" href="/platform/sql-editor" icon="database">
+    Query the `signal_events` table across every Signal in your project.
   </Card>
 </CardGroup>

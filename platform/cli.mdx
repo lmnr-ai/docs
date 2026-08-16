@@ -2,10 +2,10 @@
 title: CLI
 ---
 
-The `lmnr-cli` is a command-line tool for onboarding a project, querying Laminar data, managing datasets, and annotating debug sessions from your terminal. It is the fastest way to wire up a new project, pull traces into a shell pipeline, script dataset maintenance, or connect an AI coding agent that can shell out, all without leaving the command line.
+The `lmnr-cli` is a command-line tool for onboarding a project, querying Laminar data, managing datasets and Signals, and annotating debug sessions from your terminal. It is the fastest way to wire up a new project, pull traces into a shell pipeline, script dataset maintenance, or connect an AI coding agent that can shell out, all without leaving the command line.
 
 <Note>
-The CLI is a standalone npm package (`lmnr-cli`) and ships independently from the `@lmnr-ai/lmnr` SDK. You do not need the SDK installed to onboard a project, query data, or manage datasets.
+The CLI is a standalone npm package (`lmnr-cli`) and ships independently from the `@lmnr-ai/lmnr` SDK. You do not need the SDK installed to onboard a project, query data, or manage datasets and Signals.
 </Note>
 ## Install
 
@@ -73,7 +73,7 @@ lmnr-cli logout   # Remove the stored credentials
 
 ## Self-hosting
 
-For a self-hosted deployment, point the CLI at your instance. `login` talks to your frontend (the auth issuer); the data commands (`sql`, `dataset`, `project`, `debug`) talk to your API.
+For a self-hosted deployment, point the CLI at your instance. `login` talks to your frontend (the auth issuer); the data commands (`sql`, `dataset`, `signal`, `project`, `debug`) talk to your API.
 
 The cleanest way is to set the URLs once via environment variables. The CLI reads them from your environment and from a `.env` or `.env.local` file in the current directory.
 ```bash
@@ -102,7 +102,7 @@ The CLI does not use a project API key. The `LMNR_PROJECT_API_KEY` that `lmnr-cl
 
 ## Directory-scoped projects
 
-Every project command (`sql`, `dataset`, `project`, `debug`) resolves which project it targets from the directory you run in. `lmnr-cli setup` writes a `.lmnr/project.json` link file at the project root (it holds the project id and display details, never secrets). Commands then resolve the project in this order:
+Every project command (`sql`, `dataset`, `signal`, `project`, `debug`) resolves which project it targets from the directory you run in. `lmnr-cli setup` writes a `.lmnr/project.json` link file at the project root (it holds the project id and display details, never secrets). Commands then resolve the project in this order:
 
 1. `--project-id <id>` flag.
 2. The nearest `.lmnr/project.json`, walking up from the current directory.
@@ -197,6 +197,31 @@ lmnr-cli dataset create my-dataset data.jsonl -o my-dataset.jsonl
 ```
 
 See [Datasets CLI](/datasets/cli) for the full dataset workflow including versioning semantics.
+
+## Manage Signals
+
+List, create, update, and delete [Signals](/signals/introduction) without opening the dashboard. Like `sql`, these commands run against the linked project.
+
+```bash
+# List signals in the project
+lmnr-cli signal list
+
+# Create a signal from a prompt and a payload schema
+lmnr-cli signal create "Refund requests" \
+  --prompt "Detect when the user asks for a refund. Extract the reason." \
+  --schema '{"properties":{"reason":{"type":"string","description":"Refund reason"}}}'
+
+# Update one field (omitted flags keep their stored value)
+lmnr-cli signal update "Refund requests" --sample-rate 10
+
+# Pause a signal instead of deleting it
+lmnr-cli signal update "Refund requests" --disabled
+
+# Delete a signal, its triggers, its alerts, and its events
+lmnr-cli signal delete "Refund requests"
+```
+
+`get`, `update`, and `delete` accept a signal id or a name. See [Signals CLI](/signals/cli) for the payload schema rules and the trigger model.
 
 ## Annotate debug sessions
 
@@ -324,6 +349,8 @@ lmnr-cli project --help
 lmnr-cli sql --help
 lmnr-cli sql query --help
 lmnr-cli dataset --help
+lmnr-cli signal --help
+lmnr-cli signal create --help
 lmnr-cli debug --help
 lmnr-cli debug session --help
 lmnr-cli debug session new --help
