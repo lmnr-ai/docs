@@ -109,54 +109,50 @@ Creating a Signal also creates a **Critical**-severity event alert subscribed to
 
 ## Triggers
 
-Running a Signal costs an LLM call over a whole trace, so a Signal does not read every trace by default. A trigger answers two separate questions, and each has its own list:
+**A trigger is when Laminar starts looking at a trace.** Pick one of two moments:
 
-- **`conditions`: at what moment should Laminar look at this trace?** A trace is not written all at once, it accumulates spans over time, so this is a point in time rather than a property of the data.
-- **`filters`: now that we are looking, is this trace worth spending a run on?** This is where you narrow by properties of the trace itself.
+- **Root span finished**: the trace is complete. This is the default and the right choice for most agents.
 
-Both must be satisfied for the Signal to run.
+  ```json
+  {"column": "root_span_finished", "operator": "eq", "value": "true"}
+  ```
 
-### conditions: when to look
+- **Span name**: a span you name has arrived. Use this when the trace keeps growing after the root span closes, for example when a background worker or a second service adds spans to the same trace minutes later. Evaluating at root-span-finished would read the trace before those spans exist. With `includes` and several names, the trigger fires when any one of them arrives.
 
-There are two ways to say "now", and you pick one:
+  ```json
+  {"column": "span_name", "operator": "includes", "value": ["worker.finalize", "report.written"]}
+  ```
 
-**Wait for the trace to finish.** This is the default and what you want almost every time. The whole run is complete, so the Signal sees the full story.
-
-```json
-{"column": "root_span_finished", "operator": "eq", "value": "true"}
-```
-
-**Wait for a particular span to arrive.** Use this when "finished" is not a reliable moment for your system. The common case is a distributed trace: an HTTP handler returns and closes the root span, but a background worker, a queued job, or a second service keeps adding spans to the same trace minutes later. If you evaluated at root-span-finished, the Signal would read a trace whose interesting part had not been recorded yet. Naming that late span moves evaluation to the moment the data is actually there.
-
-```json
-{"column": "span_name", "operator": "includes", "value": ["worker.finalize", "report.written"]}
-```
-
-With `includes` and several names, the trigger fires when any one of them arrives.
+| Column | Operators | Value |
+|--------|-----------|-------|
+| `root_span_finished` | `eq` | the string `"true"` (not a JSON boolean) |
+| `span_name` | `eq`, `ne`, `includes` | one span name, or an array of names with `includes` |
 
 <Note>
-A trigger must have at least one condition. An empty `conditions` list is rejected with `400 A trigger must have at least one condition`, rather than being stored as a Signal that silently never fires.
+A trigger must have at least one condition. An empty `conditions` list is rejected with `400 A trigger must have at least one condition`. To create a Signal that never runs on new traces, use `--no-default-trigger` instead.
 </Note>
 
-### filters: whether this trace is worth a run
+## Filters
 
-Filters are optional. With no filters, every trace that reaches the moment gets a run. Add them to skip traces you already know you do not care about:
+**Filters are which traces to look at.** Once a trigger fires, the Signal runs only on traces matching all of the filters. With no filters it runs on every triggered trace.
 
-| You want | Filter |
-|----------|--------|
-| Only failed runs | `{"column": "status", "operator": "eq", "value": "error"}` |
-| Skip trivial traces | `{"column": "total_token_count", "operator": "gt", "value": "1000"}` |
-| Only runs that used a given tool or subagent | `{"column": "span_names", "operator": "eq", "value": "checkout.submit"}` |
+- **`status`**: only failed runs, or only successful ones.
+- **`total_token_count`**: skip traces too small to be interesting.
+- **`span_names`**: only runs that used a particular tool or subagent.
 
-Multiple filters are AND-combined. The default trigger pairs the two most common choices: evaluate when the trace finishes, and only if it spent more than 1000 tokens.
+| Column | Operators | Value |
+|--------|-----------|-------|
+| `total_token_count` | `eq`, `ne`, `gt`, `gte`, `lt`, `lte` | a finite number |
+| `status` | `eq`, `ne` | `"error"` or `"success"` |
+| `span_names` | `eq` (includes), `ne` (does not include) | one span name |
 
 <Warning>
-`span_name` (a condition) and `span_names` (a filter) are different columns, and the difference is timing. `span_name` asks *"has this span just arrived?"* and sees only the spans that landed in the batch being processed right now. `span_names` asks *"did this span appear anywhere in the run?"* and sees the whole trace. Using one where the other belongs is rejected with an error naming the correct list.
+`span_name` is a trigger, `span_names` is a filter. The trigger asks whether that span *just arrived*, so it sees only the spans being processed right now; the filter asks whether the span appears *anywhere in the trace*. Passing either one in the wrong place is rejected with an error naming the correct list.
 </Warning>
 
-### Putting a trigger together
+## Setting triggers and filters
 
-Pass a trigger as one JSON object with both lists:
+Both travel in one `--trigger` JSON object: `conditions` holds the trigger, `filters` holds the filters.
 
 ```bash
 lmnr-cli signal create "Checkout failures" \
@@ -168,32 +164,13 @@ lmnr-cli signal create "Checkout failures" \
   }'
 ```
 
-Read that as: when a `checkout.settled` span arrives (the payment worker has reported back), and the trace errored, run the Signal.
+That Signal starts looking when a `checkout.settled` span arrives, and runs only if the trace errored. The default trigger, used when you pass no `--trigger` at all, is the equivalent of root span finished plus a `total_token_count gt 1000` filter.
 
-A Signal normally has one trigger, which is what the UI shows and edits. Entries within each list are AND-combined, so a second condition narrows the moment rather than adding an alternative one.
-
-### Column reference
-
-| List | Column | Operators | Value |
-|------|--------|-----------|-------|
-| `conditions` | `root_span_finished` | `eq` | the string `"true"` (not a JSON boolean) |
-| `conditions` | `span_name` | `eq`, `ne`, `includes` | one span name, or an array of names with `includes` |
-| `filters` | `total_token_count` | `eq`, `ne`, `gt`, `gte`, `lt`, `lte` | a finite number |
-| `filters` | `status` | `eq`, `ne` | `"error"` or `"success"` |
-| `filters` | `span_names` | `eq` (includes), `ne` (does not include) | one span name |
-
-### Processing mode
-
-A trigger's optional `mode` decides how quickly its runs are processed:
-
-- `0` (**batch**, the default): results arrive within several hours.
-- `1` (**realtime**): results arrive in minutes, and each run is billed as two signal runs.
+Add `"mode": 1` to get results in minutes instead of within several hours. Realtime runs are billed as two signal runs each, so use it for Signals that feed an [alert](/signals/alerts) someone acts on.
 
 ```bash
 --trigger '{"conditions":[{"column":"root_span_finished","operator":"eq","value":"true"}],"filters":[],"mode":1}'
 ```
-
-Use realtime when a Signal feeds an [alert](/signals/alerts) someone is meant to act on. Leave it on batch when you are collecting data to query later.
 
 ## Update a Signal
 

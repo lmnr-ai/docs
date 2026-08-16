@@ -107,13 +107,18 @@ A Signal can run in two modes, independent of each other. Open a Signal and clic
 
 Triggers run the Signal automatically on new traces. **This is what feeds live dashboards and Alerts.**
 
-A trigger decides two things. First, **when** to evaluate a trace: either once the trace finishes (the default, and the right choice for most agents) or when a span with a name you pick arrives. The second option matters when spans keep arriving after the root span closes, as in a distributed trace where a background worker reports back later. Second, **whether** a trace is worth a run, which is what the filters do: only errored runs, only runs above a token count, only runs that touched a particular tool.
+The **trigger** is when Laminar starts looking at a trace. Pick one of two moments:
+
+- **Root span finished**: the trace is complete. The default, and the right choice for most agents.
+- **Span name**: a span you name has arrived. Use this when the trace keeps growing after the root span closes, for example when a background worker adds spans to the same trace minutes later.
+
+**Filters** are which traces to look at. Once the trigger fires, the Signal runs only on traces matching all of the filters: only errored runs, only runs above a token count, only runs that used a particular tool. With no filters it runs on every triggered trace.
 
 - Open the Signal's **Settings > General** section and find **Trigger** (or configure it while creating the Signal).
-- Pick when it should be evaluated, then add filters to narrow which traces qualify. Filters are AND-combined, and with none the Signal runs on every triggered trace.
+- Pick the moment, then add filters to narrow which traces qualify.
 - Save. Every matching trace now produces a Run; runs that detect the Signal produce events.
 
-Each trigger also has a **Processing mode**: batch (results within several hours) or realtime (results in minutes, billed as two signal runs). Use realtime for Signals that feed an alert someone acts on. The same trigger can be configured from the [CLI](/signals/cli#triggers).
+**Processing mode** sets how fast runs are processed: batch (results within several hours) or realtime (results in minutes, billed as two signal runs). Use realtime for Signals that feed an alert someone acts on. All of this is also configurable from the [CLI](/signals/cli#triggers).
 
 ### Backfill (historical)
 
