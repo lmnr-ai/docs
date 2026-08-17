@@ -141,11 +141,11 @@ Each Signal can run in two ways, configured independently:
 
 Both paths produce the same kind of signal event.
 
-The trigger is the moment. Every Signal has exactly one. **Root span finished** (the default) fires when the run is over, so the Signal sees the complete trace. **Span name** fires when a named span ends, which is what you want when the work is spread across services.
+The trigger is the moment. Every Signal has exactly one. **When a trace finishes** (the default) fires when the run is over, so the Signal sees the complete trace. **When a specific span finishes** fires when a named span ends, which is what you want when the work is spread across services.
 
 Filters are properties of the whole trace, and every one of them must match. A new Signal defaults to more than 1000 tokens. You can also require an error status, or that a given span name appears anywhere in the run. A Signal with no filters runs on every trace its trigger fires for.
 
-A **span name** trigger matches the span whose completion fires the Signal. A **span names** filter asks whether that name appears anywhere in the trace.
+The **When a specific span finishes** trigger matches the span whose completion fires the Signal. A **span names** filter asks whether that name appears anywhere in the trace.
 
 ## Next steps
 

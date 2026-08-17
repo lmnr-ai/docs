@@ -64,14 +64,14 @@ Run it, then refresh the Laminar traces page to confirm the `quickstart_agent` t
 
 Click **Signals** in the project sidebar. If this is a new project, the **Failure Detector** signal is already there, ready to run on any trace over 1000 tokens.
 
-<Frame caption="Signals list: one card per Signal with recent events and a sparkline">
+<Frame caption="Signals list: one card per Signal with its event and cluster counts">
   <img src="/images/signals/signals-list.png" alt="Signals list view with cards for each Signal and recent event counts" />
 </Frame>
 
-To write your own, click **Create signal**.
+To write your own, click **+ Signal**. The Create Signal drawer opens with the definition at the top and the trigger, filters, and sampling below it.
 
-<Frame caption="Empty Create Signal dialog">
-  <img src="/images/signals/create-signal-empty.png" alt="Empty signal creation form" />
+<Frame caption="Create Signal drawer: name, template, prompt, and output schema on top, trigger and filters below">
+  <img src="/images/signals/create-signal-empty.png" alt="Empty Create Signal drawer showing the trigger options and the default total tokens filter" />
 </Frame>
 
 ## 3. Write the Signal
@@ -82,12 +82,12 @@ Fill in the form:
 2. **Template** (optional): pick a starting point. Laminar ships templates for task completion, user friction, safety, hallucination, and intent. Templates prefill the prompt and schema; edit both before saving.
 3. **Prompt**: describe what the Signal should detect or extract from the trace. *Be concrete.* "The agent answered the user's question correctly and completely" is a better prompt than "good response".
 4. **Structured output**: define the JSON schema for the payload. Keep fields small and stable; they become filterable columns on `signal_events`.
-5. **Trigger**: when the Signal evaluates a new trace. Leave the default (**Root span finished**) unless the work is spread across services, then pick **Span name**.
+5. **Trigger**: when the Signal evaluates a new trace. Leave the default (**When a trace finishes**) unless the work is spread across services, then pick **When a specific span finishes** and list the span names.
 6. **Filters**: which traces actually run. The default is total tokens > 1000. Add more; they are AND-combined.
 7. **Sampling** (optional): cap how many matching traces are evaluated. Useful when a high-volume filter would otherwise fan out across every trace.
 
-<Frame caption="Create Signal dialog filled in with a Task-template Signal">
-  <img src="/images/signals/create-signal-filled.png" alt="Create signal form populated with name, prompt, schema fields, and a realtime trigger" />
+<Frame caption="Create Signal drawer filled in from the Task template: the prompt and output schema come prefilled">
+  <img src="/images/signals/create-signal-filled.png" alt="Create Signal drawer populated with a name, the Task template, a prompt, and two output schema fields" />
 </Frame>
 
 Click **Create**. The Signal is live from this point on: the trigger starts processing new traces that match the filters.
@@ -100,22 +100,22 @@ Creating a Signal automatically creates a **Critical**-severity event alert that
 
 A Signal can evaluate new traces as they arrive, or a historical slice. **Live evaluation is what feeds dashboards and Alerts.** Open a Signal and click **Settings** to manage both from a sidebar with four sections: **General** (definition, trigger, and filters), **Alerts**, **Backfill**, and **Activity**.
 
-<Frame caption="Signal Settings > General: name, prompt, output schema, trigger, filters, and sampling">
-  <img src="/images/signals/signal-settings.png" alt="Signal settings General section with the four-section sidebar and the signal definition form" />
+<Frame caption="Signal Settings > General: prompt, output schema, trigger, filters, and sampling">
+  <img src="/images/signals/signal-settings.png" alt="Signal settings General section with the trigger options and the filters bar" />
 </Frame>
 
 ### Triggers
 
 The trigger is the moment Laminar reads the trace. Every Signal has exactly one.
 
-- **Root span finished** (the default) fires when the run's root span ends, so the Signal sees the complete trace.
-- **Span name** fires when a span with one of the names you list ends. Use it when the work is spread across services.
+- **When a trace finishes** (the default) fires when the run's root span ends, so the Signal sees the complete trace.
+- **When a specific span finishes** fires when a span with one of the names you list ends. Use it when the work is spread across services.
 
 Open the Signal's **Settings > General** section to change the trigger, then save.
 
 ### Filters
 
-Filters decide whether a triggered Signal actually runs. They are properties of the whole trace, and every one of them must match.
+Filters decide whether a triggered Signal actually runs. They are properties of the whole trace, and every one of them must match. You build them in the same filter bar you use on the traces table.
 
 A new Signal gets **total tokens > 1000** by default. You can also filter on:
 
@@ -126,7 +126,7 @@ A new Signal gets **total tokens > 1000** by default. You can also filter on:
 Clear the filters to run on every trace the trigger fires for.
 
 <Note>
-A **span name** trigger matches the span whose completion fires the Signal. A **span names** filter asks whether that name appears anywhere in the trace.
+The **When a specific span finishes** trigger matches the span whose completion fires the Signal. A **span names** filter asks whether that name appears anywhere in the trace.
 </Note>
 
 ### Backfill (historical)
@@ -153,8 +153,8 @@ Runs appear in the **Activity** section with a status (Pending, Completed, Faile
 
 A Signal you're not ready to delete can be paused. Open the Signal's **Settings > General** section and flip the **Active** switch off.
 
-<Frame caption="The Active switch at the top of Settings > General pauses and resumes the Signal">
-  <img src="/images/signals/signal-active-switch.png" alt="Signal settings General section with the Active switch at the top of the form" />
+<Frame caption="The Active switch at the top of Settings > General; flipped off, the Signal reads Inactive">
+  <img src="/images/signals/signal-active-switch.png" alt="Signal settings General section with the Active switch flipped off and the signal marked Inactive" />
 </Frame>
 
 While a Signal is paused:
