@@ -92,6 +92,7 @@
             "pages": [
               "signals/introduction",
               "signals/quickstart",
+              "signals/cli",
               "signals/clusters",
               "signals/alerts",
               "signals/reports"
