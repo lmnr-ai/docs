@@ -3,9 +3,7 @@ title: Manage Signals from the CLI
 sidebarTitle: CLI
 ---
 
-`lmnr-cli signal` creates, inspects, updates, and deletes [Signals](/signals/introduction) from your terminal. A Signal you create this way is the same object the **Create signal** drawer produces: it shows up in the Signals list, evaluates the same traces, and stays editable in the UI.
-
-This makes Signals reviewable like the rest of your code. **You can keep a Signal's prompt and output schema in your repo, ship changes to them from CI, and hand the whole surface to a coding agent** that can shell out.
+`lmnr-cli signal` creates, inspects, updates, and deletes [Signals](/signals/introduction) from your terminal. **Keep a Signal's prompt and schema in your repo, ship changes from CI, or hand the surface to a coding agent** that can shell out.
 
 <Note>
 `signal` ships in the standalone [`lmnr-cli`](/platform/cli) npm package. You do not need the `@lmnr-ai/lmnr` SDK installed to use it.
@@ -31,94 +29,9 @@ That logs you in and writes `.lmnr/project.json`, so every `signal` command in t
 
 The rest of this page assumes a global install. With `npx`, prefix each command with `npx lmnr-cli@latest`.
 
-## What decides when a Signal runs
-
-Running an LLM over every trace you produce would be slow and expensive, so a Signal does not read all of them. Three separate things decide which traces it reads, and they answer three different questions:
-
-| Flag | Question it answers | Values |
-| --- | --- | --- |
-| `--trigger` | **When** is the Signal evaluated? | `root-span-finished` (default) or `span-name` |
-| `--filter` | **Whether** it actually runs, given it was triggered | Repeatable, AND-combined |
-| `--mode` | **How** the run is processed | `realtime` (default) or `batch` |
-
-They are independent. On `signal update` you can change any one of them without restating the other two.
-
-### The trigger: when the Signal is evaluated
-
-A trace is a tree of spans that arrive over the lifetime of a run. The trigger picks the moment Laminar stops waiting and reads the trace.
-
-There is exactly **one** trigger per Signal, and every Signal has one. There is no "no trigger" state: a Signal without a moment to fire on would never produce anything. Omit `--trigger` on create and you get `root-span-finished`.
-
-Two kinds exist:
-
-- **`root-span-finished`** fires when the trace's root span ends, which is to say when the run itself is over. This is what you want for almost every agent: the Signal sees the complete run, from the first LLM turn to the last.
-
-  ```bash
-  --trigger root-span-finished
-  ```
-
-- **`span-name`** fires when a span with one of the names you list ends. Use it for distributed traces, where no single span is observably the root because the work is spread across services, queues, or workers. Pass `--span-name` once per name; at least one is required.
-
-  ```bash
-  --trigger span-name --span-name agent.run --span-name worker.step
-  ```
-
-<Warning>
-`--span-name` without `--trigger span-name` is an error, not an implied switch to the `span-name` kind. Inferring it would let a typo in `--trigger` quietly change when your Signal fires:
-
-```bash
-$ lmnr-cli signal create "Agent failures" --prompt "..." --schema '...' --span-name agent.run
-ERROR: --span-name requires --trigger span-name
-```
-</Warning>
-
-### Filters: whether the run actually happens
-
-A trigger firing does not mean the Signal runs. Filters are the second gate, and they ask a different question: *is this trace worth reading at all?*
-
-Where the trigger is about a moment, a filter is about a property of the **whole trace**, evaluated against everything Laminar has accumulated for it. Filters are how you keep trivial traces from being analyzed: a two-span health check hitting your agent's endpoint fires `root-span-finished` just like a real 200-step run does.
-
-Each `--filter` is a JSON object. The flag is repeatable and every filter must match, so they are AND-combined:
-
-```bash
---filter '{"column":"status","operator":"eq","value":"error"}' \
---filter '{"column":"total_token_count","operator":"gt","value":"1000"}'
-```
-
-Three columns are supported:
-
-| Column | Operators | Value |
-| --- | --- | --- |
-| `total_token_count` | `eq` `ne` `gt` `gte` `lt` `lte` | A number, as a string |
-| `status` | `eq` `ne` | `error` or `success` |
-| `span_names` | `eq` (includes) `ne` (does not include) | A span name |
-
-Pass an unsupported column and the server tells you which ones it accepts:
-
-```bash
-$ lmnr-cli signal update "Refund requests" \
-    --filter '{"column":"duration","operator":"gt","value":"5"}'
-ERROR: 400 Unsupported filter column "duration" (expected total_token_count, status, or span_names)
-```
-
-**A new Signal gets one filter by default**, `total_token_count > 1000`, the same default the UI applies. Pass `--filter` on create to replace it, or clear filters entirely on an existing Signal with `--no-filters`, which makes the Signal run on every trace it fires for.
-
-<Note>
-`--span-name` (the trigger) and the `span_names` filter (plural) look similar and are not the same thing. The trigger matches the span whose completion fires the Signal. The filter asks whether that name appears anywhere in the trace. So a Signal triggered on `root-span-finished` and filtered on `span_names eq checkout.submit` reads complete runs, but only the ones that touched checkout.
-</Note>
-
-### Mode: how the run is processed
-
-`--mode` picks how the run is executed once it passes the trigger and the filters. It changes cost and latency, never which traces are read:
-
-- **`realtime`** (the default) evaluates the trace as soon as it is triggered. Results land in minutes, and each run is billed as two signal runs.
-- **`batch`** groups the run together with others. Results are available within several hours, and each run is billed once.
-
-Use `realtime` for anything feeding live [alerts](/signals/alerts), and `batch` for Signals you read as an aggregate later.
-
 ## Create a Signal
 
-At minimum a Signal needs a name, a prompt, and an output schema:
+A Signal is a [prompt, a schema, a trigger, and filters](/signals/introduction#anatomy-of-a-signal). At minimum `signal create` needs a name, `--prompt`, and `--schema`:
 
 ```bash
 lmnr-cli signal create "Refund requests" \
@@ -138,17 +51,15 @@ Refund requests (50da5457-4b5d-4937-b834-4a73f50ce473)
   status:       active
 ```
 
-Note what you did not have to specify. The trigger defaulted to `root-span-finished`, the filter to `total_token_count > 1000`, and the mode to `realtime`, so the Signal is already live on new traces.
+The trigger defaults to `root-span-finished`, the filter to `total_token_count > 1000`, and the mode to `realtime`, so the Signal is already live on new traces. See [Triggers](/signals/quickstart#triggers) and [Filters](/signals/quickstart#filters) for how they work.
 
-The **prompt** is plain-language instructions describing what to detect. Be concrete: *"the agent answered the user's question correctly and completely"* is a better prompt than *"good response"*.
-
-The **schema** names the fields to extract from every match. They become the filterable, queryable columns on the resulting events, which is what makes a Signal's output something you can aggregate instead of a wall of prose. `--schema` takes a JSON Schema object:
+`--schema` takes a JSON Schema object:
 
 - Field names must be identifiers: `^[a-zA-Z_][a-zA-Z0-9_]*$`.
 - Field types are `string`, `number`, or `boolean`. For a fixed set of values, use `"type": "string"` with an `enum` array.
 - Every field is required. `type` and `required` are filled in for you if you omit them.
 
-Here is the same command with the firing configuration spelled out:
+To override the [trigger](/signals/quickstart#triggers), [filters](/signals/quickstart#filters), or mode from the CLI:
 
 ```bash
 lmnr-cli signal create "Fabricated tool data" \
@@ -174,13 +85,19 @@ Fabricated tool data (0e5b6466-eeab-47f9-a5d4-6b2ff6c7a365)
   status:       active
 ```
 
-Two more flags shape a new Signal:
-
-- `--sample-rate <1-95>` evaluates only that percentage of matching traces. Useful when a broad filter would otherwise fan out across all your traffic. Omit it for no sampling.
-- `--disabled` creates the Signal paused, so you can review the definition in the UI before it starts consuming traces. Turn it on later with `signal update --no-disabled`.
+`--filter` takes JSON `{"column":"...","operator":"...","value":"..."}` and is repeatable. Columns: `total_token_count`, `status`, `span_names`. Pass it on create to replace the default.
 
 <Note>
-Creating a Signal also creates a **Critical**-severity event alert subscribed to your email, exactly as the UI's create flow does. Route it to Slack, change the severity, or add output-schema filters from the Signal's **Settings > Alerts** section. See [Alerts](/signals/alerts).
+`--span-name` is the trigger flag. `span_names` is a filter column: it matches a name anywhere in the trace.
+</Note>
+
+Two more flags shape a new Signal:
+
+- `--sample-rate <1-95>` evaluates only that percentage of matching traces. Omit it for no sampling.
+- `--disabled` creates the Signal paused. Turn it on later with `signal update --no-disabled`.
+
+<Note>
+Creating a Signal also creates a **Critical**-severity event alert subscribed to your email. Route it to Slack, change the severity, or add output-schema filters from the Signal's **Settings > Alerts** section. See [Alerts](/signals/alerts).
 </Note>
 
 ## List and inspect Signals
@@ -222,7 +139,34 @@ lmnr-cli signal get "Refund requests" --json
 ```
 
 ```json wrap
-{"id":"50da5457-4b5d-4937-b834-4a73f50ce473","projectId":"0cce3ee3-d6bb-437d-a2fa-bbfd72a935e2","name":"Refund requests","prompt":"Detect when the user asks for a refund. Extract the reason they gave.","structuredOutput":{"type":"object","required":["reason"],"properties":{"reason":{"type":"string","description":"Refund reason"}}},"sampleRate":null,"disabled":false,"createdAt":"2026-08-17T11:01:12.951925Z","trigger":{"type":"rootSpanFinished"},"filters":[{"value":"1000","column":"total_token_count","operator":"gt"}],"mode":"realtime"}
+{
+  "id": "50da5457-4b5d-4937-b834-4a73f50ce473",
+  "projectId": "0cce3ee3-d6bb-437d-a2fa-bbfd72a935e2",
+  "name": "Refund requests",
+  "prompt": "Detect when the user asks for a refund. Extract the reason they gave.",
+  "structuredOutput": {
+    "type": "object",
+    "required": ["reason"],
+    "properties": {
+      "reason": {
+        "type": "string",
+        "description": "Refund reason"
+      }
+    }
+  },
+  "sampleRate": null,
+  "disabled": false,
+  "createdAt": "2026-08-17T11:01:12.951925Z",
+  "trigger": { "type": "rootSpanFinished" },
+  "filters": [
+    {
+      "value": "1000",
+      "column": "total_token_count",
+      "operator": "gt"
+    }
+  ],
+  "mode": "realtime"
+}
 ```
 
 ```bash
@@ -238,7 +182,7 @@ lmnr-cli signal list --json | jq '.[] | select(.disabled) | .name'
 lmnr-cli signal update "Refund requests" --prompt "Detect refund asks only, ignore complaints."
 ```
 
-The three firing flags are independent of each other too, so switching a Signal to batch processing leaves its trigger and filters untouched:
+Switching a Signal to batch processing leaves its trigger and filters untouched:
 
 ```bash
 lmnr-cli signal update "Refund requests" --mode batch

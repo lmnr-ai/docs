@@ -6,7 +6,7 @@ sidebarTitle: Quickstart
 This quickstart walks through the full Signals loop: *generate traces, write a Signal that reads them, run it, and look at the events*.
 
 <Note>
-Every new Laminar project ships with a **Failure Detector** signal pre-created and triggered automatically on traces with more than 1000 tokens. It categorizes issues as `tool_error`, `api_error`, `logic_error`, `looping`, `wrong_tool`, `timeout`, or `other`. You don't need to build this one yourself. Open it from the Signals list to see events as soon as your traces start arriving.
+Every new Laminar project ships with a **Failure Detector** signal pre-created. It runs automatically on traces with more than 1000 tokens, and categorizes issues as `tool_error`, `api_error`, `logic_error`, `looping`, `wrong_tool`, `timeout`, or `other`. You don't need to build this one yourself. Open it from the Signals list to see events as soon as your traces start arriving.
 </Note>
 
 ## Prerequisites
@@ -82,34 +82,52 @@ Fill in the form:
 2. **Template** (optional): pick a starting point. Laminar ships templates for task completion, user friction, safety, hallucination, and intent. Templates prefill the prompt and schema; edit both before saving.
 3. **Prompt**: describe what the Signal should detect or extract from the trace. *Be concrete.* "The agent answered the user's question correctly and completely" is a better prompt than "good response".
 4. **Structured output**: define the JSON schema for the payload. Keep fields small and stable; they become filterable columns on `signal_events`.
-5. **Triggers**: toggle on to run this Signal automatically on new traces. Add filters to narrow which traces it runs against.
-6. **Sampling** (optional): cap how many matching traces the trigger consumes per time window. Useful when a high-volume filter would otherwise fan out across every trace.
+5. **Trigger**: when the Signal evaluates a new trace. Leave the default (**Root span finished**) unless the work is spread across services, then pick **Span name**.
+6. **Filters**: which traces actually run. The default is total tokens > 1000. Add more; they are AND-combined.
+7. **Sampling** (optional): cap how many matching traces are evaluated. Useful when a high-volume filter would otherwise fan out across every trace.
 
 <Frame caption="Create Signal dialog filled in with a Task-template Signal">
   <img src="/images/signals/create-signal-filled.png" alt="Create signal form populated with name, prompt, schema fields, and a realtime trigger" />
 </Frame>
 
-Click **Create**. The Signal is live from this point on: any configured Trigger starts processing new traces immediately.
+Click **Create**. The Signal is live from this point on: the trigger starts processing new traces that match the filters.
 
 <Note>
 Creating a Signal automatically creates a **Critical**-severity event alert that posts to the in-app notification center. Open the Signal's **Settings > Alerts** section (or **Project Settings > Alerts**) to route it to Slack or email, change the severity, or add output-schema filters. See [Alerts](/signals/alerts).
 </Note>
 
-## 4. Run the Signal: Triggers and Backfill
+## 4. Run the Signal
 
-A Signal can run in two modes, independent of each other. Open a Signal and click **Settings** to manage both from a sidebar with four sections: **General** (definition and triggers), **Alerts**, **Backfill**, and **Activity**.
+A Signal can evaluate new traces as they arrive, or a historical slice. **Live evaluation is what feeds dashboards and Alerts.** Open a Signal and click **Settings** to manage both from a sidebar with four sections: **General** (definition, trigger, and filters), **Alerts**, **Backfill**, and **Activity**.
 
-<Frame caption="Signal Settings > General: name, prompt, output schema, triggers, and sampling">
+<Frame caption="Signal Settings > General: name, prompt, output schema, trigger, filters, and sampling">
   <img src="/images/signals/signal-settings.png" alt="Signal settings General section with the four-section sidebar and the signal definition form" />
 </Frame>
 
-### Triggers (live)
+### Triggers
 
-Triggers run the Signal automatically on new traces that match your filter set. **This is what feeds live dashboards and Alerts.**
+The trigger is the moment Laminar reads the trace. Every Signal has exactly one.
 
-- Open the Signal's **Settings > General** section and turn on **Triggers** (or configure Triggers while creating the Signal).
-- Add one or more filters. All filters are AND-combined.
-- Save. Every matching trace now produces a Run; runs that detect the Signal produce events.
+- **Root span finished** (the default) fires when the run's root span ends, so the Signal sees the complete trace.
+- **Span name** fires when a span with one of the names you list ends. Use it when the work is spread across services.
+
+Open the Signal's **Settings > General** section to change the trigger, then save.
+
+### Filters
+
+Filters decide whether a triggered Signal actually runs. They are properties of the whole trace, and every one of them must match.
+
+A new Signal gets **total tokens > 1000** by default. You can also filter on:
+
+- **Total tokens**: comparisons like `>` `1000`
+- **Status**: `error` or `success`
+- **Span names**: whether a name appears anywhere in the trace
+
+Clear the filters to run on every trace the trigger fires for.
+
+<Note>
+A **span name** trigger matches the span whose completion fires the Signal. A **span names** filter asks whether that name appears anywhere in the trace.
+</Note>
 
 ### Backfill (historical)
 
@@ -141,7 +159,7 @@ A Signal you're not ready to delete can be paused. Open the Signal's **Settings 
 
 While a Signal is paused:
 
-- New traces are not evaluated, even if they match the Signal's triggers.
+- New traces are not evaluated, even if they match the Signal's trigger and filters.
 - Backfills are rejected until the Signal is re-enabled.
 - Existing events and clusters are kept, and stay queryable in SQL and the UI.
 - Alerts on the Signal stay configured but have nothing to fire on.

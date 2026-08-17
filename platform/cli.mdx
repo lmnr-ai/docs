@@ -180,7 +180,7 @@ See [Laminar Agent](/platform/laminar-agent) for the full list of what it can do
 
 ## Manage Signals
 
-Create, inspect, update, and delete [Signals](/signals/introduction) without leaving the terminal. A Signal created this way is the same object the UI's **Create signal** drawer produces, so it stays editable in the app.
+Create, inspect, update, and delete [Signals](/signals/introduction) from the terminal.
 
 ```bash
 lmnr-cli signal create "Refund requests" \
@@ -193,7 +193,7 @@ lmnr-cli signal update "Refund requests" --mode batch
 lmnr-cli signal delete "Refund requests"
 ```
 
-Three independent flags decide which traces a Signal reads: `--trigger` (when it is evaluated), `--filter` (whether it runs), and `--mode` (how the run is processed). See [Signals CLI](/signals/cli) for the full reference.
+See [Signals CLI](/signals/cli) for the full reference.
 
 ## Manage datasets
 
