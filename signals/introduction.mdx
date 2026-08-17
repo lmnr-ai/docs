@@ -26,11 +26,12 @@ Scoring the last LLM span cannot see any of these, because by the time the agent
 
 ## Anatomy of a Signal
 
-A Signal has three parts, and you configure all three:
+A Signal has four parts, and you configure all four:
 
 - **Prompt**: plain-language instructions describing what to detect or extract from a trace.
 - **Structured output schema**: a JSON schema the extracted payload must conform to. You name the fields you want pulled out of every match, which is what makes the resulting events filterable and queryable instead of a wall of prose.
-- **Triggers**: trace conditions that must be met for the Signal to run, so you're not analyzing traces you don't care about.
+- **Trigger**: the moment Laminar reads the trace. Default is when the root span finishes, which is when the run is over.
+- **Filters**: which traces actually run, so you're not analyzing traces you don't care about. Default is more than 1000 tokens.
 
 That's everything. Laminar handles the rest.
 
@@ -81,7 +82,7 @@ Essentially, **anything you've ever had to ask a teammate to skim traces for**. 
 
 ## How a Signal run works
 
-When a trace matches a Signal's trigger conditions, Laminar doesn't just paste the raw trace into a single LLM call. A Signal run is a small investigation, and it moves through three stages: compress the trace, let an agent investigate it, then turn what the agent found into events.
+When a trace matches a Signal's trigger and filters, Laminar doesn't just paste the raw trace into a single LLM call. A Signal run is a small investigation, and it moves through three stages: compress the trace, let an agent investigate it, then turn what the agent found into events.
 
 <Frame>
   ![Chat GPT Image Jul 2, 2026, 05 33 30 PM](/images/ChatGPT-Image-Jul-2,-2026,-05_33_30-PM.png)
@@ -133,12 +134,18 @@ Each finding becomes a **signal event** linked back to the trace that produced i
 
 ## Run a Signal on new traces or historical traces
 
-Each Signal can run in two modes, configured independently:
+Each Signal can run in two ways, configured independently:
 
-- **Triggers** run the Signal on new traces as they arrive. Use Triggers for anything you want to watch in real time (live error rates, live success counts, anything that feeds Alerts). Trigger filters are AND-combined and are evaluated against accumulated trace state, so Signals fire once per matching trace.
-- **Backfill** runs the Signal across a historical slice of traces. Use a backfill to seed a new Signal, re-run a changed prompt over last week's traffic, or investigate a window of traces that match a filter.
+- **Live**, on new traces as they arrive. This is what feeds dashboards and [Alerts](/signals/alerts). Live evaluation is two separate decisions: a **trigger** picks *when* Laminar reads the trace, and **filters** pick *whether* that trace is worth reading.
+- **Backfill**, across a historical slice of traces. Use a backfill to seed a new Signal, re-run a changed prompt over last week's traffic, or investigate a window of traces that already landed.
 
-Both paths produce the same kind of signal event; the only difference is when and which traces the Signal reads.
+Both paths produce the same kind of signal event.
+
+The trigger is the moment. Every Signal has exactly one. **When a trace finishes** (the default) fires when the run is over, so the Signal sees the complete trace. **When a specific span finishes** fires when a named span ends, which is what you want when the work is spread across services.
+
+Filters are properties of the whole trace, and every one of them must match. A new Signal defaults to more than 1000 tokens. You can also require an error status, or that a given span name appears anywhere in the run. A Signal with no filters runs on every trace its trigger fires for.
+
+The **When a specific span finishes** trigger matches the span whose completion fires the Signal. A **span names** filter asks whether that name appears anywhere in the trace.
 
 ## Next steps
 
@@ -153,5 +160,9 @@ Both paths produce the same kind of signal event; the only difference is when an
 
   <Card title="Alerts" icon="bell" href="/signals/alerts">
     Fire Slack or email notifications on new signal events or clusters.
+  </Card>
+
+  <Card title="CLI" icon="terminal" href="/signals/cli">
+    Create and update Signals from your terminal, so their definitions live in your repo.
   </Card>
 </CardGroup>

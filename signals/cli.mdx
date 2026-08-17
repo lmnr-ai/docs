@@ -1,0 +1,328 @@
+---
+title: Manage Signals from the CLI
+sidebarTitle: CLI
+---
+
+`lmnr-cli signal` creates, inspects, updates, and deletes [Signals](/signals/introduction) from your terminal. **Keep a Signal's prompt and schema in your repo, ship changes from CI, or hand the surface to a coding agent** that can shell out.
+
+<Note>
+`signal` ships in the standalone [`lmnr-cli`](/platform/cli) npm package. You do not need the `@lmnr-ai/lmnr` SDK installed to use it.
+</Note>
+
+## Install and authenticate
+
+```bash
+# Run directly with npx (no install)
+npx lmnr-cli@latest signal list
+
+# Or install globally
+npm install -g lmnr-cli
+```
+
+The CLI authenticates as you, the signed-in user, and resolves which project to target from the directory you run in. Run `setup` once per project:
+
+```bash
+lmnr-cli setup
+```
+
+That logs you in and writes `.lmnr/project.json`, so every `signal` command in that directory (or any subdirectory) targets that project. Override per command with `--project-id <uuid>`. See [Authenticate](/platform/cli#authenticate) and [Directory-scoped projects](/platform/cli#directory-scoped-projects).
+
+The rest of this page assumes a global install. With `npx`, prefix each command with `npx lmnr-cli@latest`.
+
+## Create a Signal
+
+A Signal is a [prompt, a schema, a trigger, and filters](/signals/introduction#anatomy-of-a-signal). At minimum `signal create` needs a name, `--prompt`, and `--schema`:
+
+```bash
+lmnr-cli signal create "Refund requests" \
+  --prompt "Detect when the user asks for a refund. Extract the reason they gave." \
+  --schema '{"properties":{"reason":{"type":"string","description":"Refund reason"}}}'
+```
+
+```
+Created signal "Refund requests".
+Refund requests (50da5457-4b5d-4937-b834-4a73f50ce473)
+  prompt:       Detect when the user asks for a refund. Extract the reason they gave.
+  fields:       reason
+  trigger:      root-span-finished
+  filters:      {"value":"1000","column":"total_token_count","operator":"gt"}
+  mode:         realtime
+  sample rate:  none
+  status:       active
+```
+
+The trigger defaults to `root-span-finished`, the filter to `total_token_count > 1000`, and the mode to `realtime`, so the Signal is already live on new traces. See [Triggers](/signals/quickstart#triggers) and [Filters](/signals/quickstart#filters) for how they work.
+
+`--schema` takes a JSON Schema object:
+
+- Field names must be identifiers: `^[a-zA-Z_][a-zA-Z0-9_]*$`.
+- Field types are `string`, `number`, or `boolean`. For a fixed set of values, use `"type": "string"` with an `enum` array.
+- Every field is required. `type` and `required` are filled in for you if you omit them.
+
+To override the [trigger](/signals/quickstart#triggers), [filters](/signals/quickstart#filters), or mode from the CLI:
+
+```bash
+lmnr-cli signal create "Fabricated tool data" \
+  --prompt "The agent presented information not supported by the tool results it received." \
+  --schema '{"properties":{
+      "failed_tool":{"type":"string","description":"The tool that failed"},
+      "severity":{"type":"string","enum":["low","high"],"description":"How bad it is"}}}' \
+  --trigger span-name --span-name agent.run --span-name worker.step \
+  --filter '{"column":"status","operator":"eq","value":"error"}' \
+  --mode realtime \
+  --sample-rate 25
+```
+
+```
+Created signal "Fabricated tool data".
+Fabricated tool data (0e5b6466-eeab-47f9-a5d4-6b2ff6c7a365)
+  prompt:       The agent presented information not supported by the tool results it received.
+  fields:       severity, failed_tool
+  trigger:      span-name: agent.run, worker.step
+  filters:      {"value":"error","column":"status","operator":"eq"}
+  mode:         realtime
+  sample rate:  25
+  status:       active
+```
+
+`--filter` takes JSON `{"column":"...","operator":"...","value":"..."}` and is repeatable. Columns: `total_token_count`, `status`, `span_names`. Pass it on create to replace the default.
+
+<Note>
+`--span-name` is the trigger flag. `span_names` is a filter column: it matches a name anywhere in the trace.
+</Note>
+
+Two more flags shape a new Signal:
+
+- `--sample-rate <1-95>` evaluates only that percentage of matching traces. Omit it for no sampling.
+- `--disabled` creates the Signal paused. Turn it on later with `signal update --no-disabled`.
+
+<Note>
+Creating a Signal also creates a **Critical**-severity event alert subscribed to your email. Route it to Slack, change the severity, or add output-schema filters from the Signal's **Settings > Alerts** section. See [Alerts](/signals/alerts).
+</Note>
+
+## List and inspect Signals
+
+```bash
+lmnr-cli signal list
+```
+
+```
+ID                                    Name                  Status  Sample  Trigger                            Filters  Mode
+50da5457-4b5d-4937-b834-4a73f50ce473  Refund requests       active  -       root-span-finished                 1        realtime
+0e5b6466-eeab-47f9-a5d4-6b2ff6c7a365  Fabricated tool data  active  25%     span-name: agent.run, worker.step  1        realtime
+```
+
+Columns are truncated to fit your terminal width.
+
+Pass a name to filter the list by case-insensitive substring, and `signal get` to see one Signal in full:
+
+```bash
+lmnr-cli signal list refund
+lmnr-cli signal get "Refund requests"
+```
+
+Every command that takes a `<signal>` accepts **either an id or a name**, so you rarely need to look up a uuid. An ambiguous name is an error listing the candidates rather than a silent pick, since `update` and `delete` change things:
+
+```bash
+$ lmnr-cli signal get "Checkout"
+ERROR: "Checkout" matches 2 signals: Checkout timeouts (80345fd4-…), Checkout failures (b8f0bbd5-…). Pass the id instead.
+```
+
+`signal get` renders the trigger and filters in the same syntax the flags accept, so its output is copy-pasteable into `signal update`.
+
+### Machine-readable output
+
+Every subcommand takes `--json`, which prints structured JSON to stdout while human-facing messages go to stderr. That keeps pipes clean for scripts and coding agents:
+
+```bash
+lmnr-cli signal get "Refund requests" --json
+```
+
+```json wrap
+{
+  "id": "50da5457-4b5d-4937-b834-4a73f50ce473",
+  "projectId": "0cce3ee3-d6bb-437d-a2fa-bbfd72a935e2",
+  "name": "Refund requests",
+  "prompt": "Detect when the user asks for a refund. Extract the reason they gave.",
+  "structuredOutput": {
+    "type": "object",
+    "required": ["reason"],
+    "properties": {
+      "reason": {
+        "type": "string",
+        "description": "Refund reason"
+      }
+    }
+  },
+  "sampleRate": null,
+  "disabled": false,
+  "createdAt": "2026-08-17T11:01:12.951925Z",
+  "trigger": { "type": "rootSpanFinished" },
+  "filters": [
+    {
+      "value": "1000",
+      "column": "total_token_count",
+      "operator": "gt"
+    }
+  ],
+  "mode": "realtime"
+}
+```
+
+```bash
+# Every Signal that is not currently active
+lmnr-cli signal list --json | jq '.[] | select(.disabled) | .name'
+```
+
+## Update a Signal
+
+`signal update` is a **partial patch: any flag you omit keeps its stored value.** Changing the prompt cannot clear your sampling, reactivate a paused Signal, or alter when it fires.
+
+```bash
+lmnr-cli signal update "Refund requests" --prompt "Detect refund asks only, ignore complaints."
+```
+
+Switching a Signal to batch processing leaves its trigger and filters untouched:
+
+```bash
+lmnr-cli signal update "Refund requests" --mode batch
+```
+
+Everything you can set on create, you can change:
+
+```bash
+# Change when it fires
+lmnr-cli signal update "Refund requests" --trigger span-name --span-name agent.run
+
+# Replace the whole filter set (--filter always replaces, never appends)
+lmnr-cli signal update "Refund requests" \
+  --filter '{"column":"total_token_count","operator":"gt","value":"5000"}'
+
+# Run on every trace it fires for
+lmnr-cli signal update "Refund requests" --no-filters
+
+# Sampling on, then off
+lmnr-cli signal update "Refund requests" --sample-rate 10
+lmnr-cli signal update "Refund requests" --no-sampling
+
+# Pause, then resume
+lmnr-cli signal update "Refund requests" --disabled
+lmnr-cli signal update "Refund requests" --no-disabled
+```
+
+A paused Signal stops evaluating new traces and rejects backfills, but keeps its existing events and clusters. See [Pause and resume a Signal](/signals/quickstart#pause-and-resume-a-signal).
+
+An update with no flags is an error rather than a silent no-op:
+
+```bash
+$ lmnr-cli signal update "Refund requests"
+ERROR: Nothing to update. Pass at least one of --prompt, --schema, --trigger, --filter,
+--no-filters, --mode, --sample-rate, --no-sampling, --disabled, --no-disabled.
+```
+
+## Delete a Signal
+
+```bash
+lmnr-cli signal delete "Refund requests"
+```
+
+```
+Deleted signal "Refund requests" (844258b2-b786-435b-924a-3884d518c36a), its triggers, alerts, and events.
+```
+
+<Warning>
+Deletion is permanent and cascades: the Signal's triggers, its alerts, and every signal event it ever produced are removed. To stop a Signal without losing its history, pause it with `signal update --disabled` instead.
+</Warning>
+
+## Reference
+
+```bash
+lmnr-cli signal [command]
+```
+
+Shared by every `signal` subcommand:
+
+```
+  --project-id <id>   Target project id. Defaults to the linked .lmnr/project.json
+  --base-url <url>    Base URL for the Laminar API. Defaults to https://api.lmnr.ai or LMNR_BASE_URL
+  --port <port>       Port for the Laminar API. Defaults to 443 or LMNR_HTTP_PORT
+  --json              Output structured JSON to stdout
+```
+
+### signal create
+
+```bash
+lmnr-cli signal create [options] <name>
+```
+
+```
+Arguments:
+  name                       Signal name (unique per project, max 255 chars)
+
+Options:
+  --prompt <prompt>          LLM instruction describing what to detect in a trace (required)
+  --schema <json>            Payload schema as JSON (required)
+  --trigger <kind>           root-span-finished | span-name. Omitted → root-span-finished
+  --span-name <name>         Span name to trigger on (repeatable). Requires --trigger span-name
+  --filter <json>            Filter as JSON (repeatable, ANDed). Omitted → the default >1000 tokens
+  --mode <mode>              batch | realtime. Omitted → realtime
+  --sample-rate <percent>    Evaluate only this percent of matching traces (1-95)
+  --disabled                 Create the signal paused
+```
+
+### signal update
+
+```bash
+lmnr-cli signal update [options] <signal>
+```
+
+```
+Arguments:
+  signal                     Signal id or name
+
+Options:
+  --prompt <prompt>          Replace the LLM instruction
+  --schema <json>            Replace the payload schema (same shape as create)
+  --trigger <kind>           Change when it is evaluated: root-span-finished | span-name
+  --span-name <name>         Span name to trigger on (repeatable). Requires --trigger span-name
+  --filter <json>            Replace ALL filters with these (repeatable, same syntax as create)
+  --no-filters               Clear all filters (run on every trace it fires for)
+  --mode <mode>              batch | realtime
+  --sample-rate <percent>    Set the sampling percent (1-95)
+  --no-sampling              Clear sampling (evaluate every matching trace)
+  --disabled                 Pause the signal
+  --no-disabled              Resume the signal
+```
+
+### signal list, get, delete
+
+```bash
+lmnr-cli signal list [name]      # name filters by case-insensitive substring
+lmnr-cli signal get <signal>     # signal is an id or a name
+lmnr-cli signal delete <signal>
+```
+
+Every command has examples in its own help text:
+
+```bash
+lmnr-cli signal --help
+lmnr-cli signal create --help
+lmnr-cli signal update --help
+```
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Signals" href="/signals/introduction" icon="radio">
+    How a Signal reads a whole trace and turns it into structured events.
+  </Card>
+  <Card title="Quickstart" href="/signals/quickstart" icon="play">
+    Write your first Signal in the UI and run it over historical traces.
+  </Card>
+  <Card title="Alerts" href="/signals/alerts" icon="bell">
+    Fire Slack or email notifications on the events your Signal produces.
+  </Card>
+  <Card title="CLI" href="/platform/cli" icon="terminal">
+    The rest of `lmnr-cli`: setup, SQL queries, datasets, and debug sessions.
+  </Card>
+</CardGroup>

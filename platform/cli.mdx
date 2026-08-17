@@ -178,6 +178,23 @@ lmnr-cli ask "summarize the most expensive trace today" --json
 
 See [Laminar Agent](/platform/laminar-agent) for the full list of what it can do and the other surfaces (MCP, Slack) it runs on.
 
+## Manage Signals
+
+Create, inspect, update, and delete [Signals](/signals/introduction) from the terminal.
+
+```bash
+lmnr-cli signal create "Refund requests" \
+  --prompt "Detect when the user asks for a refund. Extract the reason they gave." \
+  --schema '{"properties":{"reason":{"type":"string","description":"Refund reason"}}}'
+
+lmnr-cli signal list
+lmnr-cli signal get "Refund requests" --json
+lmnr-cli signal update "Refund requests" --mode batch
+lmnr-cli signal delete "Refund requests"
+```
+
+See [Signals CLI](/signals/cli) for the full reference.
+
 ## Manage datasets
 
 List, push, pull, and create datasets from files on disk. Supported formats: `.jsonl`, `.json`, `.csv`. Like `sql`, these commands run against the linked project.
