@@ -311,3 +311,39 @@ handling utf-8 buffers. See more in the [Node.js issue](https://github.com/nodej
 ### Solution
 
 Upgrade to Node.js version 22.8.0 or higher. You can also downgrade to 22.5.
+
+## My span exports are rejected as too large.
+
+### Problem
+
+Exports fail with a payload-too-large error, or time out with `DEADLINE_EXCEEDED` on a request that carries only a few dozen spans.
+
+### Cause
+
+The batch span processor sends a batch when it reaches a span count or when a scheduled delay elapses. Neither trigger looks at how many bytes the batch holds, and agent spans carry whole prompts, completions, and tool payloads as string attributes. A handful of large spans is enough to build a request over the ingest limit.
+
+### Solution
+
+Enable the byte-size flush trigger, which exports the buffer when the next span would push it past a limit:
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    Laminar.initialize({
+      projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+      flushBySize: true,
+      maxExportBatchSizeBytes: 8 * 1024 * 1024,
+    });
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    Laminar.initialize(
+        flush_by_size=True,
+        max_export_batch_size_bytes=8 * 1024 * 1024,
+    )
+    ```
+  </Tab>
+</Tabs>
+
+Lowering `maxExportBatchSize` / `max_export_batch_size` also helps and is worth trying first, but it bounds the span count rather than the payload. See [Batching](/sdk/batching) for how the two interact and what the byte limit measures.

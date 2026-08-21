@@ -6,6 +6,7 @@ New releases and improvements.
 
 ## August 2026
 
+- **Flush span batches by payload size** - Both SDKs can now export a batch when its payload would cross a byte limit, alongside the existing span-count and scheduled-delay triggers. Turn it on with `Laminar.initialize({ flushBySize: true })` in TypeScript or `Laminar.initialize(flush_by_size=True)` in Python, and set `maxExportBatchSizeBytes` / `max_export_batch_size_bytes` if 32 MiB is not the right ceiling. Useful for agents whose spans carry whole conversation histories, where a few spans are enough to build an export the backend rejects. See [Batching](/sdk/batching).
 - **Manage Signals from the CLI** - `lmnr-cli signal create / list / get / update / delete` puts the whole [Signal](/signals/introduction) definition in your terminal, so a prompt and output schema can live in your repo and ship from CI. A Signal's firing configuration is three independent flags: `--trigger` picks when it is evaluated (`root-span-finished` or `span-name`), repeatable `--filter` decides whether it runs, and `--mode` selects batch or realtime processing. `update` is a partial patch, so changing one leaves the other two alone. See [Signals CLI](/signals/cli).
 
 ## July 2026

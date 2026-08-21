@@ -183,6 +183,7 @@
               "sdk/trace-methods",
               "sdk/context-utilities",
               "sdk/lifecycle",
+              "sdk/batching",
               "sdk/constants",
               "sdk/client",
               "sdk/evaluations"

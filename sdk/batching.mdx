@@ -1,0 +1,115 @@
+---
+title: Span Batching and Export Payload Size Limits
+sidebarTitle: Batching
+---
+
+Laminar's TypeScript and Python SDKs buffer finished spans in OpenTelemetry's batch span processor and export them to Laminar in batches. A batch is sent on whichever comes first: the buffer reaching a span count, or a scheduled delay elapsing. Neither trigger bounds how many *bytes* a batch carries, and agent spans carry whole prompts, completions, and tool payloads as string attributes. `flushBySize` (`flush_by_size` in Python) adds a third competing trigger: flush the buffer when the next span would push it past a byte limit.
+
+## Default batching
+
+Two triggers, whichever fires first, plus the timeout the resulting request gets:
+
+| Setting | TypeScript | Python |
+|---------|------------|--------|
+| Spans buffered | `maxExportBatchSize`, default `512` | `max_export_batch_size`, default `64` |
+| Scheduled delay | 5000 ms | 5000 ms |
+| Export timeout | `traceExportTimeoutMillis`, default `30000` | `export_timeout_seconds`, default `30` |
+
+Lowering the span count is the usual first move when exports are too large, and it is often enough. It cannot bound the payload though: 20 spans carrying a 2 MB conversation each is a 40 MB export no matter how low the count is set, and if the count goes low enough to fix that, small spans start exporting one request at a time.
+
+## When to flush by payload size
+
+Turn it on if you see any of these, and lowering the span count did not fix them:
+
+- Exports rejected as too large by the ingest endpoint, so every span in that batch is lost.
+- `DEADLINE_EXCEEDED` on export, because a single request is big enough to outlast the export timeout.
+- Traces arriving in bursts of tens of megabytes, from agents that keep long conversation histories on every LLM call.
+
+If your spans are small, leave it off. The span count and the scheduled delay fire first for small spans, so the byte trigger would never do anything.
+
+## Enable it
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { Laminar } from '@lmnr-ai/lmnr';
+
+    Laminar.initialize({
+      projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+      flushBySize: true,
+      maxExportBatchSizeBytes: 8 * 1024 * 1024, // optional, defaults to 32 MiB
+    });
+    ```
+
+    Requires `@lmnr-ai/lmnr` 0.8.45 or later.
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import Laminar
+
+    Laminar.initialize(
+        flush_by_size=True,
+        max_export_batch_size_bytes=8 * 1024 * 1024,  # optional, defaults to 32 MiB
+    )
+    ```
+
+    Requires `lmnr` 0.7.59 or later.
+  </Tab>
+</Tabs>
+
+The other two triggers keep working. A batch is exported when it reaches the span count, or the scheduled delay elapses, or the next span would push it past the byte limit.
+
+## Options
+
+| TypeScript | Python | Default | Description |
+|------------|--------|---------|-------------|
+| `flushBySize` | `flush_by_size` | `false` | Enable the byte-size flush trigger |
+| `maxExportBatchSizeBytes` | `max_export_batch_size_bytes` | 32 MiB | Approximate byte limit for one batch |
+
+The byte limit on its own does nothing. Without `flushBySize`, `maxExportBatchSizeBytes` is ignored and the plain batch processor is used, so enabling one without the other is a no-op rather than a silent change of behavior.
+
+`disableBatch` wins over `flushBySize`. With batching off, every span is exported on its own and there is no buffer to bound.
+
+## What the limit measures
+
+The size of a batch is estimated, not computed from the encoded request. The SDK adds up the UTF-8 byte lengths of span names, attribute keys, string attribute values, event and link attributes, and status messages. Numbers and booleans are counted as a flat 8 bytes, and protobuf framing, ids, and timestamps are not counted at all.
+
+<Note>
+Treat the limit as a target, not a guarantee. The estimate runs below the real encoded size, and in Python the flush is handed to a background thread, so spans that end while it runs join the batch on their way out. Pick a value with headroom under the largest request your endpoint accepts rather than one exactly at it.
+</Note>
+
+Here is the effect on the wire, measured with 12 spans of roughly 1 MiB each against a 4 MiB limit:
+
+| Configuration | Exports | Largest export |
+|---------------|---------|----------------|
+| Default batching | 1 | 12 MiB |
+| `flushBySize` with a 4 MiB limit | 4 | 3 MiB |
+
+Without the flag all 12 spans fit under the span count limit, so they leave in one request. With it, the buffer is flushed each time the next span would cross 4 MiB. Those numbers are from the TypeScript SDK; Python splits the same spans into three exports, one of them over the limit, because its flush is asynchronous.
+
+## Flushing is still your job at exit
+
+The byte trigger only bounds how large a batch gets. It does not flush the buffer when your process ends, so short-lived scripts, serverless handlers, and CLI tools still need an explicit flush. See [Flushing and shutdown](/tracing/structure/flushing-and-shutdown).
+
+## Self-hosted deployments
+
+If you self-host, you control the ingest limit as well as the batch size. The app server reads `HTTP_PAYLOAD_LIMIT` (default 5 MiB) and `GRPC_PAYLOAD_LIMIT` (default 25 MiB), both in bytes. The two settings are complementary: the server limit is what rejects a request, the batch size is what keeps you from building one.
+
+Both server defaults are below the SDK's 32 MiB default, so on a self-hosted deployment set `maxExportBatchSizeBytes` under whichever limit applies to your transport (gRPC unless you pass `forceHttp`), or raise the server limit to match.
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Flushing and shutdown" icon="log-out" href="/tracing/structure/flushing-and-shutdown">
+    Send pending spans before a script, Lambda, or worker exits.
+  </Card>
+  <Card title="SDK lifecycle" icon="repeat" href="/sdk/lifecycle">
+    `flush`, `force_flush`, and `shutdown` reference for both SDKs.
+  </Card>
+  <Card title="TypeScript initialization" icon="file-code" href="/sdk/typescript/instrumentation">
+    Every option `Laminar.initialize()` accepts in TypeScript.
+  </Card>
+  <Card title="Python initialization" icon="file-code" href="/sdk/python/instrumentation">
+    Every option `Laminar.initialize()` accepts in Python.
+  </Card>
+</CardGroup>

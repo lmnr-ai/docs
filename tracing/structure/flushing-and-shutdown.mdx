@@ -72,3 +72,7 @@ Don't flush in hot paths (e.g., inside a web request handler). It adds latency. 
 In Python, `Laminar.flush()` triggers the export, but the export itself runs in a background thread. In short-lived processes (like Lambda), the process can exit before that thread completes, and spans can be lost.
 
 `Laminar.force_flush()` blocks until export completes by internally resetting the tracing pipeline, so it’s the safest option at the end of each serverless invocation.
+
+## Controlling when batches are sent
+
+Flushing at exit is one half of the story; the other is how batches are formed while your process runs. Both SDKs export on a span count or a scheduled delay, and can also export on payload size for agents whose spans carry large prompts and completions. See [Batching](/sdk/batching).
