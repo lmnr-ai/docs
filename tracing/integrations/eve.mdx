@@ -109,6 +109,121 @@ Open the trace in Laminar and you get the transcript view: the user message, eac
 
 eve also emits its durable-workflow spans (workflow start, step execution, hooks). These show up in the trace tree but stay out of the transcript, so the conversation reads cleanly. More on the trace UX: [Viewing traces](/platform/viewing-traces).
 
+## Run evals
+
+eve ships its own eval runner (`eve eval`). Laminar plugs into it as a reporter. Every run becomes a Laminar [evaluation](/evaluations/introduction): one evaluation per run, one datapoint per eval, and each datapoint links to the agent trace that produced it. From there you [compare runs](/evaluations/comparing-runs) and chart scores across a group.
+
+This needs `eve` 0.29.1 or later.
+
+<Steps>
+<Step title="Register the Laminar reporter">
+
+Add `LaminarReporter` to the `reporters` array in your eval config. The reporter reads `LMNR_PROJECT_API_KEY` from the environment.
+
+```typescript evals/evals.config.ts
+import { LaminarReporter } from "@lmnr-ai/lmnr";
+import { defineEvalConfig } from "eve/evals";
+
+export default defineEvalConfig({
+  reporters: [
+    new LaminarReporter({
+      name: "weather-agent",
+      groupName: "weather-agent",
+    }),
+  ],
+});
+```
+
+`groupName` is what makes runs comparable: every run under the same group appears on one progression chart. On run start the reporter prints the URL of the evaluation to stdout.
+
+</Step>
+<Step title="Let the agent join the eval trace">
+
+The reporter creates the trace in the runner process and sends it to the agent as a `traceparent` header. eve only reads that header when the agent emits a server span for each inbound channel request, so turn that on in the instrumentation file.
+
+```typescript agent/instrumentation.ts {5}
+import { defineInstrumentation } from "eve/instrumentation";
+
+export default defineInstrumentation({
+  // Emit the inbound server span that carries the runner's trace context.
+  traceChannelRequests: true,
+  setup: ({ agentName }) =>
+    registerOTel({
+      serviceName: agentName,
+      spanProcessors: [new LaminarSpanProcessor()],
+    }),
+});
+```
+
+The option defaults to `false`. With it off, no eve span joins the eval trace.
+
+</Step>
+<Step title="Keep the whole run in one trace">
+
+eve runs on the Vercel Workflow runtime. Its default trace mode starts a new root trace for every queue-delivered invocation, so the agent's turns land on a different trace than the eval result. Set the continuous mode in the environment the agent runs in.
+
+```bash
+# .env
+WORKFLOW_TRACE_MODE=continuous
+```
+
+</Step>
+<Step title="Run the evals">
+
+```bash
+eve eval
+```
+
+Each eval writes a datapoint as soon as eve grades it. Open the URL the reporter printed to see the scores, the assertion detail, and the trace behind each row.
+
+</Step>
+</Steps>
+
+### Trace the judge model calls
+
+`t.judge.autoevals.*` assertions run in the runner process, not in the agent, so the agent's instrumentation never sees them. To capture the judge's model call, register Laminar's AI SDK telemetry in the eval config. eve calls the AI SDK from inside its own bundle, and AI SDK v7 reads registered telemetry from a global registry, so this one registration reaches it.
+
+```typescript evals/evals.config.ts {1-2,5}
+import { LaminarAiSdkTelemetry, LaminarReporter } from "@lmnr-ai/lmnr";
+import { registerTelemetry } from "ai";
+import { defineEvalConfig } from "eve/evals";
+
+registerTelemetry(new LaminarAiSdkTelemetry());
+
+export default defineEvalConfig({
+  reporters: [new LaminarReporter({ name: "weather-agent" })],
+});
+```
+
+That one line is the whole setup. Judge spans and eval spans share a single tracer provider in the runner: whichever of the reporter or the telemetry integration runs first initializes it, and the other reuses it. The reporter flushes it when the run finishes, so nothing is lost to the `process.exit()` that ends `eve eval`.
+
+Each judge call lands as its own span under the eval trace. Without this step the scores are still recorded; only the judge's model call is missing.
+
+### What lands on each datapoint
+
+Every eval produces one datapoint with three scores:
+
+| Score | Value |
+| --- | --- |
+| `eve.verdict.passed` | 1 when eve's verdict for the eval is `passed` |
+| `eve.gates.passed` | 1 when every gate assertion passed |
+| `eve.soft_thresholds.passed` | 1 when every soft assertion with a threshold passed |
+
+The scores stay the same across every eval file on purpose. eve eval files assert different things, and per-assertion score columns would leave most rows empty.
+
+Per-assertion detail goes to the datapoint metadata under `assertions`, with a shorter `failedAssertions` list when something fails. The metadata also carries the eve verdict, the session status, the eve session id, the model id, and the tools the agent called. On the trace itself, each assertion becomes an `EVALUATOR` span, so you read the grade and the run that earned it in one place.
+
+### Reporter options
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `name` | eve run name | Name of the Laminar evaluation created for the run. |
+| `groupName` | none | Group the run belongs to. Runs in one group share a progression chart. |
+| `metadata` | none | Extra metadata attached to the evaluation. |
+| `projectApiKey` | `LMNR_PROJECT_API_KEY` | Project API key. |
+| `baseUrl` | `https://api.lmnr.ai` | Laminar API base URL. Set this for self-hosted Laminar. |
+| `propagateTraceContext` | `true` | Send the runner's trace context to the agent. Set `false` and each datapoint links to a reporter-owned trace that holds the grade but none of the agent's work. |
+
 ## Track outcomes with Signals
 
 Traces answer *what happened on this run*. **[Signals](/signals/introduction) answer the cross-trace question**: *how often does the agent call a tool that returns an empty result, when does a turn run more steps than expected, how often does the agent answer without calling the tool it should have*. A Signal pairs a plain-language prompt with a JSON output schema. Laminar runs it live on new traces (Triggers) or backfills it across history (Jobs) and records a structured event every time it matches. From there you [query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on events across every run.
@@ -135,8 +250,23 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
   <Accordion title="I see the model and tool calls but no message content">
     Check that you did not set `recordInputs` or `recordOutputs` to `false` in `defineInstrumentation`. Both default to on; setting either to `false` strips that content from the spans.
   </Accordion>
+  <Accordion title="My eval datapoints link to a trace with no agent work in it">
+    Both eve settings are needed for the agent to join the eval trace:
+    - `traceChannelRequests: true` in `agent/instrumentation.ts`. Without it the agent ignores the runner's `traceparent` header. The option needs eve 0.29.1 or later.
+    - `WORKFLOW_TRACE_MODE=continuous` in the environment the agent runs in. The default mode starts a fresh trace for every queue-delivered invocation, so the turns land elsewhere.
+
+    The datapoint metadata records which path was used under `traceResolution`. A value of `reporter-fallback` means no trace context reached the agent.
+  </Accordion>
+  <Accordion title="I see the eval scores but no judge model call">
+    Add `registerTelemetry(new LaminarAiSdkTelemetry())` to `evals/evals.config.ts`. Judge assertions run in the eval runner, which the agent's instrumentation never sees.
+  </Accordion>
+  <Accordion title="A running eval row stays pending in the UI">
+    Reload the evaluation page. Rows written by the eve reporter do not stream their result into an open page yet. The stored data is complete, so a reload shows every score.
+  </Accordion>
   <Accordion title="I see two tracer providers or duplicated spans">
-    Remove any `Laminar.initialize()` call. With eve, `registerOTel` owns the tracer provider and `LaminarSpanProcessor` attaches to it. `Laminar.initialize()` would register a second provider.
+    Remove any `Laminar.initialize()` call from `agent/instrumentation.ts`. In the agent, `registerOTel` owns the tracer provider and `LaminarSpanProcessor` attaches to it, so `Laminar.initialize()` would register a second provider.
+
+    This does not apply to `evals/evals.config.ts`. That file runs in the eval runner, which has no `registerOTel`, and the reporter and the AI SDK telemetry integration share one provider there.
   </Accordion>
 </AccordionGroup>
 
@@ -154,5 +284,11 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
   </Card>
   <Card title="Vercel AI SDK" href="/tracing/integrations/vercel-ai-sdk">
     eve is built on the AI SDK. Trace `generateText` and `streamText` directly here.
+  </Card>
+  <Card title="Evaluations" href="/evaluations/introduction">
+    Score agent behavior on a dataset and track it as the agent changes.
+  </Card>
+  <Card title="Comparing runs" href="/evaluations/comparing-runs">
+    Read score deltas between two runs of the same eval group.
   </Card>
 </CardGroup>
