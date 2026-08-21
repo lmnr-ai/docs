@@ -15,15 +15,18 @@ Two triggers, whichever fires first, plus the timeout the resulting request gets
 | Scheduled delay | 5000 ms | 5000 ms |
 | Export timeout | `traceExportTimeoutMillis`, default `30000` | `export_timeout_seconds`, default `30` |
 
-Lowering the span count is the usual first move when exports are too large, and it is often enough. It cannot bound the payload though: 20 spans carrying a 2 MB conversation each is a 40 MB export no matter how low the count is set, and if the count goes low enough to fix that, small spans start exporting one request at a time.
+Lowering the span count is the usual first move when exports are too large, and it is often enough. It cannot bound the payload though: 20 spans carrying a 2 MB payload each is a 40 MB export no matter how low the count is set, and if the count goes low enough to fix that, small spans start exporting one request at a time.
 
 ## When to flush by payload size
 
-Turn it on if you see any of these, and lowering the span count did not fix them:
+The byte trigger earns its place when spans are large *and* many of them finish at once. One agent on its own rarely gets there: model calls are slow, so spans trickle in and the scheduled delay fires long before the buffer grows.
 
-- Exports rejected as too large by the ingest endpoint, so every span in that batch is lost.
+Running the same work in parallel is what changes that. The usual case is an evaluation over a dataset of images, PDFs, or long documents on your own machine, where dozens of concurrent tasks each end a multi-megabyte span within the same few seconds. Whichever of the two triggers fires first then hands the exporter a buffer whose size nothing has looked at.
+
+Symptoms, if you are already hitting it:
+
+- Exports rejected as too large by the ingest endpoint, so every span in that batch is lost. See [Troubleshooting](/tracing/troubleshooting) for the exact errors per transport.
 - `DEADLINE_EXCEEDED` on export, because a single request is big enough to outlast the export timeout.
-- Traces arriving in bursts of tens of megabytes, from agents that keep long conversation histories on every LLM call.
 
 If your spans are small, leave it off. The span count and the scheduled delay fire first for small spans, so the byte trigger would never do anything.
 
@@ -69,6 +72,10 @@ The other two triggers keep working. A batch is exported when it reaches the spa
 The byte limit on its own does nothing. Without `flushBySize`, `maxExportBatchSizeBytes` is ignored and the plain batch processor is used, so enabling one without the other is a no-op rather than a silent change of behavior.
 
 `disableBatch` wins over `flushBySize`. With batching off, every span is exported on its own and there is no buffer to bound.
+
+<Warning>
+`disableBatch` is a local debugging aid, not a production setting. It sends one network request per span, the moment that span ends, and in Python the request runs on the thread that ended it, so your application blocks on the export every time a span closes.
+</Warning>
 
 ## What the limit measures
 
