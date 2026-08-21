@@ -19,6 +19,8 @@ Initialize Laminar tracing and auto-instrumentation.
 | `disabled_instruments` | `set[Instruments]` | `None` | Disable these instruments |
 | `disable_batch` | `bool` | `False` | Disable batching span processor |
 | `max_export_batch_size` | `int` &#124; `None` | `None` | Batch size (defaults to `64` when `None`) |
+| `flush_by_size` | `bool` | `False` | Also flush a batch when its payload would exceed `max_export_batch_size_bytes`. See [Batching](/sdk/batching) |
+| `max_export_batch_size_bytes` | `int` &#124; `None` | `None` | Approximate max bytes per batch (defaults to 32 MiB). Only used when `flush_by_size` is True |
 | `export_timeout_seconds` | `int` &#124; `None` | `None` | Export timeout (defaults to `30` when `None`) |
 | `set_global_tracer_provider` | `bool` | `True` | Set global OTEL tracer provider |
 | `otel_logger_level` | `int` | `logging.ERROR` | OTEL logger level |

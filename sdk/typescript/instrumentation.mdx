@@ -19,6 +19,8 @@ Initialize Laminar tracing and auto-instrumentation.
 | `disableBatch` | `boolean` | `false` | Disable batching span processor |
 | `traceExportTimeoutMillis` | `number` | `30000` | Export timeout |
 | `maxExportBatchSize` | `number` | `512` | Max spans per export batch |
+| `flushBySize` | `boolean` | `false` | Also flush a batch when its payload would exceed `maxExportBatchSizeBytes`. See [Batching](/sdk/batching) |
+| `maxExportBatchSizeBytes` | `number` | `33554432` | Approximate max bytes per export batch. Only used when `flushBySize` is true |
 | `forceHttp` | `boolean` | `false` | Force OTLP HTTP exporter |
 | `logLevel` | `'error'` &#124; `'warn'` &#124; `'info'` &#124; `'debug'` | `'error'` | SDK log level |
 | `sessionRecordingOptions` | `SessionRecordingOptions` | — | Browser session recording options |
