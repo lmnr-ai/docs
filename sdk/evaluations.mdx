@@ -33,7 +33,7 @@ title: Evaluations
     |------|------|---------|-------------|
     | `data` | `EvaluationDataset` &#124; `Datapoint[]` | — | Dataset or array |
     | `executor` | `(data, ...args) => any` | — | Function to evaluate |
-    | `evaluators` | `Record<string, Function or HumanEvaluator>` | — | Scoring functions |
+    | `evaluators` | `Record<string, Function>` | — | Scoring functions |
     | `name` | `string` | — | Evaluation name |
     | `groupName` | `string` | `'default'` | Group name |
     | `metadata` | `Record<string, any>` | — | Evaluation metadata |
@@ -112,28 +112,6 @@ title: Evaluations
     **Provided:**
     - `slice(start, end)` — Helper using `get()`
 
-    ---
-
-    <Heading level={2} id="ts-human-evaluator">HumanEvaluator</Heading>
-
-    Placeholder for human evaluation.
-
-    ```typescript
-    import { HumanEvaluator } from '@lmnr-ai/lmnr';
-
-    await evaluate({
-      data,
-      executor,
-      evaluators: {
-        quality: new HumanEvaluator([
-          { value: 1, label: 'Good' },
-          { value: 0, label: 'Bad' },
-        ]),
-      },
-    });
-    ```
-
-    **Note:** Creates spans with type `HUMAN_EVALUATOR` and `null` scores for later human annotation.
   </Tab>
   <Tab title="Python">
     <Heading level={2} id="py-evaluate">evaluate()</Heading>
@@ -163,7 +141,7 @@ title: Evaluations
     |------|------|---------|-------------|
     | `data` | `EvaluationDataset` &#124; `list[Datapoint]` | — | Dataset or list of datapoints |
     | `executor` | `Callable` | — | Function to evaluate |
-    | `evaluators` | `dict[str, Callable or HumanEvaluator]` | — | Scoring functions |
+    | `evaluators` | `dict[str, Callable]` | — | Scoring functions |
     | `name` | `str` | `None` | Evaluation name |
     | `group_name` | `str` | `None` | Group name (defaults to `'default'` when `None`) |
     | `metadata` | `dict` | `None` | Evaluation metadata |
