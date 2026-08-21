@@ -31,7 +31,6 @@ Set on the span you want to control. All keys are namespaced under `lmnr.span.*`
 | `lmnr.span.instrumentation_source` | string | Free-form label identifying the emitter (e.g. `"javascript"`, `"my-internal-adapter"`). Surfaces in span metadata. |
 | `lmnr.span.sdk_version` | string | Version of the emitter. Optional. |
 | `lmnr.span.language_version` | string | Runtime version of the emitter. Optional. |
-| `lmnr.span.human_evaluator_options` | string (JSON) | Used by `HumanEvaluator()`. See [evaluations](/evaluations/introduction). |
 
 Setting `lmnr.span.type = "LLM"` is required for LLM-specific UI and cost rollups to render at all. A span with `LLM` type but no `gen_ai.*` content shows up in the LLM section but with an empty conversation panel. See [LLM attributes](#llm-attributes) below.
 
