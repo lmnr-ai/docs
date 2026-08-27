@@ -28,7 +28,7 @@ lmnr-cli setup
 It opens your browser to authorize the CLI, then:
 
 1. Logs you in (if you are not already).
-2. Lets you pick or create a project.
+2. Picks your project. A brand-new account gets one called `dev`; if you can access several, the browser asks which one before you approve.
 3. Mints a project API key for your application's SDK and writes `LMNR_PROJECT_API_KEY=...` to your env file (an existing `.env.local` if you have one, otherwise `.env`). If a valid key for this project is already configured, it keeps that one.
 4. Links the directory by writing `.lmnr/project.json`.
 5. Installs the Laminar agent skill into your project (`.claude/`, `.cursor/`, `.codex/`, or `.agents/`).
