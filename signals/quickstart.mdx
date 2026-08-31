@@ -112,19 +112,25 @@ To write your own, click **+ Signal**. The Create Signal drawer opens with the d
 *When* the Signal evaluates a trace. A Signal has exactly one trigger.
 
 - **When a trace finishes** — fires once the trace's root span ends. The default, and right for most agents.
-- **When a specific span finishes** — fires when any span you name ends. Use this when the work is spread across services and spans keep arriving after the root span closes (distributed tracing).
+- **When a specific span finishes** — fires when **any** of the span names you list ends (OR). Use this when the work is spread across services and spans keep arriving after the root span closes (distributed tracing). Empty names are ignored.
+
+The trigger fires when that named span completes. It does not wait for every other span in the trace.
 
 </Step>
 
 <Step title="Filters">
-*Which* traces actually run once the trigger fires. Filters are **AND-combined** — a trace runs only if every filter passes. The default is `total tokens > 1000`.
+*Which* traces actually run once the trigger fires. Filters are **AND-combined** — a trace runs only if every filter passes. They are checked against the **whole trace** after remaining spans have had time to arrive, not against the firing span alone. The default is `total tokens > 1000`.
 
-| Filter           | Type   | Matches against                                                       |
-| ---------------- | ------ | --------------------------------------------------------------------- |
-| **Total tokens** | number | The trace's cumulative token count across all spans.                  |
-| **Status**       | enum   | `error` if any span in the trace errored, `success` otherwise.        |
-| **Span names**   | array  | Any span name anywhere in the trace.                                  |
-| **Span tags**    | array  | Any [tag](/tracing/structure/tags) attached to any span in the trace. |
+| Filter           | Type   | Matches against                                                                 |
+| ---------------- | ------ | ------------------------------------------------------------------------------- |
+| **Total tokens** | number | The trace's cumulative token count across all spans.                            |
+| **Status**       | enum   | `error` if any span in the trace errored, `success` otherwise.                  |
+| **Span names**   | array  | Whether **any of** the listed names appears anywhere in the trace (`none of` is the inverse). |
+| **Span tags**    | array  | Whether **any of** the listed [tags](/tracing/structure/tags) appears on any span. |
+
+<Note>
+The **When a specific span finishes** trigger and the **Span names** filter are different on purpose. Listing `get_full_spans` as a trigger starts analysis when that span ends. Adding a Span names filter of `Task Judge` then requires that name to be present *somewhere in the same trace* before the run proceeds. Listing several names in either place is OR; combining a trigger with filters is AND.
+</Note>
 
 </Step>
 

@@ -85,10 +85,10 @@ Fabricated tool data (0e5b6466-eeab-47f9-a5d4-6b2ff6c7a365)
   status:       active
 ```
 
-`--filter` takes JSON `{"column":"...","operator":"...","value":"..."}` and is repeatable. Columns: `total_token_count`, `status`, `span_names`. Pass it on create to replace the default.
+`--filter` takes JSON `{"column":"...","operator":"...","value":"..."}` and is repeatable. Columns: `total_token_count`, `status`, `span_names`, `tags`. Pass it on create to replace the default. Array filters (`span_names`, `tags`) take `"operator": "includes"` or `"not_includes"` and a list of strings; `includes` is OR (any listed value present).
 
 <Note>
-`--span-name` is the trigger flag. `span_names` is a filter column: it matches a name anywhere in the trace.
+`--span-name` is the trigger flag and is OR if you pass it more than once: the Signal fires when any of those spans ends. `span_names` is a filter column: after the trigger fires, it checks whether any listed name appears anywhere in the trace. Empty names are ignored on both.
 </Note>
 
 Two more flags shape a new Signal:
@@ -263,7 +263,7 @@ Options:
   --prompt <prompt>          LLM instruction describing what to detect in a trace (required)
   --schema <json>            Payload schema as JSON (required)
   --trigger <kind>           root-span-finished | span-name. Omitted → root-span-finished
-  --span-name <name>         Span name to trigger on (repeatable). Requires --trigger span-name
+  --span-name <name>         Span name to trigger on (repeatable, OR). Requires --trigger span-name
   --filter <json>            Filter as JSON (repeatable, ANDed). Omitted → the default >1000 tokens
   --mode <mode>              batch | realtime. Omitted → realtime
   --sample-rate <percent>    Evaluate only this percent of matching traces (1-95)
@@ -284,7 +284,7 @@ Options:
   --prompt <prompt>          Replace the LLM instruction
   --schema <json>            Replace the payload schema (same shape as create)
   --trigger <kind>           Change when it is evaluated: root-span-finished | span-name
-  --span-name <name>         Span name to trigger on (repeatable). Requires --trigger span-name
+  --span-name <name>         Span name to trigger on (repeatable, OR). Requires --trigger span-name
   --filter <json>            Replace ALL filters with these (repeatable, same syntax as create)
   --no-filters               Clear all filters (run on every trace it fires for)
   --mode <mode>              batch | realtime

@@ -141,11 +141,11 @@ Each Signal can run in two ways, configured independently:
 
 Both paths produce the same kind of signal event.
 
-The trigger is the moment. Every Signal has exactly one. **When a trace finishes** (the default) fires when the run is over, so the Signal sees the complete trace. **When a specific span finishes** fires when a named span ends, which is what you want when the work is spread across services.
+The trigger is the moment. Every Signal has exactly one. **When a trace finishes** (the default) fires when the run is over, so the Signal sees the complete trace. **When a specific span finishes** fires when **any** of the names you list ends (OR). Use it when the work is spread across services. Empty names are ignored.
 
-Filters are properties of the whole trace, and every one of them must match. A new Signal defaults to more than 1000 tokens. You can also require an error status, or that a given span name appears anywhere in the run. A Signal with no filters runs on every trace its trigger fires for.
+Filters are properties of the whole trace, checked after remaining spans have had time to arrive, and every one of them must match (AND). A new Signal defaults to more than 1000 tokens. You can also require an error status, or that any of a list of span names or tags appears anywhere in the run. A Signal with no filters runs on every trace its trigger fires for.
 
-The **When a specific span finishes** trigger matches the span whose completion fires the Signal. A **span names** filter asks whether that name appears anywhere in the trace.
+The **When a specific span finishes** trigger matches the span whose completion starts the Signal. A **span names** filter is a separate check: it asks whether that name appears *anywhere in the trace*, not only on the firing span. The form restates this as a sentence as you configure it, for example: *This signal runs when a span named "get_full_spans" finishes, if the trace includes a span named "Task Judge".*
 
 ## Next steps
 
