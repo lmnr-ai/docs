@@ -3,10 +3,14 @@ title: Quickstart
 sidebarTitle: Quickstart
 ---
 
-This quickstart walks through the full Signals loop: *generate traces, write a Signal that reads them, run it, and look at the events*.
+This quickstart walks through the full Signals loop: _generate traces, write a Signal that reads them, run it, and look at the events_.
 
 <Note>
-Every new Laminar project ships with a **Failure Detector** signal pre-created. It runs automatically on traces with more than 1000 tokens, and categorizes issues as `tool_error`, `api_error`, `logic_error`, `looping`, `wrong_tool`, `timeout`, or `other`. You don't need to build this one yourself. Open it from the Signals list to see events as soon as your traces start arriving.
+  Every new Laminar project ships with a **Failure Detector** signal pre-created. It runs
+  automatically on traces with more than 1000 tokens, and categorizes issues as `tool_error`,
+  `api_error`, `logic_error`, `looping`, `wrong_tool`, `timeout`, or `other`. You don't need to
+  build this one yourself. Open it from the Signals list to see events as soon as your traces start
+  arriving.
 </Note>
 
 ## Prerequisites
@@ -65,76 +69,96 @@ Run it, then refresh the Laminar traces page to confirm the `quickstart_agent` t
 Click **Signals** in the project sidebar. If this is a new project, the **Failure Detector** signal is already there, ready to run on any trace over 1000 tokens.
 
 <Frame caption="Signals list: one card per Signal with its event and cluster counts">
-  <img src="/images/signals/signals-list.png" alt="Signals list view with cards for each Signal and recent event counts" />
+  <img
+    src="/images/signals/signals-list.png"
+    alt="Signals list view with cards for each Signal and recent event counts"
+  />
 </Frame>
 
 To write your own, click **+ Signal**. The Create Signal drawer opens with the definition at the top and the trigger, filters, and sampling below it.
 
 <Frame caption="Create Signal drawer: name, template, prompt, and output schema on top, trigger and filters below">
-  <img src="/images/signals/create-signal-empty.png" alt="Empty Create Signal drawer showing the trigger options and the default total tokens filter" />
+  <img
+    src="/images/signals/create-signal-empty.png"
+    alt="Empty Create Signal drawer showing the trigger options and the default total tokens filter"
+  />
 </Frame>
 
 ## 3. Write the Signal
 
-Fill in the form:
-
-1. **Name**: a stable identifier. Use snake_case or dot-notation (`agent_response_quality`, `checkout.completed`). The name is what you filter, alert, and query by.
-2. **Template** (optional): pick a starting point. Laminar ships templates for task completion, user friction, safety, hallucination, and intent. Templates prefill the prompt and schema; edit both before saving.
-3. **Prompt**: describe what the Signal should detect or extract from the trace. *Be concrete.* "The agent answered the user's question correctly and completely" is a better prompt than "good response".
-4. **Structured output**: define the JSON schema for the payload. Keep fields small and stable; they become filterable columns on `signal_events`.
-5. **Trigger**: when the Signal evaluates a new trace. Leave the default (**When a trace finishes**) unless the work is spread across services, then pick **When a specific span finishes** and list the span names.
-6. **Filters**: which traces actually run. The default is total tokens > 1000. Add more; they are AND-combined.
-7. **Sampling** (optional): cap how many matching traces are evaluated. Useful when a high-volume filter would otherwise fan out across every trace.
-
 <Frame caption="Create Signal drawer filled in from the Task template: the prompt and output schema come prefilled">
-  <img src="/images/signals/create-signal-filled.png" alt="Create Signal drawer populated with a name, the Task template, a prompt, and two output schema fields" />
+  <img
+    src="/images/signals/create-signal-filled.png"
+    alt="Create Signal drawer populated with a name, the Task template, a prompt, and two output schema fields"
+  />
 </Frame>
+
+<Steps>
+<Step title="Name">
+</Step>
+
+<Step title="Template (optional)">Templates prefill the prompt and schema</Step>
+
+<Step title="Prompt">
+  Describe what the Signal should detect or extract from the trace in plain English.
+</Step>
+
+<Step title="Structured output">
+  Signals Agent will generate a payload for every event. Define the shape of this payload with a
+  JSON schema.
+</Step>
+
+<Step title="Trigger">
+*When* the Signal evaluates a trace. A Signal has exactly one trigger.
+
+- **When a trace finishes** — fires once the trace's root span ends. The default, and right for most agents.
+- **When a specific span finishes** — fires when any span you name ends. Use this when the work is spread across services and spans keep arriving after the root span closes (distributed tracing).
+
+</Step>
+
+<Step title="Filters">
+*Which* traces actually run once the trigger fires. Filters are **AND-combined** — a trace runs only if every filter passes. The default is `total tokens > 1000`.
+
+| Filter           | Type   | Matches against                                                       |
+| ---------------- | ------ | --------------------------------------------------------------------- |
+| **Total tokens** | number | The trace's cumulative token count across all spans.                  |
+| **Status**       | enum   | `error` if any span in the trace errored, `success` otherwise.        |
+| **Span names**   | array  | Any span name anywhere in the trace.                                  |
+| **Span tags**    | array  | Any [tag](/tracing/structure/tags) attached to any span in the trace. |
+
+</Step>
+
+<Step title="Sampling (optional)">
+Evaluate only a percentage of matching traces (5–95%). Sampling is applied **per user**, so coverage stays spread across your user base instead of concentrating on whoever is noisiest. Useful when a broad filter would otherwise fan out across every trace.
+</Step>
+</Steps>
 
 Click **Create**. The Signal is live from this point on: the trigger starts processing new traces that match the filters.
 
 <Note>
-Creating a Signal automatically creates a **Critical**-severity event alert that posts to the in-app notification center. Open the Signal's **Settings > Alerts** section (or **Project Settings > Alerts**) to route it to Slack or email, change the severity, or add output-schema filters. See [Alerts](/signals/alerts).
+By default, Signals will notify you of critical events through the platform notifications panel. Open the Signal's **Settings > Alerts** section (or **Project Settings > Alerts**) to route it to Slack or email, or add additional filters. See [Alerts](/signals/alerts).
 </Note>
 
-## 4. Run the Signal
+## 4. Manage the Signal
 
-A Signal can evaluate new traces as they arrive, or a historical slice. **Live evaluation is what feeds dashboards and Alerts.** Open a Signal and click **Settings** to manage both from a sidebar with four sections: **General** (definition, trigger, and filters), **Alerts**, **Backfill**, and **Activity**.
+A Signal can evaluate new traces as they arrive, or a historical slice. Open a Signal and click **Settings** to manage both from a sidebar with four sections: **General** (definition, trigger, and filters), **Alerts**, **Backfill**, and **Activity**.
 
 <Frame caption="Signal Settings > General: prompt, output schema, trigger, filters, and sampling">
-  <img src="/images/signals/signal-settings.png" alt="Signal settings General section with the trigger options and the filters bar" />
+  <img
+    src="/images/signals/signal-settings.png"
+    alt="Signal settings General section with the trigger options and the filters bar"
+  />
 </Frame>
-
-### Triggers
-
-The trigger is the moment Laminar reads the trace. Every Signal has exactly one.
-
-- **When a trace finishes** (the default) fires when the run's root span ends, so the Signal sees the complete trace.
-- **When a specific span finishes** fires when a span with one of the names you list ends. Use it when the work is spread across services.
-
-Open the Signal's **Settings > General** section to change the trigger, then save.
-
-### Filters
-
-Filters decide whether a triggered Signal actually runs. They are properties of the whole trace, and every one of them must match. You build them in the same filter bar you use on the traces table.
-
-A new Signal gets **total tokens > 1000** by default. You can also filter on:
-
-- **Total tokens**: comparisons like `>` `1000`
-- **Status**: `error` or `success`
-- **Span names**: whether a name appears anywhere in the trace
-
-Clear the filters to run on every trace the trigger fires for.
-
-<Note>
-The **When a specific span finishes** trigger matches the span whose completion fires the Signal. A **span names** filter asks whether that name appears anywhere in the trace.
-</Note>
 
 ### Backfill (historical)
 
 Use **Backfill** to run a Signal across historical traces, for example to evaluate a freshly-created Signal over the last 24 hours of traffic.
 
 <Frame caption="Start a backfill: pick traces or filters, then enqueue">
-  <img src="/images/signals/create-job.png" alt="Backfill page with trace selection, filters, and trace table" />
+  <img
+    src="/images/signals/create-job.png"
+    alt="Backfill page with trace selection, filters, and trace table"
+  />
 </Frame>
 
 1. Open the Signal's **Settings > Backfill** section.
@@ -146,7 +170,10 @@ Use **Backfill** to run a Signal across historical traces, for example to evalua
 Runs appear in the **Activity** section with a status (Pending, Completed, Failed). Each Run that detects the Signal links to the resulting event in the **Events** tab.
 
 <Frame caption="Activity section: one row per Run with its source, status, and the event it produced">
-  <img src="/images/signals/signal-activity.png" alt="Signal activity table listing runs with run id, trace id, event id, source, and status" />
+  <img
+    src="/images/signals/signal-activity.png"
+    alt="Signal activity table listing runs with run id, trace id, event id, source, and status"
+  />
 </Frame>
 
 ### Pause and resume a Signal
@@ -154,7 +181,10 @@ Runs appear in the **Activity** section with a status (Pending, Completed, Faile
 A Signal you're not ready to delete can be paused. Open the Signal's **Settings > General** section and flip the **Active** switch off.
 
 <Frame caption="The Active switch at the top of Settings > General; flipped off, the Signal reads Inactive">
-  <img src="/images/signals/signal-active-switch.png" alt="Signal settings General section with the Active switch flipped off and the signal marked Inactive" />
+  <img
+    src="/images/signals/signal-active-switch.png"
+    alt="Signal settings General section with the Active switch flipped off and the signal marked Inactive"
+  />
 </Frame>
 
 While a Signal is paused:
@@ -167,7 +197,10 @@ While a Signal is paused:
 Paused Signals show a **Disabled** badge on the Signals list and are grouped separately from active ones. Flip the switch back on and the Signal resumes evaluating new traces immediately.
 
 <Frame caption="The Signals list groups paused Signals under a Disabled section">
-  <img src="/images/signals/signals-list-disabled.png" alt="Signals list with an Active section and a Disabled section, the disabled Signal card dimmed with a Disabled badge" />
+  <img
+    src="/images/signals/signals-list-disabled.png"
+    alt="Signals list with an Active section and a Disabled section, the disabled Signal card dimmed with a Disabled badge"
+  />
 </Frame>
 
 You can also pause a single [alert](/signals/alerts#enable-or-disable-an-alert) instead of the whole Signal, to keep collecting events while silencing notifications.
@@ -177,7 +210,10 @@ You can also pause a single [alert](/signals/alerts#enable-or-disable-an-alert) 
 Open the Signal detail page and switch to the **Events** tab. Each row is one detected event, linked back to the trace that produced it.
 
 <Frame caption="Events tab: structured payloads, timestamps, and jump-to-trace links">
-  <img src="/images/signals/signal-detail.png" alt="Signal events view with chart, event list, and per-event payload" />
+  <img
+    src="/images/signals/signal-detail.png"
+    alt="Signal events view with chart, event list, and per-event payload"
+  />
 </Frame>
 
 From here you can:
