@@ -38,9 +38,9 @@ Results appear in a table or raw JSON view. Export results to a dataset or label
 
 You can also query from outside the UI:
 
-- **API**: `POST /v1/sql/query` — authenticate with your project API key and pass `{ "query": "..." }`.
-- **CLI**: `lmnr-cli sql query "<query>" --json` — see [CLI](/platform/cli).
-- **MCP**: connect an MCP client (Claude Code, Cursor, Codex) and call `query_laminar_sql` — see [MCP Server](/platform/mcp).
+- **API**: `POST /v1/sql/query` with your project API key. See [SQL API](#sql-api).
+- **CLI**: `lmnr-cli sql query "<query>" --json`. See [CLI](/platform/cli).
+- **MCP**: connect an MCP client (Claude Code, Cursor, Codex) and call `query_laminar_sql`. See [MCP Server](/platform/mcp).
 
 ## Writing Queries
 
@@ -117,7 +117,7 @@ FROM spans
 WHERE simpleJSONHas(attributes, 'gen_ai.request.structured_output_schema')
 ```
 
-For complex operations (array indexing, nested paths), use `JSONExtract*` functions—more flexible but slower.
+For complex operations (array indexing, nested paths), use `JSONExtract*` functions: more flexible but slower.
 
 ### Working with tuples
 
@@ -776,6 +776,135 @@ ORDER BY span_count DESC
 ## Exporting Results
 
 Select results and click "Export to Dataset." Map columns to dataset fields (`data`, `target`, `metadata`). Use this to build evaluation datasets from query results.
+
+## SQL API
+
+Run the same queries over HTTP with `POST /v1/sql/query`. Use it to pull Laminar data into notebooks, scheduled jobs, or your own dashboards.
+
+```
+POST https://api.lmnr.ai/v1/sql/query
+```
+
+Authenticate with a project API key as a Bearer token (`Authorization: Bearer <PROJECT_API_KEY>`). The key identifies the project, so queries never reference a project id.
+
+<Note>
+Self-hosting: replace the base URL with your app-server HTTP origin, including the port. For example, `http://localhost:8000/v1/sql/query`.
+</Note>
+
+### Request
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `query` | string | Yes | A single `SELECT` statement, same syntax as the editor |
+| `parameters` | object | No | Values for the `{name:Type}` placeholders in `query`. Defaults to `{}` |
+
+```bash
+curl -X POST https://api.lmnr.ai/v1/sql/query \
+  -H "Authorization: Bearer $LMNR_PROJECT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "SELECT name, span_type, start_time FROM spans WHERE start_time > now() - INTERVAL 1 DAY ORDER BY start_time DESC LIMIT 3"
+  }'
+```
+
+Rows come back in a `data` array, one object per row, keyed by the columns (or aliases) you selected:
+
+```json
+{
+  "data": [
+    {
+      "name": "openai.chat",
+      "span_type": "LLM",
+      "start_time": "2026-09-02 21:14:07.925746000"
+    }
+  ]
+}
+```
+
+64-bit integers are returned as JSON numbers, not strings.
+
+### Passing parameters
+
+Don't build query strings by hand. Write `{name:Type}` placeholders in the SQL and send the values in `parameters`, where `Type` is the ClickHouse type of the value:
+
+```bash
+curl -X POST https://api.lmnr.ai/v1/sql/query \
+  -H "Authorization: Bearer $LMNR_PROJECT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "SELECT name, start_time FROM spans WHERE span_type = {span_type:String} AND start_time > {since:DateTime} ORDER BY start_time DESC LIMIT 100",
+    "parameters": { "span_type": "LLM", "since": "2026-09-01 00:00:00" }
+  }'
+```
+
+Types match the column types in [Table Schemas](#table-schemas): `String`, `UUID`, `Int64`, `Float64`, `DateTime`, `Array(String)`, and so on.
+
+### From the SDKs
+
+Both SDKs wrap the endpoint and return the `data` array directly.
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```typescript
+    import { LaminarClient } from '@lmnr-ai/lmnr';
+
+    const client = new LaminarClient({
+      projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+    });
+
+    const rows = await client.sql.query(
+      `SELECT count(*) AS spans
+       FROM spans
+       WHERE span_type = {span_type:String}
+         AND start_time > now() - INTERVAL 1 DAY`,
+      { span_type: 'LLM' },
+    );
+
+    console.log(rows[0].spans);
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    import os
+    from lmnr import LaminarClient
+
+    client = LaminarClient(project_api_key=os.environ["LMNR_PROJECT_API_KEY"])
+
+    rows = client.sql.query(
+        """
+        SELECT count(*) AS spans
+        FROM spans
+        WHERE span_type = {span_type:String}
+          AND start_time > now() - INTERVAL 1 DAY
+        """,
+        {"span_type": "LLM"},
+    )
+
+    print(rows[0]["spans"])
+    ```
+  </Tab>
+</Tabs>
+
+### Limits
+
+- Only `SELECT` queries against the tables listed in [What You Can Query](#what-you-can-query) are accepted. Anything else is rejected before it reaches the database.
+- Queries cannot reference `project_id`. The API key already scopes results to one project.
+- `SETTINGS` clauses in your query are ignored. Every query runs under server-side execution-time, memory, and result-size limits, so narrow the time range and add a `LIMIT` for large scans.
+- Queries are rate limited per project.
+
+### Errors
+
+Errors return a JSON body with a single `error` field:
+
+```json
+{ "error": "Query validation failed: Only SELECT statements are allowed" }
+```
+
+| Status | Meaning |
+|--------|---------|
+| 400 | The query failed validation or the database rejected it (bad syntax, unknown column, missing parameter) |
+| 401 | Missing or invalid project API key |
+| 429 | Project rate limit exceeded. Retry with backoff |
 
 ## Full Reference
 
