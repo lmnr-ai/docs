@@ -15,8 +15,12 @@ Alerts live at the project level. Open **Project Settings > Alerts** to see ever
 
 Creating a new Signal auto-creates alerts so you start receiving notifications immediately:
 
-1. A **New event** alert on the new Signal, scoped to **Critical** severity. When clustering is available, [*skip similar events*](#skip-notifications-for-similar-events) is on by default.
-2. A **New cluster** alert when clustering is available.
+1. A **New event** alert on the new Signal, scoped to **Critical** severity, with [*skip similar events*](#skip-notifications-for-similar-events) on by default.
+2. A **New cluster** alert.
+
+<Note>
+For self-hosters with `CLUSTERING_ENABLED=false`, Laminar does not create the New cluster alert and leaves *skip similar events* off on the New event alert.
+</Note>
 
 The alerts default to in-app notifications, and the Signal's creator is subscribed by email. To change channels or route an alert to Slack, open **Project Settings > Alerts** and edit it.
 
