@@ -206,25 +206,16 @@
         ]
       },
       {
+        "tab": "API Reference",
+        "openapi": "openapi/openapi.yaml"
+      },
+      {
         "tab": "Changelog",
         "pages": [
           "changelog"
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Community",
-          "href": "https://discord.gg/nNFUUDAKub",
-          "icon": "discord",
-          "color": {
-            "dark": "#5562ea",
-            "light": "#5562ea"
-          }
-        }
-      ]
-    }
+    ]
   },
   "redirects": [
     {
