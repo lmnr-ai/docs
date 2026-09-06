@@ -136,12 +136,12 @@ Evaluate only a percentage of matching traces (5–95%). Sampling is applied **p
 Click **Create**. The Signal is live from this point on: the trigger starts processing new traces that match the filters.
 
 <Note>
-By default, Signals will notify you of critical events through the platform notifications panel. Open the Signal's **Settings > Alerts** section (or **Project Settings > Alerts**) to route it to Slack or email, or add additional filters. See [Alerts](/signals/alerts).
+By default, Signals will notify the creator of critical events through the platform notifications panel and email. Open the Signal's **Settings > Alerts** section (or **Project Settings > Alerts**) to change channels or add additional filters. See [Alerts](/signals/alerts).
 </Note>
 
 ## 4. Manage the Signal
 
-A Signal can evaluate new traces as they arrive, or a historical slice. Open a Signal and click **Settings** to manage both from a sidebar with four sections: **General** (definition, trigger, and filters), **Alerts**, **Backfill**, and **Activity**.
+A Signal can evaluate new traces as they arrive, or a historical slice. Open a Signal and click **Settings** to manage both from a sidebar with three sections: **General** (definition, trigger, and filters), **Alerts**, and **Backfill**. Every evaluation the Signal performs is listed on the Signal's own **Runs** tab, alongside **Events** and **Settings**.
 
 <Frame caption="Signal Settings > General: prompt, output schema, trigger, filters, and sampling">
   <img
@@ -167,12 +167,12 @@ Use **Backfill** to run a Signal across historical traces, for example to evalua
 4. Choose **specific traces** or **all traces matching your filters**.
 5. Click **Start backfill**. Laminar enqueues one Run per trace.
 
-Runs appear in the **Activity** section with a status (Pending, Completed, Failed). Each Run that detects the Signal links to the resulting event in the **Events** tab.
+Runs appear on the **Runs** tab with a status (Pending, Processing, Completed, Failed). Backfilled Runs are marked as such, so you can tell them from the Runs a live trigger produced. Each Run that detects the Signal links to the resulting event in the **Events** tab, and every Run reports the token cost of the evaluation.
 
-<Frame caption="Activity section: one row per Run with its source, status, and the event it produced">
+<Frame caption="The Runs tab: one row per evaluated trace with its source, status, cost, and the event it produced">
   <img
     src="/images/signals/signal-activity.png"
-    alt="Signal activity table listing runs with run id, trace id, event id, source, and status"
+    alt="Signal runs table listing runs with status, source, event, clusters, cost, and event id"
   />
 </Frame>
 
@@ -220,7 +220,7 @@ From here you can:
 
 - Filter events by any field you defined in the structured output schema.
 - Click any row to open the corresponding trace.
-- Scroll to the clusters view below the events table to see similar events grouped together. See [Clusters](/signals/clusters).
+- Use the clusters view above the events table to see similar events grouped together. See [Clusters](/signals/clusters).
 - Query the raw events in the [SQL Editor](/platform/sql-editor) via the `signal_events` table.
 
 ## Querying `signal_events` in SQL
