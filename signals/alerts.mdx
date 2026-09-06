@@ -13,12 +13,16 @@ Alerts live at the project level. Open **Project Settings > Alerts** to see ever
 
 ## Defaults on signal creation
 
-Creating a new Signal auto-creates two alerts so you start receiving notifications immediately:
+Creating a new Signal auto-creates alerts so you start receiving notifications immediately:
 
-1. A **New event** alert on the new Signal, scoped to **Critical** severity, with [*skip similar events*](#skip-notifications-for-similar-events) on.
-2. A **New cluster** alert on the new Signal.
+1. A **New event** alert on the new Signal, scoped to **Critical** severity, with [*skip similar events*](#skip-notifications-for-similar-events) on by default.
+2. A **New cluster** alert.
 
-Both alerts default to in-app notifications only. To route to Slack or email, open **Project Settings > Alerts** and edit the alert.
+<Note>
+For self-hosters with `CLUSTERING_ENABLED=false`, Laminar does not create the New cluster alert and leaves *skip similar events* off on the New event alert.
+</Note>
+
+The alerts default to in-app notifications, and the Signal's creator is subscribed by email. To change channels or route an alert to Slack, open **Project Settings > Alerts** and edit it.
 
 ## Alert types
 
@@ -62,7 +66,7 @@ Turn this on when a Signal fires often on repetitive cases (the same timeout loo
 
 ## Notification channels
 
-Every alert posts to the in-app notification center by default. Slack and email are optional and configured per alert.
+Every alert posts to the in-app notification center by default. The creator is also subscribed by email when a Signal creates its default alerts; Slack and any additional email subscriptions are configured per alert.
 
 ### Slack
 
