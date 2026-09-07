@@ -16,8 +16,6 @@ tags:
     description: Send telemetry and browser session data to Laminar.
   - name: Traces
     description: Update trace data after ingestion.
-  - name: Tags
-    description: Organize traces and spans with tags.
   - name: SQL
     description: Query project data with read-only SQL.
   - name: Projects
@@ -147,25 +145,6 @@ paths:
           content:
             application/json:
               schema: {type: array, items: {$ref: '#/components/schemas/LabelingQueueItemResponse'}}
-        '400': {$ref: '#/components/responses/BadRequest'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '404': {$ref: '#/components/responses/NotFound'}
-  /v1/tag:
-    post:
-      tags: [Tags]
-      summary: Add tags to a trace or span
-      description: Adds tag names to a specified span, or to the top span of a specified trace.
-      operationId: addTags
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              oneOf:
-                - {$ref: '#/components/schemas/TagTraceRequest'}
-                - {$ref: '#/components/schemas/TagSpanRequest'}
-      responses:
-        '200': {$ref: '#/components/responses/Success'}
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -333,7 +312,12 @@ paths:
     delete:
       tags: [Signals]
       summary: Delete a Signal
-      description: Deletes a Signal and returns its final state.
+      description: |
+        Deletes a Signal and returns its final state.
+
+        <Warning>
+          Deleting a Signal also deletes all of its alerts and events and is irreversible. We recommend disabling the Signal instead. You can disable it from the UI or through the [Update a Signal](/api-reference/signals/update-a-signal) endpoint by setting `disabled` to `true`.
+        </Warning>
       operationId: deleteSignal
       responses:
         '200':
@@ -563,18 +547,6 @@ components:
       properties:
         id: {$ref: '#/components/schemas/Uuid'}
         createdAt: {type: string, format: date-time}
-    TagTraceRequest:
-      type: object
-      required: [names, traceId]
-      properties:
-        names: {type: array, minItems: 1, items: {type: string}}
-        traceId: {$ref: '#/components/schemas/Uuid'}
-    TagSpanRequest:
-      type: object
-      required: [names, spanId]
-      properties:
-        names: {type: array, minItems: 1, items: {type: string}}
-        spanId: {$ref: '#/components/schemas/Uuid'}
     SqlQueryRequest:
       type: object
       required: [query]
