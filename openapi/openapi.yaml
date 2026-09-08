@@ -28,6 +28,8 @@ tags:
     description: Add items to labeling queues.
   - name: Signals
     description: Manage automated evaluations of project traces.
+  - name: LLM profiles
+    description: Configure workspace LLM credentials and models for self-hosted Signals.
 paths:
   /v1/traces:
     post:
@@ -208,7 +210,12 @@ paths:
     post:
       tags: [Signals]
       summary: Create a Signal
-      description: Creates a Signal with the first server-managed definition version.
+      description: |
+        Creates a Signal with the first server-managed configuration version.
+
+        <Note>
+          `llmProfileId` and `model` are available only on self-hosted deployments. Provide both fields together. Laminar Cloud rejects them.
+        </Note>
       operationId: createSignal
       requestBody:
         required: true
@@ -259,7 +266,12 @@ paths:
     patch:
       tags: [Signals]
       summary: Update a Signal
-      description: Updates a Signal; only prompt or structuredOutput changes increment currentVersion.
+      description: |
+        Updates a Signal. An update that changes the effective Signal configuration increments its server-managed version.
+
+        <Note>
+          `llmProfileId` and `model` are available only on self-hosted deployments. Provide both fields together to change the Signal's LLM route. Laminar Cloud rejects them.
+        </Note>
       operationId: updateSignal
       requestBody:
         required: true
@@ -294,6 +306,119 @@ paths:
               schema: { $ref: "#/components/schemas/Signal" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
+  /v1/llm-profiles:
+    get:
+      tags: [LLM profiles]
+      summary: List LLM profiles
+      description: |
+        Lists every LLM profile in the authenticated project's workspace.
+
+        <Note>
+          LLM profiles are available only on self-hosted deployments. Laminar Cloud returns `404 Not Found`.
+        </Note>
+      operationId: listLlmProfiles
+      responses:
+        "200":
+          description: Workspace LLM profiles. Secret values are masked.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LlmProfileList" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [LLM profiles]
+      summary: Create an LLM profile
+      description: |
+        Creates an LLM profile in the authenticated project's workspace.
+
+        <Note>
+          LLM profiles are available only on self-hosted deployments. Laminar Cloud returns `404 Not Found`. Secrets are accepted as plaintext over TLS, stored encrypted, and never returned unmasked.
+        </Note>
+      operationId: createLlmProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateLlmProfileRequest" }
+      responses:
+        "200":
+          description: LLM profile created. Secret values are masked.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LlmProfile" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /v1/llm-profiles/{profile_id}:
+    parameters:
+      - { $ref: "#/components/parameters/LlmProfileId" }
+    get:
+      tags: [LLM profiles]
+      summary: Get an LLM profile
+      description: |
+        Returns an LLM profile from the authenticated project's workspace. Secret values are masked.
+
+        <Note>
+          LLM profiles are available only on self-hosted deployments. Laminar Cloud returns `404 Not Found`.
+        </Note>
+      operationId: getLlmProfile
+      responses:
+        "200":
+          description: LLM profile details.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LlmProfile" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [LLM profiles]
+      summary: Update an LLM profile
+      description: |
+        Updates an LLM profile. Omitted fields retain their stored values, `models` replaces the complete model list, and supplied secrets are merged with stored secrets.
+
+        <Note>
+          LLM profiles are available only on self-hosted deployments. Laminar Cloud returns `404 Not Found`. Removing a model used by a Signal returns `409 Conflict`.
+        </Note>
+      operationId: updateLlmProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateLlmProfileRequest" }
+      responses:
+        "200":
+          description: LLM profile updated. Secret values are masked.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LlmProfile" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      tags: [LLM profiles]
+      summary: Delete an LLM profile
+      description: |
+        Deletes an LLM profile and returns its final state.
+
+        <Note>
+          LLM profiles are available only on self-hosted deployments. Laminar Cloud returns `404 Not Found`.
+        </Note>
+
+        <Warning>
+          A profile used by a Signal cannot be deleted. The API returns `409 Conflict` until every Signal stops using it.
+        </Warning>
+      operationId: deleteLlmProfile
+      responses:
+        "200":
+          description: LLM profile deleted. Secret values are masked.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LlmProfile" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
   /v1/evals:
     post:
       tags: [Evaluations]
@@ -408,6 +533,11 @@ components:
       schema: { $ref: "#/components/schemas/Uuid" }
     SignalId:
       name: signal_id
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/Uuid" }
+    LlmProfileId:
+      name: profile_id
       in: path
       required: true
       schema: { $ref: "#/components/schemas/Uuid" }
@@ -605,6 +735,14 @@ components:
           type: array
           items: { $ref: "#/components/schemas/SignalFilter" }
         mode: { type: string, enum: [batch, realtime] }
+        llmProfileId:
+          oneOf:
+            - { $ref: "#/components/schemas/Uuid" }
+            - { type: "null" }
+          description: Self-hosted only. Workspace LLM profile used to evaluate the Signal. Provide with `model`; omit both fields on update to keep the existing route.
+        model:
+          type: [string, "null"]
+          description: Self-hosted only. Model selected from `llmProfileId`. Provide both fields together.
     CreateSignalRequest:
       allOf:
         - { $ref: "#/components/schemas/SignalDefinitionFields" }
@@ -623,23 +761,31 @@ components:
               name,
               prompt,
               structuredOutput,
+              sampleRate,
               disabled,
               createdAt,
               trigger,
               filters,
               mode,
-              currentVersion,
+              version,
+              llmProfileId,
+              llmProfileName,
+              model,
             ]
           properties:
             id: { $ref: "#/components/schemas/Uuid" }
             projectId: { $ref: "#/components/schemas/Uuid" }
             createdAt: { type: string, format: date-time }
-            currentVersion:
+            version:
               type: integer
               format: int32
               minimum: 1
               readOnly: true
-              description: Server-managed version of the prompt and structured output definition.
+              description: Server-managed version of the Signal configuration.
+            llmProfileName:
+              type: [string, "null"]
+              readOnly: true
+              description: Display name of the selected workspace LLM profile.
     SignalList:
       type: object
       required: [signals]
@@ -647,6 +793,127 @@ components:
         signals:
           type: array
           items: { $ref: "#/components/schemas/Signal" }
+    LlmProfileProvider:
+      type: string
+      enum:
+        [
+          openai_completions,
+          openai_responses,
+          gemini,
+          bedrock,
+          azure_chat_completions,
+          azure_responses,
+          azure_anthropic,
+          custom,
+        ]
+    LlmProfileAuth:
+      oneOf:
+        - type: object
+          required: [type]
+          properties:
+            type: { type: string, const: api_key }
+        - type: object
+          required: [type, accessKeyId]
+          properties:
+            type: { type: string, const: aws_keys }
+            accessKeyId: { type: string, maxLength: 256 }
+        - type: object
+          required: [type]
+          properties:
+            type: { type: string, const: bearer_token }
+    LlmProfileConfig:
+      type: object
+      properties:
+        auth: { $ref: "#/components/schemas/LlmProfileAuth" }
+        region: { type: string, maxLength: 64 }
+        resourceId: { type: string, maxLength: 256 }
+        baseUrl: { type: string, format: uri }
+        apiVersion: { type: string, maxLength: 64 }
+        headerNames:
+          type: array
+          maxItems: 32
+          uniqueItems: true
+          items: { type: string, maxLength: 256 }
+      description: Provider-specific non-secret configuration. Azure requires exactly one of `resourceId` or `baseUrl`; Bedrock requires `region`; custom providers require `baseUrl`.
+    LlmProfileSecretsInput:
+      type: object
+      writeOnly: true
+      properties:
+        apiKey: { type: string, format: password, maxLength: 8192 }
+        secretAccessKey: { type: string, format: password, maxLength: 8192 }
+        token: { type: string, format: password, maxLength: 8192 }
+        headers:
+          type: object
+          additionalProperties: { type: string, format: password, maxLength: 8192 }
+      description: Plaintext credentials. Required fields depend on the provider and authentication type.
+    LlmProfileSecrets:
+      type: object
+      readOnly: true
+      required: [apiKey, secretAccessKey, token, headers]
+      properties:
+        apiKey: { type: [string, "null"], description: Masked API key. }
+        secretAccessKey: { type: [string, "null"], description: Masked AWS secret access key. }
+        token: { type: [string, "null"], description: Masked bearer token. }
+        headers:
+          type: array
+          items: { type: string }
+          description: Names of stored custom headers; values are never returned.
+    CreateLlmProfileRequest:
+      type: object
+      required: [name, provider, models]
+      properties:
+        name: { type: string, maxLength: 255 }
+        provider: { $ref: "#/components/schemas/LlmProfileProvider" }
+        config: { $ref: "#/components/schemas/LlmProfileConfig" }
+        secrets: { $ref: "#/components/schemas/LlmProfileSecretsInput" }
+        models:
+          type: array
+          minItems: 1
+          maxItems: 64
+          uniqueItems: true
+          items: { type: string, maxLength: 256 }
+    UpdateLlmProfileRequest:
+      type: object
+      properties:
+        name: { type: string, maxLength: 255 }
+        provider:
+          allOf:
+            - { $ref: "#/components/schemas/LlmProfileProvider" }
+          description: When changing the provider, `config` is required.
+        config: { $ref: "#/components/schemas/LlmProfileConfig" }
+        secrets:
+          allOf:
+            - { $ref: "#/components/schemas/LlmProfileSecretsInput" }
+          description: Supplied values replace matching secrets; omitted values remain unchanged.
+        models:
+          type: array
+          minItems: 1
+          maxItems: 64
+          uniqueItems: true
+          items: { type: string, maxLength: 256 }
+          description: Replaces the complete model list when supplied.
+    LlmProfile:
+      type: object
+      required: [id, workspaceId, name, provider, config, models, secrets, createdAt, updatedAt]
+      properties:
+        id: { $ref: "#/components/schemas/Uuid" }
+        workspaceId: { $ref: "#/components/schemas/Uuid" }
+        name: { type: string }
+        provider: { $ref: "#/components/schemas/LlmProfileProvider" }
+        config: { $ref: "#/components/schemas/LlmProfileConfig" }
+        models:
+          type: array
+          items: { type: string }
+        secrets: { $ref: "#/components/schemas/LlmProfileSecrets" }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    LlmProfileList:
+      type: object
+      required: [llmProfiles]
+      properties:
+        llmProfiles:
+          type: array
+          items: { $ref: "#/components/schemas/LlmProfile" }
     CreateEvaluationRequest:
       type: object
       properties:
