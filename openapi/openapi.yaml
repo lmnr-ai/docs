@@ -21,7 +21,7 @@ tags:
   - name: Projects
     description: Resolve project information.
   - name: Datasets
-    description: Read datasets and add datapoints.
+    description: Create, read, update, and delete datasets and add datapoints.
   - name: Evaluations
     description: Create evaluation runs and record their results.
   - name: Labeling queues
@@ -170,6 +170,72 @@ paths:
             application/json:
               schema: { type: array, items: { $ref: "#/components/schemas/Dataset" } }
         "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Datasets]
+      summary: Create a dataset
+      description: Creates an empty dataset. Dataset names do not need to be unique.
+      operationId: createDataset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DatasetNameRequest" }
+      responses:
+        "201":
+          description: Dataset created.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Dataset" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /v1/datasets/{dataset_id}:
+    parameters:
+      - { $ref: "#/components/parameters/DatasetId" }
+    get:
+      tags: [Datasets]
+      summary: Get a dataset
+      description: Returns a dataset by its canonical ID.
+      operationId: getDataset
+      responses:
+        "200":
+          description: Dataset found.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Dataset" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Datasets]
+      summary: Update a dataset
+      description: Renames a dataset. Dataset names do not need to be unique.
+      operationId: updateDataset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DatasetNameRequest" }
+      responses:
+        "200":
+          description: Dataset updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Dataset" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Datasets]
+      summary: Delete a dataset
+      description: Deletes a dataset and its datapoints.
+      operationId: deleteDataset
+      responses:
+        "200":
+          description: Dataset deleted. Returns the deleted dataset.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Dataset" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
   /v1/datasets/datapoints:
     get:
       tags: [Datasets]
@@ -516,6 +582,11 @@ components:
       bearerFormat: Ingest-only API key
       description: A project API key restricted to ingestion operations.
   parameters:
+    DatasetId:
+      name: dataset_id
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/Uuid" }
     QueueId:
       name: queue_id
       in: path
@@ -629,6 +700,14 @@ components:
       required: [data]
       properties:
         data: { type: array, items: { $ref: "#/components/schemas/JsonValue" } }
+    DatasetNameRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Leading and trailing whitespace is removed. The remaining name must not be empty.
     Dataset:
       type: object
       required: [id, name, projectId, createdAt]
