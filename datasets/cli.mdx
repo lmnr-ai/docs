@@ -223,12 +223,36 @@ These are shared by every `dataset` subcommand.
 
 ## Commands
 
+Dataset names are display labels and do not need to be unique. Use the dataset ID returned by `list` when you need to target one dataset unambiguously.
+
 ### List all datasets
 
 List all datasets.
 
 ```bash
 lmnr-cli dataset list
+```
+
+### Get a dataset
+
+Get dataset metadata by its canonical ID.
+
+```bash
+lmnr-cli dataset get <dataset-id>
+```
+
+### Rename a dataset
+
+```bash
+lmnr-cli dataset update <dataset-id> --name <new-name>
+```
+
+### Delete a dataset
+
+Delete a dataset and its datapoints.
+
+```bash
+lmnr-cli dataset delete <dataset-id>
 ```
 
 ### Create a new dataset

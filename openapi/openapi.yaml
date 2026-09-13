@@ -245,14 +245,15 @@ paths:
       parameters:
         - { name: datasetId, in: query, schema: { $ref: "#/components/schemas/Uuid" } }
         - { name: datasetName, in: query, schema: { type: string } }
-        - { name: limit, in: query, required: true, schema: { type: integer, format: int64 } }
-        - { name: offset, in: query, required: true, schema: { type: integer, format: int64 } }
+        - { name: limit, in: query, required: true, schema: { type: integer, format: int64, minimum: 1, maximum: 1000 } }
+        - { name: offset, in: query, required: true, schema: { type: integer, format: int64, minimum: 0 } }
       responses:
         "200":
           description: A page of datapoints.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/DatapointPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
     post:
@@ -707,7 +708,7 @@ components:
         name:
           type: string
           minLength: 1
-          description: Leading and trailing whitespace is removed. The remaining name must not be empty.
+          description: Dataset name. Names are stored as supplied and do not need to be unique.
     Dataset:
       type: object
       required: [id, name, projectId, createdAt]
