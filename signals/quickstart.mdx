@@ -223,9 +223,33 @@ From here you can:
 - Use the clusters view above the events table to see similar events grouped together. See [Clusters](/signals/clusters).
 - Query the raw events in the [SQL Editor](/platform/sql-editor) via the `signal_events` table.
 
-## Querying `signal_events` in SQL
+## Querying signal events in SQL
 
 `signal_events` stores each event's payload as a JSON string. The UI's payload filter uses `simpleJSONExtractString` / `simpleJSONExtractRaw`, so you can mirror the same behavior in SQL.
+
+### Start from traces when you want traces back
+
+Signal events are also attached to the traces they came from, as a `signal_events` column on the `traces` table. Unnest it and you get trace columns and event fields side by side, with no join:
+
+```sql
+SELECT
+    id AS trace_id,
+    end_time,
+    total_cost,
+    e.signal_id,
+    e.severity,
+    substring(e.payload, 1, 2000) AS payload
+FROM traces
+ARRAY JOIN signal_events AS e
+WHERE start_time > now() - INTERVAL 1 DAY
+  AND e.severity >= 1
+ORDER BY end_time DESC
+LIMIT 100
+```
+
+Each tuple has `event_id`, `signal_id`, `severity`, and `payload`. Traces no Signal fired on have an empty array, so `notEmpty(signal_events)` and `empty(signal_events)` are the cheap way to count coverage. The [clusters column](/signals/clusters#querying-clusters-with-sql) on `traces` works the same way.
+
+Query `signal_events` directly, as below, when the row you want back is an event.
 
 ### Quick payload filter (UI-equivalent)
 

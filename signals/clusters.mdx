@@ -68,10 +68,26 @@ If your Signal has a small, well-defined set of payload fields (say, a category 
 
 ## Querying clusters with SQL
 
-Clusters are queryable in the [SQL Editor](/platform/sql-editor):
+Clusters are queryable in the [SQL Editor](/platform/sql-editor) from three directions.
 
-- The `clusters` table has one row per named cluster, including `name`, `level`, `parent_id`, and `num_signal_events`, so you can reconstruct the hierarchy or trend cluster sizes over time.
-- The `signal_events` table has a `clusters` column: the IDs of every cluster an event belongs to, from its most specific cluster up through its parents.
+**Start from traces.** The `traces` table has a `clusters` column carrying the clusters this trace's signal events landed in, names and counts already resolved. This is the shortest path to *which runs are in this cluster*, and the only one that lets you put cluster names next to trace cost, duration, or metadata:
+
+```sql
+SELECT
+    c.name AS cluster,
+    count() AS traces,
+    round(sum(total_cost), 4) AS cost
+FROM traces
+ARRAY JOIN clusters AS c
+WHERE start_time > now() - INTERVAL 7 DAY
+  AND c.level = 1
+GROUP BY cluster
+ORDER BY cost DESC
+```
+
+**Start from events.** The `signal_events` table has `clusters` (every cluster an event belongs to, from its most specific one up through its parents), `leaf_clusters` (only the most specific ones), and `cluster_details` (the same clusters with their names and levels resolved).
+
+**Start from the clusters.** The `clusters` table has one row per named cluster, including `name`, `level`, `parent_id`, and `num_signal_events`, so you can reconstruct the hierarchy or trend cluster sizes over time.
 
 ## Next steps
 
@@ -80,6 +96,6 @@ Clusters are queryable in the [SQL Editor](/platform/sql-editor):
     Fire Slack or email notifications on new signal events or clusters.
   </Card>
   <Card title="SQL Editor" href="/platform/sql-editor" icon="database">
-    Query the `clusters` and `signal_events` tables directly.
+    Query clusters off `traces`, or the `clusters` and `signal_events` tables directly.
   </Card>
 </CardGroup>

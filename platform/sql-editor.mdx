@@ -9,7 +9,7 @@ Query all your Laminar data directly with SQL. Find patterns, debug issues, and 
 | Table | Contains |
 |-------|----------|
 | spans | Individual spans (LLM/tool/custom/eval spans) with events and tags |
-| traces | Trace-level aggregates derived from spans |
+| traces | Trace-level aggregates derived from spans, plus the signal events and clusters attached to the trace |
 | trace_outputs | Extracted final agent output per trace |
 | signal_events | Signal-triggered events and payloads (excludes L0-cluster membership) |
 | signal_events_all | Same as signal_events but with L0-cluster membership included |
@@ -76,6 +76,28 @@ FROM traces
 WHERE id IN ('id1', 'id2', 'id3')
 ```
 
+### Read signals and clusters off traces
+
+`traces` carries the signal events that fired on the trace and the clusters those events landed in. Any question of the form *which traces did X* is answerable without touching `signal_events` or `clusters`:
+
+```sql
+-- Volume and cost per cluster, straight off traces
+SELECT
+    c.name AS cluster,
+    count() AS traces,
+    round(sum(total_cost), 4) AS cost
+FROM traces
+ARRAY JOIN clusters AS c
+WHERE start_time > now() - INTERVAL 7 DAY
+  AND c.level = 1
+GROUP BY cluster
+ORDER BY cost DESC
+```
+
+The same query written as a join goes through `signal_events` to reach `clusters`, costs two joins, and still can't reach trace cost or duration without a third. Prefer the trace-side columns whenever the row you want back is a trace.
+
+Go to `signal_events` when the row you want back is an event: per-run counts, signal versions, or payload fields you need to filter on precisely. See [signal_events](#signal_events) for those columns and [Signal events](#signal-events) / [Clusters on traces](#clusters-on-traces) for the trace-side ones.
+
 ### Working with dates
 
 Truncate timestamps for grouping with `toStartOfInterval`:
@@ -121,9 +143,11 @@ For complex operations (array indexing, nested paths), use `JSONExtract*` functi
 
 ### Working with tuples
 
-Some columns store data as arrays of named tuples. The most common examples are:
+Some columns store data as arrays of tuples. The most common examples are:
 - `spans.events`: `Array(Tuple(timestamp Int64, name String, attributes String))`
 - `evaluation_datapoints.trace_spans`: `Array(Tuple(name String, duration Float64, type String))`
+- `traces.signal_events`: `Array(Tuple(event_id UUID, signal_id UUID, severity UInt8, payload String))`
+- `traces.clusters`: `Array(Tuple(id UUID, signal_id UUID, name String, level UInt8, parent_id UUID, num_signal_events UInt32, created_at DateTime64(9, 'UTC'), updated_at DateTime64(9, 'UTC')))`
 
 Use `tupleElement(tuple, 'fieldName')` to extract fields from tuples:
 
@@ -175,6 +199,19 @@ WHERE length(events) > 0
   AND start_time > now() - INTERVAL 1 DAY
 LIMIT 10
 ```
+
+When the tuple fields are named, the shorter `alias.field` form works too, both inside a lambda and after an `ARRAY JOIN`:
+
+```sql
+-- Equivalent to tupleElement(c, 'name')
+SELECT id, arrayMap(c -> c.name, clusters) AS cluster_names
+FROM traces
+WHERE start_time > now() - INTERVAL 1 DAY
+  AND notEmpty(clusters)
+LIMIT 10
+```
+
+One column is an exception: `signal_events.cluster_details` is an unnamed tuple, so field names don't resolve on it. Use positional access (`c.1`, `c.2`, `c.3`) there, in the order the type declares. Every other tuple column on this page is named.
 
 ### Data types
 
@@ -371,6 +408,8 @@ LIMIT 100
 | `span_names` | `Array(String)` | `["run", "openai.chat", "tool.search"]` |
 | `agent_input` | `String` | `"[{\"role\": \"user\", \"content\": \"Hello\"}]"` |
 | `has_browser_session` | `Bool` | `true` |
+| `signal_events` | `Array(Tuple(event_id UUID, signal_id UUID, severity UInt8, payload String))` | `[Tuple('01234567-89ab-4def-8234-426614174000', '11111111-2222-4333-9444-555555555555', 2, '{"error_type": "timeout"}')]` |
+| `clusters` | `Array(Tuple(id UUID, signal_id UUID, name String, level UInt8, parent_id UUID, num_signal_events UInt32, created_at DateTime64(9, 'UTC'), updated_at DateTime64(9, 'UTC')))` | `[Tuple('aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee', '11111111-2222-4333-9444-555555555555', 'Checkout timeouts', 1, 'ffffffff-0000-4111-8222-333333333333', 42, '2021-01-01 00:00:00', '2021-01-02 00:00:00')]` |
 
 `id` is the trace ID; join to spans with `spans.trace_id = traces.id`.
 
@@ -414,6 +453,71 @@ Status is set to `error` if any span in the trace has status `error`, otherwise 
 
 Metadata is stored as a string in JSON format. That is, you can safely `JSON.parse` / `json.loads` it. In addition, you can use JSON* and simpleJSON* functions on it right in the queries. Metadata is guaranteed to be a valid JSON object.
 
+#### Signal events
+
+`signal_events` holds every [signal](/signals/introduction) event that fired on the trace, so you can go from a trace to its signals without a join. Each tuple has:
+
+- `event_id` (UUID): the matching row in [signal_events](#signal_events)
+- `signal_id` (UUID): which Signal fired
+- `severity` (UInt8): `0` (INFO), `1` (WARNING), `2` (CRITICAL)
+- `payload` (String): the event payload as JSON, same content as `signal_events.payload`
+
+The array is empty for traces no Signal fired on. Events carry no separate timestamp here: a signal event happens at the end of the trace it was extracted from, so use the trace's `end_time`. Signal names are not denormalized either, so group by `signal_id` and label the results in your application, or read `name` from [signal_events](#signal_events).
+
+Both `signal_events` and `clusters` are filled in for older traces progressively, so a trace from before the columns existed can read empty here while its events are still present in the [signal_events](#signal_events) table. New traces are populated as they land.
+
+`ARRAY JOIN` gives one row per event:
+
+```sql
+-- Warning-and-above signal events on recent traces
+SELECT
+    id AS trace_id,
+    end_time,
+    e.signal_id,
+    e.severity,
+    substring(e.payload, 1, 2000) AS payload
+FROM traces
+ARRAY JOIN signal_events AS e
+WHERE start_time > now() - INTERVAL 1 DAY
+  AND e.severity >= 1
+ORDER BY end_time DESC
+LIMIT 100
+```
+
+Two things to keep in mind:
+
+- **Select `payload` truncated.** Payloads are the largest thing on the row and a single oversized row can exceed the result-size limit. `substring(e.payload, 1, 2000)` is enough for triage; go to `signal_events` for one specific event when you need the whole thing.
+- **Reading any field of the tuple reads the payload with it**, so always keep the `start_time` filter. Counting alone is cheap: `empty()` and `notEmpty()` only read the array length.
+
+```sql
+-- What share of traces triggered a Signal?
+SELECT
+    countIf(notEmpty(signal_events)) AS with_signal,
+    countIf(empty(signal_events)) AS without_signal
+FROM traces
+WHERE start_time > now() - INTERVAL 1 DAY
+```
+
+#### Clusters on traces
+
+`clusters` holds the named [clusters](/signals/clusters) this trace's signal events belong to, resolved down to names and counts. Fields match the [clusters](#clusters) table: `id`, `signal_id`, `name`, `level`, `parent_id`, `num_signal_events`, `created_at`, `updated_at`.
+
+The array is empty until the trace's events have been clustered, and stays empty for traces with no events at all.
+
+Ancestors are included as their own elements, not nested: a trace whose event sits in the L1 cluster *Checkout timeouts* under the L2 cluster *Payment failures* gets both, and you walk between them with `parent_id`. Filter on `level` to pick a granularity: `c.level = 1` is the finest named grouping.
+
+```sql
+-- Traces in a named cluster, no unnesting needed
+SELECT id, start_time, total_cost
+FROM traces
+WHERE start_time > now() - INTERVAL 1 DAY
+  AND arrayExists(c -> c.name = 'Checkout timeouts', clusters)
+ORDER BY start_time DESC
+LIMIT 100
+```
+
+`num_signal_events` is the size of the whole cluster, not the trace's contribution to it. Use `count()` over the unnested rows for the latter.
+
 ### trace_outputs
 
 The extracted final agent output per trace: the output-message array of the last LLM call on the trace's main-agent path. One row per trace.
@@ -451,42 +555,60 @@ LIMIT 10
 | `payload` | `String` | `"{\"error_type\": \"timeout\", \"count\": 3}"` |
 | `timestamp` | `DateTime64(9, 'UTC')` | `"2021-01-01 00:00:00"` |
 | `severity` | `UInt8` | `2` |
-| `summary` | `String` | `"Checkout request timed out after 3 retries"` |
+| `signal_version` | `UInt32` | `3` |
 | `clusters` | `Array(UUID)` | `["aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"]` |
+| `leaf_clusters` | `Array(UUID)` | `["aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"]` |
+| `cluster_details` | `Array(Tuple(UUID, String, UInt8))` | `[Tuple('aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee', 'Checkout timeouts', 1)]` |
+
+<Note>
+If the row you want back is a trace rather than an event, read [signal_events](#signal-events) and [clusters](#clusters-on-traces) off the `traces` table instead. It answers the same questions with no join.
+</Note>
 
 #### Payload
 
 The `payload` column is stored as a string in JSON format. That is, you can safely `JSON.parse` / `json.loads` it. In addition, you can use JSON* and simpleJSON* functions on it right in the queries. Payload is guaranteed to be a valid JSON object.
 
+Payloads can be large. When selecting many rows, truncate with `substring(payload, 1, 2000)` rather than pulling the whole column.
+
 #### Severity
 
 `severity` is a numeric level matching the alert thresholds: `0` (INFO), `1` (WARNING), `2` (CRITICAL).
 
-#### Summary
+#### Signal version
 
-`summary` is a short, human-readable description of the event produced by the Signal. It may be empty for older events.
+`signal_version` is the version of the Signal definition that produced the event. It increments every time you change the definition (name, prompt, output schema, trigger, filters, processing mode, sample rate, model, or whether the Signal is paused), so it separates events extracted under an old definition from events extracted under the current one. It is `0` for events that predate versioning.
 
-#### Clusters
+#### Cluster columns
 
-`clusters` is the list of cluster IDs this event belongs to (see [Clusters](/signals/clusters)). Only non-L0 clusters are included.
+Three columns describe cluster membership (see [Clusters](/signals/clusters)). All three exclude L0 clusters and are empty for events that have not been clustered yet.
+
+| Column | Contains |
+|--------|----------|
+| `clusters` | Every named cluster the event belongs to: its finest cluster plus that cluster's ancestors |
+| `leaf_clusters` | Only the finest named clusters (level 1), without the ancestors |
+| `cluster_details` | The same clusters as `clusters`, with `name` and `level` resolved, so you don't have to join |
+
+`cluster_details` is an unnamed tuple of `(id, name, level)`, so read it positionally:
+
+```sql
+SELECT
+    id,
+    severity,
+    arrayStringConcat(arrayMap(c -> c.2, cluster_details), ', ') AS cluster_names
+FROM signal_events
+WHERE timestamp > now() - INTERVAL 1 DAY
+  AND notEmpty(cluster_details)
+LIMIT 100
+```
+
+Unnest `leaf_clusters` when you want each event counted exactly once. Unnesting `clusters` counts an event once per level of the hierarchy it sits in, which is what you want for a roll-up and not what you want for a total.
 
 
 ### signal_events_all
 
-Same schema as `signal_events`, but the `clusters` column includes L0-cluster membership as well. Use this when you need to resolve or list events that belong to an L0 cluster; use `signal_events` for everything else.
+Same columns as `signal_events`, but `clusters` and `cluster_details` include L0-cluster membership as well. Use this when you need to resolve or list events that belong to an L0 cluster; use `signal_events` for everything else.
 
-| Column | Type | Example value |
-|--------|------|---------------|
-| `id` | `UUID` | `"01234567-89ab-4def-8234-426614174000"` |
-| `signal_id` | `UUID` | `"11111111-2222-4333-9444-555555555555"` |
-| `trace_id` | `UUID` | `"01234567-1234-4def-a234-426614174000"` |
-| `run_id` | `UUID` | `"22222222-3333-4444-b555-666666666666"` |
-| `name` | `String` | `"error.clustered"` |
-| `payload` | `String` | `"{\"error_type\": \"timeout\", \"count\": 3}"` |
-| `timestamp` | `DateTime64(9, 'UTC')` | `"2021-01-01 00:00:00"` |
-| `severity` | `UInt8` | `2` |
-| `summary` | `String` | `"Checkout request timed out after 3 retries"` |
-| `clusters` | `Array(UUID)` | `["aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"]` |
+L0 clusters are unnamed, so they show up in `cluster_details` with an empty `name` and `level` of `0`. `leaf_clusters` is unaffected: it lists level-1 clusters on both tables.
 
 
 ### signal_runs
@@ -524,6 +646,8 @@ Same schema as `signal_events`, but the `clusters` column includes L0-cluster me
 
 Clusters group similar signal events into a hierarchy (see [Clusters](/signals/clusters)). Each row is one cluster. L0 (lowest-level) clusters are excluded.
 
+Use this table for questions about the clusters themselves: their sizes, their names, how the hierarchy is shaped. For *which traces are in this cluster*, read the [clusters column on traces](#clusters-on-traces) instead.
+
 | Column | Type | Example value |
 |--------|------|---------------|
 | `id` | `UUID` | `"aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"` |
@@ -539,6 +663,10 @@ Clusters group similar signal events into a hierarchy (see [Clusters](/signals/c
 #### Level
 
 `level` is the cluster's position in the hierarchy. Leaf-level (L0) clusters are excluded from this table; `level` is always greater than `0`.
+
+#### Event counts
+
+`num_signal_events` is the cluster's own size, including everything in its descendants. It can be higher than the number of distinct events in the cluster: an event that describes more than one behavior is clustered once per behavior. Count the unnested rows on `traces` or `signal_events` when you need a distinct-event figure.
 
 
 ### event_clusters_all
@@ -733,6 +861,42 @@ SELECT
 FROM spans
 WHERE span_type = 'LLM'
   AND start_time > now() - INTERVAL 1 DAY
+```
+
+**Severity mix per Signal, read off traces:**
+```sql
+SELECT
+    e.signal_id AS signal_id,
+    countIf(e.severity = 2) AS critical,
+    countIf(e.severity = 1) AS warning,
+    countIf(e.severity = 0) AS info
+FROM traces
+ARRAY JOIN signal_events AS e
+WHERE start_time > now() - INTERVAL 7 DAY
+GROUP BY signal_id
+ORDER BY critical DESC
+```
+
+**Traces that fired a Signal but haven't been clustered yet:**
+```sql
+SELECT count() AS traces
+FROM traces
+WHERE start_time > now() - INTERVAL 1 DAY
+  AND notEmpty(signal_events)
+  AND empty(clusters)
+```
+
+**Cluster hierarchy with parent names:**
+```sql
+SELECT
+    c.name AS cluster,
+    c.level AS level,
+    c.num_signal_events AS events,
+    c.num_children_clusters AS children,
+    p.name AS parent
+FROM clusters AS c
+LEFT JOIN clusters AS p ON p.id = c.parent_id
+ORDER BY level DESC, events DESC
 ```
 
 **Average cost per evaluation datapoint:**
