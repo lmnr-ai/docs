@@ -1,0 +1,188 @@
+---
+title: LLM Profiles for Custom LLM Providers and API Keys
+sidebarTitle: LLM profiles
+---
+
+Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. An **LLM profile** bundles a provider, the credentials for it, and the list of models you want to use into one workspace-level entry. Profiles are what the [playground](/playground) runs on, and on self-hosted deployments they are what [Signals](/signals/introduction) run on. Add a profile for a first-party provider (OpenAI, Anthropic, Google Gemini, Groq, Mistral, AWS Bedrock, Azure AI Foundry) or point one at any OpenAI-compatible gateway, including a model you host yourself.
+
+<Frame caption="Workspace settings: three LLM profiles, each with the models it exposes">
+  <img src="/images/platform/llm-profiles-list.png" alt="LLM profiles settings page listing an OpenAI, Anthropic, and custom gateway profile with their models" />
+</Frame>
+
+Profiles are **workspace-scoped**: create one once and every project in the workspace can use it. Any workspace member can add, edit, and delete profiles.
+
+## Create a profile
+
+<Steps>
+  <Step title="Open LLM profiles">
+    Go to **Settings > LLM profiles**, under **Workspace settings**, and click **Profile**.
+  </Step>
+  <Step title="Name it and pick a provider">
+    The name is how the profile appears in the playground and Signal pickers, and it must be unique in the workspace. Pick the provider, then fill in the fields it asks for. See [Providers](#providers) below for what each one needs.
+
+    <Frame caption="The profile form: provider credentials on top, the model list below, Test connection on the left">
+      <img src="/images/platform/llm-profile-form.png" alt="New LLM profile side sheet with name, provider, API key, and model list fields" />
+    </Frame>
+  </Step>
+  <Step title="List the models">
+    Add every model you want this profile to offer, written exactly as the provider expects it (`gpt-5-mini`, `claude-sonnet-4-5-20250929`, `anthropic.claude-sonnet-4-5-20250929-v1:0`). Laminar does not fetch a model catalog: the list you type is the list the playground and Signal pickers show. One model minimum, 64 maximum per profile.
+  </Step>
+  <Step title="Test the connection">
+    **Test connection** sends one small request per listed model with the credentials in the form, and reports the round trip per model. A model that the provider rejects (wrong name, no access, bad key) shows the provider's own error, so you can fix it before saving.
+  </Step>
+  <Step title="Save">
+    Click **Create**. The profile is immediately selectable in every project in the workspace.
+  </Step>
+</Steps>
+
+## Providers
+
+One profile is one provider and one set of credentials. For OpenAI and Azure AI Foundry, also pick the **API shape**, which is the endpoint your deployments speak.
+
+| Provider | API shape | Fields |
+|---|---|---|
+| **OpenAI** | Chat Completions or Responses API | API key |
+| **Anthropic** | - | API key |
+| **Google Gemini** | - | API key |
+| **Groq** | - | API key |
+| **Mistral** | - | API key |
+| **AWS Bedrock** | - | AWS region, then either an access key ID with its secret access key, or a Bedrock API key (bearer token) |
+| **Azure AI Foundry** | Chat Completions, Responses API, or Anthropic Messages | API key, plus either the resource name (the `<name>` in `https://<name>.services.ai.azure.com`) or a full base URL. Optional API version |
+| **Custom (OpenAI-compatible)** | - | Base URL, API key, and any number of custom headers |
+
+A few notes on the less obvious ones:
+
+- **API shape is not the same as the model.** One Azure AI Foundry resource can serve all three shapes; pick the one the deployment you are calling speaks. Switching shape within a provider keeps the stored credentials, since the key is the same.
+- **Bedrock** takes long-form model ids, including the inference-profile prefix when you use one (`us.anthropic.claude-sonnet-4-5-20250929-v1:0`).
+- **Custom** speaks OpenAI Chat Completions only. Give it the API root; Laminar appends `/chat/completions`. Header names are stored with the profile, header values are stored as secrets. This is the option for vLLM, Ollama behind a proxy, LiteLLM, OpenRouter, an internal gateway, or any other OpenAI-compatible endpoint.
+
+## How credentials are stored
+
+Every secret in a profile (API keys, AWS secret access keys, bearer tokens, custom header values) is encrypted at rest and **write-only**. Reads return a masked hint instead of the value: `sk-***********kEA`, or fully starred for a short value, plus the names of any custom headers. That is enough to tell which key a profile holds, and never enough to reuse it.
+
+Because secrets are write-only, editing a profile does not require retyping them. Leave a secret field blank and the stored value is kept; type a new value to rotate it. The same rule applies over the API: an omitted secret keeps what is stored.
+
+<Note>
+  On self-hosted deployments, profile secrets are encrypted with your own `AEAD_SECRET_KEY`, the same key that encrypts project API keys. See [Self-hosting configuration](/self-hosting/configuration).
+</Note>
+
+## Run the playground on a profile
+
+The playground's model picker is built from the workspace's profiles: one submenu per profile, listing that profile's models. Pick a profile and model, and the run uses that profile's credentials.
+
+<Frame caption="The playground model picker: one submenu per profile, models listed as you entered them">
+  <img src="/images/platform/llm-profile-playground-select.png" alt="Playground model dropdown showing LLM profiles with their models in submenus" />
+</Frame>
+
+A workspace with no profiles gets a **No LLM profiles configured** notice in place of the picker, with a link to settings. **Open in playground** on a traced LLM span binds the playground to a profile only when one of your profiles lists that span's model verbatim; otherwise the rest of the span (messages, tools, parameters) is copied over and you pick the model.
+
+Deleting a profile, or removing a model from it, clears that selection on any playground that used it. The playground reopens with **Select model** and everything else intact.
+
+## Route Signals through a profile
+
+<Note>
+  Selecting a profile for a Signal is available on **self-hosted deployments**. On Laminar Cloud, Signals run on Laminar's own model credentials and no profile is involved.
+</Note>
+
+On a self-hosted deployment, each [Signal](/signals/introduction) runs on one profile and one of its models. The **LLM** section of the Signal form holds the pair:
+
+<Frame caption="The Signal form's LLM section: profile on the left, one of its models on the right">
+  <img src="/images/platform/llm-profile-signal-section.png" alt="Signal creation drawer showing the LLM profile and model selects" />
+</Frame>
+
+- **New Signals must pick a profile and a model.** If the workspace has exactly one profile, it is preselected with its first model. With no profiles at all, the picker reads **No profiles yet** and the Signal cannot be created until you add one.
+- **Signals created before you added profiles keep running** on the server's `LLM_PROVIDER` environment configuration. The form flags them so you can move them onto a profile; there is no way back to environment credentials once a Signal points at a profile.
+- **The selected model serves the whole run.** A profile-backed Signal ignores the server's environment-level provider and model-size settings.
+- **A bad profile fails the run, visibly.** A revoked key, a model you lost access to, or a deleted profile fails the Signal run with the provider's error and the profile name, so the Runs tab tells you what to fix instead of retrying forever.
+
+Deleting a profile, or removing a model, is **refused while a Signal uses it**. Re-point or delete those Signals first. This is the opposite of the playground, where the same delete just clears the selection.
+
+Other AI features on a self-hosted deployment (chat with trace, SQL with AI, trace clustering) still use the server's `LLM_PROVIDER` and `LLM_API_KEY`. Profiles do not replace those. See [Self-hosting configuration](/self-hosting/configuration#ai-features-and-llm-provider).
+
+## Manage profiles over the API
+
+Profiles are also full CRUD over HTTP, authenticated with a project API key from **Settings > Project API keys**. A project key manages the profiles of the workspace that project belongs to.
+
+<Note>
+Self-hosting: replace the base URL with your app-server HTTP origin, including the port. For example, `http://localhost:8000/v1/llm-profiles`.
+</Note>
+
+| Method | Path |
+|---|---|
+| `GET` | `/v1/llm-profiles` |
+| `POST` | `/v1/llm-profiles` |
+| `GET` | `/v1/llm-profiles/{id}` |
+| `PATCH` | `/v1/llm-profiles/{id}` |
+| `DELETE` | `/v1/llm-profiles/{id}` |
+
+Create a profile:
+
+```bash
+curl -X POST https://api.lmnr.ai/v1/llm-profiles \
+  -H "Authorization: Bearer $LMNR_PROJECT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Production OpenAI",
+    "provider": "openai_responses",
+    "secrets": { "apiKey": "sk-..." },
+    "models": ["gpt-5-mini", "gpt-4.1-mini"]
+  }'
+```
+
+```json
+{
+  "id": "23ea6106-6ec8-4d1b-b2bc-5423272244b3",
+  "workspaceId": "929e0d7d-98b2-445a-a6fc-1e8607248571",
+  "name": "Production OpenAI",
+  "provider": "openai_responses",
+  "config": { "auth": { "type": "api_key" } },
+  "models": ["gpt-4.1-mini", "gpt-5-mini"],
+  "secrets": {
+    "apiKey": "sk-*********************kEA",
+    "secretAccessKey": null,
+    "token": null,
+    "headers": []
+  },
+  "createdAt": "2026-09-14T17:26:23.338936Z",
+  "updatedAt": "2026-09-14T17:26:23.338936Z"
+}
+```
+
+`provider` is one of `openai_completions`, `openai_responses`, `anthropic`, `gemini`, `groq`, `mistral`, `bedrock`, `azure_chat_completions`, `azure_responses`, `azure_anthropic`, `custom`. `config` carries the plaintext, provider-specific settings and `secrets` the credentials, split exactly as the form does it:
+
+```bash
+# Bedrock with AWS keys
+-d '{
+  "name": "Bedrock EU",
+  "provider": "bedrock",
+  "config": { "region": "eu-west-1", "auth": { "type": "aws_keys", "accessKeyId": "AKIA..." } },
+  "secrets": { "secretAccessKey": "..." },
+  "models": ["eu.anthropic.claude-sonnet-4-5-20250929-v1:0"]
+}'
+
+# OpenAI-compatible gateway with a custom header
+-d '{
+  "name": "Internal gateway",
+  "provider": "custom",
+  "config": {
+    "baseUrl": "https://gateway.internal.example.com/v1",
+    "headerNames": ["X-Team"]
+  },
+  "secrets": { "apiKey": "gw-...", "headers": { "X-Team": "ml-platform" } },
+  "models": ["llama-3.3-70b"]
+}'
+```
+
+`PATCH` is a partial update: every field is optional, omitted secrets keep their stored values, and `models` replaces the whole list. Two things to watch:
+
+- Changing `provider` requires sending `config` with it (`400 config is required when provider changes`).
+- Sending any `config` replaces the whole object, so include every field the provider needs, not just the one you are changing.
+
+Errors come back as `{"error": "..."}` with a message you can show as-is: `400` for validation (`Add at least one model`, `apiKey is required`), `409` for a duplicate name or a profile a Signal still uses, `404` for a profile that is not in the caller's workspace.
+
+## Next steps
+
+- [Playground](/playground) - iterate on prompts, tools, and models on top of a profile.
+- [Signals](/signals/introduction) - extract structured outcomes and failures from your traces.
+- [Self-hosting configuration](/self-hosting/configuration) - the environment-level LLM settings that the rest of the AI features use.
+- [Custom model costs](/platform/custom-model-costs) - price the models a custom or self-hosted profile calls.

@@ -146,6 +146,7 @@
               "platform/pii-redaction",
               "custom-dashboards/overview",
               "queues/quickstart",
+              "platform/llm-profiles",
               "playground"
             ]
           }

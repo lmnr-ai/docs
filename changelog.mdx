@@ -4,6 +4,10 @@ title: Changelog
 
 New releases and improvements.
 
+## September 2026
+
+- **LLM profiles** - Bring your own provider credentials. An [LLM profile](/platform/llm-profiles) is a workspace-level entry holding a provider, its API keys, and the exact list of models you want to expose: OpenAI, Anthropic, Google Gemini, Groq, Mistral, AWS Bedrock, Azure AI Foundry, or any OpenAI-compatible gateway including a model you host yourself. The [playground](/playground) model picker is built from your profiles, and on self-hosted deployments each [Signal](/signals/introduction) runs on a profile and one of its models instead of the server's `LLM_PROVIDER` environment configuration. Secrets are write-only and encrypted at rest, and **Test connection** checks every model in the profile before you save.
+
 ## August 2026
 
 - **Flush span batches by payload size** - Both SDKs can now export a batch when its payload would cross a byte limit, alongside the existing span-count and scheduled-delay triggers. Turn it on with `Laminar.initialize({ flushBySize: true })` in TypeScript or `Laminar.initialize(flush_by_size=True)` in Python, and set `maxExportBatchSizeBytes` / `max_export_batch_size_bytes` if 32 MiB is not the right ceiling. Useful for agents whose spans carry whole conversation histories, where a few spans are enough to build an export the backend rejects. See [Batching](/sdk/batching).
