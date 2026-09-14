@@ -16,16 +16,16 @@ A cluster is a group of signal events whose summaries are semantically similar. 
 Read top-down when you want the shape of the problem (*"most failures are tool loops"*). Read bottom-up when you want the specific example (*"this one loop is the config-validation tool calling itself twelve times"*).
 
 <Note>
-Clustering is fully automatic. You will start to see clusters as more traces are processed.
+Clustering is fully automatic. There is nothing to enable per Signal; clusters appear as events accumulate.
 </Note>
 
 ## Where to find them
 
 On any Signal detail page, open the **Events** tab. The clusters view sits above the events table:
 
-- **The icicle strip.** One row per level of the hierarchy, broadest at the top and most specific at the bottom, with each band's width proportional to its event count. A band sitting under another is one of its sub-clusters, so the whole tree is readable at a glance without expanding anything. When a row has more clusters than it has width for, the smallest fold into a **+N** counter you can open to see the rest.
+- **The icicle strip.** One row per level of the hierarchy, broadest at the top and most specific at the bottom, with each band's width proportional to its event count. A band sitting under another is one of its sub-clusters, so the whole tree reads at a glance without expanding anything. When a row runs out of width, the smallest bands fold into a **+N** counter you can open.
 - **The frequency chart.** Each cluster is a stacked series over time, with a **Signal runs** overlay so you can read cluster volume against how often the Signal ran.
-- **The readout**, pinned over the top-left of the chart. It names whatever cluster is in focus and gives its event count, its share of traces, and its sub-cluster count. With nothing in focus it shows the total cluster count for the range instead.
+- **The readout**, pinned over the top-left of the chart. It names whatever cluster is in focus and gives its event count, its share of traces, and its sub-cluster count. With nothing in focus it shows the total cluster count for the range.
 
 Hover a band to highlight its branch and see its details. Click the band to pin that cluster in the readout and filter the events table to its members; click it again to clear the selection. From any event you can jump to the trace that produced it. Everything respects the page-level **time range**.
 
@@ -50,9 +50,7 @@ Clustering runs asynchronously, after events are created:
 3. Each event in the batch either joins the closest existing group or starts a new one. As related events accumulate, named clusters appear in the UI; events that have not joined a named cluster sit in the **Unclustered** bucket.
 4. If the batch created new clusters or meaningfully changed existing ones, names are generated or refreshed.
 
-Two consequences worth knowing:
-
-- An event shows up in the events table immediately but can take a minute or two to land in a cluster. During a live incident, expect cluster counts to trail the event count slightly.
+An event shows up in the events table immediately but can take a minute or two to land in a cluster, so during a live incident expect cluster counts to trail the event count slightly.
 
 Clusters are a view over the underlying events, not a copy. Deleting a Signal or purging events removes cluster membership automatically.
 
@@ -68,26 +66,13 @@ If your Signal has a small, well-defined set of payload fields (say, a category 
 
 ## Querying clusters with SQL
 
-Clusters are queryable in the [SQL Editor](/platform/sql-editor) from three directions.
+Clusters are queryable in the [SQL Editor](/platform/sql-editor) from three directions:
 
-**Start from traces.** The `traces` table has a `clusters` column carrying the clusters this trace's signal events landed in, names and counts already resolved. This is the shortest path to *which runs are in this cluster*, and the only one that lets you put cluster names next to trace cost, duration, or metadata:
+- **From traces.** `traces.clusters` carries the clusters a trace's signal events landed in, names and counts already resolved. The shortest path to *which runs are in this cluster*, and the only one that puts cluster names next to trace cost, duration, and metadata.
+- **From events.** `signal_events` has `clusters` (every cluster an event belongs to, from its most specific one up through its parents), `leaf_clusters` (only the most specific ones), and `cluster_details` (the same clusters with their names and levels resolved).
+- **From the clusters themselves.** The `clusters` table has one row per named cluster, including `name`, `level`, `parent_id`, and `num_signal_events`, so you can reconstruct the hierarchy or trend cluster sizes over time.
 
-```sql
-SELECT
-    c.name AS cluster,
-    count() AS traces,
-    round(sum(total_cost), 4) AS cost
-FROM traces
-ARRAY JOIN clusters AS c
-WHERE start_time > now() - INTERVAL 7 DAY
-  AND c.level = 1
-GROUP BY cluster
-ORDER BY cost DESC
-```
-
-**Start from events.** The `signal_events` table has `clusters` (every cluster an event belongs to, from its most specific one up through its parents), `leaf_clusters` (only the most specific ones), and `cluster_details` (the same clusters with their names and levels resolved).
-
-**Start from the clusters.** The `clusters` table has one row per named cluster, including `name`, `level`, `parent_id`, and `num_signal_events`, so you can reconstruct the hierarchy or trend cluster sizes over time.
+See [Clusters on traces](/platform/sql-editor#clusters-on-traces) for example queries against each.
 
 ## Next steps
 

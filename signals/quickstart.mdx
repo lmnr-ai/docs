@@ -141,7 +141,7 @@ By default, Signals will notify the creator of critical events through the platf
 
 ## 4. Manage the Signal
 
-A Signal can evaluate new traces as they arrive, or a historical slice. Open a Signal and click **Settings** to manage both from a sidebar with three sections: **General** (definition, trigger, and filters), **Alerts**, and **Backfill**. Every evaluation the Signal performs is listed on the Signal's own **Runs** tab, alongside **Events** and **Settings**.
+A Signal can evaluate new traces as they arrive, or a historical slice. Open a Signal and click **Settings** to manage both from a sidebar with three sections: **General** (definition, trigger, and filters), **Alerts**, and **Backfill**. Every evaluation the Signal performs is listed on the **Runs** tab, next to **Events** and **Settings**.
 
 <Frame caption="Signal Settings > General: prompt, output schema, trigger, filters, and sampling">
   <img
@@ -167,7 +167,7 @@ Use **Backfill** to run a Signal across historical traces, for example to evalua
 4. Choose **specific traces** or **all traces matching your filters**.
 5. Click **Start backfill**. Laminar enqueues one Run per trace.
 
-Runs appear on the **Runs** tab with a status (Pending, Processing, Completed, Failed). Backfilled Runs are marked as such, so you can tell them from the Runs a live trigger produced. Each Run that detects the Signal links to the resulting event in the **Events** tab, and every Run reports the token cost of the evaluation.
+Runs appear on the **Runs** tab with a status (Pending, Processing, Completed, Failed), a source that distinguishes backfilled Runs from the ones a live trigger produced, and the token cost of the evaluation. Each Run that detected the Signal links to the event it created.
 
 <Frame caption="The Runs tab: one row per evaluated trace with its source, status, cost, and the event it produced">
   <img
@@ -227,29 +227,7 @@ From here you can:
 
 `signal_events` stores each event's payload as a JSON string. The UI's payload filter uses `simpleJSONExtractString` / `simpleJSONExtractRaw`, so you can mirror the same behavior in SQL.
 
-### Start from traces when you want traces back
-
-Signal events are also attached to the traces they came from, as a `signal_events` column on the `traces` table. Unnest it and you get trace columns and event fields side by side, with no join:
-
-```sql
-SELECT
-    id AS trace_id,
-    end_time,
-    total_cost,
-    e.signal_id,
-    e.severity,
-    substring(e.payload, 1, 2000) AS payload
-FROM traces
-ARRAY JOIN signal_events AS e
-WHERE start_time > now() - INTERVAL 1 DAY
-  AND e.severity >= 1
-ORDER BY end_time DESC
-LIMIT 100
-```
-
-Each tuple has `event_id`, `signal_id`, `severity`, and `payload`. Traces no Signal fired on have an empty array, so `notEmpty(signal_events)` and `empty(signal_events)` are the cheap way to count coverage. The [clusters column](/signals/clusters#querying-clusters-with-sql) on `traces` works the same way.
-
-Query `signal_events` directly, as below, when the row you want back is an event.
+Events are also attached to the traces they came from, as `signal_events` and `clusters` columns on the `traces` table. Read them from there when the row you want back is a trace: see [Signal events on traces](/platform/sql-editor#signal-events-on-traces).
 
 ### Quick payload filter (UI-equivalent)
 

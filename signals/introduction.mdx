@@ -129,7 +129,7 @@ Each finding becomes a **signal event** linked back to the trace that produced i
 - It's queued for **clustering**, where Laminar groups it with similar events from other traces so patterns surface as [Clusters](/signals/clusters).
 
 <Note>
-  Signal events are accessible via the `signal_events` table and can be easily queried using the [SQL Editor](/platform/sql-editor). They are also attached to the traces that produced them, as `signal_events` and `clusters` columns on the `traces` table, so a signal event payload really is just another column of a trace: `FROM traces ARRAY JOIN signal_events AS e` and you can filter runs by what a Signal found.
+  Every event is queryable in the [SQL Editor](/platform/sql-editor), from either end. The `signal_events` table has one row per event. The `traces` table carries a trace's events and clusters as columns, so you can filter runs by what a Signal found and read cost, duration, and metadata off the same row.
 </Note>
 
 ## Run a Signal on new traces or historical traces
