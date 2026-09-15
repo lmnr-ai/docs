@@ -99,6 +99,127 @@ Deleting a profile, or removing a model, is **refused while a Signal uses it**. 
 
 Other AI features on a self-hosted deployment (chat with trace, SQL with AI, trace clustering) still use the server's `LLM_PROVIDER` and `LLM_API_KEY`. Profiles do not replace those. See [Self-hosting configuration](/self-hosting/configuration#ai-features-and-llm-provider).
 
+## Manage profiles from the CLI
+
+`lmnr-cli llm-profile` is full CRUD over the same profiles the settings page edits, so you can script provisioning or hand the surface to a coding agent. It works on Laminar Cloud and on self-hosted deployments; only [pinning a Signal to a profile](#route-signals-through-a-profile) is self-hosted only.
+
+The CLI authenticates as you and resolves the workspace from the linked project, so `lmnr-cli login` plus a linked directory (or `--project-id <uuid>`) is all you need. See [CLI](/platform/cli#authenticate).
+
+```bash
+lmnr-cli llm-profile list
+```
+
+```
+ID                                    Name               Provider          Models
+05cc437c-5e4a-4c95-8207-3b295619645c  Anthropic (prod)   anthropic         claude-haiku-4-5-20251001, claude-sonnet-4-5-20250929
+2cc210c3-3f6f-4655-a3fc-a12cf4dea5e5  Internal gateway   custom            llama-3.3-70b
+23ea6106-6ec8-4d1b-b2bc-5423272244b3  Production OpenAI  openai_responses  gpt-4.1-mini, gpt-5-mini, gpt-5
+```
+
+The `ID` column is what [`signal create --llm-profile-id`](/signals/cli#run-a-signal-on-an-llm-profile) takes. `llm-profile get <profile-id>` shows one profile in full, with secrets as masks:
+
+```bash
+lmnr-cli llm-profile get 2cc210c3-3f6f-4655-a3fc-a12cf4dea5e5
+```
+
+```
+Internal gateway (2cc210c3-3f6f-4655-a3fc-a12cf4dea5e5)
+  provider:     custom
+  auth:         api_key
+  base url:     https://gateway.internal.example.com/v1
+  models:       llama-3.3-70b
+  api key:      gw-**************def
+  headers:      X-Team
+  created:      2026-09-14T17:26:46.903960Z
+  updated:      2026-09-14T17:26:46.903960Z
+```
+
+### Create a profile from the CLI
+
+`create` takes the name as its argument, the provider in `--provider`, one `--model` per model, and the credential flags that provider needs:
+
+```bash
+# OpenAI on the Responses API
+lmnr-cli llm-profile create "Staging OpenAI" \
+  --provider openai_responses \
+  --api-key sk-... \
+  --model gpt-5-mini --model gpt-4.1-mini
+
+# Bedrock with AWS keys
+lmnr-cli llm-profile create "Bedrock west" \
+  --provider bedrock \
+  --access-key-id AKIA... --secret-access-key ... --region us-west-2 \
+  --model anthropic.claude-sonnet-4-5-20250929-v1:0
+
+# An OpenAI-compatible gateway with a custom header
+lmnr-cli llm-profile create "Internal gateway" \
+  --provider custom \
+  --provider-base-url https://gateway.internal.example.com/v1 \
+  --api-key gw-... --header X-Team=ml-platform \
+  --model llama-3.3-70b
+```
+
+<Warning>
+`--provider-base-url` is the **provider's** endpoint. `--base-url` is the Laminar API URL (the one you set for a self-hosted deployment). They are different flags.
+</Warning>
+
+Which credential flags a provider needs matches the [Providers](#providers) table:
+
+| Provider | Flags |
+|---|---|
+| `openai_completions`, `openai_responses`, `anthropic`, `gemini`, `groq`, `mistral` | `--api-key` |
+| `bedrock` | `--region`, plus either `--access-key-id` with `--secret-access-key`, or `--token` |
+| `azure_chat_completions`, `azure_responses`, `azure_anthropic` | `--api-key`, exactly one of `--resource-id` or `--provider-base-url`, optional `--api-version` |
+| `custom` | `--api-key` and `--provider-base-url`, optional `--header <name=value>` (repeatable) |
+
+The auth type is inferred from the flags you pass: `--access-key-id` selects AWS keys, `--token` selects a bearer token, otherwise an API key. Nothing is validated locally, so the server's own message is what you see:
+
+```bash
+$ lmnr-cli llm-profile create "Groq (prod)" --provider groq --api-key sk-...
+ERROR: 400 Add at least one model
+```
+
+### Update and delete from the CLI
+
+`update` is a partial patch: only the flags you pass change. Two rules to keep in mind, both server-side:
+
+- `--model` **replaces the whole model list**, it does not append.
+- Any config flag (`--region`, `--provider-base-url`, `--resource-id`, `--api-version`, `--header`) replaces the whole config object, so re-pass every config field the provider needs.
+
+Secrets are the exception: omit them and the stored credentials are kept, pass one to rotate it.
+
+```bash
+# Rename, credentials and models untouched
+lmnr-cli llm-profile update 1ba7f4d8-a75f-4188-8372-871f1b5493f7 --name "Staging OpenAI (responses)"
+
+# Replace the model list with one model
+lmnr-cli llm-profile update 1ba7f4d8-a75f-4188-8372-871f1b5493f7 --model gpt-5
+
+# Rotate the key, everything else untouched
+lmnr-cli llm-profile update 1ba7f4d8-a75f-4188-8372-871f1b5493f7 --api-key sk-new...
+
+lmnr-cli llm-profile delete 1ba7f4d8-a75f-4188-8372-871f1b5493f7
+```
+
+```
+Deleted LLM profile "Staging OpenAI (responses)" (1ba7f4d8-a75f-4188-8372-871f1b5493f7).
+```
+
+An update with no flags is an error rather than a silent no-op, and a delete is refused while a Signal uses the profile (`409`). Every subcommand takes `--json` for machine-readable output on stdout:
+
+```bash
+lmnr-cli llm-profile list --json | jq '.[] | {name, provider, models}'
+lmnr-cli llm-profile get <profile-id> --json
+```
+
+The group is also aliased to `llm-profiles`, and every subcommand has examples in its help text:
+
+```bash
+lmnr-cli llm-profile --help
+lmnr-cli llm-profile create --help
+lmnr-cli llm-profile update --help
+```
+
 ## Manage profiles over the API
 
 Profiles are also full CRUD over HTTP, authenticated with a project API key from **Settings > Project API keys**. A project key manages the profiles of the workspace that project belongs to.

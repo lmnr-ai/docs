@@ -49,7 +49,11 @@ Refund requests (50da5457-4b5d-4937-b834-4a73f50ce473)
   mode:         realtime
   sample rate:  none
   status:       active
+  llm profile:  env
+  model:        env default
 ```
+
+`llm profile: env` means the Signal runs on the deployment's own model credentials, which is how every Signal on Laminar Cloud runs. On a self-hosted deployment you pick a profile instead: see [Run a Signal on an LLM profile](#run-a-signal-on-an-llm-profile).
 
 The trigger defaults to `root-span-finished`, the filter to `total_token_count > 1000`, and the mode to `realtime`, so the Signal is already live on new traces. See [Triggers](/signals/quickstart#triggers) and [Filters](/signals/quickstart#filters) for how they work.
 
@@ -83,6 +87,8 @@ Fabricated tool data (0e5b6466-eeab-47f9-a5d4-6b2ff6c7a365)
   mode:         realtime
   sample rate:  25
   status:       active
+  llm profile:  env
+  model:        env default
 ```
 
 `--filter` takes JSON `{"column":"...","operator":"...","value":"..."}` and is repeatable. Columns: `total_token_count`, `status`, `span_names`. Pass it on create to replace the default.
@@ -165,14 +171,40 @@ lmnr-cli signal get "Refund requests" --json
       "operator": "gt"
     }
   ],
-  "mode": "realtime"
+  "mode": "realtime",
+  "version": 1,
+  "llmProfileId": null,
+  "llmProfileName": null,
+  "model": null
 }
 ```
+
+`version` is the current version of the judge definition (the prompt and schema). The full history is `signal versions`, below. `llmProfileId`, `llmProfileName`, and `model` are `null` when the Signal runs on the deployment's own credentials.
 
 ```bash
 # Every Signal that is not currently active
 lmnr-cli signal list --json | jq '.[] | select(.disabled) | .name'
 ```
+
+### Version history
+
+Editing a Signal appends a new version of its definition: the name, prompt, schema, trigger, filters, mode, sampling, status, and LLM route as they were at that moment. An edit that changes nothing appends nothing. `signal versions` prints that history, oldest first, so you can see what the judge was asked at the time an old event was extracted:
+
+```bash
+lmnr-cli signal versions "Refund requests"
+```
+
+```
+v1  2026-08-17T11:01:12.951925Z
+  prompt:  Detect when the user asks for a refund. Extract the reason they gave.
+  fields:  reason
+
+v2  2026-08-19T09:20:41.118204Z
+  prompt:  Detect refund asks only, ignore complaints.
+  fields:  reason
+```
+
+Like `get`, it takes an id or a name. The human output shows the prompt and the payload fields of each version; with `--json` each entry is `{"version","createdAt","definition"}` and `definition` carries the whole snapshot. The `version` field on `signal get` is only the current pointer; this command is the log.
 
 ## Update a Signal
 
@@ -219,6 +251,46 @@ $ lmnr-cli signal update "Refund requests"
 ERROR: Nothing to update. Pass at least one of --prompt, --schema, --trigger, --filter,
 --no-filters, --mode, --sample-rate, --no-sampling, --disabled, --no-disabled.
 ```
+
+## Run a Signal on an LLM profile
+
+<Note>
+Pointing a Signal at an [LLM profile](/platform/llm-profiles) is available on **self-hosted deployments**. On Laminar Cloud, Signals run on Laminar's own model credentials and the flags below are rejected.
+</Note>
+
+On a self-hosted deployment, each Signal runs on one LLM profile and one of that profile's models. `--llm-profile-id` and `--model` set the pair, and they are **required together** on `signal create`:
+
+```bash
+lmnr-cli llm-profile list   # the ID column is what --llm-profile-id takes
+
+lmnr-cli signal create "Refund requests" \
+  --prompt "Detect when the user asks for a refund. Extract the reason they gave." \
+  --schema '{"properties":{"reason":{"type":"string","description":"Refund reason"}}}' \
+  --llm-profile-id 2cc210c3-3f6f-4655-a3fc-a12cf4dea5e5 --model llama-3.3-70b
+```
+
+`signal update` takes the same pair to move a Signal onto a different profile or model:
+
+```bash
+lmnr-cli signal update "Refund requests" \
+  --llm-profile-id 23ea6106-6ec8-4d1b-b2bc-5423272244b3 --model gpt-5-mini
+```
+
+Both flags pass straight through, so the server's own rules apply and its messages are what you see:
+
+- Passing only one of the two is rejected. So is passing either one on Laminar Cloud.
+- The model has to be one the profile declares. Discover both with [`lmnr-cli llm-profile list`](/platform/llm-profiles#manage-profiles-from-the-cli).
+- There is no flag for moving a Signal **back** to the deployment's environment credentials. Signals created before you added profiles keep running on them until you pin a profile.
+- Deleting a profile, or removing a model a Signal is pinned to, is refused while that Signal exists.
+
+`signal get` shows the pair, with the profile name for readability:
+
+```
+  llm profile:  Internal gateway (2cc210c3-3f6f-4655-a3fc-a12cf4dea5e5)
+  model:        llama-3.3-70b
+```
+
+See [LLM profiles](/platform/llm-profiles) for how to create one and what each provider needs.
 
 ## Delete a Signal
 
@@ -268,6 +340,9 @@ Options:
   --mode <mode>              batch | realtime. Omitted → realtime
   --sample-rate <percent>    Evaluate only this percent of matching traces (1-95)
   --disabled                 Create the signal paused
+  --llm-profile-id <id>      Workspace LLM profile to run the signal on (self-hosted only,
+                             required together with --model)
+  --model <name>             Model to use from that profile (self-hosted only)
 ```
 
 ### signal update
@@ -292,13 +367,18 @@ Options:
   --no-sampling              Clear sampling (evaluate every matching trace)
   --disabled                 Pause the signal
   --no-disabled              Resume the signal
+  --llm-profile-id <id>      Re-route the signal onto a workspace LLM profile (self-hosted
+                             only, must be paired with --model). There is no flag to clear
+                             the route back to the deployment's own credentials
+  --model <name>             Model to use from that profile
 ```
 
-### signal list, get, delete
+### signal list, get, versions, delete
 
 ```bash
-lmnr-cli signal list [name]      # name filters by case-insensitive substring
-lmnr-cli signal get <signal>     # signal is an id or a name
+lmnr-cli signal list [name]       # name filters by case-insensitive substring
+lmnr-cli signal get <signal>      # signal is an id or a name
+lmnr-cli signal versions <signal> # definition history, oldest first
 lmnr-cli signal delete <signal>
 ```
 
