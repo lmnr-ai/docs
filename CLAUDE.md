@@ -288,9 +288,8 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 
 ## Signals clusters page (`/signals/clusters.mdx`)
 
-- The clusters page is the canonical public coverage of clustering queueing + hierarchy (LAM-1889). Public-safe framing rules for the internals (implementation lives in lmnr-private, never say so): the hidden unnamed accumulation layer below named clusters may be described vaguely ("internal accumulation layer of small, unnamed groups"), but never name level numbers (L0/L1), batch sizes, flush intervals, promotion thresholds, queue/lock topology, or embedding details. Translate timings to user-observable terms ("typically within a minute", "a couple of similar events").
+- The clusters page is the canonical public coverage of clustering queueing + hierarchy (LAM-1889). Public-safe framing rules for the internals: don't describe the unnamed accumulation layer below named clusters at all, and never name level numbers (L0/L1), batch sizes, flush intervals, promotion thresholds, queue/lock topology, or embedding details. Tree depth ("up to three levels deep") is fine, since the icicle strip shows every level at once. Translate timings to user-observable terms ("typically within a minute"), and don't promise a cluster after a specific number of similar events.
 - Events not yet in a named cluster surface in the UI as the **Unclustered** bucket — use that name in prose, not "L0" or "pending".
-- The clusters refresh (PR #217) DROPPED the accumulation-layer `<Note>` and the "a new cluster appears after the second similar event" claim; the page now says only that clusters appear as events accumulate. Don't reintroduce either. Tree depth ("up to three levels deep") is public now that the icicle strip shows every level at once; `level` numbers stay a SQL-page concept.
 
 ## Temporal integration
 
