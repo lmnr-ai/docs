@@ -222,67 +222,31 @@ lmnr-cli llm-profile update --help
 
 ## Manage profiles over the API
 
-Profiles are also full CRUD over HTTP, authenticated with a project API key from **Settings > Project API keys**. A project key manages the profiles of the workspace that project belongs to.
+Profiles are also full CRUD over HTTP, authenticated with a project API key from **Settings > Project API keys**. A project key manages the profiles of the workspace that project belongs to. Every field, status code, and the masked `secrets` object are in the API reference: [list](/api-reference/llm-profiles/list-llm-profiles), [create](/api-reference/llm-profiles/create-an-llm-profile), [get](/api-reference/llm-profiles/get-an-llm-profile), [update](/api-reference/llm-profiles/update-an-llm-profile), and [delete](/api-reference/llm-profiles/delete-an-llm-profile).
 
 <Note>
 Self-hosting: replace the base URL with your app-server HTTP origin, including the port. For example, `http://localhost:8000/v1/llm-profiles`.
 </Note>
 
-| Method | Path |
-|---|---|
-| `GET` | `/v1/llm-profiles` |
-| `POST` | `/v1/llm-profiles` |
-| `GET` | `/v1/llm-profiles/{id}` |
-| `PATCH` | `/v1/llm-profiles/{id}` |
-| `DELETE` | `/v1/llm-profiles/{id}` |
-
-Create a profile:
+`config` carries the plaintext, provider-specific settings and `secrets` the credentials, split exactly as the form does it:
 
 ```bash
 curl -X POST https://api.lmnr.ai/v1/llm-profiles \
   -H "Authorization: Bearer $LMNR_PROJECT_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Production OpenAI",
-    "provider": "openai_responses",
-    "secrets": { "apiKey": "sk-..." },
-    "models": ["gpt-5-mini", "gpt-4.1-mini"]
+    "name": "Bedrock EU",
+    "provider": "bedrock",
+    "config": { "region": "eu-west-1", "auth": { "type": "aws_keys", "accessKeyId": "AKIA..." } },
+    "secrets": { "secretAccessKey": "..." },
+    "models": ["eu.anthropic.claude-sonnet-4-5-20250929-v1:0"]
   }'
 ```
 
+An OpenAI-compatible gateway keeps its header *names* in `config` and their values in `secrets`:
+
 ```json
 {
-  "id": "23ea6106-6ec8-4d1b-b2bc-5423272244b3",
-  "workspaceId": "929e0d7d-98b2-445a-a6fc-1e8607248571",
-  "name": "Production OpenAI",
-  "provider": "openai_responses",
-  "config": { "auth": { "type": "api_key" } },
-  "models": ["gpt-4.1-mini", "gpt-5-mini"],
-  "secrets": {
-    "apiKey": "sk-*********************kEA",
-    "secretAccessKey": null,
-    "token": null,
-    "headers": []
-  },
-  "createdAt": "2026-09-14T17:26:23.338936Z",
-  "updatedAt": "2026-09-14T17:26:23.338936Z"
-}
-```
-
-`provider` is one of `openai_completions`, `openai_responses`, `anthropic`, `gemini`, `groq`, `mistral`, `bedrock`, `azure_chat_completions`, `azure_responses`, `azure_anthropic`, `custom`. `config` carries the plaintext, provider-specific settings and `secrets` the credentials, split exactly as the form does it:
-
-```bash
-# Bedrock with AWS keys
--d '{
-  "name": "Bedrock EU",
-  "provider": "bedrock",
-  "config": { "region": "eu-west-1", "auth": { "type": "aws_keys", "accessKeyId": "AKIA..." } },
-  "secrets": { "secretAccessKey": "..." },
-  "models": ["eu.anthropic.claude-sonnet-4-5-20250929-v1:0"]
-}'
-
-# OpenAI-compatible gateway with a custom header
--d '{
   "name": "Internal gateway",
   "provider": "custom",
   "config": {
@@ -291,15 +255,14 @@ curl -X POST https://api.lmnr.ai/v1/llm-profiles \
   },
   "secrets": { "apiKey": "gw-...", "headers": { "X-Team": "ml-platform" } },
   "models": ["llama-3.3-70b"]
-}'
+}
 ```
 
-`PATCH` is a partial update: every field is optional, omitted secrets keep their stored values, and `models` replaces the whole list. Two things to watch:
+`PATCH` is a partial update: every field is optional, omitted secrets keep their stored values, and `models` replaces the whole list. Three things to watch:
 
 - Changing `provider` requires sending `config` with it (`400 config is required when provider changes`).
 - Sending any `config` replaces the whole object, so include every field the provider needs, not just the one you are changing.
-
-Errors come back as `{"error": "..."}` with a message you can show as-is: `400` for validation (`Add at least one model`, `apiKey is required`), `409` for a duplicate name or a profile a Signal still uses, `404` for a profile that is not in the caller's workspace.
+- Dropping a model a Signal runs on is refused with `409`, same as deleting the profile itself.
 
 ## Next steps
 
