@@ -73,7 +73,7 @@ Set these on a span where `lmnr.span.type = "LLM"`.
 | Output cost | `gen_ai.usage.output_cost` | `0.0024` |
 | Total cost | `gen_ai.usage.cost` | `0.0043` |
 
-Cost is calculated from `gen_ai.system` + `gen_ai.request.model` + token counts. Without all three, cost stays at zero. Setting the explicit `gen_ai.usage.*_cost` keys overrides the calculated values. See [LLM cost tracking](/tracing/structure/llm-cost-tracking) for the supported provider names.
+Cost is calculated from `gen_ai.system` + `gen_ai.request.model` + token counts. Without all three, cost stays at zero. Setting the explicit `gen_ai.usage.*_cost` keys overrides the calculated values. See [LLM cost tracking](/tracing/cost-tracking) for the supported provider names.
 
 ### Prompts and completions
 
@@ -352,7 +352,7 @@ Pick whichever your runtime supports best. Attribute semantics on the wire are i
   <Card title="Span types" icon="tags" href="/tracing/structure/span-types">
     What `DEFAULT`, `LLM`, and `TOOL` render to in the transcript view.
   </Card>
-  <Card title="LLM cost tracking" icon="dollar-sign" href="/tracing/structure/llm-cost-tracking">
+  <Card title="LLM cost tracking" icon="dollar-sign" href="/tracing/cost-tracking">
     Required `gen_ai.*` attributes and supported provider names.
   </Card>
   <Card title="Metadata" icon="layer-group" href="/tracing/structure/metadata">

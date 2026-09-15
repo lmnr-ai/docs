@@ -63,7 +63,7 @@ Run this in the [SQL editor](/platform/sql-editor) and copy the values straight 
 
 For each LLM span, in order:
 
-1. **Explicit cost attributes on the span.** If a span sets `gen_ai.usage.input_cost`, `output_cost`, or `cost`, Laminar uses those numbers and consults no price table. This is the escape hatch when you compute cost yourself: see [LLM cost tracking](/tracing/structure/llm-cost-tracking).
+1. **Explicit cost attributes on the span.** If a span sets `gen_ai.usage.input_cost`, `output_cost`, or `cost`, Laminar uses those numbers and consults no price table. This is the escape hatch when you compute cost yourself: see [LLM cost tracking](/tracing/cost-tracking).
 2. **Your project's custom prices**, matched exactly as described above.
 3. **The built-in price table**, which does normalize: it strips date snapshots and tries provider-prefixed variants, so `gpt-5-mini-2026-04-01` still resolves to `gpt-5-mini` pricing.
 
@@ -84,12 +84,12 @@ Work through these in order:
 - **The span costs `$0`.** The provider or model doesn't match. Run the SQL query above and compare character for character, watching for date suffixes and a provider you didn't expect.
 - **The span has a cost you didn't configure.** Either your instrumentation sets explicit cost attributes (which win outright) or the model resolved against the built-in table. Check whether your code sets `gen_ai.usage.*_cost`.
 - **Only older spans are wrong.** Prices apply at ingestion. Spans stored before you added the price keep their original cost.
-- **Token counts are missing.** Any price needs token counts to multiply. If `input_tokens` and `output_tokens` are `0`, fix the instrumentation first: [LLM cost tracking](/tracing/structure/llm-cost-tracking) covers the attributes to set.
+- **Token counts are missing.** Any price needs token counts to multiply. If `input_tokens` and `output_tokens` are `0`, fix the instrumentation first: [LLM cost tracking](/tracing/cost-tracking) covers the attributes to set.
 
 ## What's next
 
 <CardGroup cols={2}>
-  <Card title="LLM cost tracking" href="/tracing/structure/llm-cost-tracking">
+  <Card title="LLM cost tracking" href="/tracing/cost-tracking">
     Instrument a custom provider by hand and set token counts or explicit costs.
   </Card>
   <Card title="Span attribute reference" href="/tracing/structure/span-attribute-reference">

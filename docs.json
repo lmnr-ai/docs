@@ -71,11 +71,11 @@
                   "tracing/structure/tags",
                   "tracing/structure/images",
                   "tracing/structure/continuing-traces",
-                  "tracing/structure/llm-cost-tracking",
                   "tracing/structure/span-attribute-reference",
                   "tracing/structure/flushing-and-shutdown"
                 ]
               },
+              "tracing/cost-tracking",
               "tracing/browser-agent-observability",
               "tracing/langgraph-visualization",
               {
@@ -221,6 +221,10 @@
     {
       "source": "/hosting-options",
       "destination": "/self-hosting/overview"
+    },
+    {
+      "source": "/tracing/structure/llm-cost-tracking",
+      "destination": "/tracing/cost-tracking"
     }
   ],
   "logo": "/logo/laminar-wordmark.svg",
