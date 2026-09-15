@@ -73,7 +73,31 @@ Set these on a span where `lmnr.span.type = "LLM"`.
 | Output cost | `gen_ai.usage.output_cost` | `0.0024` |
 | Total cost | `gen_ai.usage.cost` | `0.0043` |
 
-Cost is calculated from `gen_ai.system` + `gen_ai.request.model` + token counts. Without all three, cost stays at zero. Setting the explicit `gen_ai.usage.*_cost` keys overrides the calculated values. See [LLM cost tracking](/tracing/cost-tracking) for the supported provider names.
+Cost is calculated from a model name and token counts. Laminar uses `gen_ai.response.model` when it is set and falls back to `gen_ai.request.model`, so either one is enough; without a model name cost stays at zero. `gen_ai.system` is not required, but it narrows the price lookup and is what [custom model costs](/platform/custom-model-costs) match on. Setting the explicit `gen_ai.usage.*_cost` keys overrides the calculated values and skips every price table. See [LLM cost tracking](/tracing/cost-tracking).
+
+### Cached, reasoning, and audio tokens
+
+Laminar prices these at their own rates rather than folding them into input and output. The Laminar integrations set the cache and reasoning keys wherever the provider reports them; the rest are here for exporters that have the numbers and want them priced.
+
+| Concept | Wire key | Example |
+| --- | --- | --- |
+| Cache read tokens | `gen_ai.usage.cache_read_input_tokens` | `4096` |
+| Cache write tokens | `gen_ai.usage.cache_creation_input_tokens` | `1024` |
+| Cache write, 5-minute tier | `gen_ai.usage.cache_creation.input_tokens.ephemeral_5m` | `1024` |
+| Cache write, 1-hour tier | `gen_ai.usage.cache_creation.input_tokens.ephemeral_1h` | `512` |
+| Reasoning tokens | `gen_ai.usage.reasoning_tokens` | `830` |
+| Audio input tokens | `gen_ai.usage.audio_input_tokens` | `220` |
+| Audio output tokens | `gen_ai.usage.audio_output_tokens` | `140` |
+| Service tier | `gen_ai.response.service_tier` | `"flex"` |
+| Batch request | `gen_ai.request.batch` | `true` |
+
+`gen_ai.usage.input_tokens` is the **total** input count, cached tokens included. Laminar subtracts the cache read and write counts from it to get the tokens billed at the regular input rate, so do not add cached tokens on top of the input total.
+
+Service tier is read from `gen_ai.response.service_tier` first, then `gen_ai.request.service_tier`, then the `openai.*` and `anthropic.*` equivalents. A tier that the model publishes a rate for, such as `flex` or `priority`, is priced at that rate; `gen_ai.request.batch` does the same for batch rates.
+
+<Note>
+The current OTel spec forms (`gen_ai.usage.cache_read.input_tokens`, `gen_ai.usage.cache_creation.input_tokens`) and pydantic-ai's `gen_ai.usage.details.cache_read_tokens` / `cache_write_tokens` are normalized to the keys above on ingestion, so either form works.
+</Note>
 
 ### Prompts and completions
 

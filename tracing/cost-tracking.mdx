@@ -1,52 +1,41 @@
 ---
-title: LLM Cost and Token Tracking
+title: LLM cost tracking
 ---
 
-Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. It records token usage and dollar cost on every LLM span, then aggregates those numbers across the whole trace, so you can see what an agent run cost, which model, user, or customer drove the spend, and where the tokens went.
+Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. It records token usage and dollar cost on every LLM span and rolls both up to the trace, so every agent run carries what it cost, which model spent it, and where the tokens went.
 
-For [auto-instrumented providers and frameworks](/tracing/integrations/overview) this works with no configuration. Initialize the SDK and every LLM call carries token counts and cost. The rest of this page covers what you can break that spend down by, how the numbers are calculated, and how to instrument calls Laminar does not trace automatically.
+For [auto-instrumented providers and frameworks](/tracing/integrations/overview) this needs no configuration. Initialize the SDK and every LLM call carries token counts and cost. The rest of this page covers what Laminar prices, how it arrives at the number, and how to instrument calls it does not trace automatically.
 
-## What you can track
+## What Laminar prices
 
-Every LLM span carries input tokens, output tokens, and the cost of that call. Laminar rolls them up so you can attribute spend by:
+Providers do not bill every token at the same rate, so Laminar does not either. Each LLM span carries the token counts the provider reported, priced per kind:
+
+| Token type | How it is priced |
+| --- | --- |
+| Input | The model's input rate |
+| Output | The model's output rate |
+| Cache reads | The provider's discounted cache-read rate |
+| Cache writes | The cache-write rate, including Anthropic's separate 5-minute and 1-hour tiers |
+| Reasoning | Taken out of the output count and charged at the model's reasoning rate, or at its output rate when the provider does not publish a separate one |
+| Audio | Taken out of the input and output counts and charged at the model's audio rates |
+
+Two adjustments to the rate itself also happen automatically. A request that crosses a model's long-context threshold is priced at the above-threshold rate for the whole call, the way Claude Sonnet 4.5 and Gemini 3 Pro bill past 200k tokens. And a call made on a cheaper or premium service tier, such as OpenAI's `flex` or `priority`, is priced at that tier's rate rather than the standard one.
+
+<Note>
+`gen_ai.usage.input_tokens` is the **total** input count, cached tokens included. Laminar subtracts the cache read and write counts from it to get the tokens billed at the regular input rate, so if you are instrumenting by hand, do not add cached tokens on top of the input total.
+</Note>
+
+Every one of these lands as a column on both `spans` and `traces`: `input_tokens`, `output_tokens`, `cache_read_input_tokens`, `cache_creation_input_tokens`, `reasoning_tokens`, `input_cost`, `output_cost`, and `total_cost`. So "how much of last week's bill was reasoning tokens" is a query, not an estimate.
+
+## Break spend down by user, session, or customer
+
+Costs roll up from each LLM span to the trace, so every run already carries its own total. Everything past that comes from ordinary [trace structure](/tracing/structure/overview) primitives, and they work the same whether the spans were auto-instrumented or created by hand:
 
 - **Model and provider**, including a mix of providers in one run
 - **Agent or workflow**, through span and trace names
-- **Session**, a full conversation or multi-step run
-- **User**, through the user ID on the trace
-- **Metadata and tags**, so you can slice by environment, customer, feature, or experiment
-- **Individual run**, since every trace carries its own total
-
-Costs appear on the trace and on each span in the UI, and are queryable across traces from the [SQL editor](/platform/sql-editor).
-
-## Which models and providers are covered
-
-Laminar calculates cost for effectively every model from every major provider, and pricing is kept current as providers change it. Models released after the SDK version you have installed still price correctly, so there is nothing to upgrade when a provider ships something new.
-
-Two cases need a price from you:
-
-- A **private, self-hosted, or fine-tuned model** that has no public list price.
-- A **rate that differs from list price**, such as negotiated or committed-use pricing.
-
-Both are handled by defining a per-project rate under **Settings > Model costs**. See [Custom model costs](/platform/custom-model-costs).
-
-## How Laminar calculates cost
-
-Cost is computed at ingestion from three things on the span:
-
-1. Provider name (`gen_ai.system`)
-2. Request model name (`gen_ai.request.model`)
-3. Token counts
-
-All three are required. If any is missing, cost stays at zero, which is the most common reason a span shows no price. See the [span attribute reference](/tracing/structure/span-attribute-reference) for the full key list.
-
-Where a provider reports cached or reasoning tokens, Laminar counts them and prices them at their own rates rather than folding them in with ordinary input and output. This matters on reasoning models, where output tokens alone understate the bill, and on long-context agents, where treating cached reads as full-price input overstates it.
-
-Prices apply at ingestion, so changing a rate does not re-cost spans you have already recorded.
-
-## Attributing cost across your system
-
-A per-call cost is only useful if you can group it. Laminar's trace primitives are what turn a pile of LLM spans into a cost breakdown, and they work the same whether the spans were auto-instrumented or created by hand.
+- **[Session](/tracing/structure/sessions)**, a full conversation or multi-step run
+- **[User](/tracing/structure/user-id)**, through the user ID on the trace
+- **[Metadata](/tracing/structure/metadata)** and **[tags](/tracing/structure/tags)**, so you can slice by environment, customer, feature, or experiment
 
 <Tabs items={['TypeScript', 'Python']}>
   <Tab title="TypeScript">
@@ -87,50 +76,79 @@ A per-call cost is only useful if you can group it. Laminar's trace primitives a
   </Tab>
 </Tabs>
 
-Each of these has its own page with the full API: [Sessions](/tracing/structure/sessions), [User ID](/tracing/structure/user-id), [Metadata](/tracing/structure/metadata), and [Tags](/tracing/structure/tags).
+Metadata is the one to reach for when you need per-customer or per-feature reporting, because it is queryable in the [SQL editor](/platform/sql-editor). "What did this customer cost us last month" is one query rather than an export:
 
-<Note>
-Metadata is the one to reach for when you need per-customer or per-feature cost reporting. It is queryable in the SQL editor, so "what did this customer cost us last month" is one query rather than an export.
-</Note>
+```sql
+SELECT
+    simpleJSONExtractString(metadata, 'customer') AS customer,
+    round(sum(total_cost), 2) AS cost
+FROM traces
+WHERE start_time > now() - INTERVAL 30 DAY
+GROUP BY customer
+ORDER BY cost DESC
+```
 
-## Instrumenting calls Laminar does not trace automatically
+## Which models and providers are priced
 
-Auto-instrumentation covers the providers and frameworks on the [integrations list](/tracing/integrations/overview). You need to create LLM spans by hand for:
+Laminar prices effectively every model from every major provider, and keeps up as providers change their rates. Prices are resolved on the Laminar server rather than in the SDK, so a model that shipped this morning is priced correctly with the SDK version you already have.
+
+You supply a price yourself only when there is no public one to look up, such as a private, self-hosted, or fine-tuned model, or when your rate differs from list price. Define it once per project under **Settings > Model costs**, see [Custom model costs](/platform/custom-model-costs). The alternative, for cases where you already compute cost yourself, is to set it directly on the span, covered in [Instrument calls Laminar does not trace automatically](#instrument-calls-laminar-does-not-trace-automatically).
+
+## How Laminar calculates cost
+
+At ingestion, Laminar resolves a price for each LLM span in this order:
+
+1. **Cost attributes on the span.** A non-zero `gen_ai.usage.input_cost`, `output_cost`, or `cost` is taken as the answer and no price table is consulted.
+2. **Your project's custom prices**, matched exactly on model and provider.
+3. **The built-in price table**, looked up from the model and provider on the span.
+
+The model name comes from `gen_ai.response.model`, falling back to `gen_ai.request.model`. Either one is enough, and the response model takes priority because it is the model the provider actually billed you for. Without a model name there is nothing to look up, cost stays at zero, and that is the most common reason a span shows no price.
+
+The provider, from `gen_ai.system`, narrows the lookup rather than gating it: Laminar tries the provider and model together first, then the model on its own. It matters for models the table lists only under a provider prefix, such as Azure deployments or Gemini, and not at all for OpenAI and Anthropic models, whose names match on their own.
+
+The built-in table also matches forgivingly. Case is ignored, a trailing date snapshot is stripped so `gpt-5-mini-2026-04-01` resolves to `gpt-5-mini` pricing, and a `provider/model` string is understood. Custom prices are the opposite: they match [exactly](/platform/custom-model-costs#names-must-match-your-span-attributes-exactly), so a date suffix on the span that is missing from your entry means no match.
+
+Prices apply at ingestion, so changing a rate does not re-cost spans you have already recorded.
+
+## Instrument calls Laminar does not trace automatically
+
+Auto-instrumentation covers the providers and frameworks on the [integrations list](/tracing/integrations/overview). Create LLM spans by hand for:
 
 - Self-hosted or fine-tuned models behind your own endpoint
 - Providers Laminar does not instrument yet
 - Direct HTTP calls to an LLM API
 - Custom inference servers
 
-### Provider names for manual spans
+### What the span needs
 
-When you create an LLM span yourself, set the provider name to one of the values below so Laminar can match pricing. This table is the list of identifier strings, not the list of models Laminar can price: auto-instrumented calls set this for you, and any model can be priced through custom model costs.
+Create the span with span type `LLM`. Without it the span renders as a generic operation, stays out of transcript view, and is skipped by the cost rollup. Then set:
 
-| Provider | Provider name | Example model |
+| Attribute | SDK constant | Notes |
+|---|---|---|
+| Model | `RESPONSE_MODEL`, `REQUEST_MODEL` | Required. Set the response model when the API returns one, the request model otherwise, or both. |
+| Provider | `PROVIDER` | Recommended. See the identifiers below. |
+| Input tokens | `INPUT_TOKEN_COUNT` | Total input count, cached tokens included. |
+| Output tokens | `OUTPUT_TOKEN_COUNT` | Total output count, reasoning tokens included. |
+
+Cache, reasoning, and audio token counts have no SDK constants. Set them as raw attribute keys from the [LLM attributes reference](/tracing/structure/span-attribute-reference#llm-attributes) if your provider reports them and you want them priced at their own rates.
+
+### Provider identifiers
+
+If you are hand-instrumenting a provider Laminar knows, use the identifier the price table is keyed by. These are the common ones, with a model string that resolves against each:
+
+| Provider | `gen_ai.system` | Example model |
 |---------|----------------|---------------|
-| OpenAI | `openai` | `gpt-5-mini`, `gpt-5-mini-2025-08-07` |
+| OpenAI | `openai` | `gpt-5-mini` |
 | Anthropic | `anthropic` | `claude-sonnet-4-5` |
-| Google Gemini | `gemini`, `google-genai` | `models/gemini-3-pro-preview` |
-| Azure OpenAI | `azure-openai` | `gpt-5-mini` |
-| AWS Bedrock (Anthropic) | `bedrock-anthropic` | `claude-3-5-sonnet-20241022-v2:0` |
-| Mistral | `mistral` | `mistral-large-2407` |
-| Groq | `groq` | `llama-3.1-70b-versatile` |
+| Google Gemini | `gemini` | `gemini-3-pro-preview` |
+| Azure OpenAI | `azure` | `gpt-5-mini` |
+| AWS Bedrock | `bedrock` | `anthropic.claude-sonnet-4-5-20250929-v1:0` |
+| Mistral | `mistral` | `mistral-large-2411` |
+| Groq | `groq` | `llama-3.3-70b-versatile` |
+| xAI | `xai` | `grok-4` |
+| OpenRouter | `openrouter` | `openai/gpt-5-mini` |
 
-If your provider is not listed, record token usage and set explicit cost attributes, or define the price once under Settings > Model costs.
-
-### Required attributes
-
-| Attribute | Description |
-|-----------|-------------|
-| Provider | Provider name, for example `openai`, `anthropic`, `custom` |
-| Request model | Model name you requested |
-| Response model | Model name returned by the API |
-| Input token count | Number of input tokens |
-| Output token count | Number of output tokens |
-
-Set `spanType: 'LLM'` when creating the span. Without it the span renders as a generic operation and is excluded from transcript view.
-
-Use the exact model string the provider API returns. Simplifying `gpt-5-mini-2025-08-07` to `gpt-5-mini` changes which price is matched.
+For anything else, including your own endpoint, use whatever identifier you like and give it a price under **Settings > Model costs**, or set explicit cost attributes on the span.
 
 ### Example
 
@@ -156,7 +174,7 @@ Use the exact model string the provider API returns. Simplifying `gpt-5-mini-202
         [LaminarAttributes.RESPONSE_MODEL]: response.model,
         [LaminarAttributes.INPUT_TOKEN_COUNT]: response.usage?.input_tokens ?? 0,
         [LaminarAttributes.OUTPUT_TOKEN_COUNT]: response.usage?.output_tokens ?? 0,
-        // Optional: explicit costs (override calculated pricing)
+        // Optional: explicit costs, which override every price table
         [LaminarAttributes.INPUT_COST]: 0.001,
         [LaminarAttributes.OUTPUT_COST]: 0.002,
         [LaminarAttributes.TOTAL_COST]: 0.003,
@@ -194,11 +212,14 @@ Use the exact model string the provider API returns. Simplifying `gpt-5-mini-202
             Attributes.RESPONSE_MODEL.value: response.get("model"),
             Attributes.INPUT_TOKEN_COUNT.value: response.get("usage", {}).get("input_tokens", 0),
             Attributes.OUTPUT_TOKEN_COUNT.value: response.get("usage", {}).get("output_tokens", 0),
-            # Optional: explicit costs (override calculated pricing)
+            # Optional: explicit costs, which override every price table
             Attributes.INPUT_COST.value: 0.001,
             Attributes.OUTPUT_COST.value: 0.002,
             Attributes.TOTAL_COST.value: 0.003,
         })
+    except Exception as error:
+        span.record_exception(error)
+        raise
     finally:
         span.end()
     ```
@@ -221,10 +242,10 @@ If you ship OTLP directly to Laminar, set the same fields as raw attribute keys 
     });
     // ... call the model ...
     span.setAttributes({
-      "gen_ai.response.model": "gpt-5-mini-2025-04-01",
+      "gen_ai.response.model": "gpt-5-mini-2026-04-01",
       "gen_ai.usage.input_tokens": 1284,
       "gen_ai.usage.output_tokens": 162,
-      // Optional explicit costs (override calculated pricing)
+      // Optional explicit costs, which override every price table
       "gen_ai.usage.input_cost": 0.0019,
       "gen_ai.usage.output_cost": 0.0024,
       "gen_ai.usage.cost": 0.0043,
@@ -244,10 +265,10 @@ If you ship OTLP directly to Laminar, set the same fields as raw attribute keys 
     )
     # ... call the model ...
     span.set_attributes({
-        "gen_ai.response.model": "gpt-5-mini-2025-04-01",
+        "gen_ai.response.model": "gpt-5-mini-2026-04-01",
         "gen_ai.usage.input_tokens": 1284,
         "gen_ai.usage.output_tokens": 162,
-        # Optional explicit costs (override calculated pricing)
+        # Optional explicit costs, which override every price table
         "gen_ai.usage.input_cost": 0.0019,
         "gen_ai.usage.output_cost": 0.0024,
         "gen_ai.usage.cost": 0.0043,
@@ -257,32 +278,23 @@ If you ship OTLP directly to Laminar, set the same fields as raw attribute keys 
   </Tab>
 </Tabs>
 
-For prompt and completion content, plus the rest of the attribute keys Laminar reads, see [Span attribute reference](/tracing/structure/span-attribute-reference).
+For prompt and completion content, cache and reasoning token keys, and the rest of what Laminar reads off an LLM span, see the [LLM attributes reference](/tracing/structure/span-attribute-reference#llm-attributes).
 
-## Setting your own prices
-
-If Laminar cannot look up a price for your provider and model, you have two options:
-
-- **Define a price once in the UI.** Add a per-project rate under **Settings > Model costs** and Laminar prices every matching span from it, so you do not set cost attributes on every call. See [Custom model costs](/platform/custom-model-costs).
-- **Attach explicit cost attributes** per span, as in the examples above. These take precedence over every price table, including your own custom prices.
-
-## Viewing costs
-
-Costs show up:
+## Where costs show up
 
 - On **trace details**, as the sum of every LLM call in the run. See [Viewing traces](/platform/viewing-traces).
 - On **individual LLM spans**, as the cost of that call.
 - On **dashboards**, aggregated by provider, model, or any dimension you set. See [Dashboards](/custom-dashboards/overview).
 - In the **[SQL editor](/platform/sql-editor)**, for reporting across traces.
 
-## Finding wasted spend
+## Find wasted spend
 
 Cost tracking tells you what you spent. To find what you wasted, use [Signals](/signals/introduction): plain-language instructions that read whole agent runs and flag the patterns that quietly drive cost, like a tool call retried until the agent gives up. Because a Signal sees the full run rather than isolated token counts, it catches waste that a per-call number cannot show.
 
 ## FAQ
 
 **Why is cost showing as zero on my spans?**
-Cost needs the provider name, the request model, and token counts. Missing any one of the three leaves cost at zero. A model string that does not match the provider's exact naming has the same effect.
+Cost needs a model name and token counts. Missing either leaves cost at zero. A model string the price table does not recognize has the same effect.
 
 **Can I see cost per user, per session, or per customer?**
 Yes. Set a [user ID](/tracing/structure/user-id), [session ID](/tracing/structure/sessions), or [metadata](/tracing/structure/metadata) on the trace and cost aggregates by any of them.
@@ -291,22 +303,22 @@ Yes. Set a [user ID](/tracing/structure/user-id), [session ID](/tracing/structur
 Effectively every model from every major provider, with pricing kept current. Private, self-hosted, and fine-tuned models are priced through [custom model costs](/platform/custom-model-costs).
 
 **Are cached and reasoning tokens counted?**
-Yes, where the provider reports them. Both are priced at their own rates rather than as ordinary input and output.
+Yes, wherever the provider reports them. Both are recorded as their own token counts and priced at their own rates rather than as ordinary input and output.
 
 **Can I override the calculated cost?**
-Yes. Explicit cost attributes on a span take precedence over every price table.
+Yes. Cost attributes on a span take precedence over every price table, including your own custom prices.
 
 **Can Laminar cap or block my spending?**
-No, and no observability platform can. Enforcing a hard limit means refusing a request while it is in flight, which requires sitting in the request path. Laminar records what happened and can flag expensive runs through Signals, but it does not gate calls.
+No. Enforcing a hard limit means refusing a request while it is in flight, which requires sitting in the request path, and Laminar reads your traces rather than proxying your calls. It records what you spent and can flag expensive runs through Signals.
 
 ## Troubleshooting
 
 | Symptom | Cause |
 |---------|-------|
-| Cost is zero | Provider name or request model missing, or the model string does not match the provider's naming |
+| Cost is zero | No model name on the span, no token counts, or a model string the price table does not recognize |
 | Cost looks too high on a long-context agent | The provider is not reporting cached tokens, so cached reads are priced as full input |
 | A custom price is not applying | Custom-cost matching is exact on both model and provider. See [Custom model costs](/platform/custom-model-costs) |
-| Span shows tokens but renders as a generic operation | `spanType` was not set to `LLM` |
+| Span shows tokens but renders as a generic operation | Span type was not set to `LLM` |
 
 ## What's next
 
@@ -314,8 +326,8 @@ No, and no observability platform can. Enforcing a hard limit means refusing a r
   <Card title="Custom model costs" icon="dollar-sign" href="/platform/custom-model-costs">
     Set your own prices for private, fine-tuned, or negotiated-rate models.
   </Card>
-  <Card title="Span attribute reference" icon="list" href="/tracing/structure/span-attribute-reference">
-    Every attribute key Laminar reads, including the cost and token keys.
+  <Card title="LLM attributes reference" icon="list" href="/tracing/structure/span-attribute-reference#llm-attributes">
+    Every attribute key Laminar reads off an LLM span, including the token and cost keys.
   </Card>
   <Card title="Signals" icon="signal" href="/signals/introduction">
     Catch wasteful and failing runs across your whole trace history.

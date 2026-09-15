@@ -12,7 +12,7 @@ Three span types cover the manual-instrumentation cases:
 | Type | When to use |
 |------|-------------|
 | `DEFAULT` | Any function on your code path that isn't a model call or a tool. This is the default. |
-| `LLM` | A manual LLM call where you want Laminar to pick up token counts and cost. See [LLM Cost Tracking](/tracing/cost-tracking). |
+| `LLM` | A manual LLM call where you want Laminar to pick up token counts and cost. See [LLM cost tracking](/tracing/cost-tracking). |
 | `TOOL` | A function your agent invokes as a tool (`get_weather`, `search_flights`, `book_flight`, `run_sql`). |
 
 The other types (`EXECUTOR`, `EVALUATOR`, `HUMAN_EVALUATOR`, `EVALUATION`, `CACHED`) exist for the evaluations framework and for internal auto-instrumentation. You won't set them by hand in day-to-day agent code.
