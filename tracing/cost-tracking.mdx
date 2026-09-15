@@ -17,9 +17,8 @@ Providers do not bill every token at the same rate, so Laminar does not either. 
 | Cache reads | The provider's discounted cache-read rate |
 | Cache writes | The cache-write rate, including Anthropic's separate 5-minute and 1-hour tiers |
 | Reasoning | Taken out of the output count and charged at the model's reasoning rate, or at its output rate when the provider does not publish a separate one |
-| Audio | Taken out of the input and output counts and charged at the model's audio rates |
 
-Two adjustments to the rate itself also happen automatically. A request that crosses a model's long-context threshold is priced at the above-threshold rate for the whole call, the way Claude Sonnet 4.5 and Gemini 3 Pro bill past 200k tokens. And a call made on a cheaper or premium service tier, such as OpenAI's `flex` or `priority`, is priced at that tier's rate rather than the standard one.
+Two adjustments to the rate itself also happen automatically. A request that crosses a model's long-context threshold is priced at the above-threshold rate for the whole call, the way `gpt-5.6-sol` doubles its input rate past 272k tokens. And a call made on a cheaper or premium service tier, such as OpenAI's `flex` or `priority`, is priced at that tier's rate rather than the standard one.
 
 <Note>
 `gen_ai.usage.input_tokens` is the **total** input count, cached tokens included. Laminar subtracts the cache read and write counts from it to get the tokens billed at the regular input rate, so if you are instrumenting by hand, do not add cached tokens on top of the input total.
@@ -130,7 +129,7 @@ Create the span with span type `LLM`. Without it the span renders as a generic o
 | Input tokens | `INPUT_TOKEN_COUNT` | Total input count, cached tokens included. |
 | Output tokens | `OUTPUT_TOKEN_COUNT` | Total output count, reasoning tokens included. |
 
-Cache, reasoning, and audio token counts have no SDK constants. Set them as raw attribute keys from the [LLM attributes reference](/tracing/structure/span-attribute-reference#llm-attributes) if your provider reports them and you want them priced at their own rates.
+Cache and reasoning token counts have no SDK constants. Set them as raw attribute keys from the [LLM attributes reference](/tracing/structure/span-attribute-reference#llm-attributes) if your provider reports them and you want them priced at their own rates.
 
 ### Provider identifiers
 
