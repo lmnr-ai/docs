@@ -197,11 +197,16 @@ See [Signals CLI](/signals/cli) for the full reference.
 
 ## Manage datasets
 
-List, push, pull, and create datasets from files on disk. Supported formats: `.jsonl`, `.json`, `.csv`. Like `sql`, these commands run against the linked project.
+Create, list, inspect, rename, delete, push, and pull datasets. File operations support `.jsonl`, `.json`, and `.csv`. Like `sql`, these commands run against the linked project.
 
 ```bash
 # List all datasets in the project
 lmnr-cli dataset list --json
+
+# Inspect, rename, or delete a dataset by its canonical ID
+lmnr-cli dataset get <dataset-id>
+lmnr-cli dataset update <dataset-id> --name renamed-dataset
+lmnr-cli dataset delete <dataset-id>
 
 # Push new datapoints into an existing dataset
 lmnr-cli dataset push data.jsonl -n my-dataset
