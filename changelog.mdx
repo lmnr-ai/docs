@@ -4,6 +4,10 @@ title: Changelog
 
 New releases and improvements.
 
+## September 2026
+
+- **Signal events and clusters on the traces table** - `traces` now carries the [Signal](/signals/introduction) events that fired on a trace and the named [clusters](/signals/clusters) those events landed in, names and counts already resolved. `ARRAY JOIN` either column and signal data sits next to trace cost and duration, so *which runs are in this failure cluster and what did they cost* is one query instead of two joins. On the event side, `signal_events` gains `leaf_clusters` and `cluster_details`, which resolve cluster names and levels without a join, plus `signal_version` to tell events extracted under an older Signal definition from current ones. See [SQL editor](/platform/sql-editor#table-schemas).
+
 ## August 2026
 
 - **Flush span batches by payload size** - Both SDKs can now export a batch when its payload would cross a byte limit, alongside the existing span-count and scheduled-delay triggers. Turn it on with `Laminar.initialize({ flushBySize: true })` in TypeScript or `Laminar.initialize(flush_by_size=True)` in Python, and set `maxExportBatchSizeBytes` / `max_export_batch_size_bytes` if 32 MiB is not the right ceiling. Useful for agents whose spans carry whole conversation histories, where a few spans are enough to build an export the backend rejects. See [Batching](/sdk/batching).
