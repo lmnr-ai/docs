@@ -28,7 +28,19 @@ Every one of these lands as a column on both `spans` and `traces`: `input_tokens
 
 ## Break spend down by user, session, or customer
 
-Costs roll up from each LLM span to the trace, so every run already carries its own total. Everything past that comes from ordinary [trace structure](/tracing/structure/overview) primitives, and they work the same whether the spans were auto-instrumented or created by hand:
+Costs roll up from each LLM span to the span that contains it and on to the trace, so a run that fans out across tools, subagents, and providers still resolves to one number:
+
+```text
+support-agent                                              $0.0412
+├── classify          openai / gpt-5-mini                  $0.0021
+├── search_docs       anthropic / claude-sonnet-4-5        $0.0180
+│   └── summarize     openai / gpt-5-mini                  $0.0043
+└── draft_reply       anthropic / claude-opus-5            $0.0168
+```
+
+The same total is available at every level above the trace too. A [session](/tracing/structure/sessions) shows its cost in the sessions table and in the session header, and a project's spend is a [dashboard](/custom-dashboards/overview) away: the **Total cost** preset charts it over time, while **Expensive traces** and **Expensive spans** rank the individual offenders.
+
+Everything past that comes from ordinary [trace structure](/tracing/structure/overview) primitives, and they work the same whether the spans were auto-instrumented or created by hand:
 
 - **Model and provider**, including a mix of providers in one run
 - **Agent or workflow**, through span and trace names
@@ -90,6 +102,8 @@ ORDER BY cost DESC
 ## Which models and providers are priced
 
 Laminar prices effectively every model from every major provider, and keeps up as providers change their rates. Prices are resolved on the Laminar server rather than in the SDK, so a model that shipped this morning is priced correctly with the SDK version you already have.
+
+Pricing is per span, so a run that mixes providers needs no special handling: each call is priced against its own model and provider, and the trace total is their sum. A [self-hosted](/self-hosting/overview) Laminar prices spans from the same table as the managed cloud, with one caveat: your deployment refreshes it over the network at startup, so an air-gapped install has no built-in prices and needs custom ones.
 
 You supply a price yourself only when there is no public one to look up, such as a private, self-hosted, or fine-tuned model, or when your rate differs from list price. Define it once per project under **Settings > Model costs**, see [Custom model costs](/platform/custom-model-costs). The alternative, for cases where you already compute cost yourself, is to set it directly on the span, covered in [Instrument calls Laminar does not trace automatically](#instrument-calls-laminar-does-not-trace-automatically).
 
@@ -289,6 +303,8 @@ For prompt and completion content, cache and reasoning token keys, and the rest 
 ## Find wasted spend
 
 Cost tracking tells you what you spent. To find what you wasted, use [Signals](/signals/introduction): plain-language instructions that read whole agent runs and flag the patterns that quietly drive cost, like a tool call retried until the agent gives up. Because a Signal sees the full run rather than isolated token counts, it catches waste that a per-call number cannot show.
+
+Signals are also how you hear about it without watching a dashboard. Every Signal comes with an [alert](/signals/alerts) that fires on its events, in-app, by email, or into Slack. Be clear on what that is: the alert fires on the pattern the Signal matched, not on a dollar threshold, and it reports a call that already happened rather than preventing one.
 
 ## FAQ
 
