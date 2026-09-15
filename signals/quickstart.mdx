@@ -269,7 +269,7 @@ ORDER BY score DESC
 SELECT
     timestamp,
     trace_id,
-    JSONExtract(payload, 'summary', 'String') AS summary,
+    JSONExtract(payload, 'rationale', 'String') AS rationale,
     JSONExtract(payload, 'metrics', 'confidence', 'Float64') AS confidence,
     JSONExtract(payload, 'labels', 'Array(String)') AS labels
 FROM signal_events

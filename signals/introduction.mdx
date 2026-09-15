@@ -54,7 +54,6 @@ The **output schema** names three fields to extract for each occurrence: `unsupp
 
 ```json wrap
 {
-  "summary": "Agent hallucinated hotel options and estimated prices after API timeout",
   "severity": "warning",
   "payload": {
     "unsupported_claim": "Specific hotel recommendations (Ibis Paris Montmartre, Hotel Eiffel Seine, Pullman Paris Tour Eiffel) with estimated prices (€130, €200, €420)",
@@ -115,7 +114,7 @@ This is what makes Signals reliable on long traces. A checkout failure buried in
 
 A run ends in one of two ways:
 
-- The agent submits **one or more findings**. Each finding contains a payload that conforms to your schema, a short summary of what was found, and a severity (`critical`, `warning`, or `info`).
+- The agent submits **one or more findings**. Each finding contains a payload that conforms to your schema and a severity (`critical`, `warning`, or `info`).
 - The agent submits **nothing**, meaning the behavior you described wasn't present in that trace. No event is created.
 
 A single trace can legitimately produce multiple findings: an agent that retried a broken tool three times produces three retry events, not one.
