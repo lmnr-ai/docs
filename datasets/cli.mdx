@@ -3,7 +3,7 @@ sidebarTitle: CLI
 title: Laminar datasets CLI
 ---
 
-The `lmnr-cli dataset` command manages datasets in Laminar from your terminal: list them, create new ones from local files, and push or pull datapoints. It ships in the standalone [`lmnr-cli`](/platform/cli) npm package, so you do not need the `@lmnr-ai/lmnr` SDK installed to use it.
+The `lmnr-cli dataset` command manages datasets in Laminar from your terminal: list and inspect them, create new ones from local files, push or pull datapoints, rename a dataset, and delete one. It ships in the standalone [`lmnr-cli`](/platform/cli) npm package, so you do not need the `@lmnr-ai/lmnr` SDK installed to use it.
 
 <Note>
 `lmnr-cli` replaces the dataset commands that used to ship with the `@lmnr-ai/lmnr` SDK (`lmnr datasets ...`). The old SDK-bundled CLI is deprecated; use `lmnr-cli dataset` instead.
@@ -233,18 +233,44 @@ List all datasets.
 lmnr-cli dataset list
 ```
 
+```
+ID                                    Created At           Name
+2b5f01c6-5a10-4abd-b8c7-05f9d7be3b9a  2026-09-15 10:03:26  qa-eval
+
+Total: 1 dataset(s)
+```
+
 ### Get a dataset
 
-Get dataset metadata by its canonical ID.
+Get dataset metadata by its canonical ID. Useful for confirming an id resolves in this project before scripting a push or a delete against it.
 
 ```bash
 lmnr-cli dataset get <dataset-id>
 ```
 
+```bash
+lmnr-cli dataset get 2b5f01c6-5a10-4abd-b8c7-05f9d7be3b9a --json
+```
+
+```json
+{
+  "id": "2b5f01c6-5a10-4abd-b8c7-05f9d7be3b9a",
+  "name": "qa-eval",
+  "projectId": "85602090-0a3b-415a-b616-e9cd788e6a64",
+  "createdAt": "2026-09-15T10:03:26.545138Z"
+}
+```
+
 ### Rename a dataset
 
+`update` takes the dataset id and a new name in `-n` / `--name`. Renaming keeps every datapoint and its version history: only the display name changes, so anything referencing the dataset **by id** keeps working while pushes and pulls that pass `-n <old-name>` stop resolving.
+
 ```bash
-lmnr-cli dataset update <dataset-id> --name <new-name>
+lmnr-cli dataset update 2b5f01c6-5a10-4abd-b8c7-05f9d7be3b9a -n qa-eval-v2
+```
+
+```
+Updated dataset "qa-eval-v2" (2b5f01c6-5a10-4abd-b8c7-05f9d7be3b9a).
 ```
 
 ### Delete a dataset
@@ -252,8 +278,16 @@ lmnr-cli dataset update <dataset-id> --name <new-name>
 Delete a dataset and its datapoints.
 
 ```bash
-lmnr-cli dataset delete <dataset-id>
+lmnr-cli dataset delete 2b5f01c6-5a10-4abd-b8c7-05f9d7be3b9a
 ```
+
+```
+Deleted dataset "qa-eval-v2" (2b5f01c6-5a10-4abd-b8c7-05f9d7be3b9a) and its datapoints.
+```
+
+<Warning>
+Deleting a dataset is permanent and removes every datapoint in it, including all datapoint versions. There is no confirmation prompt. Pull a copy first (`dataset pull`) if you may want the data back.
+</Warning>
 
 ### Create a new dataset
 

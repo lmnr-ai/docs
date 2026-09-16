@@ -29,7 +29,7 @@ tags:
   - name: Signals
     description: Manage automated evaluations of project traces.
   - name: LLM profiles
-    description: Configure workspace LLM credentials and models for self-hosted Signals.
+    description: Configure the workspace LLM credentials and models the playground and self-hosted Signals run on.
 paths:
   /v1/traces:
     post:
@@ -379,10 +379,6 @@ paths:
       summary: List LLM profiles
       description: |
         Lists every LLM profile in the authenticated project's workspace.
-
-        <Note>
-          LLM profiles are available only on self-hosted deployments. Laminar Cloud returns `404 Not Found`.
-        </Note>
       operationId: listLlmProfiles
       responses:
         "200":
@@ -399,7 +395,7 @@ paths:
         Creates an LLM profile in the authenticated project's workspace.
 
         <Note>
-          LLM profiles are available only on self-hosted deployments. Laminar Cloud returns `404 Not Found`. Secrets are accepted as plaintext over TLS, stored encrypted, and never returned unmasked.
+          Secrets are accepted as plaintext over TLS, stored encrypted, and never returned unmasked.
         </Note>
       operationId: createLlmProfile
       requestBody:
@@ -425,10 +421,6 @@ paths:
       summary: Get an LLM profile
       description: |
         Returns an LLM profile from the authenticated project's workspace. Secret values are masked.
-
-        <Note>
-          LLM profiles are available only on self-hosted deployments. Laminar Cloud returns `404 Not Found`.
-        </Note>
       operationId: getLlmProfile
       responses:
         "200":
@@ -442,10 +434,10 @@ paths:
       tags: [LLM profiles]
       summary: Update an LLM profile
       description: |
-        Updates an LLM profile. Omitted fields retain their stored values, `models` replaces the complete model list, and supplied secrets are merged with stored secrets.
+        Updates an LLM profile. Omitted fields retain their stored values, `models` replaces the complete model list, a supplied `config` replaces the whole stored config object, and supplied secrets are merged with stored secrets.
 
         <Note>
-          LLM profiles are available only on self-hosted deployments. Laminar Cloud returns `404 Not Found`. Removing a model used by a Signal returns `409 Conflict`.
+          Removing a model used by a Signal returns `409 Conflict`.
         </Note>
       operationId: updateLlmProfile
       requestBody:
@@ -468,10 +460,6 @@ paths:
       summary: Delete an LLM profile
       description: |
         Deletes an LLM profile and returns its final state.
-
-        <Note>
-          LLM profiles are available only on self-hosted deployments. Laminar Cloud returns `404 Not Found`.
-        </Note>
 
         <Warning>
           A profile used by a Signal cannot be deleted. The API returns `409 Conflict` until every Signal stops using it.
@@ -879,7 +867,10 @@ components:
         [
           openai_completions,
           openai_responses,
+          anthropic,
           gemini,
+          groq,
+          mistral,
           bedrock,
           azure_chat_completions,
           azure_responses,

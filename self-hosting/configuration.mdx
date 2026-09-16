@@ -13,7 +13,7 @@ helm upgrade -i laminar laminar/laminar -f laminar.yaml
 
 ## AI features and LLM provider
 
-Chat-with-trace, SQL-with-AI, and [Signals](/signals/introduction) all run through one unified LLM provider configuration. Set the provider on all three application pods (they default to `gemini`), and supply the key:
+Chat-with-trace and SQL-with-AI run through one unified LLM provider configuration. Set the provider on all three application pods (they default to `gemini`), and supply the key:
 
 - `LLM_PROVIDER`: `gemini` (default), `openai`, or `bedrock`. Set via `frontend.env.llmProvider`, `appServer.env.llmProvider`, and `appServerConsumer.env.llmProvider`.
 - `LLM_API_KEY`: the key for `gemini` or `openai`. Set via `secrets.data`.
@@ -21,6 +21,10 @@ Chat-with-trace, SQL-with-AI, and [Signals](/signals/introduction) all run throu
 - `LLM_MODEL_SMALL` / `LLM_MODEL_MEDIUM` / `LLM_MODEL_LARGE`: optional per-tier model overrides. Per-provider defaults apply when unset. For Bedrock, these are Inference Profile IDs.
 
 AI features in the frontend activate as soon as `LLM_API_KEY` (or AWS credentials for Bedrock) is populated.
+
+<Note>
+[Signals](/signals/introduction) and the [playground](/playground) do not use these values. Each Signal runs on an [LLM profile](/platform/llm-profiles): a workspace-level entry holding a provider, its credentials, and the models you allow. Set `LLM_API_KEY` for the features above, and add profiles in workspace settings for Signals and the playground.
+</Note>
 
 ### Gemini (default)
 
@@ -92,7 +96,9 @@ appServerConsumer:
 
 ## Signals
 
-[Signals](/signals/introduction) extract structured events from your traces using the LLM provider configured above. They are **enabled by default** in the frontend once an `LLM_API_KEY` (or Bedrock credentials) is set. No separate flag is required to turn them on.
+[Signals](/signals/introduction) extract structured events from your traces. On a self-hosted deployment, each Signal runs on an [LLM profile](/platform/llm-profiles) that a workspace member creates in the app: the provider, its credentials, and the models the Signal may use live in the profile, not in `laminar.yaml`. Signals are **enabled by default** in the frontend, and no `LLM_API_KEY` is required to turn them on.
+
+Signals created before profiles existed keep running on the `LLM_PROVIDER` configuration above until you point them at a profile. Signals that use a profile ignore `LLM_PROVIDER`, `LLM_BASE_URL`, and the `LLM_MODEL_*` overrides entirely.
 
 To disable Signals:
 
@@ -111,7 +117,7 @@ frontend:
 ```
 
 <Note>
-Signal extraction runs in the `app-server-consumer` pod, so its `llmProvider` (and any model overrides) governs how Signals are computed. Keep the provider consistent across `frontend`, `appServer`, and `appServerConsumer` unless you have a reason to split them.
+Signal extraction runs in the `app-server-consumer` pod. For a Signal without a profile, that pod's `llmProvider` (and any model overrides) governs how the Signal is computed, so keep the provider consistent across `frontend`, `appServer`, and `appServerConsumer` unless you have a reason to split them. Profile credentials are encrypted by the frontend and decrypted by the app server, both with `AEAD_SECRET_KEY`, so that value has to match across pods (the chart sets one key for all of them).
 </Note>
 
 ## Slack notifications

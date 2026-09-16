@@ -2,7 +2,7 @@
 title: CLI
 ---
 
-The `lmnr-cli` is a command-line tool for onboarding a project, querying Laminar data, managing datasets, and annotating debug sessions from your terminal. It is the fastest way to wire up a new project, pull traces into a shell pipeline, script dataset maintenance, or connect an AI coding agent that can shell out, all without leaving the command line.
+The `lmnr-cli` is a command-line tool for onboarding a project, querying Laminar data, managing datasets, Signals, and LLM profiles, and annotating debug sessions from your terminal. It is the fastest way to wire up a new project, pull traces into a shell pipeline, script dataset maintenance, or connect an AI coding agent that can shell out, all without leaving the command line.
 
 <Note>
 The CLI is a standalone npm package (`lmnr-cli`) and ships independently from the `@lmnr-ai/lmnr` SDK. You do not need the SDK installed to onboard a project, query data, or manage datasets.
@@ -73,7 +73,7 @@ lmnr-cli logout   # Remove the stored credentials
 
 ## Self-hosting
 
-For a self-hosted deployment, point the CLI at your instance. `login` talks to your frontend (the auth issuer); the data commands (`sql`, `dataset`, `project`, `debug`) talk to your API.
+For a self-hosted deployment, point the CLI at your instance. `login` talks to your frontend (the auth issuer); the data commands (`sql`, `dataset`, `signal`, `llm-profile`, `project`, `debug`) talk to your API.
 
 The cleanest way is to set the URLs once via environment variables. The CLI reads them from your environment and from a `.env` or `.env.local` file in the current directory.
 ```bash
@@ -102,7 +102,7 @@ The CLI does not use a project API key. The `LMNR_PROJECT_API_KEY` that `lmnr-cl
 
 ## Directory-scoped projects
 
-Every project command (`sql`, `dataset`, `project`, `debug`) resolves which project it targets from the directory you run in. `lmnr-cli setup` writes a `.lmnr/project.json` link file at the project root (it holds the project id and display details, never secrets). Commands then resolve the project in this order:
+Every project command (`sql`, `dataset`, `signal`, `llm-profile`, `project`, `debug`) resolves which project it targets from the directory you run in. `lmnr-cli setup` writes a `.lmnr/project.json` link file at the project root (it holds the project id and display details, never secrets). Commands then resolve the project in this order:
 
 1. `--project-id <id>` flag.
 2. The nearest `.lmnr/project.json`, walking up from the current directory.
@@ -189,11 +189,30 @@ lmnr-cli signal create "Refund requests" \
 
 lmnr-cli signal list
 lmnr-cli signal get "Refund requests" --json
+lmnr-cli signal versions "Refund requests"
 lmnr-cli signal update "Refund requests" --mode batch
 lmnr-cli signal delete "Refund requests"
 ```
 
-See [Signals CLI](/signals/cli) for the full reference.
+See [Signals CLI](/signals/cli) for the full reference, including the `--llm-profile-id` and `--model` pair that routes a Signal through an [LLM profile](/platform/llm-profiles) on self-hosted deployments.
+
+## Manage LLM profiles
+
+An [LLM profile](/platform/llm-profiles) bundles a provider, its credentials, and the models you want into one workspace-level entry. `llm-profile` is full CRUD over them, so you can provision providers from a script instead of the settings page.
+
+```bash
+lmnr-cli llm-profile list
+lmnr-cli llm-profile get <profile-id> --json
+
+lmnr-cli llm-profile create "Staging OpenAI" \
+  --provider openai_responses --api-key sk-... \
+  --model gpt-5-mini --model gpt-4.1-mini
+
+lmnr-cli llm-profile update <profile-id> --model gpt-5
+lmnr-cli llm-profile delete <profile-id>
+```
+
+Secrets are write-only: reads return a mask, and an update that omits a secret keeps the stored value. See [LLM profiles from the CLI](/platform/llm-profiles#manage-profiles-from-the-cli) for the per-provider flags and the update rules.
 
 ## Manage datasets
 
@@ -204,7 +223,7 @@ Create, list, inspect, rename, delete, push, and pull datasets. File operations 
 lmnr-cli dataset list --json
 
 # Inspect, rename, or delete a dataset by its canonical ID
-lmnr-cli dataset get <dataset-id>
+lmnr-cli dataset get <dataset-id> --json
 lmnr-cli dataset update <dataset-id> --name renamed-dataset
 lmnr-cli dataset delete <dataset-id>
 
@@ -346,6 +365,8 @@ lmnr-cli project --help
 lmnr-cli sql --help
 lmnr-cli sql query --help
 lmnr-cli dataset --help
+lmnr-cli signal --help
+lmnr-cli llm-profile --help
 lmnr-cli debug --help
 lmnr-cli debug session --help
 lmnr-cli debug session new --help
