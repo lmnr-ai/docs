@@ -223,6 +223,8 @@ These are shared by every `dataset` subcommand.
 
 ## Commands
 
+Dataset names are display labels and do not need to be unique. Use the dataset ID returned by `list` when you need to target one dataset unambiguously.
+
 ### List all datasets
 
 List all datasets.
@@ -238,9 +240,9 @@ ID                                    Created At           Name
 Total: 1 dataset(s)
 ```
 
-### Inspect one dataset
+### Get a dataset
 
-Show a single dataset by id. Useful for confirming an id resolves in this project before scripting a push or a delete against it.
+Get dataset metadata by its canonical ID. Useful for confirming an id resolves in this project before scripting a push or a delete against it.
 
 ```bash
 lmnr-cli dataset get <dataset-id>
@@ -272,6 +274,8 @@ Updated dataset "qa-eval-v2" (2b5f01c6-5a10-4abd-b8c7-05f9d7be3b9a).
 ```
 
 ### Delete a dataset
+
+Delete a dataset and its datapoints.
 
 ```bash
 lmnr-cli dataset delete 2b5f01c6-5a10-4abd-b8c7-05f9d7be3b9a

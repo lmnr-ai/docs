@@ -216,12 +216,16 @@ Secrets are write-only: reads return a mask, and an update that omits a secret k
 
 ## Manage datasets
 
-List, push, pull, and create datasets from files on disk. Supported formats: `.jsonl`, `.json`, `.csv`. Like `sql`, these commands run against the linked project.
+Create, list, inspect, rename, delete, push, and pull datasets. File operations support `.jsonl`, `.json`, and `.csv`. Like `sql`, these commands run against the linked project.
 
 ```bash
-# List all datasets in the project, or inspect one by id
+# List all datasets in the project
 lmnr-cli dataset list --json
+
+# Inspect, rename, or delete a dataset by its canonical ID
 lmnr-cli dataset get <dataset-id> --json
+lmnr-cli dataset update <dataset-id> --name renamed-dataset
+lmnr-cli dataset delete <dataset-id>
 
 # Push new datapoints into an existing dataset
 lmnr-cli dataset push data.jsonl -n my-dataset
@@ -231,10 +235,6 @@ lmnr-cli dataset pull output.jsonl -n my-dataset
 
 # Create a new dataset from a file, writing a local copy with dataset IDs
 lmnr-cli dataset create my-dataset data.jsonl -o my-dataset.jsonl
-
-# Rename a dataset, or delete it with every datapoint in it
-lmnr-cli dataset update <dataset-id> -n my-renamed-dataset
-lmnr-cli dataset delete <dataset-id>
 ```
 
 See [Datasets CLI](/datasets/cli) for the full dataset workflow including versioning semantics.
