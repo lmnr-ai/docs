@@ -92,12 +92,11 @@ On a self-hosted deployment, each [Signal](/signals/introduction) runs on one pr
 
 - **New Signals must pick a profile and a model.** If the workspace has exactly one profile, it is preselected with its first model. With no profiles at all, the picker reads **No profiles yet** and the Signal cannot be created until you add one.
 - **Signals created before you added profiles keep running** on the server's `LLM_PROVIDER` environment configuration. The form flags them so you can move them onto a profile; there is no way back to environment credentials once a Signal points at a profile.
-- **The selected model serves the whole run.** A profile-backed Signal ignores the server's environment-level provider and model-size settings.
 - **A bad profile fails the run, visibly.** A revoked key, a model you lost access to, or a deleted profile fails the Signal run with the provider's error and the profile name, so the Runs tab tells you what to fix instead of retrying forever.
 
 Deleting a profile, or removing a model, is **refused while a Signal uses it**. Re-point or delete those Signals first. This is the opposite of the playground, where the same delete just clears the selection.
 
-Other AI features on a self-hosted deployment (chat with trace, SQL with AI, trace clustering) still use the server's `LLM_PROVIDER` and `LLM_API_KEY`. Profiles do not replace those. See [Self-hosting configuration](/self-hosting/configuration#ai-features-and-llm-provider).
+Other AI features on a self-hosted deployment (chat with trace, SQL with AI) still use the server's `LLM_PROVIDER` and `LLM_API_KEY`. Profiles do not replace those. See [Self-hosting configuration](/self-hosting/configuration#ai-features-and-llm-provider).
 
 ## Manage profiles from the CLI
 

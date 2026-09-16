@@ -13,7 +13,7 @@ helm upgrade -i laminar laminar/laminar -f laminar.yaml
 
 ## AI features and LLM provider
 
-Chat-with-trace, SQL-with-AI, and trace clustering run through one unified LLM provider configuration. Set the provider on all three application pods (they default to `gemini`), and supply the key:
+Chat-with-trace and SQL-with-AI run through one unified LLM provider configuration. Set the provider on all three application pods (they default to `gemini`), and supply the key:
 
 - `LLM_PROVIDER`: `gemini` (default), `openai`, or `bedrock`. Set via `frontend.env.llmProvider`, `appServer.env.llmProvider`, and `appServerConsumer.env.llmProvider`.
 - `LLM_API_KEY`: the key for `gemini` or `openai`. Set via `secrets.data`.
