@@ -1,6 +1,7 @@
 ---
-title: LLM Observability for LiteLLM
+title: LiteLLM observability
 sidebarTitle: LiteLLM
+description: "Trace LiteLLM calls to any model it routes to with one integration: prompts, token usage, cost, and latency in Laminar's transcript view."
 ---
 
 ## Overview
@@ -56,3 +57,26 @@ response = litellm.completion(
 </div>
 </Step>
 </Steps>
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="OpenAI" href="/tracing/integrations/openai">
+    Trace the OpenAI SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="Anthropic" href="/tracing/integrations/anthropic">
+    Trace the Anthropic SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="OpenRouter" href="/tracing/integrations/openrouter">
+    Trace OpenRouter requests with model and cost attribution.
+  </Card>
+  <Card title="Cohere" href="/tracing/integrations/cohere">
+    Trace Cohere chat, embed, and rerank calls.
+  </Card>
+  <Card title="LangChain / LangGraph" href="/tracing/integrations/langchain">
+    Trace LangChain chains and LangGraph graphs.
+  </Card>
+  <Card title="All integrations" href="/tracing/integrations/overview">
+    Every integration Laminar supports, with a table of what each one captures.
+  </Card>
+</CardGroup>

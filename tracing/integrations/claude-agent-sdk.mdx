@@ -1,6 +1,7 @@
 ---
-title: Observability for Claude Agent SDK
+title: Claude Agent SDK observability
 sidebarTitle: Claude Agent SDK
+description: "Trace agents built on the Claude Agent SDK in TypeScript and Python, including subagent runs, tool calls, token usage, and cost."
 ---
 
 ## Overview
@@ -264,7 +265,7 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
 
 <AccordionGroup>
   <Accordion title="I don't see any traces in Laminar">
-    - Confirm `LMNR_PROJECT_API_KEY` is set in the same process that runs the SDK.
+    - Confirm `LMNR_PROJECT_API_KEY` is set in the same process that runs the Claude Agent SDK.
     - In TypeScript, make sure you're iterating the async generator returned by `query`. The agent only runs while you consume messages.
     - In Python, `claude-agent-sdk` must be importable when `Laminar.initialize()` runs. Install it with `pip install claude-agent-sdk`.
   </Accordion>
@@ -299,7 +300,27 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
   <Card title="Tracing structure" href="/tracing/structure/overview">
     Sessions, metadata, and tags for deeper control.
   </Card>
+</CardGroup>
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="Claude Code" href="/tracing/integrations/claude-code">
+    Trace Claude Code sessions with a one-command plugin.
+  </Card>
   <Card title="OpenCode" href="/tracing/integrations/opencode">
-    Running Claude Agent SDK alongside OpenCode? Trace both here.
+    Running the Claude Agent SDK alongside OpenCode? Trace both here.
+  </Card>
+  <Card title="Codex" href="/tracing/integrations/codex">
+    Trace Codex CLI sessions with a one-command plugin.
+  </Card>
+  <Card title="Anthropic" href="/tracing/integrations/anthropic">
+    Trace the Anthropic SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="OpenHands SDK" href="/tracing/integrations/openhands-sdk">
+    Trace OpenHands software agents end to end.
+  </Card>
+  <Card title="All integrations" href="/tracing/integrations/overview">
+    Every integration Laminar supports, with a table of what each one captures.
   </Card>
 </CardGroup>

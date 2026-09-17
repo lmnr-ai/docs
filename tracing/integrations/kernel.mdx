@@ -1,6 +1,7 @@
 ---
-title: Observability for computer-using agents on Kernel
+title: Kernel observability
 sidebarTitle: Kernel
+description: "Trace computer-using agents that drive Kernel browsers, with the browser session recording synced to the agent's steps."
 ---
 
 ## Overview
@@ -417,3 +418,26 @@ async def run_automation(ctx: KernelContext):
 - Understand [session replay for browser agents](/tracing/browser-agent-observability) in more detail.
 - Learn about [Profiles](https://www.onkernel.com/docs/browsers/profiles) in Kernel to persist browser state between runs.
 - Learn about calling playwright [directly](https://www.onkernel.com/docs/browsers/playwright-execution) through Kernel's API.
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="Browser Use" href="/tracing/integrations/browser-use">
+    Trace Browser Use agents with synced session recordings.
+  </Card>
+  <Card title="Stagehand" href="/tracing/integrations/stagehand">
+    Trace Stagehand runs with synced session recordings.
+  </Card>
+  <Card title="Skyvern" href="/tracing/integrations/skyvern">
+    Trace Skyvern workflows with synced session recordings.
+  </Card>
+  <Card title="Playwright" href="/tracing/integrations/playwright">
+    Record Playwright browser sessions alongside your traces.
+  </Card>
+  <Card title="OpenHands SDK" href="/tracing/integrations/openhands-sdk">
+    Trace OpenHands software agents end to end.
+  </Card>
+  <Card title="All integrations" href="/tracing/integrations/overview">
+    Every integration Laminar supports, with a table of what each one captures.
+  </Card>
+</CardGroup>

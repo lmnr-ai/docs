@@ -1,6 +1,7 @@
 ---
-title: LLM Observability for Cohere SDK
+title: Cohere observability
 sidebarTitle: Cohere
+description: "Trace every Cohere chat, embed, and rerank call: prompts, token usage, cost, and latency, all readable in Laminar's transcript view."
 ---
 
 ## Overview
@@ -170,7 +171,7 @@ for i, score in sorted(sims, key=lambda x: x[1], reverse=True):
 
 All Cohere API calls are now automatically traced in Laminar.
 
-## Monitoring Your Cohere Usage
+## Monitoring Cohere usage
 
 After instrumenting your Cohere calls with Laminar, you'll be able to:
 
@@ -182,7 +183,30 @@ After instrumenting your Cohere calls with Laminar, you'll be able to:
 
 Visit your Laminar dashboard to view your Cohere traces and analytics.
 
-## Advanced Features
+## Enrich your Cohere traces
 
-- Enrich traces with sessions, user IDs, metadata, and tags via the [SDK reference](/sdk/reference).
-- Wrap custom functions with `observe` to capture business logic alongside model calls (see the SDK reference).
+- Attach sessions, user IDs, metadata, and tags to Cohere spans via the [SDK reference](/sdk/reference).
+- Wrap the functions around your Cohere calls with `observe` and mark them as [TOOL spans](/tracing/structure/span-types) so they show up in the transcript.
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="OpenAI" href="/tracing/integrations/openai">
+    Trace the OpenAI SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="Anthropic" href="/tracing/integrations/anthropic">
+    Trace the Anthropic SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="Gemini" href="/tracing/integrations/gemini">
+    Trace Gemini calls made with the Google Gen AI SDK.
+  </Card>
+  <Card title="LiteLLM" href="/tracing/integrations/litellm">
+    One integration for every model LiteLLM routes to.
+  </Card>
+  <Card title="LangChain / LangGraph" href="/tracing/integrations/langchain">
+    Trace LangChain chains and LangGraph graphs.
+  </Card>
+  <Card title="All integrations" href="/tracing/integrations/overview">
+    Every integration Laminar supports, with a table of what each one captures.
+  </Card>
+</CardGroup>

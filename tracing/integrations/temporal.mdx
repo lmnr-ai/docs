@@ -1,6 +1,7 @@
 ---
-title: Observability for Temporal Workflows
+title: Temporal observability
 sidebarTitle: Temporal
+description: "Trace AI agents that run as Temporal workflows in TypeScript and Python: one trace across the client, the workflow, and every activity."
 ---
 
 ## Overview
@@ -579,5 +580,28 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
   </Card>
   <Card title="Span types" href="/tracing/structure/span-types">
     Mark functions as TOOL or LLM spans so they surface in the transcript view.
+  </Card>
+</CardGroup>
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="eve" href="/tracing/integrations/eve">
+    Trace eve durable agents, their turns, and tool calls.
+  </Card>
+  <Card title="Vercel AI SDK" href="/tracing/integrations/vercel-ai-sdk">
+    Trace `generateText` and `streamText` in Next.js and Node.js.
+  </Card>
+  <Card title="OpenAI" href="/tracing/integrations/openai">
+    Trace the OpenAI SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="Anthropic" href="/tracing/integrations/anthropic">
+    Trace the Anthropic SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="LangChain / LangGraph" href="/tracing/integrations/langchain">
+    Trace LangChain chains and LangGraph graphs.
+  </Card>
+  <Card title="All integrations" href="/tracing/integrations/overview">
+    Every integration Laminar supports, with a table of what each one captures.
   </Card>
 </CardGroup>

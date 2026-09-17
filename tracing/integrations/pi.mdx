@@ -1,6 +1,7 @@
 ---
-title: Pi Extension
+title: Pi observability
 sidebarTitle: Pi
+description: "Trace every Pi coding agent session: each prompt becomes a trace with its LLM calls and tool calls, grouped as a Laminar session."
 ---
 
 ## Overview
@@ -70,7 +71,7 @@ One trace covers one prompt. Pi can run its agent loop more than once for a sing
 
 Spans open when the work starts, not when it finishes. An LLM span opens as Pi hands the request to the model, so its duration is the real call latency.
 
-## Configuration
+## Configure the Pi extension
 
 The extension reads its config from `~/.config/lmnr/pi-extension.json`, written by `lmnr-cli plugin add pi`:
 
@@ -88,10 +89,33 @@ These environment variables override the file when set, which is handy for CI or
 | `LMNR_BASE_URL` | config file, else `https://api.lmnr.ai` | Laminar API base URL, for self-hosted deployments. |
 | `LMNR_USER_ID` | `lmnr-cli login` identity | User id to attach to every trace. |
 | `LMNR_MAX_CHARS` | `20000` | Character cap for span input and output values. The system prompt gets its own budget of this size, so a turn's input can reach about twice the cap. |
-| `LMNR_DEBUG` | — | Set to `true` to attach runs to a debugger session and write a log file. |
+| `LMNR_DEBUG` | none | Set to `true` to attach runs to a debugger session and write a log file. |
 
 ## Debugger sessions
 
-Set `LMNR_DEBUG=true` and each run also joins a Laminar [debugger session](/debugger/introduction), so you can inspect and replay it. The SDK resolves the session id in this order: `LMNR_DEBUG_SESSION_ID`, then the nearest `.lmnr/debug-session.json` written by `lmnr-cli debug session new`, then a fresh id.
+Set `LMNR_DEBUG=true` and each run also joins a Laminar [debugger session](/debugger/introduction), so you can inspect and replay it. The Laminar SDK resolves the session id in this order: `LMNR_DEBUG_SESSION_ID`, then the nearest `.lmnr/debug-session.json` written by `lmnr-cli debug session new`, then a fresh id.
 
 `LMNR_DEBUG=true` also turns on file logging to `~/.pi/agent/lmnr-pi-extension.log`. Pi is a terminal UI, so the extension never writes diagnostics to stdout. Read that file when traces do not arrive.
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="Claude Code" href="/tracing/integrations/claude-code">
+    Trace Claude Code sessions with a one-command plugin.
+  </Card>
+  <Card title="Codex" href="/tracing/integrations/codex">
+    Trace Codex CLI sessions with a one-command plugin.
+  </Card>
+  <Card title="OpenCode" href="/tracing/integrations/opencode">
+    Trace OpenCode coding agent sessions.
+  </Card>
+  <Card title="Claude Agent SDK" href="/tracing/integrations/claude-agent-sdk">
+    Trace Claude Agent SDK runs and their subagents.
+  </Card>
+  <Card title="Anthropic" href="/tracing/integrations/anthropic">
+    Trace the Anthropic SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="All integrations" href="/tracing/integrations/overview">
+    Every integration Laminar supports, with a table of what each one captures.
+  </Card>
+</CardGroup>

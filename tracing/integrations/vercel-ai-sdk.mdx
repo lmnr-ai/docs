@@ -1,6 +1,7 @@
 ---
-title: Observability and Tracing for Vercel AI SDK in Next.js and Node.js
+title: Vercel AI SDK observability
 sidebarTitle: Vercel AI SDK
+description: "Trace Vercel AI SDK calls in Next.js and Node.js: model turns, tool calls, streaming, sub-agents, token usage, and cost."
 ---
 
 import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
@@ -395,7 +396,7 @@ export async function POST(req: Request) {
 
 ## Tracing a multi-step agent
 
-The AI SDK runs the tool-calling loop for you: the model calls a tool, the SDK runs the tool's `execute`, feeds the result back, and repeats until the model stops calling tools or a stop condition trips. Laminar records every step as a span under one trace, so the transcript shows each tool call and its result in order.
+The AI SDK runs the tool-calling loop for you: the model calls a tool, the AI SDK runs the tool's `execute`, feeds the result back, and repeats until the model stops calling tools or a stop condition trips. Laminar records every step as a span under one trace, so the transcript shows each tool call and its result in order.
 
 Two shapes are common. `generateText` with `tools` and `stopWhen` is the workhorse. `ToolLoopAgent` is a thin wrapper if you want to reuse the same tools and instructions across many calls.
 
@@ -719,10 +720,27 @@ The [debugger](/debugger/setup#ai-sdk-caching) still needs `wrapLanguageModel` a
   <Card title="Tracing structure" href="/tracing/structure/overview">
     Sessions, user IDs, metadata, and tags.
   </Card>
+</CardGroup>
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="Mastra" href="/tracing/integrations/mastra">
+    Trace Mastra agents, workflows, and tools in TypeScript.
+  </Card>
+  <Card title="eve" href="/tracing/integrations/eve">
+    Trace eve durable agents, their turns, and tool calls.
+  </Card>
   <Card title="OpenAI" href="/tracing/integrations/openai">
-    Mixing AI SDK with the OpenAI SDK directly? Trace it here.
+    Mixing the AI SDK with the OpenAI SDK directly? Trace it here.
   </Card>
   <Card title="Anthropic" href="/tracing/integrations/anthropic">
-    Mixing AI SDK with the Anthropic SDK directly? Trace it here.
+    Mixing the AI SDK with the Anthropic SDK directly? Trace it here.
+  </Card>
+  <Card title="OpenAI Agents SDK" href="/tracing/integrations/openai-agents-sdk">
+    Trace agent runs, handoffs, and tool calls.
+  </Card>
+  <Card title="All integrations" href="/tracing/integrations/overview">
+    Every integration Laminar supports, with a table of what each one captures.
   </Card>
 </CardGroup>

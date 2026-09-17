@@ -1,6 +1,7 @@
 ---
-title: Observability for Pydantic AI
+title: Pydantic AI observability
 sidebarTitle: Pydantic AI
+description: "Trace Pydantic AI agent runs in Python: every model turn, typed tool call, and sub-agent run, readable as a conversation in Laminar."
 ---
 
 ## Overview
@@ -208,7 +209,27 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
   <Card title="Tracing structure" href="/tracing/structure/overview">
     Sessions, metadata, and tags for deeper control.
   </Card>
-  <Card title="OpenAI SDK" href="/tracing/integrations/openai">
+</CardGroup>
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="OpenAI" href="/tracing/integrations/openai">
     Using the OpenAI SDK directly without Pydantic AI? Trace it here.
+  </Card>
+  <Card title="LangChain / LangGraph" href="/tracing/integrations/langchain">
+    Trace LangChain chains and LangGraph graphs.
+  </Card>
+  <Card title="deepagents" href="/tracing/integrations/deepagents">
+    Trace deepagents runs, subagents, and tool calls.
+  </Card>
+  <Card title="OpenAI Agents SDK" href="/tracing/integrations/openai-agents-sdk">
+    Trace agent runs, handoffs, and tool calls.
+  </Card>
+  <Card title="Anthropic" href="/tracing/integrations/anthropic">
+    Trace the Anthropic SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="All integrations" href="/tracing/integrations/overview">
+    Every integration Laminar supports, with a table of what each one captures.
   </Card>
 </CardGroup>

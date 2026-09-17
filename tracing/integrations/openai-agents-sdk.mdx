@@ -1,13 +1,14 @@
 ---
-title: Observability for OpenAI Agents SDK
+title: OpenAI Agents SDK observability
 sidebarTitle: OpenAI Agents SDK
+description: "Trace OpenAI Agents SDK runs in TypeScript and Python: agent turns, tool calls, handoffs, and sub-agents in Laminar's transcript view."
 ---
 
 ## Overview
 
 Laminar is an open-source, OpenTelemetry-native observability platform for the OpenAI Agents SDK ([Python](https://openai.github.io/openai-agents-python/), [TypeScript](https://openai.github.io/openai-agents-js/)). Trace, debug, and monitor every agent turn, tool call, handoff, and sub-agent with a single `Laminar.initialize()` call. Self-host via Helm or use managed cloud.
 
-The OpenAI Agents SDK lets you build agent workflows with `Agent`, `Runner.run` / `run`, function tools, and handoffs between specialists. Laminar hooks into the SDK's built-in trace processor to mirror every agent span into Laminar, plus adds the system instructions so the full prompt is visible in the trace.
+The OpenAI Agents SDK lets you build agent workflows with `Agent`, `Runner.run` / `run`, function tools, and handoffs between specialists. Laminar hooks into the OpenAI Agents SDK's built-in trace processor to mirror every agent span into Laminar, plus adds the system instructions so the full prompt is visible in the trace.
 
 What Laminar captures:
 
@@ -143,7 +144,7 @@ More on the trace UX: [Viewing traces](/platform/viewing-traces).
 
 ## Multi-agent runs with handoffs
 
-The OpenAI Agents SDK models specialization through handoffs: a triage agent routes the user to a specialist via `handoff(other_agent)` / `handoff(otherAgent)`, and the SDK exposes each handoff as a `transfer_to_<agent>` tool call. In Laminar, the destination agent's turns and tool calls nest under the handoff span, so you can follow the full multi-agent conversation in one trace.
+The OpenAI Agents SDK models specialization through handoffs: a triage agent routes the user to a specialist via `handoff(other_agent)` / `handoff(otherAgent)`, and the OpenAI Agents SDK exposes each handoff as a `transfer_to_<agent>` tool call. In Laminar, the destination agent's turns and tool calls nest under the handoff span, so you can follow the full multi-agent conversation in one trace.
 
 <Tabs items={['Python', 'TypeScript']}>
 <Tab title="Python">
@@ -518,7 +519,7 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
 
 <AccordionGroup>
   <Accordion title="I don't see any traces in Laminar">
-    - Confirm `LMNR_PROJECT_API_KEY` is set in the same process that runs the SDK.
+    - Confirm `LMNR_PROJECT_API_KEY` is set in the same process that runs the OpenAI Agents SDK.
     - Python: `openai-agents` must be importable when `Laminar.initialize()` runs. Install with `pip install openai-agents`. The integration requires `openai-agents >= 0.7.0` and `lmnr >= 0.7.49`.
     - TypeScript: `@openai/agents` must be installed in the same workspace. The integration requires `@lmnr-ai/lmnr >= 0.8.21`. If you import `@openai/agents` before `Laminar.initialize()` in ESM, pass the module via `instrumentModules: { openAIAgents: agents }`.
   </Accordion>
@@ -563,5 +564,28 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
   </Card>
   <Card title="Tracing structure" href="/tracing/structure/overview">
     Sessions, metadata, and tags for deeper control.
+  </Card>
+</CardGroup>
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="OpenAI" href="/tracing/integrations/openai">
+    Trace the OpenAI SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="Vercel AI SDK" href="/tracing/integrations/vercel-ai-sdk">
+    Trace `generateText` and `streamText` in Next.js and Node.js.
+  </Card>
+  <Card title="Mastra" href="/tracing/integrations/mastra">
+    Trace Mastra agents, workflows, and tools in TypeScript.
+  </Card>
+  <Card title="Pydantic AI" href="/tracing/integrations/pydantic-ai">
+    Trace Pydantic AI agent runs and typed tool calls.
+  </Card>
+  <Card title="Claude Agent SDK" href="/tracing/integrations/claude-agent-sdk">
+    Trace Claude Agent SDK runs and their subagents.
+  </Card>
+  <Card title="All integrations" href="/tracing/integrations/overview">
+    Every integration Laminar supports, with a table of what each one captures.
   </Card>
 </CardGroup>

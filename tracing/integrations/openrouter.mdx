@@ -1,6 +1,7 @@
 ---
-title: LLM Observability for OpenRouter
+title: OpenRouter observability
 sidebarTitle: OpenRouter
+description: "Trace every OpenRouter request with the model that served it, token usage, cost, and latency, all readable in Laminar's transcript view."
 ---
 
 ## Overview
@@ -256,7 +257,7 @@ curl https://openrouter.ai/api/v1/chat/completions \
 
 </CodeGroup>
 
-## Monitoring Your OpenRouter Usage
+## Monitoring OpenRouter usage
 
 When you use the OpenAI SDK integration above, Laminar will create LLM spans so you can:
 
@@ -268,8 +269,31 @@ When you use the OpenAI SDK integration above, Laminar will create LLM spans so 
 
 Visit your Laminar dashboard to view your OpenRouter traces and analytics.
 
-## Advanced Features
+## Enrich your OpenRouter traces
 
-- Enrich traces with sessions, user IDs, metadata, and tags via the [SDK reference](/sdk/reference).
-- Wrap custom functions with `observe` to capture business logic alongside model calls.
-- Images sent to vision-capable models are captured automatically - see [Tracing Images](/tracing/structure/images).
+- Attach sessions, user IDs, metadata, and tags to OpenRouter spans via the [SDK reference](/sdk/reference).
+- Wrap the functions around your OpenRouter calls with `observe` and mark them as [TOOL spans](/tracing/structure/span-types) so they show up in the transcript.
+- Images you send to vision-capable models are captured automatically ([Tracing Images](/tracing/structure/images)).
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="OpenAI" href="/tracing/integrations/openai">
+    Trace the OpenAI SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="Anthropic" href="/tracing/integrations/anthropic">
+    Trace the Anthropic SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="LiteLLM" href="/tracing/integrations/litellm">
+    One integration for every model LiteLLM routes to.
+  </Card>
+  <Card title="Gemini" href="/tracing/integrations/gemini">
+    Trace Gemini calls made with the Google Gen AI SDK.
+  </Card>
+  <Card title="Vercel AI SDK" href="/tracing/integrations/vercel-ai-sdk">
+    Trace `generateText` and `streamText` in Next.js and Node.js.
+  </Card>
+  <Card title="All integrations" href="/tracing/integrations/overview">
+    Every integration Laminar supports, with a table of what each one captures.
+  </Card>
+</CardGroup>

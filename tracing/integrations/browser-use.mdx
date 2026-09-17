@@ -1,6 +1,7 @@
 ---
-title: "Observability for Browser Use"
+title: Browser Use observability
 sidebarTitle: Browser Use
+description: "Trace Browser Use agents and watch the browser session recording synced to the agent's steps, LLM calls, and screenshots."
 ---
 
 ## Overview
@@ -37,11 +38,34 @@ async def main():
 asyncio.run(main())
 ```
 
-## Viewing Traces
+## View a Browser Use trace
 
-You can view traces in the Laminar UI by going to the traces tab in your project.
+You can view Browser Use traces in the Laminar UI by going to the traces tab in your project.
 When you select a trace, you can see both the browser session recording and the agent execution steps.
 
 Timeline of the browser session is synced with the agent execution steps, timeline highlights indicate the agent's current step synced with the browser session.
 
 <video src="/images/browser.mp4" controls loop muted playsInline className="block w-full" />
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="Stagehand" href="/tracing/integrations/stagehand">
+    Trace Stagehand runs with synced session recordings.
+  </Card>
+  <Card title="Skyvern" href="/tracing/integrations/skyvern">
+    Trace Skyvern workflows with synced session recordings.
+  </Card>
+  <Card title="Playwright" href="/tracing/integrations/playwright">
+    Record Playwright browser sessions alongside your traces.
+  </Card>
+  <Card title="Kernel" href="/tracing/integrations/kernel">
+    Trace computer-using agents running on Kernel browsers.
+  </Card>
+  <Card title="OpenHands SDK" href="/tracing/integrations/openhands-sdk">
+    Trace OpenHands software agents end to end.
+  </Card>
+  <Card title="All integrations" href="/tracing/integrations/overview">
+    Every integration Laminar supports, with a table of what each one captures.
+  </Card>
+</CardGroup>

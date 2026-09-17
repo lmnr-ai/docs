@@ -1,6 +1,7 @@
 ---
-title: Codex Plugin
+title: Codex observability
 sidebarTitle: Codex
+description: "Trace every Codex session with a plugin: each prompt becomes a trace with its LLM calls and tool calls, grouped as a Laminar session."
 ---
 
 ## Overview
@@ -62,7 +63,7 @@ Then create `~/.config/lmnr/codex-plugin.json` with a project API key. Get one f
 
 `projectApiKey` is required. `baseUrl` is optional and defaults to `https://api.lmnr.ai`; self-hosters set it to their instance's API URL (for example `http://localhost:8000`).
 
-## Configuration
+## Configure the Codex plugin
 
 The plugin reads its config from `~/.config/lmnr/codex-plugin.json`, written by `lmnr-cli plugin add codex`:
 
@@ -71,3 +72,26 @@ The plugin reads its config from `~/.config/lmnr/codex-plugin.json`, written by 
 ```
 
 The environment variables `LMNR_PROJECT_API_KEY` and `LMNR_BASE_URL` override the file when set, which is handy for CI or a shell you already have configured. Traces are attributed to the identity from `lmnr-cli login` when present; set `LMNR_USER_ID` to override the user id attached to traces.
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="Claude Code" href="/tracing/integrations/claude-code">
+    Trace Claude Code sessions with a one-command plugin.
+  </Card>
+  <Card title="OpenCode" href="/tracing/integrations/opencode">
+    Trace OpenCode coding agent sessions.
+  </Card>
+  <Card title="Pi" href="/tracing/integrations/pi">
+    Trace Pi coding agent sessions with a one-command extension.
+  </Card>
+  <Card title="OpenAI" href="/tracing/integrations/openai">
+    Trace the OpenAI SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="OpenAI Agents SDK" href="/tracing/integrations/openai-agents-sdk">
+    Trace agent runs, handoffs, and tool calls.
+  </Card>
+  <Card title="All integrations" href="/tracing/integrations/overview">
+    Every integration Laminar supports, with a table of what each one captures.
+  </Card>
+</CardGroup>

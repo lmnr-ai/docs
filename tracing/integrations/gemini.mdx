@@ -1,6 +1,7 @@
 ---
-title: LLM Observability for Gemini SDK
+title: Gemini observability
 sidebarTitle: Gemini
+description: "Trace every Gemini API call made with the Google Gen AI SDK: prompts, token usage, cost, and latency, all readable in Laminar's transcript view."
 ---
 
 ## Overview
@@ -68,7 +69,7 @@ print(response.text)
 
 All Gemini API calls are now automatically traced in Laminar.
 
-## Monitoring Your Gemini Usage
+## Monitoring Gemini usage
 
 After instrumenting your Gemini calls with Laminar, you'll be able to:
 
@@ -80,7 +81,30 @@ After instrumenting your Gemini calls with Laminar, you'll be able to:
 
 Visit your Laminar dashboard to view your Gemini traces and analytics.
 
-## Advanced Features
+## Enrich your Gemini traces
 
-- Enrich traces with sessions, user IDs, metadata, and tags via the [SDK reference](/sdk/reference).
-- Wrap custom functions with `observe` to capture business logic alongside model calls (see the SDK reference).
+- Attach sessions, user IDs, metadata, and tags to Gemini spans via the [SDK reference](/sdk/reference).
+- Wrap the functions around your Gemini calls with `observe` and mark them as [TOOL spans](/tracing/structure/span-types) so they show up in the transcript.
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="OpenAI" href="/tracing/integrations/openai">
+    Trace the OpenAI SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="Anthropic" href="/tracing/integrations/anthropic">
+    Trace the Anthropic SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="LiteLLM" href="/tracing/integrations/litellm">
+    One integration for every model LiteLLM routes to.
+  </Card>
+  <Card title="OpenRouter" href="/tracing/integrations/openrouter">
+    Trace OpenRouter requests with model and cost attribution.
+  </Card>
+  <Card title="Vercel AI SDK" href="/tracing/integrations/vercel-ai-sdk">
+    Trace `generateText` and `streamText` in Next.js and Node.js.
+  </Card>
+  <Card title="All integrations" href="/tracing/integrations/overview">
+    Every integration Laminar supports, with a table of what each one captures.
+  </Card>
+</CardGroup>

@@ -1,6 +1,7 @@
 ---
-title: Claude Code Plugin
+title: Claude Code observability
 sidebarTitle: Claude Code
+description: "Trace every Claude Code session with a plugin: each prompt becomes a trace with its LLM calls and tool calls, grouped as a Laminar session."
 ---
 
 ## Overview
@@ -62,7 +63,7 @@ Then create `~/.config/lmnr/claude-code-plugin.json` with a project API key. Get
 
 `projectApiKey` is required. `baseUrl` is optional and defaults to `https://api.lmnr.ai`; self-hosters set it to their instance's API URL (for example `http://localhost:8000`).
 
-## Configuration
+## Configure the Claude Code plugin
 
 The plugin reads its config from `~/.config/lmnr/claude-code-plugin.json`, written by `lmnr-cli plugin add claude-code`:
 
@@ -71,3 +72,26 @@ The plugin reads its config from `~/.config/lmnr/claude-code-plugin.json`, writt
 ```
 
 The environment variables `LMNR_PROJECT_API_KEY` and `LMNR_BASE_URL` override the file when set, which is handy for CI or a shell you already have configured. Traces are attributed to the identity from `lmnr-cli login` when present; set `LMNR_USER_ID` to override the user id attached to traces.
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="Codex" href="/tracing/integrations/codex">
+    Trace Codex CLI sessions with a one-command plugin.
+  </Card>
+  <Card title="OpenCode" href="/tracing/integrations/opencode">
+    Trace OpenCode coding agent sessions.
+  </Card>
+  <Card title="Claude Agent SDK" href="/tracing/integrations/claude-agent-sdk">
+    Trace Claude Agent SDK runs and their subagents.
+  </Card>
+  <Card title="Pi" href="/tracing/integrations/pi">
+    Trace Pi coding agent sessions with a one-command extension.
+  </Card>
+  <Card title="Anthropic" href="/tracing/integrations/anthropic">
+    Trace the Anthropic SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="All integrations" href="/tracing/integrations/overview">
+    Every integration Laminar supports, with a table of what each one captures.
+  </Card>
+</CardGroup>
