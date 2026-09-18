@@ -1,58 +1,11 @@
 ---
-title: "Integrations: frameworks and SDKs Laminar supports"
+title: Agent and LLM Observability Integrations
 sidebarTitle: Introduction
-description: "Every framework, LLM SDK, and coding agent Laminar supports, with a table of what each integration captures: LLM calls, tool calls, streaming, sub-agents, and cost."
 ---
 
 Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. It auto-instruments LLM provider SDKs, agent frameworks, and browser agents, so you trace, debug, and monitor every call without changing your code. Initialize Laminar once and calls to OpenAI, Anthropic, LangChain, the Vercel AI SDK, and the rest of the integrations below are captured with full detail: prompts, responses, tool calls, tokens, latency, and cost.
 
-Laminar supports 27 integrations today: LLM provider SDKs, agent frameworks, coding agents, and browser and computer-use agents. The table below is the short answer to what each one traces; every integration page has setup steps for TypeScript and Python (where both are supported).
-
-## What each integration traces
-
-| Integration | Languages | LLM calls | Tool calls | Streaming | Sub-agents | Cost |
-| --- | --- | --- | --- | --- | --- | --- |
-| [OpenAI](/tracing/integrations/openai) | TypeScript, Python | ✓ | - | ✓ | - | ✓ |
-| [Anthropic](/tracing/integrations/anthropic) | TypeScript, Python | ✓ | - | ✓ | - | ✓ |
-| [Gemini](/tracing/integrations/gemini) | Python | ✓ | - | ✓ | - | ✓ |
-| [Cohere](/tracing/integrations/cohere) | Python | ✓ | - | - | - | ✓ |
-| [LiteLLM](/tracing/integrations/litellm) | Python | ✓ | - | ✓ | - | ✓ |
-| [OpenRouter](/tracing/integrations/openrouter) | TypeScript, Python | ✓ | - | ✓ | - | ✓ |
-| [Vercel AI SDK](/tracing/integrations/vercel-ai-sdk) | TypeScript | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [eve](/tracing/integrations/eve) | TypeScript | ✓ | ✓ | ✓ | - | ✓ |
-| [LangChain / LangGraph](/tracing/integrations/langchain) | Python | ✓ | ✓ | ✓ | - | ✓ |
-| [deepagents](/tracing/integrations/deepagents) | Python | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [Mastra](/tracing/integrations/mastra) | TypeScript | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [Pydantic AI](/tracing/integrations/pydantic-ai) | Python | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [OpenAI Agents SDK](/tracing/integrations/openai-agents-sdk) | TypeScript, Python | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [OpenHands SDK](/tracing/integrations/openhands-sdk) | Python | ✓ | ✓ | - | - | ✓ |
-| [Temporal](/tracing/integrations/temporal) | TypeScript, Python | ✓ | - | ✓ | - | ✓ |
-| [Claude Code](/tracing/integrations/claude-code) | CLI plugin | ✓ | ✓ | ✓ | - | ✓ |
-| [Codex](/tracing/integrations/codex) | CLI plugin | ✓ | ✓ | ✓ | - | ✓ |
-| [Pi](/tracing/integrations/pi) | CLI extension | ✓ | ✓ | ✓ | - | ✓ |
-| [Claude Agent SDK](/tracing/integrations/claude-agent-sdk) | TypeScript, Python | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [OpenCode](/tracing/integrations/opencode) | TypeScript, CLI plugin | ✓ | ✓ | ✓ | - | ✓ |
-| [Browser Use](/tracing/integrations/browser-use) | Python | ✓ | ✓ | - | - | ✓ |
-| [Stagehand](/tracing/integrations/stagehand) | TypeScript | ✓ | ✓ | - | - | ✓ |
-| [Skyvern](/tracing/integrations/skyvern) | Python | ✓ | ✓ | - | - | ✓ |
-| [Kernel](/tracing/integrations/kernel) | TypeScript, Python | - | ✓ | - | - | - |
-| [Playwright](/tracing/integrations/playwright) | TypeScript, Python | - | - | - | - | - |
-| [Puppeteer](/tracing/integrations/puppeteer) | TypeScript | - | - | - | - | - |
-| [Langfuse](/tracing/integrations/langfuse) | Python | ✓ | ✓ | - | - | ✓ |
-
-How to read it: `✓` means Laminar captures it automatically once you initialize the SDK, `-` means it either does not apply to that integration or is something you instrument yourself.
-
-- **LLM calls**: every model call becomes an LLM span with the prompt, the response, token counts, and latency.
-- **Tool calls**: tool invocations get their own span with arguments and results. On a raw provider SDK the model's tool-call request is recorded on the LLM span, but running the tool is your own function: wrap it with [`observe`](/tracing/structure/observe-decorator) and mark it a [TOOL span](/tracing/structure/span-types) to give it a row in the transcript.
-- **Streaming**: streamed responses are recorded as one complete span with the assembled output and token counts.
-- **Sub-agents**: nested agent runs group under the call that spawned them and collapse to their input and final output in the [transcript view](/platform/viewing-traces).
-- **Cost**: derived from the model name and token usage, including any [custom model costs](/platform/custom-model-costs) you set.
-- **Browser session recordings** come with Browser Use, Stagehand, Skyvern, Kernel, Playwright, and Puppeteer: scrub the video and the trace scrolls with it. That is what Playwright and Puppeteer contribute, which is why their LLM columns are empty.
-- **Temporal** stitches the client call, the workflow, and every activity into one trace; the LLM and tool detail inside an activity comes from whichever SDK you call there.
-
-<Note>
-The table is not a boundary. Laminar is OpenTelemetry-native, so it also ingests spans from any OTel-emitting code and from functions you wrap yourself with [`observe`](/tracing/structure/observe-decorator).
-</Note>
+Each integration page below has setup steps for TypeScript and Python (where both are supported) and shows what Laminar captures. Pick the SDK or framework you use.
 
 ## LLM provider SDKs
 
