@@ -16,17 +16,17 @@ Then copy this prompt into Claude Code, Cursor, or Codex:
 
 ```text
 1. Instrument this project with Laminar using the installed skill or the docs:
-https://laminar.sh/docs/tracing/integrations/overview
+https://laminar.sh/docs/integrations
 2. Run the project.
 3. Verify instrumentation:
 `lmnr-cli sql query "SELECT * FROM traces ORDER BY start_time DESC LIMIT 1" --json`
 4. View the traces in the browser
 ```
 
-Your coding agent picks the right [integration](/tracing/integrations/overview), adds initialization at the correct entrypoint, runs your project, and verifies traces are landing. Then open your project in the [dashboard](https://www.lmnr.ai/projects) to read the full transcript.
+Your coding agent picks the right [integration](/integrations), adds initialization at the correct entrypoint, runs your project, and verifies traces are landing. Then open your project in the [dashboard](https://www.lmnr.ai/projects) to read the full transcript.
 
 See the [CLI page](/platform/cli) for what `setup` writes and how the debug commands authenticate.
 
 ## Install manually
 
-Prefer to wire up the SDK yourself? The [Tracing docs](/tracing/introduction) walk through installation, initialization, and the available [integrations](/tracing/integrations/overview). For where to run Laminar, see [Self-hosting](/self-hosting/overview).
+Prefer to wire up the SDK yourself? The [Tracing docs](/tracing/introduction) walk through installation, initialization, and the available [integrations](/integrations). For where to run Laminar, see [Self-hosting](/self-hosting/overview).

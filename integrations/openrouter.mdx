@@ -1,0 +1,362 @@
+---
+title: OpenRouter observability
+sidebarTitle: OpenRouter
+description: "Trace every OpenRouter request with the model that served it, token usage, cost, and latency, all readable in Laminar's transcript view."
+---
+
+## Overview
+
+Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. Trace, debug, and monitor every OpenRouter call your app makes, with prompts, responses, token counts, cost, and latency on each span, in both TypeScript and Python.
+
+OpenRouter gives you access to hundreds of models through a single API, so teams use it to switch models and providers without changing code. Laminar auto-instruments the OpenRouter SDK: initialize Laminar once and every chat, responses, and embeddings call is traced.
+
+<Note>
+OpenRouter-specific headers are optional. Setting them allows your app to appear on the OpenRouter leaderboards.
+</Note>
+
+## Getting Started
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ### 1. Install Laminar and the OpenRouter SDK
+
+    ```bash
+    npm install @lmnr-ai/lmnr@latest @openrouter/sdk
+    ```
+
+    ### 2. Set up your environment variables
+
+    Store your API keys in a `.env` file:
+
+    ```bash
+    # .env file
+    LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+    OPENROUTER_API_KEY=your-openrouter-api-key
+    ```
+
+    Then load them in your application using a package like [dotenv](https://www.npmjs.com/package/dotenv).
+
+    ### 3. Initialize Laminar
+
+    `@openrouter/sdk` is an ES module, so pass it to `instrumentModules` for Laminar to patch it:
+
+    ```typescript {5-7}
+    import { Laminar } from '@lmnr-ai/lmnr';
+    import { OpenRouter } from '@openrouter/sdk';
+    import 'dotenv/config';
+
+    Laminar.initialize({
+      instrumentModules: { openrouter: OpenRouter },
+    });
+
+    const client = new OpenRouter({
+      apiKey: process.env.OPENROUTER_API_KEY,
+      defaultHeaders: {
+        'HTTP-Referer': '<YOUR_SITE_URL>', // Optional
+        'X-Title': '<YOUR_SITE_NAME>', // Optional
+      },
+    });
+    ```
+
+    ### 4. Use the OpenRouter SDK as usual
+
+    ```typescript
+    const result = await client.chat.send({
+      chatRequest: {
+        model: 'openai/gpt-5-mini',
+        messages: [
+          { role: 'user', content: 'What is the meaning of life?' },
+        ],
+      },
+    });
+
+    // `send` returns a stream when `stream: true` is set, so narrow the result.
+    if ('choices' in result) {
+      console.log(result.choices[0].message.content);
+    }
+    ```
+
+    All OpenRouter SDK calls are now traced in Laminar.
+
+    <Note>
+    Using OpenRouter inside Next.js? The [Vercel AI SDK page](/integrations/vercel-ai-sdk#nextjs-setup) covers the Next.js-specific setup (`serverExternalPackages` and `instrumentation.ts`).
+    </Note>
+  </Tab>
+  <Tab title="Python">
+    ### 1. Install Laminar and the OpenRouter SDK
+
+    ```bash
+    pip install -U lmnr openrouter python-dotenv
+    ```
+
+    ### 2. Set up your environment variables
+
+    Store your API keys in a `.env` file:
+
+    ```bash
+    # .env file
+    LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+    OPENROUTER_API_KEY=your-openrouter-api-key
+    ```
+
+    ### 3. Initialize Laminar
+
+    Laminar instruments the OpenRouter SDK automatically when the `openrouter` package is installed:
+
+    ```python {9}
+    import os
+
+    from dotenv import load_dotenv
+    from lmnr import Laminar
+    from openrouter import OpenRouter
+
+    load_dotenv()
+
+    Laminar.initialize()
+
+    client = OpenRouter(api_key=os.environ["OPENROUTER_API_KEY"])
+    ```
+
+    ### 4. Use the OpenRouter SDK as usual
+
+    ```python
+    response = client.chat.send(
+        model="openai/gpt-5-mini",
+        messages=[
+            {"role": "user", "content": "What is the meaning of life?"}
+        ],
+    )
+
+    print(response.choices[0].message.content)
+    ```
+
+    All OpenRouter SDK calls are now traced in Laminar.
+
+    <Note>
+    To see an example of how to integrate Laminar within a FastAPI application, check out our [FastAPI integration guide](/guides/fastapi).
+    </Note>
+  </Tab>
+</Tabs>
+
+## What Laminar captures
+
+Each call becomes an LLM span named after the resource you called:
+
+- `openrouter.chat` for `client.chat.send`.
+- `openrouter.responses` for `client.responses.send`.
+- `openrouter.embeddings` for `client.embeddings.generate`.
+
+Every span carries the model, the request messages, the response, token counts, and cost, whether the call returns a single response or a stream. Streamed responses are recorded once the stream is consumed.
+
+## Using the OpenAI SDK with OpenRouter
+
+If you reach OpenRouter through the OpenAI SDK, Laminar traces those calls too. Point the OpenAI client's base URL at OpenRouter and initialize Laminar as usual.
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript {5-7}
+    import { Laminar } from '@lmnr-ai/lmnr';
+    import OpenAI from 'openai';
+    import 'dotenv/config';
+
+    Laminar.initialize({
+      instrumentModules: { OpenAI: OpenAI },
+    });
+
+    const openai = new OpenAI.OpenAI({
+      baseURL: 'https://openrouter.ai/api/v1',
+      apiKey: process.env.OPENROUTER_API_KEY,
+    });
+
+    const response = await openai.chat.completions.create({
+      model: 'openai/gpt-5-mini',
+      messages: [
+        { role: 'user', content: 'What is the meaning of life?' }
+      ],
+    });
+
+    console.log(response.choices[0].message.content);
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python {9}
+    import os
+
+    from dotenv import load_dotenv
+    from lmnr import Laminar
+    from openai import OpenAI
+
+    load_dotenv()
+
+    Laminar.initialize()
+
+    client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=os.environ["OPENROUTER_API_KEY"],
+    )
+
+    response = client.chat.completions.create(
+        model="openai/gpt-5-mini",
+        messages=[
+            {"role": "user", "content": "What is the meaning of life?"}
+        ],
+    )
+
+    print(response.choices[0].message.content)
+    ```
+  </Tab>
+</Tabs>
+
+## Using the OpenRouter API directly
+
+<Tip>
+You can use the interactive [Request Builder](https://openrouter.ai/request-builder) to generate OpenRouter API requests in the language of your choice.
+</Tip>
+
+<Note>
+Direct HTTP calls are captured as custom spans via `observe()`. LLM-specific fields (tokens, cost) are not extracted automatically from raw responses.
+</Note>
+
+<CodeGroup>
+
+```python title="Python"
+import json
+import requests
+
+from lmnr import Laminar, observe
+
+Laminar.initialize()
+
+@observe()
+def call_openrouter():
+    response = requests.post(
+        url="https://openrouter.ai/api/v1/chat/completions",
+        headers={
+            "Authorization": "Bearer <OPENROUTER_API_KEY>",
+            "HTTP-Referer": "<YOUR_SITE_URL>", # Optional
+            "X-Title": "<YOUR_SITE_NAME>", # Optional
+        },
+        data=json.dumps({
+            "model": "openai/gpt-5-mini",
+            "messages": [
+                {"role": "user", "content": "What is the meaning of life?"}
+            ]
+        })
+    )
+    return response.json()
+
+print(call_openrouter())
+```
+
+```typescript title="TypeScript (fetch)"
+import { Laminar, observe } from '@lmnr-ai/lmnr';
+
+Laminar.initialize();
+
+const response = await observe({ name: 'openrouter.fetch' }, async () =>
+  fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: 'Bearer <OPENROUTER_API_KEY>',
+      'HTTP-Referer': '<YOUR_SITE_URL>', // Optional
+      'X-Title': '<YOUR_SITE_NAME>', // Optional
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'openai/gpt-5-mini',
+      messages: [
+        {
+          role: 'user',
+          content: 'What is the meaning of life?',
+        },
+      ],
+    }),
+  })
+);
+
+console.log(await response.json());
+```
+
+```shell title="Shell"
+curl https://openrouter.ai/api/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $OPENROUTER_API_KEY" \
+  -d '{
+  "model": "openai/gpt-5-mini",
+  "messages": [
+    {
+      "role": "user",
+      "content": "What is the meaning of life?"
+    }
+  ]
+}'
+```
+
+</CodeGroup>
+
+## See what happened in a trace
+
+Open a trace in Laminar and you land on the transcript view: Laminar extracts the agent input, the model's turns, and any tool calls into a conversation, so you read what happened instead of clicking through a tree of span names. Token counts, cost, and latency sit on each LLM span, and you can open any span in the [playground](/playground) to iterate on the prompt.
+
+More on the trace UX: [Viewing traces](/platform/viewing-traces).
+
+## Track outcomes with Signals
+
+Traces answer *what happened on this run*. **[Signals](/signals/introduction) answer the cross-trace question**: *how often does a model refuse, which runs fell back to a second provider, when do responses come back empty*. A Signal pairs a plain-language prompt with a JSON output schema. Laminar runs it live on new traces (Triggers) or backfills it across history (Jobs) and records a structured event every time it matches. From there you [query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on events across every trace.
+
+<Note>
+Every new project ships with a **Failure Detector** Signal that categorizes issues on any trace over 1000 tokens. Open it from the Signals sidebar to see events as soon as your OpenRouter traces arrive.
+</Note>
+
+## Query across traces
+
+- **[SQL editor](/platform/sql-editor)** for ad-hoc queries across traces, spans, signals, and evals.
+- **SQL API** for programmatic access from scripts and pipelines.
+- **[CLI](/platform/cli)** (`lmnr-cli sql query`) for terminal-driven queries and piping JSON into shell tools or coding agents.
+- **[MCP server](/platform/mcp)** to query Laminar directly from Claude Code, Cursor, Codex, or any MCP-aware client.
+
+## Enrich your OpenRouter traces
+
+- Attach sessions, user IDs, metadata, and tags to OpenRouter spans via the [SDK reference](/sdk/reference).
+- Wrap the functions around your OpenRouter calls with `observe` and mark them as [TOOL spans](/tracing/structure/span-types) so they show up in the transcript.
+- Images you send to vision-capable models are captured automatically ([Tracing Images](/tracing/structure/images)).
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Viewing traces" href="/platform/viewing-traces">
+    Read the transcript view, filter, and search across traces.
+  </Card>
+  <Card title="Signals" href="/signals/introduction">
+    Detect behaviors and failures across every run, then query, cluster, and alert on them.
+  </Card>
+  <Card title="SQL editor and MCP server" href="/platform/sql-editor">
+    Query traces programmatically from the UI, API, or your IDE.
+  </Card>
+  <Card title="Tracing structure" href="/tracing/structure/overview">
+    Add sessions, metadata, and tags, and group calls under your own spans.
+  </Card>
+</CardGroup>
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="OpenAI" href="/integrations/openai">
+    Trace the OpenAI SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="Anthropic" href="/integrations/anthropic">
+    Trace the Anthropic SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="LiteLLM" href="/integrations/litellm">
+    One integration for every model LiteLLM routes to.
+  </Card>
+  <Card title="Gemini" href="/integrations/gemini">
+    Trace Gemini calls made with the Google Gen AI SDK.
+  </Card>
+  <Card title="Vercel AI SDK" href="/integrations/vercel-ai-sdk">
+    Trace `generateText` and `streamText` in Next.js and Node.js.
+  </Card>
+  <Card title="All integrations" href="/integrations">
+    Browse every provider, framework, coding agent, and browser integration Laminar supports.
+  </Card>
+</CardGroup>

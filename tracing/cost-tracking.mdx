@@ -4,7 +4,7 @@ title: LLM cost tracking
 
 Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. It records token usage and dollar cost on every LLM span and rolls both up to the trace, so every agent run carries what it cost, which model spent it, and where the tokens went.
 
-For [auto-instrumented providers and frameworks](/tracing/integrations/overview) this needs no configuration. Initialize the SDK and every LLM call carries token counts and cost. The rest of this page covers what Laminar prices, how it arrives at the number, and how to instrument calls it does not trace automatically.
+For [auto-instrumented providers and frameworks](/integrations) this needs no configuration. Initialize the SDK and every LLM call carries token counts and cost. The rest of this page covers what Laminar prices, how it arrives at the number, and how to instrument calls it does not trace automatically.
 
 ## What Laminar prices
 
@@ -125,7 +125,7 @@ Prices apply at ingestion, so changing a rate does not re-cost spans you have al
 
 ## Instrument calls Laminar does not trace automatically
 
-Auto-instrumentation covers the providers and frameworks on the [integrations list](/tracing/integrations/overview). Create LLM spans by hand for:
+Auto-instrumentation covers the providers and frameworks on the [integrations list](/integrations). Create LLM spans by hand for:
 
 - Self-hosted or fine-tuned models behind your own endpoint
 - Providers Laminar does not instrument yet
