@@ -1,6 +1,7 @@
 ---
-title: Observability and Tracing for eve Durable Agents in TypeScript
+title: eve observability
 sidebarTitle: eve
+description: "Trace eve durable agents in TypeScript: every model turn, tool call, token count, and cost, readable as a conversation in Laminar."
 ---
 
 import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
@@ -282,13 +283,36 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
   <Card title="SQL editor and MCP server" href="/platform/sql-editor">
     Query traces programmatically from the UI, API, or your IDE.
   </Card>
-  <Card title="Vercel AI SDK" href="/tracing/integrations/vercel-ai-sdk">
-    eve is built on the AI SDK. Trace `generateText` and `streamText` directly here.
-  </Card>
   <Card title="Evaluations" href="/evaluations/introduction">
     Score agent behavior on a dataset and track it as the agent changes.
   </Card>
   <Card title="Comparing runs" href="/evaluations/comparing-runs">
     Read score deltas between two runs of the same eval group.
+  </Card>
+  <Card title="Tracing structure" href="/tracing/structure/overview">
+    Sessions, metadata, and tags for deeper control.
+  </Card>
+</CardGroup>
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="Vercel AI SDK" href="/integrations/vercel-ai-sdk">
+    eve is built on the AI SDK. Trace `generateText` and `streamText` directly here.
+  </Card>
+  <Card title="Mastra" href="/integrations/mastra">
+    Trace Mastra agents, workflows, and tools in TypeScript.
+  </Card>
+  <Card title="Temporal" href="/integrations/temporal">
+    Trace agents that run as Temporal workflows.
+  </Card>
+  <Card title="OpenAI" href="/integrations/openai">
+    Trace the OpenAI SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="OpenAI Agents SDK" href="/integrations/openai-agents-sdk">
+    Trace agent runs, handoffs, and tool calls.
+  </Card>
+  <Card title="All integrations" href="/integrations">
+    Browse every provider, framework, coding agent, and browser integration Laminar supports.
   </Card>
 </CardGroup>

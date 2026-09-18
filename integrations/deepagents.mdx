@@ -1,6 +1,7 @@
 ---
-title: Observability for LangChain deepagents
+title: deepagents observability
 sidebarTitle: deepagents
+description: "Trace deepagents runs in Python: the agent root span, every tool call, and every subagent, readable as a conversation in Laminar."
 ---
 
 ## Overview
@@ -350,7 +351,30 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
   <Card title="SQL editor and MCP server" href="/platform/sql-editor">
     Query traces programmatically from the UI, API, or your IDE.
   </Card>
-  <Card title="LangChain / LangGraph" href="/tracing/integrations/langchain">
+  <Card title="Tracing structure" href="/tracing/structure/overview">
+    Sessions, metadata, and tags for deeper control.
+  </Card>
+</CardGroup>
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="LangChain / LangGraph" href="/integrations/langchain">
     Tracing raw LangChain chains or LangGraph without deepagents on top.
+  </Card>
+  <Card title="Pydantic AI" href="/integrations/pydantic-ai">
+    Trace Pydantic AI agent runs and typed tool calls.
+  </Card>
+  <Card title="OpenAI Agents SDK" href="/integrations/openai-agents-sdk">
+    Trace agent runs, handoffs, and tool calls.
+  </Card>
+  <Card title="LiteLLM" href="/integrations/litellm">
+    One integration for every model LiteLLM routes to.
+  </Card>
+  <Card title="Anthropic" href="/integrations/anthropic">
+    Trace the Anthropic SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="All integrations" href="/integrations">
+    Browse every provider, framework, coding agent, and browser integration Laminar supports.
   </Card>
 </CardGroup>

@@ -24,7 +24,7 @@ lmnr-cli setup
 
 ### 3. Ask your coding agent to instrument your agent
 
-The debugger works on top of normal Laminar tracing. With the skill installed, ask your coding agent to instrument your agent and it will wire up the right [integration](/tracing/integrations/overview) for you: the [Getting Started](/getting-started) onboarding prompt is the fastest way to hand it off. Caching is limited to a specific set of integrations (see [how caching works](/debugger/caching)), but the record, inspect, and replay loop runs with everything Laminar traces. If you use the AI SDK, see the [AI SDK caching note](#ai-sdk-caching) below for one extra wrapper.
+The debugger works on top of normal Laminar tracing. With the skill installed, ask your coding agent to instrument your agent and it will wire up the right [integration](/integrations) for you: the [Getting Started](/getting-started) onboarding prompt is the fastest way to hand it off. Caching is limited to a specific set of integrations (see [how caching works](/debugger/caching)), but the record, inspect, and replay loop runs with everything Laminar traces. If you use the AI SDK, see the [AI SDK caching note](#ai-sdk-caching) below for one extra wrapper.
 
 ### 4. Ask your coding agent to run the debugger
 
@@ -47,7 +47,7 @@ The [debugger process](/debugger/process) page walks through using these variabl
 
 ## AI SDK caching
 
-For the [AI SDK](/tracing/integrations/vercel-ai-sdk) (TypeScript), caching needs one extra step on top of the normal telemetry integration: wrap each model with `wrapLanguageModel`. The wrapper is what hashes the span input and consults the Laminar backend for a cached response. Without it, your AI SDK calls are traced and replayable as part of the transcript, but they will not serve from cache. The `wrapLanguageModel` step is the same across AI SDK versions; only the telemetry wiring differs.
+For the [AI SDK](/integrations/vercel-ai-sdk) (TypeScript), caching needs one extra step on top of the normal telemetry integration: wrap each model with `wrapLanguageModel`. The wrapper is what hashes the span input and consults the Laminar backend for a cached response. Without it, your AI SDK calls are traced and replayable as part of the transcript, but they will not serve from cache. The `wrapLanguageModel` step is the same across AI SDK versions; only the telemetry wiring differs.
 
 <Tabs>
 <Tab title="AI SDK v7">

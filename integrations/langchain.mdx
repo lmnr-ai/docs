@@ -1,6 +1,7 @@
 ---
-title: Observability for LangChain / LangGraph
+title: LangChain and LangGraph observability
 sidebarTitle: LangChain
+description: "Trace LangChain chains and LangGraph graphs in Python: every chain step, tool call, LLM call, token count, and cost."
 ---
 
 ## Overview
@@ -95,7 +96,7 @@ app = workflow.compile()
 
 All instrumentable LangChain and LangGraph operations are now automatically traced in Laminar.
 
-## Monitoring Your LangChain Usage
+## Monitoring LangChain usage
 
 After instrumenting your LangChain and LangGraph applications with Laminar, you'll be able to:
 
@@ -107,9 +108,30 @@ After instrumenting your LangChain and LangGraph applications with Laminar, you'
 
 Visit your Laminar dashboard to view your LangChain traces and analytics.
 
-## Advanced Features
+## Enrich your LangChain traces
 
-Leverage Laminar's advanced features to get more out of your LangChain instrumentation:
+- Attach sessions, user IDs, metadata, and tags to LangChain spans via the [SDK reference](/sdk/reference).
+- Wrap the functions around your chains and graphs with `observe` and mark them as [TOOL spans](/tracing/structure/span-types) so they show up in the transcript.
 
-- Enrich traces with sessions, user IDs, metadata, and tags via the [SDK reference](/sdk/reference).
-- Wrap custom functions with `observe` to capture business logic alongside model calls (see the SDK reference).
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="deepagents" href="/integrations/deepagents">
+    Trace deepagents runs, subagents, and tool calls.
+  </Card>
+  <Card title="Pydantic AI" href="/integrations/pydantic-ai">
+    Trace Pydantic AI agent runs and typed tool calls.
+  </Card>
+  <Card title="LiteLLM" href="/integrations/litellm">
+    One integration for every model LiteLLM routes to.
+  </Card>
+  <Card title="OpenAI" href="/integrations/openai">
+    Trace the OpenAI SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="Langfuse" href="/integrations/langfuse">
+    Keep Langfuse and send the same spans to Laminar too.
+  </Card>
+  <Card title="All integrations" href="/integrations">
+    Browse every provider, framework, coding agent, and browser integration Laminar supports.
+  </Card>
+</CardGroup>

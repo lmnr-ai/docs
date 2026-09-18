@@ -25,40 +25,6 @@
             "pages": [
               "tracing/introduction",
               {
-                "group": "Integrations",
-                "pages": [
-                  "tracing/integrations/overview",
-                  "tracing/integrations/anthropic",
-                  "tracing/integrations/openai",
-                  "tracing/integrations/gemini",
-                  "tracing/integrations/claude-code",
-                  "tracing/integrations/codex",
-                  "tracing/integrations/pi",
-                  "tracing/integrations/claude-agent-sdk",
-                  "tracing/integrations/openai-agents-sdk",
-                  "tracing/integrations/opencode",
-                  "tracing/integrations/vercel-ai-sdk",
-                  "tracing/integrations/eve",
-                  "tracing/integrations/langchain",
-                  "tracing/integrations/deepagents",
-                  "tracing/integrations/litellm",
-                  "tracing/integrations/langfuse",
-                  "tracing/integrations/mastra",
-                  "tracing/integrations/pydantic-ai",
-                  "tracing/integrations/temporal",
-                  "tracing/integrations/openrouter",
-                  "tracing/integrations/browser-use",
-                  "tracing/integrations/cohere",
-                  "tracing/integrations/kernel",
-                  "tracing/integrations/openhands-sdk",
-                  "tracing/integrations/playwright",
-                  "tracing/integrations/puppeteer",
-                  "tracing/integrations/stagehand",
-                  "tracing/integrations/skyvern",
-                  "tracing/otel"
-                ]
-              },
-              {
                 "group": "Tracing Structure",
                 "pages": [
                   "tracing/structure/overview",
@@ -153,6 +119,75 @@
         ]
       },
       {
+        "tab": "Integrations",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "integrations"
+            ]
+          },
+          {
+            "group": "LLM provider SDKs",
+            "pages": [
+              "integrations/anthropic",
+              "integrations/openai",
+              "integrations/gemini",
+              "integrations/cohere",
+              "integrations/litellm",
+              "integrations/openrouter"
+            ]
+          },
+          {
+            "group": "Agent frameworks",
+            "pages": [
+              "integrations/vercel-ai-sdk",
+              "integrations/eve",
+              "integrations/langchain",
+              "integrations/deepagents",
+              "integrations/mastra",
+              "integrations/pydantic-ai",
+              "integrations/openai-agents-sdk",
+              "integrations/openhands-sdk",
+              "integrations/temporal"
+            ]
+          },
+          {
+            "group": "Coding agents",
+            "pages": [
+              "integrations/claude-code",
+              "integrations/codex",
+              "integrations/pi",
+              "integrations/claude-agent-sdk",
+              "integrations/opencode"
+            ]
+          },
+          {
+            "group": "Browser and computer-use agents",
+            "pages": [
+              "integrations/browser-use",
+              "integrations/stagehand",
+              "integrations/skyvern",
+              "integrations/kernel",
+              "integrations/playwright",
+              "integrations/puppeteer"
+            ]
+          },
+          {
+            "group": "Other platforms",
+            "pages": [
+              "integrations/langfuse"
+            ]
+          },
+          {
+            "group": "OpenTelemetry",
+            "pages": [
+              "tracing/otel"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "Guides",
         "pages": [
           "guides/fastapi",
@@ -226,6 +261,14 @@
     {
       "source": "/tracing/structure/llm-cost-tracking",
       "destination": "/tracing/cost-tracking"
+    },
+    {
+      "source": "/tracing/integrations/overview",
+      "destination": "/integrations"
+    },
+    {
+      "source": "/tracing/integrations/:slug*",
+      "destination": "/integrations/:slug*"
     }
   ],
   "logo": "/logo/laminar-wordmark.svg",

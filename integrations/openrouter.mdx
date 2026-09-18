@@ -1,6 +1,7 @@
 ---
-title: LLM Observability for OpenRouter
+title: OpenRouter observability
 sidebarTitle: OpenRouter
+description: "Trace every OpenRouter request with the model that served it, token usage, cost, and latency, all readable in Laminar's transcript view."
 ---
 
 ## Overview
@@ -78,7 +79,7 @@ OpenRouter-specific headers are optional. Setting them allows your app to appear
     All OpenRouter SDK calls are now traced in Laminar.
 
     <Note>
-    Using OpenRouter inside Next.js? The [Vercel AI SDK page](/tracing/integrations/vercel-ai-sdk#nextjs-setup) covers the Next.js-specific setup (`serverExternalPackages` and `instrumentation.ts`).
+    Using OpenRouter inside Next.js? The [Vercel AI SDK page](/integrations/vercel-ai-sdk#nextjs-setup) covers the Next.js-specific setup (`serverExternalPackages` and `instrumentation.ts`).
     </Note>
   </Tab>
   <Tab title="Python">
@@ -314,11 +315,11 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
 - **[CLI](/platform/cli)** (`lmnr-cli sql query`) for terminal-driven queries and piping JSON into shell tools or coding agents.
 - **[MCP server](/platform/mcp)** to query Laminar directly from Claude Code, Cursor, Codex, or any MCP-aware client.
 
-## Advanced Features
+## Enrich your OpenRouter traces
 
-- Enrich traces with sessions, user IDs, metadata, and tags via the [SDK reference](/sdk/reference).
-- Wrap your own functions with `observe` to capture business logic alongside model calls, and mark tools as TOOL spans so they show up in the transcript. See [Span types](/tracing/structure/span-types).
-- Images sent to vision-capable models are captured automatically. See [Tracing Images](/tracing/structure/images).
+- Attach sessions, user IDs, metadata, and tags to OpenRouter spans via the [SDK reference](/sdk/reference).
+- Wrap the functions around your OpenRouter calls with `observe` and mark them as [TOOL spans](/tracing/structure/span-types) so they show up in the transcript.
+- Images you send to vision-capable models are captured automatically ([Tracing Images](/tracing/structure/images)).
 
 ## What's next
 
@@ -334,5 +335,28 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
   </Card>
   <Card title="Tracing structure" href="/tracing/structure/overview">
     Add sessions, metadata, and tags, and group calls under your own spans.
+  </Card>
+</CardGroup>
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="OpenAI" href="/integrations/openai">
+    Trace the OpenAI SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="Anthropic" href="/integrations/anthropic">
+    Trace the Anthropic SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="LiteLLM" href="/integrations/litellm">
+    One integration for every model LiteLLM routes to.
+  </Card>
+  <Card title="Gemini" href="/integrations/gemini">
+    Trace Gemini calls made with the Google Gen AI SDK.
+  </Card>
+  <Card title="Vercel AI SDK" href="/integrations/vercel-ai-sdk">
+    Trace `generateText` and `streamText` in Next.js and Node.js.
+  </Card>
+  <Card title="All integrations" href="/integrations">
+    Browse every provider, framework, coding agent, and browser integration Laminar supports.
   </Card>
 </CardGroup>

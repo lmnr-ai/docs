@@ -1,6 +1,7 @@
 ---
-title: Observability and Tracing for Mastra in TypeScript
+title: Mastra observability
 sidebarTitle: Mastra
+description: "Trace Mastra agents, workflows, and tools in TypeScript: model turns, tool calls, sub-agents, token usage, and cost."
 ---
 
 import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
@@ -284,10 +285,27 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
   <Card title="Tracing structure" href="/tracing/structure/overview">
     Sessions, user IDs, metadata, and tags.
   </Card>
-  <Card title="Vercel AI SDK" href="/tracing/integrations/vercel-ai-sdk">
-    Mastra uses the AI SDK under the hood. Using it directly? Trace it here.
+</CardGroup>
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="Vercel AI SDK" href="/integrations/vercel-ai-sdk">
+    Mastra runs on the AI SDK. Calling it directly? Trace it here.
   </Card>
-  <Card title="OpenAI Agents SDK" href="/tracing/integrations/openai-agents-sdk">
-    Python-first agent framework with similar multi-agent shape.
+  <Card title="eve" href="/integrations/eve">
+    Trace eve durable agents, their turns, and tool calls.
+  </Card>
+  <Card title="OpenAI Agents SDK" href="/integrations/openai-agents-sdk">
+    Trace agent runs, handoffs, and tool calls.
+  </Card>
+  <Card title="OpenAI" href="/integrations/openai">
+    Trace the OpenAI SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="Anthropic" href="/integrations/anthropic">
+    Trace the Anthropic SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="All integrations" href="/integrations">
+    Browse every provider, framework, coding agent, and browser integration Laminar supports.
   </Card>
 </CardGroup>

@@ -1,13 +1,14 @@
 ---
-title: Observability for OpenCode coding agents
+title: OpenCode observability
 sidebarTitle: OpenCode
+description: "Trace OpenCode coding agent sessions: every model turn and tool call, grouped per session and readable as a conversation in Laminar."
 ---
 
 import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
 
 ## Overview
 
-[OpenCode](https://opencode.ai/) is an open-source AI coding agent. Its [`@opencode-ai/sdk`](https://opencode.ai/docs/sdk/) package lets you call OpenCode programmatically — spin up a server, drive a session, and build products on top of the agent instead of using the TUI. Laminar makes those runs observable.
+[OpenCode](https://opencode.ai/) is an open-source AI coding agent. Its [`@opencode-ai/sdk`](https://opencode.ai/docs/sdk/) package lets you call OpenCode programmatically: spin up a server, drive a session, and build products on top of the agent instead of using the TUI. Laminar makes those runs observable.
 
 What Laminar captures:
 
@@ -111,7 +112,7 @@ If you import `@opencode-ai/sdk` before `Laminar.initialize()` (common when the 
 
 ## Trace structure
 
-Because the caller-side instrumentation hands the span context to the server-side plugin, the trace comes back as a single tree: your `observe` span is the root, the server's `turn` span is its child, and every `session.llm`, model call, and tool call hangs off `turn`. There is no separate trace for the server — everything the OpenCode process does on this turn shows up nested under the TypeScript code that kicked it off.
+Because the caller-side instrumentation hands the span context to the server-side plugin, the trace comes back as a single tree: your `observe` span is the root, the server's `turn` span is its child, and every `session.llm`, model call, and tool call hangs off `turn`. There is no separate trace for the server: everything the OpenCode process does on this turn shows up nested under the TypeScript code that kicked it off.
 
 The tree view makes that nesting obvious:
 
@@ -119,7 +120,7 @@ The tree view makes that nesting obvious:
 <img src="/images/traces/opencode-sdk-tree.png" alt="OpenCode SDK trace in Laminar, tree view" />
 </Frame>
 
-Switch to transcript view on the same trace to read the conversation — user prompt, model output, tool calls, and tool results read as a dialogue instead of a span tree. More on the trace UX: [Viewing traces](/platform/viewing-traces).
+Switch to transcript view on the same trace to read the conversation: user prompt, model output, tool calls, and tool results read as a dialogue instead of a span tree. More on the trace UX: [Viewing traces](/platform/viewing-traces).
 
 <Frame caption="Same trace in transcript view: the turn reads as a dialogue with the model responses and tool invocations inline.">
 <img src="/images/traces/opencode-sdk.png" alt="OpenCode SDK trace in Laminar, transcript view" />
@@ -203,7 +204,27 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
   <Card title="Tracing structure" href="/tracing/structure/overview">
     Sessions, metadata, and tags for deeper control.
   </Card>
-  <Card title="Claude Agent SDK" href="/tracing/integrations/claude-agent-sdk">
-    Running OpenCode alongside Claude Agent SDK? Trace both here.
+</CardGroup>
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="Claude Agent SDK" href="/integrations/claude-agent-sdk">
+    Running OpenCode alongside the Claude Agent SDK? Trace both here.
+  </Card>
+  <Card title="Claude Code" href="/integrations/claude-code">
+    Trace Claude Code sessions with a one-command plugin.
+  </Card>
+  <Card title="Codex" href="/integrations/codex">
+    Trace Codex CLI sessions with a one-command plugin.
+  </Card>
+  <Card title="Pi" href="/integrations/pi">
+    Trace Pi coding agent sessions with a one-command extension.
+  </Card>
+  <Card title="Anthropic" href="/integrations/anthropic">
+    Trace the Anthropic SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="All integrations" href="/integrations">
+    Browse every provider, framework, coding agent, and browser integration Laminar supports.
   </Card>
 </CardGroup>

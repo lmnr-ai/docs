@@ -1,6 +1,7 @@
 ---
-title: LLM Observability for OpenAI SDK in JS and Python
+title: OpenAI observability
 sidebarTitle: OpenAI
+description: "Trace every OpenAI API call in TypeScript and Python: prompts, token usage, cost, and latency, all readable in Laminar's transcript view."
 ---
 
 ## Overview
@@ -30,7 +31,7 @@ Laminar automatically instruments the official OpenAI package with a single line
     Then load them in your application using a package like [dotenv](https://www.npmjs.com/package/dotenv).
 
     <Note>
-    Using OpenAI inside Next.js? The [Vercel AI SDK page](/tracing/integrations/vercel-ai-sdk#nextjs-setup) covers the Next.js-specific setup (`serverExternalPackages`, `instrumentation.ts`, and `Laminar.patch` for direct SDK clients).
+    Using OpenAI inside Next.js? The [Vercel AI SDK page](/integrations/vercel-ai-sdk#nextjs-setup) covers the Next.js-specific setup (`serverExternalPackages`, `instrumentation.ts`, and `Laminar.patch` for direct SDK clients).
     </Note>
 
     ### 3. Initialize Laminar
@@ -132,9 +133,7 @@ Laminar automatically instruments the official OpenAI package with a single line
   </Tab>
 </Tabs>
 
-These features allow you to build more structured traces, add context to your LLM calls, and gain deeper insights into your AI application's performance.
-
-## Monitoring Your OpenAI Usage
+## Monitoring OpenAI usage
 
 After instrumenting your OpenAI calls with Laminar, you'll be able to:
 
@@ -146,11 +145,11 @@ After instrumenting your OpenAI calls with Laminar, you'll be able to:
 
 Visit your Laminar dashboard to view your OpenAI traces and analytics.
 
-## Advanced Features
+## Enrich your OpenAI traces
 
-- Enrich traces with sessions, user IDs, metadata, and tags via the SDK reference.
-- Wrap custom functions with `observe` to capture business logic alongside model calls.
-- Images sent to vision-capable models are captured automatically — see [Tracing Images](/tracing/structure/images).
+- Attach sessions, user IDs, metadata, and tags to OpenAI spans via the [SDK reference](/sdk/reference).
+- Wrap the functions around your OpenAI calls with `observe` and mark them as [TOOL spans](/tracing/structure/span-types) so they show up in the transcript.
+- Images you send to vision-capable OpenAI models are captured automatically ([Tracing Images](/tracing/structure/images)).
 
 ## Vision inputs (images)
 
@@ -206,3 +205,26 @@ Laminar automatically traces image inputs (data URLs and external URLs) sent to 
     ```
   </Tab>
 </Tabs>
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="Anthropic" href="/integrations/anthropic">
+    Trace the Anthropic SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="Gemini" href="/integrations/gemini">
+    Trace Gemini calls made with the Google Gen AI SDK.
+  </Card>
+  <Card title="OpenRouter" href="/integrations/openrouter">
+    Trace OpenRouter requests with model and cost attribution.
+  </Card>
+  <Card title="OpenAI Agents SDK" href="/integrations/openai-agents-sdk">
+    Trace agent runs, handoffs, and tool calls.
+  </Card>
+  <Card title="Vercel AI SDK" href="/integrations/vercel-ai-sdk">
+    Trace `generateText` and `streamText` in Next.js and Node.js.
+  </Card>
+  <Card title="All integrations" href="/integrations">
+    Browse every provider, framework, coding agent, and browser integration Laminar supports.
+  </Card>
+</CardGroup>
