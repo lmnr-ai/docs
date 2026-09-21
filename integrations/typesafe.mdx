@@ -1,0 +1,152 @@
+---
+title: TypeSafe AI Jev observability
+sidebarTitle: TypeSafe AI
+description: "Trace every TypeSafe AI Jev call with its state, questions, typed answers, and token usage, all readable in Laminar's transcript view."
+---
+
+## Overview
+
+Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. Trace, debug, and monitor every TypeSafe AI Jev call your agent makes, with the state, the questions you asked, the typed answers, and token usage on each span.
+
+[Jev](https://typesafe.ai) is TypeSafe AI's System One model. Instead of generating text, it reads your application state and answers typed questions: a yes/no probability (`Noul`), a selected option (`Choice`), or a rubric score (`Score`). Agents use it for routing, guardrails, and scoring, so these are exactly the decisions you want visible in a trace. Laminar auto-instruments the TypeSafe Python SDK: initialize Laminar once and every `system_one` call is traced.
+
+<Note>
+The TypeSafe integration is available in Python (`lmnr` 0.7.64 or newer). In TypeScript, wrap `@typesafe-ai/sdk` calls with [`observe`](/tracing/structure/observe-decorator) to capture them as spans.
+</Note>
+
+## Getting Started
+
+### 1. Install Laminar and the TypeSafe SDK
+
+```bash
+pip install -U lmnr typesafe-sdk python-dotenv
+```
+
+### 2. Set up your environment variables
+
+Store your API keys in a `.env` file:
+
+```bash
+# .env file
+LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+TYPESAFE_API_KEY=your-typesafe-api-key
+```
+
+Jev is in early access: create your key in the [TypeSafe console](https://console.typesafe.ai) once your account is admitted.
+
+### 3. Initialize Laminar
+
+Laminar instruments the TypeSafe SDK automatically when the `typesafe-sdk` package is installed:
+
+```python {8}
+import os
+
+from dotenv import load_dotenv
+from lmnr import Laminar
+from typesafe_sdk import TypeSafeClient
+
+load_dotenv()
+
+Laminar.initialize()
+
+client = TypeSafeClient(model="jev-1.13.0")
+```
+
+### 4. Use the TypeSafe SDK as usual
+
+```python
+from typesafe_sdk import Choice, Noul
+
+response = client.system_one(
+    state="I was charged twice for my annual plan. Please refund one of the charges.",
+    questions={
+        "wants_refund": Noul(instructions="Does the customer ask for money back?"),
+        "queue": Choice(
+            instructions="Which team should handle this?",
+            criteria={
+                "billing": "Charges, invoices, refunds",
+                "technical": "Bugs and integration problems",
+                "other": None,
+            },
+        ),
+    },
+)
+
+print(response.answers["wants_refund"].noul)
+print(response.answers["queue"].choice)
+```
+
+All `system_one` calls are now traced in Laminar, including calls made with `AsyncTypeSafeClient`.
+
+<Note>
+To see an example of how to integrate Laminar within a FastAPI application, check out our [FastAPI integration guide](/guides/fastapi).
+</Note>
+
+## What Laminar captures
+
+Each call becomes an LLM span named `typesafe.system_one`. Every span carries:
+
+- The model that answered (`jev-1.13.0`, or the resolved default when you rely on `jev-latest`).
+- The state you sent, shown as the span input.
+- The full question set: instructions and criteria for every `Noul`, `Choice`, and `Score`.
+- The typed answers, shown as the span output, with probabilities and confidence intact.
+- Input and output token counts.
+
+Failed calls (an unknown model name, an authentication error) are marked as errors on the span with the exception recorded, so a misconfigured guardrail shows up in the trace instead of disappearing into a retry loop.
+
+## See what happened in a trace
+
+Open a trace in Laminar and you land on the transcript view: Laminar extracts the agent input, the model's turns, and any tool calls into a conversation, so you read what happened instead of clicking through a tree of span names. A Jev call sits inline with the LLM calls it routes or guards, so you can see the classification next to the action it triggered.
+
+More on the trace UX: [Viewing traces](/platform/viewing-traces).
+
+## Track outcomes with Signals
+
+Traces answer *what happened on this run*. **[Signals](/signals/introduction) answer the cross-trace question**: *how often does the guardrail fire, which queue gets the most tickets, when does confidence drop below the threshold you tuned for*. A Signal pairs a plain-language prompt with a JSON output schema. Laminar runs it live on new traces (Triggers) or backfills it across history (Jobs) and records a structured event every time it matches. From there you [query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on events across every trace.
+
+## Query across traces
+
+- **[SQL editor](/platform/sql-editor)** for ad-hoc queries across traces, spans, signals, and evals.
+- **SQL API** for programmatic access from scripts and pipelines.
+- **[CLI](/platform/cli)** (`lmnr-cli sql query`) for terminal-driven queries and piping JSON into shell tools or coding agents.
+- **[MCP server](/platform/mcp)** to query Laminar directly from Claude Code, Cursor, Codex, or any MCP-aware client.
+
+## Enrich your TypeSafe traces
+
+- Attach sessions, user IDs, metadata, and tags to TypeSafe spans via the [SDK reference](/sdk/reference).
+- Wrap the functions around your Jev calls with `observe` and mark them as [TOOL spans](/tracing/structure/span-types) so they show up in the transcript.
+- Set `LMNR_TRACE_CONTENT=false` to keep the model and token counts while omitting state, questions, and answers from spans.
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Viewing traces" href="/platform/viewing-traces">
+    Read the transcript view, filter, and search across traces.
+  </Card>
+  <Card title="Signals" href="/signals/introduction">
+    Detect behaviors and failures across every run, then query, cluster, and alert on them.
+  </Card>
+  <Card title="SQL editor and MCP server" href="/platform/sql-editor">
+    Query traces programmatically from the UI, API, or your IDE.
+  </Card>
+  <Card title="Tracing structure" href="/tracing/structure/overview">
+    Add sessions, metadata, and tags, and group calls under your own spans.
+  </Card>
+</CardGroup>
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="OpenAI" href="/integrations/openai">
+    Trace the OpenAI SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="Anthropic" href="/integrations/anthropic">
+    Trace the Anthropic SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="LiteLLM" href="/integrations/litellm">
+    One integration for every model LiteLLM routes to.
+  </Card>
+  <Card title="All integrations" href="/integrations">
+    Browse every provider, framework, coding agent, and browser integration Laminar supports.
+  </Card>
+</CardGroup>

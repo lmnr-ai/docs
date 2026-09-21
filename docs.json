@@ -135,7 +135,8 @@
               "integrations/gemini",
               "integrations/cohere",
               "integrations/litellm",
-              "integrations/openrouter"
+              "integrations/openrouter",
+              "integrations/typesafe"
             ]
           },
           {
