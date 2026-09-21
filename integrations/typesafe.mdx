@@ -6,81 +6,138 @@ description: "Trace every TypeSafe AI Jev call with its state, questions, typed 
 
 ## Overview
 
-Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. Trace, debug, and monitor every TypeSafe AI Jev call your agent makes, with the state, the questions you asked, the typed answers, and token usage on each span.
+Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. Trace, debug, and monitor every TypeSafe AI Jev call your agent makes, with the state, the questions you asked, the typed answers, and token usage on each span, in both TypeScript and Python.
 
-[Jev](https://typesafe.ai) is TypeSafe AI's System One model. Instead of generating text, it reads your application state and answers typed questions: a yes/no probability (`Noul`), a selected option (`Choice`), or a rubric score (`Score`). Agents use it for routing, guardrails, and scoring, so these are exactly the decisions you want visible in a trace. Laminar auto-instruments the TypeSafe Python SDK: initialize Laminar once and every `system_one` call is traced.
-
-<Note>
-The TypeSafe integration is available in Python (`lmnr` 0.7.64 or newer). In TypeScript, wrap `@typesafe-ai/sdk` calls with [`observe`](/tracing/structure/observe-decorator) to capture them as spans.
-</Note>
+[Jev](https://typesafe.ai) is TypeSafe AI's System One model. Instead of generating text, it reads your application state and answers typed questions: a yes/no probability (`Noul`), a selected option (`Choice`), or a rubric score (`Score`). Agents use it for routing, guardrails, and scoring, so these are exactly the decisions you want visible in a trace. Laminar auto-instruments the TypeSafe SDK: initialize Laminar once and every System One call is traced.
 
 ## Getting Started
 
-### 1. Install Laminar and the TypeSafe SDK
-
-```bash
-pip install -U lmnr typesafe-sdk python-dotenv
-```
-
-### 2. Set up your environment variables
-
-Store your API keys in a `.env` file:
-
-```bash
-# .env file
-LMNR_PROJECT_API_KEY=your-laminar-project-api-key
-TYPESAFE_API_KEY=your-typesafe-api-key
-```
-
-Jev is in early access: create your key in the [TypeSafe console](https://console.typesafe.ai) once your account is admitted.
-
-### 3. Initialize Laminar
-
-Laminar instruments the TypeSafe SDK automatically when the `typesafe-sdk` package is installed:
-
-```python {8}
-import os
-
-from dotenv import load_dotenv
-from lmnr import Laminar
-from typesafe_sdk import TypeSafeClient
-
-load_dotenv()
-
-Laminar.initialize()
-
-client = TypeSafeClient(model="jev-1.13.0")
-```
-
-### 4. Use the TypeSafe SDK as usual
-
-```python
-from typesafe_sdk import Choice, Noul
-
-response = client.system_one(
-    state="I was charged twice for my annual plan. Please refund one of the charges.",
-    questions={
-        "wants_refund": Noul(instructions="Does the customer ask for money back?"),
-        "queue": Choice(
-            instructions="Which team should handle this?",
-            criteria={
-                "billing": "Charges, invoices, refunds",
-                "technical": "Bugs and integration problems",
-                "other": None,
-            },
-        ),
-    },
-)
-
-print(response.answers["wants_refund"].noul)
-print(response.answers["queue"].choice)
-```
-
-All `system_one` calls are now traced in Laminar, including calls made with `AsyncTypeSafeClient`.
-
 <Note>
-To see an example of how to integrate Laminar within a FastAPI application, check out our [FastAPI integration guide](/guides/fastapi).
+Jev is in early access: create your key in the [TypeSafe console](https://console.typesafe.ai) once your account is admitted. No TypeSafe account yet? Jev is also available through [OpenRouter](/integrations/openrouter): set `TYPESAFE_BASE_URL=https://openrouter.ai/api` and use your OpenRouter API key as `TYPESAFE_API_KEY`. The same instrumented client works unchanged.
 </Note>
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ### 1. Install Laminar and the TypeSafe SDK
+
+    ```bash
+    npm install @lmnr-ai/lmnr@latest @typesafe-ai/sdk
+    ```
+
+    ### 2. Set up your environment variables
+
+    Store your API keys in a `.env` file:
+
+    ```bash
+    # .env file
+    LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+    TYPESAFE_API_KEY=your-typesafe-api-key
+    ```
+
+    Then load them in your application using a package like [dotenv](https://www.npmjs.com/package/dotenv).
+
+    ### 3. Initialize Laminar
+
+    `@typesafe-ai/sdk` is loaded as an ES module in most projects, so pass the client class to `instrumentModules` for Laminar to patch it:
+
+    ```typescript {5-7}
+    import { Laminar } from '@lmnr-ai/lmnr';
+    import { TypeSafeClient } from '@typesafe-ai/sdk';
+    import 'dotenv/config';
+
+    Laminar.initialize({
+      instrumentModules: { typesafe: TypeSafeClient },
+    });
+
+    const client = new TypeSafeClient({ defaultModel: 'jev-1.13.0' });
+    ```
+
+    ### 4. Use the TypeSafe SDK as usual
+
+    ```typescript
+    import { choice, noul } from '@typesafe-ai/sdk';
+
+    const result = await client.systemOne({
+      state:
+        'I was charged twice for my annual plan. Please refund one of the charges.',
+      questions: {
+        wants_refund: noul('Does the customer ask for money back?'),
+        queue: choice('Which team should handle this?', {
+          billing: 'Charges, invoices, refunds',
+          technical: 'Bugs and integration problems',
+          other: null,
+        }),
+      },
+    });
+
+    console.log(result.answers.wants_refund.noul);
+    console.log(result.answers.queue.choice);
+    ```
+
+    All `systemOne` calls are now traced in Laminar.
+  </Tab>
+  <Tab title="Python">
+    ### 1. Install Laminar and the TypeSafe SDK
+
+    ```bash
+    pip install -U lmnr typesafe-sdk python-dotenv
+    ```
+
+    ### 2. Set up your environment variables
+
+    Store your API keys in a `.env` file:
+
+    ```bash
+    # .env file
+    LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+    TYPESAFE_API_KEY=your-typesafe-api-key
+    ```
+
+    ### 3. Initialize Laminar
+
+    Laminar instruments the TypeSafe SDK automatically when the `typesafe-sdk` package is installed:
+
+    ```python {8}
+    import os
+
+    from dotenv import load_dotenv
+    from lmnr import Laminar
+    from typesafe_sdk import TypeSafeClient
+
+    load_dotenv()
+
+    Laminar.initialize()
+
+    client = TypeSafeClient(model="jev-1.13.0")
+    ```
+
+    ### 4. Use the TypeSafe SDK as usual
+
+    ```python
+    from typesafe_sdk import Choice, Noul
+
+    response = client.system_one(
+        state="I was charged twice for my annual plan. Please refund one of the charges.",
+        questions={
+            "wants_refund": Noul(instructions="Does the customer ask for money back?"),
+            "queue": Choice(
+                instructions="Which team should handle this?",
+                criteria={
+                    "billing": "Charges, invoices, refunds",
+                    "technical": "Bugs and integration problems",
+                    "other": None,
+                },
+            ),
+        },
+    )
+
+    print(response.answers["wants_refund"].noul)
+    print(response.answers["queue"].choice)
+    ```
+
+    All `system_one` calls are now traced in Laminar, including calls made with `AsyncTypeSafeClient`.
+  </Tab>
+</Tabs>
 
 ## What Laminar captures
 
