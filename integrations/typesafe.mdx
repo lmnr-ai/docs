@@ -151,6 +151,10 @@ Each call becomes an LLM span named `typesafe.system_one`. Every span carries:
 
 Failed calls (an unknown model name, an authentication error) are marked as errors on the span with the exception recorded, so a misconfigured guardrail shows up in the trace instead of disappearing into a retry loop.
 
+<Frame caption="A support agent trace: the selected Jev span carries the typed answers, with the chosen queue, urgency probability, and rubric score on the span output and the question set in the output schema. The drafted reply and a second Jev verification call sit inline in the same trace.">
+<img src="/images/integrations/typesafe-trace-view.png" alt="TypeSafe AI Jev trace in Laminar with typed answers on the system_one span" />
+</Frame>
+
 ## See what happened in a trace
 
 Open a trace in Laminar and you land on the transcript view: Laminar extracts the agent input, the model's turns, and any tool calls into a conversation, so you read what happened instead of clicking through a tree of span names. A Jev call sits inline with the LLM calls it routes or guards, so you can see the classification next to the action it triggered.
