@@ -349,14 +349,14 @@ On AWS, the app server's NLB already exposes HTTP (`443`) and gRPC (`8443`) exte
 
 ## PII redaction
 
-The [PII redactor](/platform/pii-redaction) is an optional CPU-only gRPC service that strips personally identifiable information from spans before they are persisted. It is **disabled by default** and has no database or secret dependencies (the detection model is baked into the image). When enabled, the chart injects `PII_REDACTOR_URL` into the `app-server` and `app-server-consumer` pods, activating redaction during span processing.
+The [PII redactor](/platform/pii-redaction) is an optional CPU-only gRPC service that detects personally identifiable information in spans at ingest. It backs both redaction modes: **On** replaces PII before the span is persisted, and **Dual** stores the original text once and redacts it per reader, so owners and admins see the original while members, API keys, and CLI sessions see placeholders. The service is **disabled by default** and has no database or secret dependencies (the detection model is baked into the image). When enabled, the chart injects `PII_REDACTOR_URL` into the `app-server` and `app-server-consumer` pods, activating detection during span processing; the mode is then chosen per project under **Project Settings → Security**.
 
 ```yaml
 piiRedactor:
   enabled: true
 ```
 
-PII detection is CPU-intensive ONNX inference, so pin it to a dedicated compute-optimized node and size it generously:
+PII detection is CPU-intensive ONNX inference and the model weighs about 5.5 GB in memory, so pin it to a dedicated compute-optimized node and size it generously. For more throughput, add replicas rather than a bigger node:
 
 ```yaml
 piiRedactor:
@@ -366,7 +366,7 @@ piiRedactor:
   resources:
     requests:
       cpu: "2"
-      memory: "4Gi"
+      memory: "8Gi"
     limits:
       cpu: "8"
       memory: "16Gi"
