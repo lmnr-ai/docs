@@ -3,11 +3,13 @@ title: Tracing LLM calls in Next.js with Laminar
 sidebarTitle: Tracing LLM calls in Next.js
 ---
 
+import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
+
 ## Overview
 
 We'll explore a simple emotional support chat application built with Next.js that:
 1. Provides a chat interface for users seeking emotional support
-2. Uses OpenAI or Anthropic models to generate empathetic responses
+2. Uses OpenAI's `gpt-5.6-luna` or Anthropic's `claude-haiku-4-5-20251001` to generate empathetic responses
 3. Traces the entire process with Laminar
 
 ## Setup
@@ -42,10 +44,17 @@ npm install openai@latest @anthropic-ai/sdk@latest @lmnr-ai/lmnr@latest
 cp .env.local.example .env.local
 ```
 
-And then fill in the `.env.local` file.
-Get [Laminar project API key](https://docs.lmnr.ai/tracing/introduction#2-initialize-laminar-in-your-application).
-Get [OpenAI API key](https://platform.openai.com/api-keys).
-Get [Anthropic API key](https://console.anthropic.com/settings/keys).
+And then fill in the `.env.local` file:
+
+```bash .env.local
+LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+OPENAI_API_KEY=your-openai-api-key
+ANTHROPIC_API_KEY=your-anthropic-api-key
+```
+
+<GetProjectApiKey />
+
+Get your [OpenAI API key](https://platform.openai.com/api-keys) and your [Anthropic API key](https://console.anthropic.com/settings/keys) from the respective dashboards.
 
 </Step>
 <Step title = "Update next.config.ts">
@@ -121,6 +130,49 @@ Laminar must be initialized at the entry point of the application, but after oth
 For Next.js, the `instrumentation.ts` file is ideal for this purpose as it's loaded early in the application lifecycle.
 </Note>
 
+#### Passing the modules to instrument explicitly
+
+By default Laminar patches the LLM SDKs it finds at initialization time. Next.js bundles
+route code, so that automatic lookup can miss a provider you actually use. Pass the module
+to `instrumentModules` and Laminar patches that exact module object:
+
+```typescript instrumentation.ts
+export async function register() {
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+    const { Laminar } = await import('@lmnr-ai/lmnr')
+    const { OpenAI } = await import('openai')
+    const anthropic = await import('@anthropic-ai/sdk')
+
+    Laminar.initialize({
+      projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+      instrumentModules: { OpenAI, anthropic },
+    })
+  }
+}
+```
+
+Note the two different shapes: `OpenAI` is the exported class, while `anthropic` is the
+whole module namespace. Other supported keys are `bedrock`, `cohere`, `langchain`,
+`chromadb`, `qdrant`, and `pinecone`.
+
+<Warning>
+`instrumentModules` only takes effect if the provider packages are listed in
+`serverExternalPackages` too. Otherwise Next.js bundles a separate copy of the provider
+into your route, Laminar patches the unbundled one, and no spans are recorded:
+
+```javascript next.config.ts
+const nextConfig = {
+  serverExternalPackages: ['@lmnr-ai/lmnr', 'openai', '@anthropic-ai/sdk'],
+};
+
+export default nextConfig;
+```
+</Warning>
+
+This is an alternative to the `Laminar.patch()` calls in step 4 below. Use one or the
+other, not both: `instrumentModules` keeps all tracing setup in `instrumentation.ts`,
+while `Laminar.patch()` keeps it next to the client you construct.
+
 ### 2. app/page.tsx
 
 This file contains the main page layout for our chat application:
@@ -153,7 +205,7 @@ export default function Home() {
 
 This file contains the API route handler that processes chat messages and communicates with the OpenAI API.
 
-Make sure to enable `experimental_telemetry` in the `generateText` function and pass the tracer to it.
+There is no Laminar-specific code here. The provider clients are already patched, so the calls below are traced as-is.
 
 ```typescript app/api/chat/route.ts
 import { openai } from "@lib/openai";
@@ -178,13 +230,13 @@ Never give medical advice or diagnose conditions.`
     let response;
     if (llmProvider === "openai") {
       const completion = await openai.chat.completions.create({
-        model: "gpt-4.1-nano",
+        model: "gpt-5.6-luna",
         messages: [systemMessage, ...messages],
       });
       response = completion.choices[0].message.content;
     } else if (llmProvider === "anthropic") {
       const completion = await anthropic.messages.create({
-        model: "claude-3-5-haiku-latest",
+        model: "claude-haiku-4-5-20251001",
         system: systemMessage.content,
         messages: messages,
         max_tokens: 1000,
@@ -207,7 +259,9 @@ Never give medical advice or diagnose conditions.`
 
 ### 4. lib/openai.ts and lib/anthropic.ts
 
-These files contain the LLM clients, but more importantly patching those functions by Laminar.
+These files contain the LLM clients, and patch them with Laminar at the point where they're
+constructed. Skip this step if you already passed the modules through `instrumentModules`
+above.
 
 ```javascript lib/openai.ts {2-5}
 import { OpenAI } from "openai";
@@ -400,11 +454,13 @@ npm run dev
 
 ## Viewing Traces
 
-After interacting with the chat, you can view the traces in your Laminar dashboard at https://www.lmnr.ai. The trace will show:
+After interacting with the chat, you can view the traces in your Laminar dashboard at https://laminar.sh. The trace will show:
 
 1. The Next.js API route execution
 2. The OpenAI or Anthropic API calls
 3. Token usage and response details
+
+Laminar renders this as a [transcript](/platform/viewing-traces), so you read the conversation rather than a tree of span names.
 
 ## Key Features Demonstrated
 
@@ -426,6 +482,7 @@ If you encounter issues:
 - Check that your API keys are correctly set in the `.env.local` file
 - Verify that Laminar is properly initialized in the `instrumentation.ts` file
 - Verify that the `next.config.ts` file is correctly configured
-- Verify that Laminar.patch is called after LLM SDKs are imported
+- Verify that `Laminar.patch` is called after LLM SDKs are imported
+- If you use `instrumentModules`, check that every provider package is also in `serverExternalPackages`
 - Ensure all dependencies are installed
 - Review the Next.js logs for any application errors
