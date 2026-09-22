@@ -3,23 +3,33 @@ title: PII Redaction for AI Agent Traces
 sidebarTitle: PII redaction
 ---
 
-Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. PII redaction is a project-level switch that **runs every span through PII redactor model hosted on Laminar's infrastructure before storage**, replacing names, emails, secrets, phone numbers, and other detected entities with `[REDACTED_<LABEL>]` placeholders. Once it's on, *raw user data never lands in your trace store, your search index, or anyone else's eyeballs*.
+Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. PII redaction is a project-level setting that **runs every span through a PII detection model before storage** and replaces names, emails, secrets, phone numbers, and other detected entities with `[REDACTED_<LABEL>]` placeholders. It has three modes: redact nothing, redact for everyone, or store the original once and redact per reader.
 
-Redaction runs at ingest, in line with the rest of trace processing. By the time a span is searchable, in the trace view, or queryable from SQL, it has already been redacted: the original text is never persisted.
+Detection runs at ingest, in line with the rest of trace processing. By the time a span is searchable, in the trace view, or queryable from SQL, the decision about what is PII has already been made.
+
+## Modes
+
+| Mode | What is stored | Who sees the original |
+| --- | --- | --- |
+| **Off** | Spans as received. | Everyone. |
+| **On** | Redacted text only. Detected PII is replaced with placeholders before storage; the original text is never persisted. | Nobody. |
+| **Dual** | The original text, stored once, with the detected PII marked. Redaction is applied when the span is read. | Workspace owners and admins. Everyone else sees placeholders. |
+
+**On** is the right choice when raw user data must never land in your trace store, search index, or exports. **Dual** is for teams where a few people need the real conversation to debug an incident, while the rest of the workspace, and any API key or CLI session, only ever needs the redacted version.
 
 ## Enabling it
 
-Go to **Project Settings → Security**, flip **Redact PII from spans** on. The change applies to every new span ingested for that project. Existing traces are not rewritten retroactively.
+Go to **Project Settings → Security** and pick a mode under **PII in spans**. Only workspace owners and admins can change it. The change applies to every new span ingested for that project; existing traces are not rewritten retroactively.
 
-<Frame caption="Toggle enabled. Every span ingested for this project is now redacted before storage.">
-  <img src="/images/platform/pii-redaction-enabled.png" alt="Security tab with the Redact PII from spans toggle in the on position" />
+<Frame caption="Security tab with PII in spans set to Dual. Every span ingested for this project is now screened at ingest and redacted per reader.">
+  <img src="/images/platform/pii-redaction-enabled.png" alt="Security tab with the PII in spans mode selector" />
 </Frame>
 
-The toggle is per-project, not per-workspace. A workspace can mix redacted and non-redacted projects (for example, a production project with redaction on and a staging project without).
+The setting is per-project, not per-workspace. A workspace can mix modes (for example, a production project on **Dual** and a staging project on **Off**).
 
 ## What gets redacted
 
-The redactor runs over the **input** and **output** fields of every span: LLM messages, tool-call arguments and results, function inputs and outputs. It detects and replaces:
+The detector runs over the **input** and **output** fields of every span: LLM messages, tool-call arguments and results, function inputs and outputs. It detects and replaces:
 
 - Personal names
 - Email addresses
@@ -27,43 +37,60 @@ The redactor runs over the **input** and **output** fields of every span: LLM me
 - Account numbers, card numbers, and similar identifiers
 - Other entities the model classifies as PII
 
-Each detected entity is replaced with a labelled placeholder, e.g. `[REDACTED_PRIVATE_EMAIL]`, `[REDACTED_PRIVATE_PERSON]`, `[REDACTED_ACCOUNT_NUMBER]`. The structure of your span input/output (JSON shape, message role fields, tool-call IDs) is preserved: only the offending substrings are rewritten.
+Each detected entity is replaced with a labelled placeholder, e.g. `[REDACTED_PRIVATE_EMAIL]`, `[REDACTED_PRIVATE_PERSON]`, `[REDACTED_ACCOUNT_NUMBER]`. The structure of your span input/output (JSON shape, message role fields, tool-call IDs) is preserved: only the offending substrings are rewritten. Placeholders look the same in **On** and **Dual**.
 
 ## What is never redacted
 
-Some fields are structurally meaningful and pass through untouched even with redaction enabled:
+Some fields are structurally meaningful and pass through untouched in every mode:
 
 - **Object keys** in JSON inputs and outputs. A key called `email` stays; the email *value* gets redacted.
 - **Span attributes** other than input and output: span name, type, status, duration, token counts, cost, model name.
 - **Trace and span IDs**, parent IDs, and the message-role / tool-call-id fields the model needs to follow conversation structure.
 
-If you've passed a user identifier through `setTraceUserId` / `set_trace_user_id` (see [User ID](/tracing/structure/user-id)), that value is span metadata and is not affected by this toggle. Strip user IDs upstream if your compliance posture requires it.
+Redaction covers span input and output only. Signal events, datasets, evaluation datapoints, and browser session recordings are not redacted in any mode; if you push a span into a dataset, the copy is whatever you were shown at the time.
+
+If you've passed a user identifier through `setTraceUserId` / `set_trace_user_id` (see [User ID](/tracing/structure/user-id)), that value is trace metadata and is not affected by this setting. Strip user IDs upstream if your compliance posture requires it.
+
+## Dual mode: who sees what
+
+In **Dual** mode the same span renders differently depending on who is reading:
+
+- **Workspace owners and admins** see the original data.
+- **Workspace members** see PII replaced with placeholders.
+- **Public share links** see placeholders.
+- **Project API keys** (the public API, `/v1/sql/query`, and the [MCP server](/platform/mcp)) and **CLI sessions** (`lmnr-cli sql`, `lmnr-cli ask`) always see placeholders, regardless of the role of the person who created the key or logged in. This is what makes it safe to give a coding agent access to a project.
+
+This applies wherever span input and output are read: the trace and session views, the traces and spans tables, the [SQL editor](/platform/sql-editor) (`spans` and `traces`), exports, and the MCP tools.
+
+<Note>
+  Spans ingested before switching to **Dual** were never screened: restricted readers see `"[PII_MASKED_UNAVAILABLE]"` instead of the input or output, never the original text.
+</Note>
 
 ## What you'll see in traces
 
-Traces ingested with redaction on look the same in the [transcript view](/platform/viewing-traces): same structure, same nesting, same tool calls. The difference is in the content cells. A user message that was previously:
+Traces ingested with redaction look the same in the [transcript view](/platform/viewing-traces): same structure, same nesting, same tool calls. The difference is in the content cells. A user message that was previously:
 
 ```json
 "Hi, my name is Sarah Chen and my email is sarah.chen@example.com"
 ```
 
-is stored and rendered as:
+is rendered as:
 
 ```json
 "Hi, my name is [REDACTED_PRIVATE_PERSON] and my email is [REDACTED_PRIVATE_EMAIL]"
 ```
 
-The same applies to LLM outputs, tool-call arguments, and tool-call results. Token counts and timing are unchanged. Full-text [search](/platform/search) hits the redacted text, so a search for the original email returns nothing. That is the point.
+The same applies to LLM outputs, tool-call arguments, and tool-call results. Token counts and timing are unchanged. Full-text [search](/platform/search) indexes the redacted text in both **On** and **Dual**, so a search for the original email returns nothing. That is the point.
 
 <Note>
-  Redaction runs at ingest, so flipping the toggle does not retroactively redact existing traces. New traces from the moment the toggle flips are redacted; older traces stay as they were stored.
+  Detection runs at ingest, so changing the mode does not retroactively redact existing traces. New traces from the moment you switch are screened; older traces stay as they were stored (and, under **Dual**, are hidden from restricted readers as described above).
 </Note>
 
 ## Availability
 
-PII redaction is available on **Pro** and **Enterprise** plans on Laminar Cloud.
+PII redaction is available on **Pro** and **Enterprise** plans on Laminar Cloud, in all three modes.
 
-[Self-hosted](/self-hosting/overview) deployments can enable the same toggle by running the redactor alongside the rest of the stack. See the [self-hosting configuration](/self-hosting/configuration#pii-redaction) page for setup.
+[Self-hosted](/self-hosting/overview) deployments can use the same setting by running the PII redactor service alongside the rest of the stack; it is required for both **On** and **Dual**. See the [self-hosting configuration](/self-hosting/configuration#pii-redaction) page for setup.
 
 ## Where to go next
 
