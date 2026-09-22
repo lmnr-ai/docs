@@ -63,10 +63,8 @@ In **Dual** mode the same span renders differently depending on who is reading:
 This applies wherever span input and output are read: the trace and session views, the traces and spans tables, the [SQL editor](/platform/sql-editor) (`spans` and `traces`), exports, and the MCP tools.
 
 <Note>
-  Only spans ingested while **Dual** is on can be redacted per reader. Spans ingested before you switched to **Dual**, or while the detector was unavailable, were never screened, so restricted readers see the placeholder `"[PII_MASKED_UNAVAILABLE]"` in place of the whole input or output rather than the original text. Owners and admins see them as stored.
+  Spans ingested before switching to **Dual** were never screened: restricted readers see `"[PII_MASKED_UNAVAILABLE]"` instead of the input or output, never the original text.
 </Note>
-
-Two further differences for restricted readers in **Dual** mode: [search](/platform/search) returns the same results, but without the highlighted snippet, and the live agent-input preview on the traces table is not pushed in real time (it appears when the row is loaded).
 
 ## What you'll see in traces
 
