@@ -3,13 +3,17 @@ title: Tracing AI SDK in Next.js with Laminar
 sidebarTitle: Tracing AI SDK in Next.js
 ---
 
+import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
+
 ## Overview
 
 We'll explore a simple emotional support chat application built with Next.js that:
 1. Provides a chat interface for users seeking emotional support
-2. Uses OpenAI's GPT model to generate empathetic responses
+2. Uses OpenAI's `gpt-5.6-luna` to generate empathetic responses
 3. Traces the entire process with Laminar
-4. Utilizes Vercel's AI SDK for AI interactions
+4. Uses Vercel's AI SDK for AI interactions
+
+This guide targets **AI SDK v7 and later**, where Laminar registers once and traces every call with no per-call configuration. If you're still on AI SDK v5 or v6, follow the v5/v6 tab on the [Vercel AI SDK integration page](/integrations/vercel-ai-sdk) instead.
 
 ## Setup
 
@@ -43,9 +47,16 @@ npm install ai@latest @ai-sdk/openai@latest @lmnr-ai/lmnr@latest
 cp .env.local.example .env.local
 ```
 
-And then fill in the `.env.local` file.
-Get [Laminar project API key](https://docs.lmnr.ai/tracing/introduction#2-initialize-laminar-in-your-application).
-Get [OpenAI API key](https://platform.openai.com/api-keys)
+And then fill in the `.env.local` file:
+
+```bash .env.local
+LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+OPENAI_API_KEY=your-openai-api-key
+```
+
+<GetProjectApiKey />
+
+Get your [OpenAI API key](https://platform.openai.com/api-keys) from the OpenAI dashboard.
 
 </Step>
 <Step title = "Update next.config.ts">
@@ -91,30 +102,37 @@ Let's look at the key components of our Next.js application with Laminar tracing
 
 ### 1. instrumentation.ts
 
-This file is crucial as it initializes Laminar for tracing.
+This file is crucial as it registers Laminar with the AI SDK.
 Next.js automatically loads this file during initialization.
 
 ```typescript instrumentation.ts
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
-    const { Laminar } = await import('@lmnr-ai/lmnr')
-    
-    // Make sure to initialize Laminar **after** you initialize other 
-    // tracing libraries, e.g. `registerOTel` from `@vercel/otel`.
-    Laminar.initialize({
-      projectApiKey: process.env.LMNR_PROJECT_API_KEY,
-    })
+    const { registerTelemetry } = await import('ai')
+    const { LaminarAiSdkTelemetry } = await import('@lmnr-ai/lmnr')
+
+    registerTelemetry(new LaminarAiSdkTelemetry({
+      laminarOptions: {
+        projectApiKey: process.env.LMNR_PROJECT_API_KEY,
+      },
+    }))
   }
 }
 ```
+
+`LaminarAiSdkTelemetry` is the recommended way to trace the AI SDK on v7 and later. You register it once, and every `generateText`, `streamText`, `generateObject`, `streamObject`, and `embed` call in your app is traced: model turns, tool calls, token usage, and cost. There is no per-call configuration to add or forget.
+
+The constructor calls `Laminar.initialize()` for you when Laminar isn't already initialized, so you don't need a separate init call. `laminarOptions` takes everything `Laminar.initialize()` accepts. Omit it entirely and Laminar reads `LMNR_PROJECT_API_KEY` from the environment.
 
 Laminar only works in the 'nodejs' runtime of Next.js.
 
 Learn more about the `instrumentation.ts` file in the [Next.js docs](https://nextjs.org/docs/app/guides/instrumentation).
 
 <Note>
-Laminar must be initialized at the entry point of the application, but after other tracing libraries are initialized.
+Laminar must be registered at the entry point of the application, before the first AI SDK call.
 For Next.js, the `instrumentation.ts` file is ideal for this purpose as it's loaded early in the application lifecycle.
+
+If you already register a tracer provider with `registerOTel` from `@vercel/otel`, don't let Laminar register a second one: see [Coexisting with @vercel/otel](/integrations/vercel-ai-sdk#coexisting-with-vercel-otel).
 </Note>
 
 ### 2. app/page.tsx
@@ -149,37 +167,28 @@ export default function Home() {
 
 This file contains the API route handler that processes chat messages and communicates with the OpenAI API.
 
-Make sure to enable `experimental_telemetry` in the `generateText` function and pass the tracer to it.
+There is no Laminar-specific code here. Because `LaminarAiSdkTelemetry` is registered in `instrumentation.ts`, the `generateText` call below is traced as-is.
 
-```typescript app/api/chat/route.ts {3, 25-28}
+```typescript app/api/chat/route.ts
 import { openai } from "@ai-sdk/openai";
 import { generateText } from "ai";
-import { getTracer } from "@lmnr-ai/lmnr";
 import { NextRequest, NextResponse } from "next/server";
+
+// Therapeutic instructions for the model
+const instructions = `You are an AI-powered therapist assistant. Respond with
+empathy, understanding, and professionalism. Your goal is to provide supportive
+responses that help the user process their feelings and thoughts. Never give
+medical advice or diagnose conditions.`;
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { messages } = body;
 
-    // Create system message with therapeutic instructions
-    const systemMessage = {
-      role: 'system',
-      content: `You are an AI-powered therapist assistant. Respond with empathy,
-understanding, and professionalism. Your goal is to provide supportive responses
-that help the user process their feelings and thoughts. Never give medical
-advice or diagnose conditions.`
-    };
-
-    // Use the messages parameter directly with the system message as the first
-    // element
     const response = await generateText({
-      model: openai("gpt-4.1-nano"),
-      messages: [systemMessage, ...messages],
-      experimental_telemetry: {
-        isEnabled: true,
-        tracer: getTracer(),
-      }
+      model: openai("gpt-5.6-luna"),
+      instructions,
+      messages,
     });
 
     return NextResponse.json({ message: response.text });
@@ -191,6 +200,21 @@ advice or diagnose conditions.`
     );
   }
 }
+```
+
+<Note>
+AI SDK v7 rejects `system` role entries inside `messages` with `AI_InvalidPromptError`. Pass the system prompt as the `instructions` option instead, as above. Laminar still records it on the span input, so the transcript view shows the full conversation.
+</Note>
+
+To turn tracing off for one call site, or to name a span, pass a `telemetry` block on that call:
+
+```typescript
+const response = await generateText({
+  model: openai("gpt-5.6-luna"),
+  instructions,
+  messages,
+  telemetry: { functionId: "therapy-chat" },
+});
 ```
 
 ### 4. components/chat-ui.tsx
@@ -357,16 +381,18 @@ npm run dev
 
 ## Viewing Traces
 
-After interacting with the chat, you can view the traces in your Laminar dashboard at https://www.lmnr.ai. The trace will show:
+After interacting with the chat, you can view the traces in your Laminar dashboard at https://laminar.sh. The trace will show:
 
-1. The Next.js API route execution
-2. The OpenAI API call made through Vercel's AI SDK
-3. Token usage and response details
+1. An `ai.generateText` span for the AI SDK operation
+2. A nested `ai.llm` span for the model call, with the prompt, the response, and the model id
+3. Token usage, latency, and cost
+
+Laminar renders this as a [transcript](/platform/viewing-traces), so you read the conversation rather than a tree of span names.
 
 ## Key Features Demonstrated
 
-1. **Next.js Instrumentation**: Using Next.js's instrumentation API to initialize Laminar
-2. **AI SDK Integration**: Seamless integration with Vercel's AI SDK
+1. **Next.js Instrumentation**: Using Next.js's instrumentation API to register Laminar
+2. **AI SDK Integration**: One registration traces every AI SDK call, with no per-call config
 3. **OpenAI Tracing**: Automatic tracing of OpenAI API calls
 4. **Token Usage**: Automatic calculation of tokens used for each OpenAI call
 5. **Cost Estimation**: Automatic estimation of the cost of each OpenAI call
@@ -382,7 +408,8 @@ After interacting with the chat, you can view the traces in your Laminar dashboa
 If you encounter issues:
 
 - Check that your API keys are correctly set in the `.env.local` file
-- Verify that Laminar is properly initialized in the `instrumentation.ts` file
+- Verify that `registerTelemetry(new LaminarAiSdkTelemetry())` runs in the `instrumentation.ts` file, guarded by the `NEXT_RUNTIME === 'nodejs'` check
 - Verify that the `next.config.ts` file is correctly configured
+- Confirm you are on `ai` v7 or later (`npm ls ai`). On v5 and v6, `registerTelemetry` does not exist and you need the [`experimental_telemetry` setup](/integrations/vercel-ai-sdk) instead
 - Ensure all dependencies are installed
 - Review the Next.js logs for any application errors
