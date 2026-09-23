@@ -171,21 +171,64 @@ const { text } = await generateText({
 });
 ```
 
-The same `telemetry` block also carries `functionId` and `metadata` if you want to name a span or attach metadata to one call:
+The same `telemetry` block also takes `functionId`, which names the call's span:
 
 ```typescript
 const { text } = await generateText({
   model: openai('gpt-5-mini'),
   prompt: 'Draft a release note.',
-  telemetry: {
-    functionId: 'release-notes',
-    metadata: { env: 'production' },
-  },
+  telemetry: { functionId: 'release-notes' },
 });
 ```
 
 <Note>
 On AI SDK v5 and v6, the equivalent control is the `experimental_telemetry` block: omit it (or set `isEnabled: false`) to skip tracing for a call, and pass `functionId` / `metadata` there.
+</Note>
+
+## Attach metadata, sessions, user IDs, and tags
+
+On AI SDK v7, per-call context goes in `runtimeContext`. The AI SDK only sends a `runtimeContext` key to telemetry when you opt it in with `telemetry.includeRuntimeContext`, so list every key you want in Laminar there.
+
+```typescript
+import { openai } from '@ai-sdk/openai';
+import { generateText } from 'ai';
+
+const { text } = await generateText({
+  model: openai('gpt-5-mini'),
+  prompt: 'Draft a release note.',
+  runtimeContext: {
+    userId: 'user-123',
+    sessionId: 'session-456',
+    tags: ['release-notes', 'beta'],
+    env: 'production',
+    region: 'us-west',
+  },
+  telemetry: {
+    functionId: 'release-notes',
+    includeRuntimeContext: {
+      userId: true,
+      sessionId: true,
+      tags: true,
+      env: true,
+      region: true,
+    },
+  },
+});
+```
+
+Laminar reads the opted-in keys like this:
+
+| Key | Becomes |
+| --- | --- |
+| `userId` | The trace's [user ID](/tracing/structure/user-id) |
+| `sessionId` | The trace's [session ID](/tracing/structure/sessions) |
+| `tags` | [Tags](/tracing/structure/tags) on the call's span. Must be an array of strings. |
+| Any other key | A [metadata](/tracing/structure/metadata) key-value pair on the trace |
+
+Keys you leave out of `includeRuntimeContext` stay in your application and never reach Laminar, so you can keep request-scoped values in `runtimeContext` without exporting them.
+
+<Note>
+Reading `runtimeContext` requires `@lmnr-ai/lmnr` 0.8.49 or later.
 </Note>
 
 ## Configure the integration
@@ -438,9 +481,10 @@ const result = await generateText({
     }),
   },
   stopWhen: stepCountIs(5),
+  runtimeContext: { env: 'production' },
   telemetry: {
     functionId: 'travel-assistant',
-    metadata: { env: 'production' },
+    includeRuntimeContext: { env: true },
   },
 });
 
@@ -451,7 +495,7 @@ console.log(`Completed in ${result.steps.length} steps`);
 `stopWhen: stepCountIs(5)` caps the loop at five model-and-tool rounds. You can combine conditions (`stopWhen: [stepCountIs(20), hasToolCall('finalize')]`) or pass a custom predicate.
 
 <Note>
-On AI SDK v5 and v6, replace the `telemetry` block with `experimental_telemetry: { isEnabled: true, tracer: getTracer(), functionId: 'travel-assistant', metadata: { env: 'production' } }`.
+On AI SDK v5 and v6, replace the `runtimeContext` and `telemetry` blocks with `experimental_telemetry: { isEnabled: true, tracer: getTracer(), functionId: 'travel-assistant', metadata: { env: 'production' } }`.
 </Note>
 
 ### ToolLoopAgent
@@ -557,7 +601,7 @@ export const POST = async (req: Request) => {
 
 You also get grouping for free if another tracing library (for example `@vercel/otel` or `@sentry/nextjs`) is already wrapping your handler.
 
-See the full [observe reference](/tracing/structure/observe-decorator) for session IDs, user IDs, metadata, and tags.
+See the full [observe reference](/tracing/structure/observe-decorator) for session IDs, user IDs, metadata, and tags on the parent span. For per-call context on AI SDK v7, use [`runtimeContext`](#attach-metadata-sessions-user-ids-and-tags).
 
 ## Coexisting with @vercel/otel
 
@@ -643,13 +687,17 @@ const { text } = await generateText({
 </Step>
 <Step title="Move any per-call settings to the telemetry block">
 
-If a call passed `functionId` or `metadata` through `experimental_telemetry`, or you want to turn tracing off for it, use the `telemetry` block instead.
+If a call passed `functionId` through `experimental_telemetry`, or you want to turn tracing off for it, use the `telemetry` block instead. Metadata moves to `runtimeContext`, with each key opted in through `telemetry.includeRuntimeContext` (see [Attach metadata, sessions, user IDs, and tags](#attach-metadata-sessions-user-ids-and-tags)).
 
 ```typescript
 const { text } = await generateText({
   model: openai('gpt-5-mini'),
   prompt: 'Draft a release note.',
-  telemetry: { functionId: 'release-notes', metadata: { env: 'production' } },
+  runtimeContext: { env: 'production' },
+  telemetry: {
+    functionId: 'release-notes',
+    includeRuntimeContext: { env: true },
+  },
   // or: telemetry: { isEnabled: false } to skip this call
 });
 ```

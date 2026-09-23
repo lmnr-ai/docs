@@ -29,6 +29,8 @@ Set metadata inside an active span context (for example, inside `observe()` or a
     ```
 
     See also: [`Laminar.setTraceMetadata`](/sdk/trace-methods#ts-laminar-set-trace-metadata) and [`observe(..., { metadata })`](/sdk/observe#ts-observe)
+
+    On Vercel AI SDK v7, pass metadata per call through `runtimeContext` and opt each key in with `telemetry.includeRuntimeContext`. See [Attach metadata, sessions, user IDs, and tags](/integrations/vercel-ai-sdk#attach-metadata-sessions-user-ids-and-tags).
   </Tab>
   <Tab title="Python">
     ```python
