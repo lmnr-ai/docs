@@ -7,12 +7,12 @@ Connect Slack to your Laminar workspace to get [signal](/signals/introduction) a
 
 ## Connect Slack
 
-1. Go to the **Settings** page and select **Integrations** from the sidebar.
+1. Go to the **Settings** page and select **Integrations** under *Workspace settings* in the sidebar. You can also connect from the **Slack** card in any Signal's **Settings > Alerts** section (see [Alerts](/signals/alerts#slack)).
 2. Find the **Slack** card and click **Connect to Slack**.
 3. You will be redirected to Slack's authorization page. Select the Slack workspace you want to connect and click **Allow**.
 4. After authorization, you will be redirected back to Laminar. The Slack card will show a **Connected** badge.
 
-<Frame caption="Workspace integrations page">
+<Frame caption="Workspace settings: Integrations, with the Slack card">
   <img
     src="/images/integrations/workspace-integrations.png"
     alt="Workspace integrations page showing Slack connection card"
@@ -61,7 +61,7 @@ Each channel maps to a single project, so pick the project whose traces the peop
 
 ## Alerts
 
-Create per-project [alerts](/signals/alerts) that post to a Slack channel of your choice whenever a signal event is detected. Each message contains the signal name, the extracted payload fields, and a link to the trace, so you find out the moment something you care about happens and can jump straight to the run.
+Create [alerts](/signals/alerts) on any Signal that post to a Slack channel of your choice whenever a signal event is detected. Each message contains the signal name, the extracted payload fields, and a link to the trace, so you find out the moment something you care about happens and can jump straight to the run.
 
 <Frame caption="A critical Failure Detector alert in Slack, with the event details and a link to the trace">
   <img
@@ -71,11 +71,11 @@ Create per-project [alerts](/signals/alerts) that post to a Slack channel of you
   />
 </Frame>
 
-Pick the Slack channel for an alert from the [Alerts](/signals/alerts) settings page on any project. [Reports](/signals/reports) can post to Slack the same way for scheduled rollups.
+Pick the Slack channels for an alert in the Signal's **Settings > Alerts** section. That section also has its own **Slack** card, so you can connect Slack from there without opening workspace settings; both cards manage the same workspace connection. [Reports](/signals/reports) can post to Slack the same way for scheduled rollups.
 
 ## Remove Slack integration
 
-1. Go to your **Workspace** page and select **Integrations** from the sidebar.
+1. Go to the **Settings** page and select **Integrations** under *Workspace settings* in the sidebar.
 2. On the connected Slack card, click the dropdown menu (three dots).
 3. Select **Remove**.
 4. Confirm the removal in the dialog.
