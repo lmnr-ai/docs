@@ -37,7 +37,7 @@ Profiles are **workspace-scoped**: create one once and every project in the work
 
 ## Providers
 
-One profile is one provider and one set of credentials. For OpenAI and Azure AI Foundry, also pick the **API shape**, which is the endpoint your deployments speak.
+One profile is one provider and one set of credentials. For OpenAI, Azure AI Foundry, and custom OpenAI-compatible gateways, also pick the **API shape**, which is the endpoint your deployments speak.
 
 | Provider | API shape | Fields |
 |---|---|---|
@@ -48,13 +48,13 @@ One profile is one provider and one set of credentials. For OpenAI and Azure AI 
 | **Mistral** | - | API key |
 | **AWS Bedrock** | - | AWS region, then either an access key ID with its secret access key, or a Bedrock API key (bearer token) |
 | **Azure AI Foundry** | Chat Completions, Responses API, or Anthropic Messages | API key, plus either the resource name (the `<name>` in `https://<name>.services.ai.azure.com`) or a full base URL. Optional API version |
-| **Custom (OpenAI-compatible)** | - | Base URL, API key, and any number of custom headers |
+| **Custom (OpenAI-compatible)** | Chat Completions or Responses API | Base URL, API key, and any number of custom headers |
 
 A few notes on the less obvious ones:
 
-- **API shape is not the same as the model.** One Azure AI Foundry resource can serve all three shapes; pick the one the deployment you are calling speaks. Switching shape within a provider keeps the stored credentials, since the key is the same.
+- **API shape is not the same as the model.** Pick the shape the deployment or gateway you are calling speaks. Switching shape within OpenAI, Azure AI Foundry, or Custom keeps the stored credentials.
 - **Bedrock** takes long-form model ids, including the inference-profile prefix when you use one (`us.anthropic.claude-sonnet-4-5-20250929-v1:0`).
-- **Custom** speaks OpenAI Chat Completions only. Give it the API root; Laminar appends `/chat/completions`. Header names are stored with the profile, header values are stored as secrets. This is the option for vLLM, Ollama behind a proxy, LiteLLM, OpenRouter, an internal gateway, or any other OpenAI-compatible endpoint.
+- **Custom** supports OpenAI Chat Completions and the Responses API. Give it the API root; Laminar appends `/chat/completions` or `/responses` for the selected shape. Header names are stored with the profile, header values are stored as secrets. This is the option for vLLM, Ollama behind a proxy, LiteLLM, OpenRouter, an internal gateway, or any other OpenAI-compatible endpoint.
 
 ## How credentials are stored
 
@@ -169,7 +169,7 @@ Which credential flags a provider needs matches the [Providers](#providers) tabl
 | `openai_completions`, `openai_responses`, `anthropic`, `gemini`, `groq`, `mistral` | `--api-key` |
 | `bedrock` | `--region`, plus either `--access-key-id` with `--secret-access-key`, or `--token` |
 | `azure_chat_completions`, `azure_responses`, `azure_anthropic` | `--api-key`, exactly one of `--resource-id` or `--provider-base-url`, optional `--api-version` |
-| `custom` | `--api-key` and `--provider-base-url`, optional `--header <name=value>` (repeatable) |
+| `custom`, `custom_responses` | `--api-key` and `--provider-base-url`, optional `--header <name=value>` (repeatable) |
 
 The auth type is inferred from the flags you pass: `--access-key-id` selects AWS keys, `--token` selects a bearer token, otherwise an API key. Nothing is validated locally, so the server's own message is what you see:
 
@@ -256,6 +256,8 @@ An OpenAI-compatible gateway keeps its header *names* in `config` and their valu
   "models": ["llama-3.3-70b"]
 }
 ```
+
+Use `"provider": "custom_responses"` with the same `config` and `secrets` shape for a gateway that speaks the Responses API.
 
 `PATCH` is a partial update: every field is optional, omitted secrets keep their stored values, and `models` replaces the whole list. Three things to watch:
 

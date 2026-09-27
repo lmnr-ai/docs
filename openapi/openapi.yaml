@@ -876,6 +876,7 @@ components:
           azure_responses,
           azure_anthropic,
           custom,
+          custom_responses,
         ]
     LlmProfileAuth:
       oneOf:
