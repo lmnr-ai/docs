@@ -1,0 +1,186 @@
+---
+title: Understanding Your Agent Using Laminar Signals
+sidebarTitle: Using Laminar Signals
+---
+
+## Overview
+
+This guide will teach you best practices for using Laminar Signals and will walk you through the whole
+agent observability lifecycle from setting up your signal to getting targeted insights from it.
+
+We will start by defining a broad pattern of errors to look for in a trace, then get some insights into the
+behavior patterns of your agent using that signal, and then narrow it down to the specific cases that are
+most important to your business use case.
+
+Once you read this guide, you will know:
+- How to evaluate the performance of your agent in production?
+- How to setup and use Laminar Signals?
+- How to see how your AI agent fails at scale?
+- How to see the usage patterns of your agent at scale?
+- How to go from broad catch-all error pattern to more narrow Signals that are great at finding specific issues?
+
+## Problem
+
+Traditional LLM observability, a platform which writes all agent inputs and outputs to a data store, cannot help
+you answer hard questions about your agent behavior in production at scale. Moreover, it cannot even
+help you ask the right questions like "how does my agent fail?", "what are the most common failure patterns?",
+or "where should I invest my development time, so that the next version is better?"
+
+This is where Laminar Signals come in.
+
+## Getting started
+
+Laminar Signals are prompts that can be enabled inside your project to analyze your traces. Unlike
+most traditional online evaluations, Signals look at the entire trace content, can be defined much
+more high-level, and feature clustering of their outputs. This can perfectly suit both the cases
+when you know very well what you are looking for and the cases, where you want Signals to help
+you find what to look for.
+
+To get started, enable a general signal using "Failure Detector" template. You can edit
+the prompt and the schema definition, but for our example, we'll keep it at default
+settings.
+
+<Frame caption="Default prompt and structured output schema for Failure Detector signal">
+    ![Prompt for Failure Detector and one output field `description`](/images/guides/signals/failure-detector-definition.png)
+</Frame>
+
+In our structured output, we choose one field, `description` of type string, where Laminar Signals
+agent can write the description for each failure it detects.
+
+<Tip>
+    One signal can produce at most one event per trace. If you are assessing multiple specific criteria,
+    try to define output schema, such that the agent can report those in separate fields, e.g.
+    `{ too_wordy: boolean, success: boolean }`. If this is not possible, define multiple signals.
+</Tip>
+
+### Prompt and schema configuration
+
+Laminar's default template prompts are tuned to work best for most of the usage scenarios. However,
+if you wish to tune the prompt or the structured output schema for the signal, you can:
+
+- Amend the prompt slightly, or completely change it;
+- Add other fields to the structured output schema.
+- Alter fields' types. Each field can be one of string, number, boolean, or a predefined enum
+
+## Signal configuration
+
+### Understanding triggers
+
+Trigger defines the moment Laminar reads the trace. It answers the question: when is the trace ready for 
+Laminar to start processing it for Signals. Default is when the root span finishes,
+which is often when the run is over.
+
+However, there are certain cases where you want to trigger on a different condition. Common
+examples, include (1) distributed tracing with fire-and-forget-style invocation, where you
+create a span inside the first span, pass the context downstream, and close the span
+immediately, (2) your trace may end abruptly for mechanical errors (e.g. network timeout)
+and you are not interested in analyzing such traces with signals.
+
+For this reason, another trigger that you can define is "Whenever a span with a given name
+arrives".
+
+Consider this example trace of a customer support agent:
+
+<Frame caption="Trace where root span finishes earlier than the trace itself finishes">
+    ![Trace tree with root span ending early and latest tool span "submitResponse"](/images/guides/signals/trace-premature-root.png)
+</Frame>
+
+This models a use case where the agent can take a significant amount of time doing its research, but
+it is crucial to respond to the initial webhook quickly (for example Slack's default 5 second action
+webhook). The timeline at the top of the trace view shows how the root span created inside the webhook
+handler ends in just 1.5 seconds. And even though the tree structure shows that spans under the `agent` span
+are children of the `webhookHandler` span, they start and end way after their root has ended on the timeline.
+
+Using the default trigger that evaluates the signal as soon as the root span finishes here would not work
+here — Laminar would start processing the trace before the agent starts and before any meaningful information
+arrives to Laminar. A much more appropriate trigger for a signal on such trace would be "A span with name
+`submitResponse` finishes."
+
+<Tip>
+    If your agent is launched in an asynchronous fashion like the example above, we recommend adding a span to your finish action and setting up Signal triggers on it.
+</Tip>
+
+### Understanding filters
+
+Filters are checked against the trace once the trigger fires. This is needed to further narrow down the
+analysis to only the traces you are interested in. From Laminar's point, they answer this looks like: ok, I know the trigger fired, so it's time to process this trace, but should I skip it? The default filter is `total_tokens > 1000` which is a very permissive filter that includes every trace that had any real LLM processing.
+
+Triggers help you limit the analysis to only traces with certain features. These features could be implicit (tokens, status), i.e. inherent properties of a trace, and explicit (span names, tags), i.e. the ones that can be controlled from code, depending on the instrumentation.
+
+Example use cases that filters support:
+- I want to run signals only if my run consumed abnormally many tokens;
+- I want to see how my agent recovers from application errors, so I want to run it only if there is an errored span in the trace;
+- On contrary, I don't want signal runs to produce noise on application errors, so filter for successful traces only;
+- I want to analyze only the traces tagged with "my_custom_tag";
+- I want to analyze only the traces, which have span "flaky_context_operation".
+
+Triggers and filters can coexist, they surve different purposes. For the example above, we may want to filter
+it only to traces that don't have span name `getOrderDetails`, so that we can investigate why did the LLM not
+call the tool it absolutely had to call before it submits the final response.
+
+## Getting insights from running signals in production
+
+### Alerts
+
+When you create a new signal, by default, you get alerted on every new event that we believe is critical. This
+is the first place you will start getting signal from. This is useful both in development, when you run your
+agent against a scoped set of possible inputs, and in production, where you want to get alerted on every
+critical error your customer may face because of inefficiencies in your agent.
+
+If your agent runs on tens of thousands of user inputs daily, it is infeasible to get alerted on every
+critical event, as there will still be hundreds. For those cases, we suggest getting alerted on new clusters
+which is also enabled by default.
+
+Alerts are sent to all members that are in the workspace at the time signal was created. New users can sign
+up for alerts in the signal settings page. Each alert can be subscribed by 0 or more destinations (email addresses or Slack channels), so you can have fine-grained control over who on your team get notified
+about what. [Learn more about alerts](/signals/alerts).
+
+### Clustering
+
+When similar signal events accumulate creating groups of certain size, we start clustering them together. This
+is the most high-level overview of what's going on in traces inside your project.
+
+Clusters will depend a lot on the signal definition. For example, Failure Detector signal will classify /
+cluster different kinds of failures, while User Intent signal will show distribution of usage patterns of your
+agent.
+
+At the time of writing this guide, clustering is fully automatic, so no additional configuration is needed.
+
+Similar to new event alerts, we also notify members of the workspace on a new cluster. This can be configured
+in the same fashion — you can set who on your team gets notified about new clusters.
+
+## Narrowing down your signal
+
+Unless you already know, how your agent would fail (and why would you release such agent to production before
+fixing?), the best practice is to start with a general signal, such as our predefined Failure Detector
+template, let it run for a few days or weeks in production, and then create more specialised signals based
+on the clusters and patterns you see in the general signal. The more complex your agent is, the more diverse
+and unpredictable the findings will be, and thus, the more value you will get from using this approach. It
+does not mean that for simpler agents, this is not the right approach: all agents are powered by LLMs, and
+LLMs are stochastic by nature, so there is no way to foresee all the quirky ways in which your agent could
+fail.
+
+For example, Failure Detector cluster could split the clustering space into 2 high-level clusters:
+- API 400 and request shape errors
+- Hallucinated final report details
+
+And then inside each of these clusters, there will be many specific sub-clusters that will each show
+an individual finding.
+
+The errors inside the first cluster are most likely very mechanical coding
+errors unrelated to the actual LLM inside your agent, but potentially still cost longer processing, LLM
+retries, and ultimately failed runs. The fixes are low-hanging fruits in terms of return on fix investment,
+so it makes sense to fix this first. You can then keep running your agent to make sure no new events join
+these clusters.
+
+Errors in the second cluster is much less trivial to fix. To get better granularity view as to why each error
+happens and what are potential fixes, we recommend creating an additional signal. You can start from our
+Hallucination Detector template, but add some more specifics based on what you see in the original clusters.
+You can then either run a
+[backfill](https://laminar.sh/docs/signals/introduction#run-a-signal-on-new-traces-or-historical-traces)
+only selecting the historical traces that the original Failure Detector signal had already flagged, or let
+the new signal run in production.
+
+## End-to-end example. Travel Planner agent
+
+For the purposes of this guide, we ran signals over traces of a travel planner agent application. This agent
