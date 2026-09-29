@@ -106,6 +106,7 @@
               "platform/mcp",
               "platform/sql-editor",
               "platform/cli",
+              "platform/terraform",
               "platform/search",
               "platform/render-templates",
               "platform/custom-model-costs",
