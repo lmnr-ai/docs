@@ -85,7 +85,7 @@ Essentially, **anything you've ever had to ask a teammate to skim traces for**. 
 When a trace matches a Signal's trigger and filters, Laminar doesn't just paste the raw trace into a single LLM call. A Signal run is a small investigation, and it moves through three stages: compress the trace, let an agent investigate it, then turn what the agent found into events.
 
 <Frame>
-  ![Chat GPT Image Jul 2, 2026, 05 33 30 PM](/images/ChatGPT-Image-Jul-2,-2026,-05_33_30-PM.png)
+  <img src="/images/signals/signal-run.svg" alt="How a Signal run works: the trace is compressed into a transcript, an agent searches it and fetches full spans before submitting findings, and each finding becomes a signal event that feeds alerts, clusters, and SQL." />
 </Frame>
 
 ### 1. The trace is compressed

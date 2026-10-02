@@ -408,3 +408,8 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 ## Formatting
 
 - Run `prettier --write` ONLY on the specific files you changed. Never `pnpm format:write` or `prettier --write .`; it touches unrelated files. Note that the docs repo itself has no `package.json` or prettier config, so prettier is not part of the workflow here.
+
+## Diagrams (blog-figure SVGs)
+
+- Mechanism diagrams are SVGs built with the `blog-figure` skill kit (Takumi flexbox JSX painted as SVG with real `<text>` and an embedded General Sans subset), NOT AI-generated PNGs. First one: `/images/signals/signal-run.svg` on `signals/introduction.mdx` (LAM-2331), replacing a ChatGPT-rendered PNG. The figure source is not in this repo; to change it, rebuild from the kit (`/repos/lmnr/frontend/lib/fonts/general/GeneralSans-Variable.woff2` is the font) rather than hand-editing the SVG.
+- Embed as `<Frame><img src="/images/....svg" alt="..." /></Frame>`. The site is dark-only (`appearance.strict`, background `#0F0F0F`), so the kit's charcoal panels read correctly with no light-mode variant. Keep the figure to 688 wide with three stage panels at most; titles wider than ~panel minus 50 squeeze the title dot into an oval, so budget title widths too.
