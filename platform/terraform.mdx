@@ -1,0 +1,226 @@
+---
+title: Terraform Provider for Laminar Signals and LLM Profiles
+sidebarTitle: Terraform
+description: "Define Laminar Signals and LLM profiles as code, review changes in a plan, and apply them to every project from CI."
+---
+
+The Laminar Terraform provider, [`lmnr-ai/lmnr`](https://registry.terraform.io/providers/lmnr-ai/lmnr/latest), manages [Signals](/signals/introduction) and [LLM profiles](/platform/llm-profiles) with Terraform or OpenTofu. Keep Signal prompts and output schemas in your repo, review every change in `terraform plan`, and roll the same definitions out to staging and production projects. It works with Laminar Cloud and self-hosted deployments.
+
+| Type | Name | What it manages |
+|---|---|---|
+| Resource | `lmnr_signal` | Prompt, structured output, trigger, filters, sampling, and processing mode |
+| Resource | `lmnr_llm_profile` | Provider credentials and models, shared across the workspace |
+| Data source | `lmnr_signal`, `lmnr_llm_profile` | Look up an existing Signal or profile by `id` or exact `name` |
+| Data source | `lmnr_project` | The project that owns the API key |
+
+## Quick start
+
+Create a project API key in your project's settings and export it:
+
+```bash
+export LMNR_PROJECT_API_KEY=<your-project-api-key>
+```
+
+Declare the provider and a Signal:
+
+```hcl main.tf
+terraform {
+  required_providers {
+    lmnr = {
+      source = "lmnr-ai/lmnr"
+    }
+  }
+}
+
+# Reads LMNR_PROJECT_API_KEY from the environment.
+provider "lmnr" {}
+
+resource "lmnr_signal" "failure_detector" {
+  name   = "Failure detector"
+  prompt = "Identify failed or abandoned runs and explain why."
+
+  structured_output = jsonencode({
+    type = "object"
+    properties = {
+      failed = { type = "boolean" }
+      reason = { type = "string" }
+    }
+    required = ["failed", "reason"]
+  })
+}
+```
+
+Install the provider and create the Signal:
+
+```bash
+terraform init
+terraform apply
+```
+
+The Signal starts evaluating new traces as soon as the apply finishes. Open it under **Signals** in your project to see its events.
+
+<Note>
+On a self-hosted deployment, a Signal also needs an LLM profile and model to run on. See [Run a Signal on a profile](#run-a-signal-on-a-profile-self-hosted).
+</Note>
+
+## Configure the provider
+
+| Argument | Environment variable | Default |
+|---|---|---|
+| `project_api_key` | `LMNR_PROJECT_API_KEY` | Required |
+| `base_url` | `LMNR_BASE_URL` | `https://api.lmnr.ai` |
+| `http_port` | `LMNR_HTTP_PORT` | The port in `base_url`, or `443` |
+
+Arguments in the `provider` block take precedence over environment variables.
+
+### Self-hosted deployments
+
+Point the provider at your app-server's HTTP origin:
+
+```hcl
+provider "lmnr" {
+  base_url  = "http://laminar.internal"
+  http_port = 8000
+}
+```
+
+### Several projects
+
+A project API key scopes the provider to one project. Declare one provider alias per project key to manage several projects from one configuration:
+
+```hcl
+provider "lmnr" {
+  alias           = "staging"
+  project_api_key = var.staging_project_api_key
+}
+
+resource "lmnr_signal" "staging_failures" {
+  provider = lmnr.staging
+  # ...
+}
+```
+
+## Shape when a Signal runs
+
+The `trigger`, `filters`, `sample_rate`, and `mode` arguments map to the same settings as the Signal form in the UI:
+
+```hcl
+resource "lmnr_signal" "failure_detector" {
+  name   = "Failure detector"
+  prompt = "Identify failed or abandoned runs and explain why."
+
+  structured_output = jsonencode({
+    type = "object"
+    properties = {
+      failed = { type = "boolean" }
+      reason = { type = "string" }
+    }
+    required = ["failed", "reason"]
+  })
+
+  # Evaluate a quarter of the failed traces, once their `agent.run` span ends.
+  sample_rate = 25
+  trigger = {
+    type       = "spanName"
+    span_names = ["agent.run"]
+  }
+  filters = [
+    { column = "status", operator = "eq", value = "error" },
+    { column = "tags", operator = "not_includes", values = ["synthetic"] },
+  ]
+
+  lifecycle {
+    # Destroying a Signal deletes its events.
+    prevent_destroy = true
+  }
+}
+```
+
+- `trigger` sets when the Signal is evaluated: when the root span finishes (the default, `rootSpanFinished`) or when a span named in `span_names` finishes (`spanName`).
+- `filters` sets which traces are evaluated. All conditions must hold. Omitting `filters` applies the default `total_token_count > 1000`; set `filters = []` to evaluate every trace.
+- `mode` is `realtime` (the default) or `batch`.
+
+The [provider reference](https://registry.terraform.io/providers/lmnr-ai/lmnr/latest/docs/resources/signal) lists every column and operator.
+
+## Manage LLM profiles
+
+An `lmnr_llm_profile` holds a provider, its credentials, and the models it exposes. Profiles belong to the project's workspace, so every project in that workspace can use them.
+
+```hcl
+variable "openai_api_key" {
+  type      = string
+  sensitive = true
+}
+
+resource "lmnr_llm_profile" "openai" {
+  name         = "openai"
+  llm_provider = "openai_responses"
+  models       = ["gpt-5-mini", "gpt-5"]
+  api_key      = var.openai_api_key
+}
+```
+
+The attribute is `llm_provider` rather than `provider` because `provider` is a reserved Terraform argument. The [provider reference](https://registry.terraform.io/providers/lmnr-ai/lmnr/latest/docs/resources/llm_profile) lists the fields for each provider, including AWS Bedrock, Azure AI Foundry, and OpenAI-compatible gateways.
+
+<Warning>
+The Laminar API never returns credentials, so Terraform keeps the values you configure in its state, marked sensitive. Store state in an encrypted backend.
+</Warning>
+
+### Run a Signal on a profile (self-hosted)
+
+On self-hosted deployments every Signal runs on an LLM profile. Set `llm_profile_id` and one of the profile's models:
+
+```hcl
+resource "lmnr_signal" "tool_misuse" {
+  name           = "Tool misuse"
+  prompt         = "Did the agent call a tool with invalid arguments?"
+  llm_profile_id = lmnr_llm_profile.openai.id
+  model          = "gpt-5-mini"
+
+  structured_output = jsonencode({
+    type       = "object"
+    properties = { misuse = { type = "boolean" } }
+    required   = ["misuse"]
+  })
+}
+```
+
+On Laminar Cloud, Signals run on Laminar's own models: leave out `llm_profile_id` and `model`, or the apply fails.
+
+## Import existing Signals and profiles
+
+Bring a Signal or profile you created in the UI under Terraform by its UUID, which you can copy from the Laminar UI:
+
+```bash
+terraform import lmnr_signal.failure_detector <signal-uuid>
+terraform import lmnr_llm_profile.openai <llm-profile-uuid>
+```
+
+On Terraform 1.5 and later you can also use an `import` block and let `terraform plan -generate-config-out=generated.tf` write the configuration for you.
+
+After importing an LLM profile, set its credentials in the configuration. Terraform can't read them back, so the next apply writes them.
+
+## Look up existing resources
+
+Data sources read a Signal or profile that Terraform doesn't manage, by `id` or exact `name`:
+
+```hcl
+data "lmnr_llm_profile" "shared" {
+  name = "Production OpenAI"
+}
+
+output "shared_models" {
+  value = data.lmnr_llm_profile.shared.models
+}
+```
+
+## Use OpenTofu
+
+The same configuration works with OpenTofu, which installs the provider from the OpenTofu registry. Run `tofu init` and `tofu apply` instead of the `terraform` commands.
+
+## Next steps
+
+- [Signals](/signals/introduction) - how a Signal reads a trace and what its events contain.
+- [LLM profiles](/platform/llm-profiles) - supported providers and how credentials are stored.
+- [Signals CLI](/signals/cli) - create and inspect Signals from your terminal.
+- [Provider reference](https://registry.terraform.io/providers/lmnr-ai/lmnr/latest/docs) - every argument and attribute, on the Terraform Registry.
