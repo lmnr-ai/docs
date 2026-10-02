@@ -9,8 +9,8 @@ Your agent ran ten thousand times today. Some of those runs went wrong in ways t
 
 That agent runs on **[flow-1](#signals-run-on-flow-1-our-model-for-reading-traces)**, a model we trained to read traces. It matches GPT-6-sol on failure detection at 23x lower cost, about a tenth of a cent per trace, so you can run Signals on all of production instead of a sample.
 
-<Frame caption="A Signal's events tab: each row is one detected event linked back to a trace">
-  ![Signal detail view with events list and per-event payload](/images/signals/signal-detail.png)
+<Frame caption="One trace, one prompt, one event: the Signal reads every span and records which tool failed and what the agent made up">
+  <img src="/images/signals/signal-intro.svg" alt="A Signal reads a travel agent's trace with a plain-language prompt. It finds three get_hotel_availability timeouts followed by a reply with invented hotels, and records a structured event: failed_tool get_hotel_availability, unsupported_claim 3 invented hotels, severity warning." />
 </Frame>
 
 ## Signals read the whole trace, not the final answer
@@ -50,7 +50,7 @@ flow-1 ties Claude Sonnet 5 and beats GPT-6-sol on detection, at 74x and 23x low
   On Laminar Cloud, Signals run on flow-1 with no model setup. Self-hosted deployments run each Signal on an [LLM profile](/platform/llm-profiles) you pick.
 </Note>
 
-## A concrete example
+## Example: the timeout the final answer hides
 
 A travel agent was asked to plan a trip and return a flight and a hotel with the nightly price. `search_flights` returned real results. `get_hotel_availability` returned `upstream_timeout` three times in a row. The agent then wrote a well-formatted itinerary with three named hotels and nightly prices, none of which came from a tool result.
 
@@ -94,7 +94,7 @@ Laminar handles the rest: the model, the trace compression, and the agent loop.
 
 ## What else Signals can help you answer
 
-The hotel example is one failure class. If you can describe it to a colleague, you can write a Signal for it.
+The hotel example is one failure class. A few others teams track:
 
 - **Business outcomes**: "agent completed checkout," "agent answered the question correctly."
 - **Logical failures**: "agent loops on the same tool without progress," "agent gave up after one retry."
@@ -106,7 +106,7 @@ The hotel example is one failure class. If you can describe it to a colleague, y
 
 ## How a Signal run works
 
-A Signal run is a small investigation, not a single LLM call over the raw trace. It moves through three stages: compress the trace, let an agent investigate it, then turn what the agent found into an event.
+A Signal run is a small investigation, not a single LLM call over the raw trace.
 
 <Frame>
   <img src="/images/signals/signal-run.svg" alt="How a Signal run works: the trace is compressed into a transcript, an agent searches it and reads full spans before submitting its finding, and the finding becomes a signal event that feeds alerts, clusters, and SQL." />
@@ -131,7 +131,7 @@ Laminar runs your prompt as an **agent with tools**, working over the transcript
 - **read** opens a span's full input or output, a page at a time.
 - **submit** records what the agent found and ends the run.
 
-This is what makes Signals reliable on long traces. A checkout failure buried in step 40 of a 200-step run isn't lost to truncation: the agent greps for it, reads the exact tool output, and quotes it in its answer. It is told to state only what the trace shows, and that finding nothing is a valid answer.
+A checkout failure buried in step 40 of a 200-step run isn't lost to truncation: the agent greps for it, reads the exact tool output, and quotes it in its answer. It is told to state only what the trace shows, and that finding nothing is a valid answer.
 
 A run ends in one of two ways:
 
