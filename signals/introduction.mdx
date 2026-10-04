@@ -21,6 +21,10 @@ Signals are powered by our trace analysis agent. The **Signals agent** takes thr
 
 A prompt and a schema together define a **Signal**. The Signals agent reads the relevant steps in each trace and returns a **signal event** with your schema fields and links to its evidence. If it finds no match, it returns no event.
 
+<Frame caption="Each finished trace is checked against the Signal's trigger and filters, then read by the Signals agent. A matching trace produces an event that is grouped into a cluster, stored for SQL, and checked against your alerts.">
+  <img src="/images/signals/signal-lifecycle.svg" alt="The lifecycle of a Signal run. Trace t_42 finishes and is checked against the Signal's trigger, sample rate and filters; a trace that fails them is skipped and no run is recorded. A trace that passes goes to the Signals agent; if it finds no match, the run completes with no event. If it finds a match, it returns a signal event with trace_id t_42, reason_given capability and severity warning. The event joins a cluster, is stored in the signal_events table for SQL, and is checked against alert rules, which notify Slack or email on live runs." />
+</Frame>
+
 To set when Signals agent starts processing your trace you can configure **triggers and trace filters**, or use a **backfill** to analyze historical traces.
 
 You can **[query](/platform/sql-editor)** events, explore similar findings in **[clusters](/signals/clusters)**, and trigger **[alerts](/signals/alerts)**.
