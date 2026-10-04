@@ -9,8 +9,8 @@ Your agent ran ten thousand times today. Some of those runs went wrong in ways t
 
 That agent runs on **[flow-1](#signals-run-on-flow-1-our-model-for-reading-traces)**, a model we trained to read traces. It matches GPT-6-sol on failure detection at 23x lower cost, about a tenth of a cent per trace, so you can run Signals on all of production instead of a sample.
 
-<Frame caption="One trace, one prompt, one event: the Signal reads every span and records which tool failed and what the agent made up">
-  <img src="/images/signals/signal-intro.svg" alt="A Signal reads a travel agent's trace with a plain-language prompt. It finds three get_hotel_availability timeouts followed by a reply with invented hotels, and records a structured event: failed_tool get_hotel_availability, unsupported_claim 3 invented hotels, severity warning." />
+<Frame caption="One trace, one prompt, one event: the Signal reads every span and records the two statements that contradict each other">
+  <img src="/images/signals/signal-intro.svg" alt="A Signal reads a legal agent's trace with the prompt 'Flag deliverables whose parts contradict each other'. One bash span writes a redline with $210M in milestones, a later one writes a memo that counts $190M, and the final message says both deliverables are complete. The Signal records a critical event with first_statement redline: $210M and conflicting_statement memo: $190M." />
 </Frame>
 
 ## Signals read the whole trace, not the final answer
@@ -50,36 +50,34 @@ flow-1 ties Claude Sonnet 5 and beats GPT-6-sol on detection, at 74x and 23x low
   On Laminar Cloud, Signals run on flow-1 with no model setup. Self-hosted deployments run each Signal on an [LLM profile](/platform/llm-profiles) you pick.
 </Note>
 
-## Example: the timeout the final answer hides
+## Example: a redline that contradicts its own memo
 
-A travel agent was asked to plan a trip and return a flight and a hotel with the nightly price. `search_flights` returned real results. `get_hotel_availability` returned `upstream_timeout` three times in a row. The agent then wrote a well-formatted itinerary with three named hotels and nightly prices, none of which came from a tool result.
+A legal agent reviewed a counterparty's draft of a pharma partnership agreement. It had to deliver two files, a tracked-changes redline and an issues memo, and the task said every issue in the memo needed a matching change in the redline. Over 24 spans it read eight source documents, wrote the redline with one script and the memo with another. Both files passed the agent's own validation, and its final message read _"Completed and validated both deliverables."_
 
-The **prompt** describes the failure in plain language:
+The two files disagree. The redline's new milestone section lists eight payments that add up to \$210M. The memo values the deal at \$457M, counting \$190M of milestones, and then states that every issue it lists has a corresponding change in the redline.
 
+The **prompt** is one sentence:
+
+```text wrap
+Flag deliverables whose parts contradict each other: a summary figure that differs from the body, a date, amount or party name that changes between sections, or a conclusion that does not follow from the analysis presented.
 ```
-The agent presented information to the user that was not supported by the tool
-results it actually received. Look for cases where a tool call failed or returned
-no data, and the agent filled the gap with its own numbers, prices, or facts
-instead of telling the user the data was unavailable.
-```
 
-The **output schema** names three fields to extract: `unsupported_claim`, `failed_tool`, and `user_impact`. This is the event Laminar produced on that trace:
+The **output schema** asks for two fields, `first_statement` and `conflicting_statement`. Here is the event, with flow-1's summary of the trace word for word:
 
 ```json wrap
 {
-  "summary": "Agent hallucinated hotel options and estimated prices after API timeout",
-  "severity": "warning",
+  "summary": "The issues memo states the milestone total is $190M and the aggregate deal value is $457M, but the redline's milestone ladder sums to $210M, making the aggregate $477M.",
+  "severity": "critical",
   "payload": {
-    "unsupported_claim": "Specific hotel recommendations (Ibis Paris Montmartre, Hotel Eiffel Seine, Pullman Paris Tour Eiffel) with estimated prices (€130, €200, €420)",
-    "failed_tool": "get_hotel_availability",
-    "user_impact": "The user might believe these specific hotels are viable options for their dates and budget, even though the agent hallucinated the options and prices from its training data."
+    "first_statement": "Redline §5.2 lists eight milestone payments: $10M, $15M, $25M, $40M, $20M, $20M, $30M and $50M, a total of $210M.",
+    "conflicting_statement": "The issues memo gives a $457 million aggregate value: $75M upfront + $190M milestones + $192M estimated cost share."
   }
 }
 ```
 
-Nothing in the final message says "the hotel API never answered." To connect the invented prices to the timeout, you have to read a tool result in the middle of the run. That's what the Signal did.
+Neither number is in the final message. Each sits in the input of a different `bash` span, the scripts that built the two files. To catch the mismatch, flow-1 opened the full redline script, added up the milestone ladder, and compared it with the figure in the memo.
 
-Now do that on every trace you produce. One row per affected trace, filterable by `failed_tool`, [queryable](/platform/sql-editor) in SQL, [clustered](/signals/clusters) with the other traces that failed the same way, and wired to an [alert](/signals/alerts) the next time it happens.
+Now do that on every trace you produce. One row per affected trace, [queryable](/platform/sql-editor) in SQL, [clustered](/signals/clusters) with other runs whose deliverables disagree, and wired to an [alert](/signals/alerts) the next time it happens.
 
 ## Anatomy of a Signal
 
@@ -94,7 +92,7 @@ Laminar handles the rest: the model, the trace compression, and the agent loop.
 
 ## What else Signals can help you answer
 
-The hotel example is one failure class. A few others teams track:
+The redline is one kind of finding. A few others teams track:
 
 - **Business outcomes**: "agent completed checkout," "agent answered the question correctly."
 - **Logical failures**: "agent loops on the same tool without progress," "agent gave up after one retry."
