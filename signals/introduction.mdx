@@ -27,7 +27,11 @@ A prompt and a schema together define a **Signal**. The Signals agent reads the 
 
 To set when Signals agent starts processing your trace you can configure **triggers and trace filters**, or use a **backfill** to analyze historical traces.
 
-You can **[query](/platform/sql-editor)** events, explore similar findings in **[clusters](/signals/clusters)**, and trigger **[alerts](/signals/alerts)**.
+Once a signal event is created, its structured fields are available to **[query in SQL](/platform/sql-editor)**. You can filter events, count how often a behavior occurs, and compare outcomes across traces.
+
+Laminar automatically groups similar events into **[clusters](/signals/clusters)** based on the meaning of their findings. Clusters help you spot patterns across thousands of events, see which issues recur, and understand how common they are.
+
+On top of that, you can configure **[alerts](/signals/alerts)** to notify you in Slack or by email when a new signal event matches your conditions or a new cluster forms.
 
 ## Example: understand support handoffs
 
