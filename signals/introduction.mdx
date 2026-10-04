@@ -3,112 +3,131 @@ title: "Signals"
 sidebarTitle: "Introduction"
 ---
 
-A tool times out, and the agent makes up the result. The final answer still looks complete. The trace holds the evidence, just as it does when a user asks the same question three times or an agent reports a task done without finishing it.
+A **Signal** is a question you ask about every trace, answered as a row in a table. You write the question in plain language and define the fields you want back. When a trace finishes, an agent reads it. If the answer is yes, Laminar stores a **signal event** with those fields filled in and links to the supporting spans. If the answer is no, it stores no event. Over thousands of traces, those events form a table you can [query in SQL](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on.
 
-One trace can contain hundreds of spans and hundreds of thousands of tokens of prompts, tool output, and retries. People are bad at reading that much context. You skim, trust the agent's own summary, and stop at the first explanation that fits. Finding the failure in one trace is hard. At ten thousand runs a day, nobody reviews them by hand.
+Signals exist because reading a trace is the hard part of debugging an agent. One run can be hundreds of spans and hundreds of thousands of tokens of prompts, tool output, and retries. People skim it, trust the agent's own summary, and stop at the first explanation that fits. A Signal reads every trace the same way, with the same question.
 
-**A Signal does that reading for you.** You describe what to look for in plain language and name the fields you want back. On each matching trace, an agent searches across spans and opens the relevant ones. When it finds what you described, it records a structured event with references to the evidence. You **[query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on** those events.
-
-The agent runs on **[flow-1](#signals-run-on-flow-1-our-model-for-reading-traces)**, a model we trained to read traces. It matches GPT-6-sol on failure detection at 23x lower cost, about a tenth of a cent per trace. That cost lets you run Signals on all production traces instead of a sample.
-
-<Frame caption="One trace, one prompt, one event: the Signal reads every span and records the two statements that contradict each other">
-  <img src="/images/signals/signal-intro.svg" alt="A Signal reads a legal agent's trace with the prompt 'Flag deliverables whose parts contradict each other'. One bash span writes a redline with $210M in milestones, a later one writes a memo that counts $190M, and the final message says both deliverables are complete. The Signal records a critical event with first_statement redline: $210M and conflicting_statement memo: $190M." />
+<Frame caption="One trace, one prompt, one event: the Signal finds the handoff and records what was declined and why">
+  <img src="/images/signals/signal-intro.svg" alt="A Signal reads a support agent's trace with the prompt 'Did the agent decline to do all or part of what the user asked?'. The user says picture messages won't send; the agent looks up the account, then calls transfer_to_human_agents saying its tools are unavailable, and tells the user they are being transferred. The Signal records an event: declined_part 'MMS troubleshooting', reason_given 'capability', severity warning." />
 </Frame>
 
-## Signals read the whole trace, not the final answer
+## flow-1 reads your traces
 
-**A Signal reads every LLM turn, tool call, subagent, retry, and error, from the first span to the last.** Grading only your agent's last LLM output misses that context.
+The agent behind every Signal runs on **flow-1**, a model we trained to read agent traces. We trained it with reinforcement learning inside the Signals agent, using the same tools it uses in production. It treats a trace like a repository and each span like a file. It searches across spans, opens the relevant ones, and answers in your schema.
 
-Most failures in a long agent run are invisible from the output alone:
-
-- A tool returned an error in step 12 and the agent worked around it. The final answer still sounds confident and complete.
-- The agent issued the same search three times with the same arguments. The answer is right but cost three times what it should have.
-- A subagent returned nothing usable, and the parent filled the gap with a plausible substitute.
-- The agent broke a rule from its system prompt forty steps ago. The only evidence is a subtly wrong deliverable.
-
-By the time the agent writes its final message, the evidence is dozens of spans earlier. Scoring the last LLM span can't account for it. A Signal can identify *which tool failed, what the agent did about it, and what the user ended up believing*, even when *the answer looks fine*.
-
-## Signals run on flow-1, our model for reading traces
-
-Reading a whole trace is expensive. A long agent run contains hundreds of spans and often hundreds of thousands of tokens. At frontier-model prices, most teams sample production traces. Failures outside that sample go unchecked.
-
-We trained **flow-1** with reinforcement learning inside the Signals agent, using the same tools it has in production. The model treats a trace like a repository and each span like a file. It greps across spans, reads the relevant ones in full, and returns JSON that follows your schema.
-
-We benchmarked it on 523 difficult traces from coding, legal, customer support, and CRM agents, with every model running inside the same Signals agent:
-
-| Model | Detection F1 | Traces per $1 |
-| --- | --- | --- |
-| **flow-1** | **0.835** | **888** |
-| Claude Opus 5 | 0.890 | 7 |
-| Claude Sonnet 5 | 0.835 | 12 |
-| GPT-6-sol | 0.816 | 38 |
-| GPT-6-luna | 0.795 | 668 |
-
-flow-1 ties Claude Sonnet 5 and beats GPT-6-sol on detection, at 74x and 23x lower cost per trace. Claude Opus 5 detects more, at 127x the cost. GPT-6-luna comes close on price and gives up 0.04 F1. Costs cover the full agent run, including every search and read, on traces under 100k tokens.
-
-At this price, you can run a Signal on every trace. The [flow-1 announcement](https://laminar.sh/blog/flow-1) has the full benchmark, example outputs, and the gaps we're still working on.
+On traces under 100k tokens, a Signal run on flow-1 costs about a tenth of a cent. At that cost, you can run Signals on all production traces instead of a sample. The [flow-1 announcement](https://laminar.sh/blog/flow-1) covers the benchmark and the cases the model still misses.
 
 <Note>
   On Laminar Cloud, Signals run on flow-1 with no model setup. Self-hosted deployments run each Signal on an [LLM profile](/platform/llm-profiles) you pick.
 </Note>
 
-## Example: a redline that contradicts its own memo
+## Signal, run, event, cluster
 
-A legal agent reviewed a counterparty's draft of a pharma partnership agreement. It had to deliver two files: a tracked-changes redline and an issues memo. The task required every issue in the memo to have a matching change in the redline.
+Four terms appear throughout the Signals docs:
 
-Over 24 spans, the agent read eight source documents, then wrote the redline with one script and the memo with another. Both files passed the agent's own validation. Its final message read _"Completed and validated both deliverables."_
+- **Signal**: the definition. It contains a prompt, an output schema, a trigger, and filters. Each saved change creates a new version.
+- **Run**: one Signal reading one trace. Every trace a Signal analyzes gets a run, regardless of the answer. The run records a status (`PENDING`, `PROCESSING`, `COMPLETED`, or `FAILED`) and its token cost.
+- **Signal event**: what a run produces when the answer is yes. A run produces at most one event, containing your schema fields, one or more short summaries, and a severity.
+- **Cluster**: an automatically named group of similar summaries from events on different traces. An event with two summaries can belong to two clusters.
 
-The two files disagree. The redline's new milestone section lists eight payments that add up to \$210M. The memo values the deal at \$457M, counting \$190M of milestones. It also states that every issue it lists has a corresponding change in the redline.
+A trace with no event usually means the answer was no. To tell "no" apart from "never analyzed," look at runs: they are the denominator.
 
-The **prompt** is one sentence:
+## Example: why does support hand customers off?
+
+A telecom support agent gets a message: picture messages won't send, regular texts work. Its system prompt says to try every way to resolve the issue before transferring to a human.
+
+The agent looks up the customer and their three lines, then calls `transfer_to_human_agents` with the reason _"Device diagnostics and MMS troubleshooting tools are unavailable."_ It tells the user they are being transferred. Every tool call succeeded, and the conversation ended normally.
+
+To measure how often this happens and record the reasons, use this **prompt**:
 
 ```text wrap
-Flag deliverables whose parts contradict each other: a summary figure that differs from the body, a date, amount or party name that changes between sections, or a conclusion that does not follow from the analysis presented.
+Did the agent decline to do all or part of what the user asked? Flag it, quote what was declined and record the reason the agent gave.
 ```
 
-The **output schema** asks for two fields, `first_statement` and `conflicting_statement`. This is the event, with flow-1's summary of the trace word for word:
+The **output schema** has two required fields. `reason_given` is an enum, so each event falls into one of five categories:
 
-```json wrap
+```json
 {
-  "summary": "The issues memo states the milestone total is $190M and the aggregate deal value is $457M, but the redline's milestone ladder sums to $210M, making the aggregate $477M.",
-  "severity": "critical",
-  "payload": {
-    "first_statement": "Redline §5.2 lists eight milestone payments: $10M, $15M, $25M, $40M, $20M, $20M, $30M and $50M, a total of $210M.",
-    "conflicting_statement": "The issues memo gives a $457 million aggregate value: $75M upfront + $190M milestones + $192M estimated cost share."
+  "type": "object",
+  "required": ["declined_part", "reason_given"],
+  "properties": {
+    "declined_part": {
+      "type": "string",
+      "description": "What the agent declined to do"
+    },
+    "reason_given": {
+      "type": "string",
+      "enum": ["policy", "safety", "capability", "missing_information", "none"],
+      "description": "Category of the reason the agent gave; none if it gave no reason"
+    }
   }
 }
 ```
 
-Neither number appears in the final message. Each is in the input of a different `bash` span: the scripts that built the two files. To find the mismatch, flow-1 opened the full redline script, added up the milestone ladder, and compared it with the figure in the memo.
+flow-1 found the handoff in this trace and classified the reason as `capability`. The event looks like this:
 
-Run this Signal on every trace to get one row per affected trace. Each row is [queryable](/platform/sql-editor) in SQL and [clustered](/signals/clusters) with other runs whose deliverables disagree. You can configure an [alert](/signals/alerts) for the next occurrence.
+```json wrap
+{
+  "summaries": [
+    "The agent handed an MMS troubleshooting request to a human agent, saying its diagnostic and troubleshooting tools were unavailable."
+  ],
+  "severity": "warning",
+  "payload": {
+    "declined_part": "Troubleshooting the user's failed picture messages. The transfer summary says: \"User reports MMS picture messages failing for several hours while regular SMS works.\"",
+    "reason_given": "capability"
+  }
+}
+```
+
+One event answers the question for one conversation. Run the Signal on every trace to build a table of handoffs. You can then answer *why do we hand customers off* with a `GROUP BY`:
+
+```sql
+SELECT
+    simpleJSONExtractString(payload, 'reason_given') AS reason,
+    count() AS handoffs
+FROM signal_events
+WHERE signal_id = '<signal-id>'
+  AND timestamp > now() - INTERVAL 7 DAY
+GROUP BY reason
+ORDER BY handoffs DESC
+```
+
+To calculate rates, count the Signal's runs over the same window in `signal_runs`. That table has one row per analyzed trace.
+
+### A harder one: evidence that never reaches the final message
+
+Some findings require reading across spans. A legal agent wrote a contract redline and an issues memo, validated both, and reported _"Completed and validated both deliverables."_
+
+A Signal asking for *deliverables whose parts contradict each other* flagged the trace. flow-1 opened the script that built the redline, added up its eight milestone payments (\$210M), and compared the total with the memo, which counts \$190M:
+
+> "The issues memo states the milestone total is \$190M and the aggregate deal value is \$457M, but the redline's milestone ladder sums to \$210M, making the aggregate \$477M."
+
+Neither number appears in the agent's final message. Both appear in the inputs of the `bash` spans that wrote the files.
 
 ## Anatomy of a Signal
 
-You configure four parts of a Signal:
+You configure four parts:
 
 - **Prompt**: plain-language instructions describing what to detect or extract from a trace.
-- **Structured output schema**: a JSON schema that the extracted payload must conform to. You name the fields to extract from every match, so you can filter and query events by those fields.
-- **Trigger**: when Laminar reads the trace. By default, it runs when the trace finishes.
-- **Filters**: which traces the Signal analyzes. Use them to exclude traces you don't need to inspect. The default is more than 1000 tokens.
+- **Structured output schema**: a JSON schema for the event's payload. You can filter, group, and alert on each field.
+- **Trigger**: when Laminar reads the trace. By default, when the trace finishes.
+- **Filters**: which traces the Signal analyzes. New Signals start with a filter for traces over 1000 tokens.
 
-Laminar handles the model, trace compression, and agent loop.
+Laminar handles the model, trace compression, and the agent loop. The create form includes working prompt templates: Failure Detector, Logic Analyzer, Task Evaluator, Friction Detector, Hallucination Detector, and Intent Classifier.
 
-## What else Signals can help you answer
+Every new project comes with a Failure Detector Signal. Every new Signal starts with an alert on its critical events that notifies you in-app and by email.
 
-Beyond contradictions between deliverables, teams use Signals to track:
+You can use Signals to detect failures or extract other information:
 
-- **Business outcomes**: "agent completed checkout," "agent answered the question correctly."
-- **Logical failures**: "agent loops on the same tool without progress," "agent gave up after one retry."
-- **Behavioral categorization**: user intent, topic, any categorical field you want on the trace.
-- **User friction**: "user asked for the same information multiple times," "user gave up after multiple retries."
-- **Cost and waste**: "long context, short answer," "tool called with malformed arguments and retried."
+- **Failures**: "agent loops on the same tool without progress," "agent reported a task done that it never finished."
+- **Outcomes**: "agent completed checkout," "agent answered the question correctly."
+- **Categories**: user intent, topic, or any enum you want on every trace.
+- **User friction**: "user asked for the same information multiple times."
+- **Cost and waste**: "tool called with malformed arguments and retried."
 
-Use a Signal for **anything you'd ask a teammate to find by reading traces**. A Slack request that starts with "can you look through today's runs and tell me how often..." can become a Signal prompt.
+A request to "look through today's runs and tell me how often..." can become a Signal.
 
 ## How a Signal run works
-
-A Signal run investigates the trace across multiple steps, using tools to search and read spans.
 
 <Frame>
   <img src="/images/signals/signal-run.svg" alt="How a Signal run works: the trace is compressed into a transcript, an agent searches it and reads full spans before submitting its finding, and the finding becomes a signal event that feeds alerts, clusters, and SQL." />
@@ -116,59 +135,69 @@ A Signal run investigates the trace across multiple steps, using tools to search
 
 ### 1. The trace is compressed
 
-A single agent run can contain hundreds of spans, megabytes of tool output, and the same system prompt repeated on every LLM call. Before the Signals agent sees the trace, Laminar renders it as a compact transcript:
+A single agent run can contain hundreds of spans, megabytes of tool output, and the same system prompt repeated on every LLM call. Before the Signals agent reads the trace, Laminar renders it as a compact transcript:
 
 - **The user's request goes first**, so the Signals agent knows what your agent was asked to do. Earlier conversation turns remain as context.
-- **LLM turns and tool calls are kept**, with subagents grouped under the call that started them.
-- **Each system prompt appears once** instead of on every turn. Long system prompts are summarized.
+- **LLM outputs and tool calls are kept**, with subagents grouped under the call that started them.
+- **Each system prompt appears once** instead of on every turn. Laminar summarizes long system prompts.
 - **Other spans are dropped** unless they carry an error or your prompt names them.
 
-Short traces go in whole. For longer traces, Laminar cuts oversized span inputs and outputs from the middle. Each cut is marked so the agent knows there is more to read. The user's request, system prompts, and errors are never cut.
+Laminar includes short traces in full. For longer traces, it cuts oversized span inputs and outputs from the middle. It marks each cut so the agent knows there is more to read. Laminar never cuts the user's request, system prompts, or errors.
 
 ### 2. An agent investigates the trace
 
-An **agent with tools** follows your prompt and investigates the transcript across multiple steps. It accesses each span's input and output like files in a repository:
+The agent follows your prompt across multiple steps. It accesses each span's input and output like files in a repository:
 
-- **grep** runs a regex across every span, or a single one, and returns the matching snippets.
+- **grep** runs a regex across every span, or a single one, and returns matching snippets.
 - **read** opens a span's full input or output, a page at a time.
-- **submit** records what the agent found and ends the run.
+- **submit** records the answer and ends the run.
 
-A checkout failure in step 40 of a 200-step run remains accessible after truncation. The agent greps for it, reads the exact tool output, and quotes it in its answer. We instruct it to state only what the trace shows. Finding nothing is a valid result.
+A checkout failure in step 40 of a 200-step run remains accessible after truncation. The agent can grep for it, read the exact tool output, and quote it. Its instructions require it to state only what the trace shows, and "not present" is a valid answer.
 
-A run ends in one of two ways:
+A run ends in one of three ways:
 
-- The agent submits a **finding**: a payload that conforms to your schema, a short summary, and a severity. **Critical** means the result is wrong or unusable, or the agent broke a promise to the user. **Warning** is a localized defect. **Info** has no effect on the outcome, such as an extracted value or a category. Severity rules in your prompt override these defaults.
-- The agent decides the behavior **isn't present**. Laminar creates no event.
+- **Yes.** The agent submits your schema fields, one summary per distinct issue, and a severity. **Critical** means the result is wrong or unusable, or the agent broke a promise to the user. **Warning** is a localized defect. **Info** doesn't affect the outcome, such as an extracted value or a category. Severity rules in your prompt override these defaults.
+- **No.** The agent decides the behavior isn't present. The run completes with no event.
+- **Failed.** The agent hits its step limit without submitting, or the model keeps returning output that doesn't match your schema. Laminar marks the run `FAILED` with no event.
 
-On live traffic, each Signal runs once per trace, and every run produces at most one event. If the behavior occurs several times, such as a broken tool retried three times, the agent includes every occurrence in that event, with a summary for each.
+### 3. The event is stored
 
-### 3. The finding becomes a signal event
+Laminar stores the event and links it to its trace. Span references in the payload become links into the trace. Laminar then:
 
-Laminar stores the finding as a **signal event** linked to its source trace. Span references in the payload become links into the trace. Laminar then processes the event:
-
-- It **indexes the event for search**, so you can find it in the Signals UI.
-- On live runs, it checks the event against your **alert rules** (severity and payload filters). Matching events fire [Alerts](/signals/alerts). Backfills don't send alerts.
-- It queues the event for **clustering**, which groups similar events from other traces into [Clusters](/signals/clusters) so you can identify patterns.
+- **Indexes the event for search** in the Signals UI.
+- On live runs, checks it against your **alert rules** (severity and payload filters). Matching events trigger [Alerts](/signals/alerts).
+- **Clusters it** with similar events from other traces into [Clusters](/signals/clusters).
 
 <Note>
-  Every event is queryable in the [SQL Editor](/platform/sql-editor), from either end. The `signal_events` table has one row per event. The `traces` table carries a trace's events and clusters as columns, so you can filter runs by what a Signal found and read cost, duration, and metadata off the same row.
+  Every event is queryable in the [SQL Editor](/platform/sql-editor), from either end. The `signal_events` table has one row per event, and `signal_runs` has one row per run. The `traces` table carries a trace's events and clusters as columns, so you can filter runs by what a Signal found and read cost, duration, and metadata off the same row.
 </Note>
 
 ## Run a Signal on new traces or historical traces
 
-Each Signal can run in two ways, configured independently:
+Each Signal can run in two ways:
 
 - **Live**, on new traces as they arrive. Live runs feed dashboards and [Alerts](/signals/alerts).
-- **Backfill**, across a historical slice of traces you select. Use a backfill to seed a new Signal, re-run a changed prompt over last week's traffic, or investigate traces you've already collected. A backfill reads every trace you select, regardless of trigger and filters.
+- **Backfill**, across historical traces you select. Use a backfill to try a new Signal on last week's traffic, re-run a changed prompt, or investigate traces you've already collected. A backfill reads every selected trace, regardless of trigger, filters, and sample rate.
 
-Both produce the same kind of signal event.
+Both produce the same kind of signal event. Backfill events don't fire event alerts.
 
-For live runs, configure when the Signal runs and which traces it reads:
+For live runs, you configure when the Signal runs and which traces it reads:
 
-- The **trigger** determines *when* Laminar reads the trace. Every Signal has exactly one. **When a trace finishes** (the default) runs once the trace stops receiving spans, so the Signal sees the complete run. **When a specific span finishes** fires when a named span ends. Use it when the work is spread across services.
-- **Filters** determine *whether* Laminar reads the trace. They apply to the whole trace, and every filter must match. You can filter by a minimum token count (a new Signal starts at more than 1000 tokens), an error status, a span name that appears anywhere in the run, or a tag. A Signal with no filters runs on every trace its trigger fires for.
+- The **trigger** decides *when*. Every Signal has exactly one. **When a trace finishes** (the default) fires when the root span ends. Laminar then waits for the trace to stop receiving spans before reading it. **When a specific span finishes** fires when a named span ends. Use it when the work is spread across services.
+- **Filters** decide *whether*. They apply to the whole trace, and every filter must match. You can filter by a minimum token count, an error status, a span name that appears anywhere in the run, or a tag. A Signal with no filters runs on every trace its trigger fires for.
+- The **sample rate** analyzes a percentage of the traces that pass your filters. It is off by default.
 
 The span-name trigger and the span names filter serve different purposes. The trigger names the span whose completion fires the Signal. The filter checks whether a span with that name appears anywhere in the trace.
+
+For live runs, each Signal analyzes a trace once. A backfill or a new version of the Signal can add another event to the same trace. Filter on `signal_version` in SQL to compare versions.
+
+## Limits and tradeoffs
+
+- **An event is a model's judgment.** A Signal can miss a behavior or flag one that isn't there. Events carry no confidence score. Backfill a new Signal on a few hundred traces and read its events before routing its alerts to a channel people watch.
+- **Events arrive after the trace, not during it.** Laminar waits for the trace to stop receiving spans, then the agent reads it over several steps. Expect events within minutes of a trace ending. A Signal can't gate a response your agent is about to send.
+- **Spans that arrive late are missed.** If work continues after the root span ends, such as fire-and-forget tasks, the Signal may read the trace before those spans arrive. Use a span-name trigger on the span that ends the work.
+- **Long traces are read through search.** Laminar cuts span contents beyond the transcript budget from the middle. The agent can grep and read those parts, but it decides what to open. Very long system prompts and conversation history leave less room for spans.
+- **Cost scales with the trace.** Laminar bills runs by the tokens the agent reads and writes. Long traces and investigations with many searches cost more than short ones. Each run's token counts are in `signal_runs`.
 
 ## Next steps
 
