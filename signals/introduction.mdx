@@ -66,8 +66,8 @@ We trained **flow-1** with reinforcement learning specifically for agent trace a
 - **Quality**: it matches GPT-6-sol in failure detection quality on [our benchmark](https://laminar.sh/blog/flow-1), while being **23x** cheaper.
 - **Cost**: It would cost just **$3.5 on average to process 1k traces of 100k tokens each**. Learn more about Signals pricing [here](https://laminar.sh/pricing).
 
-<Frame caption="For the same $1, flow-1 analyzes 23 times as many traces as GPT-6-sol, at about the same failure detection quality.">
-  <img src="/images/signals/signal-flow-1.svg" alt="One dot per trace analyzed for $1 in the Signals agent. GPT-6-sol analyzes 38 traces with a failure detection F1 of .816; flow-1 analyzes 888, about 23 times as many, with a detection F1 of .835. Measured on 523 hard agent traces; cost includes every step of the agent run, on traces under 100k tokens." />
+<Frame caption="One dot per trace analyzed for $1.">
+  <img src="/images/signals/signal-flow-1.svg" alt="flow-1 gives GPT-6-sol level trace analysis with 23 times more traces processed per $1. One dot per trace analyzed for $1: GPT-6-sol analyzes 38 traces, flow-1 analyzes 888." />
 </Frame>
 
 That makes it practical to analyze every production trace with the quality needed to catch subtle failures.
