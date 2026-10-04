@@ -7,8 +7,9 @@ title: Understand Your Agent Using Laminar Signals
 This guide describes best practices for using Laminar Signals and walks you through the whole
 agent observability lifecycle from setting up your signal to extracting specific insights from it.
 
-We will start by defining a broad pattern of errors to look for in a trace, then look into clusters to get insights into the behavior patterns of the agent using that signal, and then narrow it down to the specific cases that are
-most important to your business use case.
+We will start by defining a broad pattern of errors to look for in a trace. We will then look into clusters
+to get insights into the behavior patterns of the agent using that Signal. Finally,
+we will narrow the Signal down to the specific cases that are most important to your business use case.
 
 This guide answers the following questions:
 - How do you evaluate the performance of your agent in production?
@@ -37,7 +38,8 @@ much more high-level, and feature clustering of their outputs. This can perfectl
 when you know very well what you are looking for and the cases where you want Signals to help
 you find what to look for.
 
-To get started, enable a general signal using the "Failure Detector" template. You can edit
+To get started, head to the signals section, create a new signal, and click the "Failure" card to select
+the "Failure Detector" template. You can edit
 the prompt and the schema definition, but for our example, we'll keep it at default
 settings.
 
@@ -115,7 +117,9 @@ analysis to only the traces you are interested in. From Laminar's point of view,
 The default filter is `total tokens > 1000`, which is a permissive filter that includes every
 trace that had any real LLM processing.
 
-Filters help you limit the analysis to only traces with certain features. These features could be implicit (tokens, status), i.e. inherent properties of a trace, and explicit (span names, tags), i.e. the ones that can be controlled from code, depending on the instrumentation.
+Filters help you limit the analysis to only traces with certain features. These features could be
+implicit (tokens, status), i.e. inherent properties of a trace, and explicit (span names, tags),
+i.e. the ones that can be controlled from code, depending on the instrumentation.
 
 Example use cases that filters support:
 - I want to run signals only if my run consumed abnormally many tokens;
@@ -143,21 +147,6 @@ minimal requirements list for the trace to be analyzed well by Signals:
 
 ## Getting insights from running signals in production
 
-### Alerts
-
-When you create a new signal, by default, you get alerted on every new event that we believe is critical. This
-is the first place you will start getting information from. This is useful both in development, when you run your
-agent against a scoped set of possible inputs, and in production, where you want to get alerted on every
-critical error your customer may face because of inefficiencies in your agent.
-
-If your agent runs on tens of thousands of user inputs daily, it is infeasible to get alerted on every
-critical event, as there will still be hundreds. For those cases, we suggest getting alerted on new clusters,
-which is also enabled by default.
-
-Alerts are sent to all members that are in the workspace at the time the signal was created. New users can sign
-up for alerts in the signal settings page. Each alert can be subscribed to by one or more destinations (email addresses or Slack channels), so you can have fine-grained control over who on your team gets notified
-about what. [Learn more about alerts](/signals/alerts).
-
 ### Clustering
 
 When similar signal events accumulate creating groups of a certain size, we start clustering them together. This
@@ -167,10 +156,23 @@ Clusters will depend a lot on the signal definition. For example, Failure Detect
 cluster different kinds of failures, while User Intent signal will show the distribution of usage patterns of your
 agent.
 
-Clustering is fully automatic, so no additional configuration is needed.
+Clustering is fully automatic, so no additional configuration is needed. You can also be [alerted on new clusters](#alerts).
 
-Similar to new event alerts, we also notify members of the workspace on a new cluster. This can be configured
-in the same fashion: you can set who on your team gets notified about new clusters.
+### Alerts
+
+When you create a new signal, by default, you get alerted on every new event that we believe is critical. This
+is the first place you will start getting information from. This is useful both in development, when you run your
+agent against a scoped set of possible inputs, and in production, where you want to get alerted on every
+critical error your customer may face because of inefficiencies in your agent.
+
+If your agent runs on tens of thousands of user inputs daily, it is infeasible to get alerted on every
+critical event, as there will still be hundreds. For those cases, we suggest getting alerted on new [clusters](#clustering),
+which is also enabled by default. As with new event alerts, you can set who on your team gets notified about new clusters.
+
+Alerts are sent to all members that are in the workspace at the time the signal was created. New users can sign
+up for alerts in the signal settings page. Each alert can be subscribed to by one or more destinations
+(email addresses or Slack channels), so you can have fine-grained control over who on your team gets notified
+about what. [Learn more about alerts](/signals/alerts).
 
 ## Narrowing down your signal
 
