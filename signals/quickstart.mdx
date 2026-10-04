@@ -177,6 +177,20 @@ Runs appear on the **Runs** tab with a status (Pending, Processing, Completed, F
   />
 </Frame>
 
+### Understand Signals usage on Laminar Cloud
+
+Every new Laminar Cloud workspace receives a one-time $5 Signals credit that carries forward until it is used. Each completed Run is priced from the tokens the Signals agent consumes:
+
+- $0.05 per 1 million input tokens
+- $0.01 per 1 million cached input tokens
+- $0.30 per 1 million output tokens
+
+On the Free plan, Laminar stops starting new Runs after the credit is exhausted and prompts you to upgrade. On paid plans, Signals continue at the token rates above, subject to the workspace's monthly Signals cost limit.
+
+The Free plan sidebar shows the credit remaining. Workspace owners can see the current billing-period spend and remaining credit under **Workspace Settings > Usage**.
+
+<Note>These limits apply to Laminar Cloud. Self-hosted deployments do not use Laminar Cloud billing.</Note>
+
 ### Pause and resume a Signal
 
 A Signal you're not ready to delete can be paused. Open the Signal's **Settings > General** section and flip the **Active** switch off.
