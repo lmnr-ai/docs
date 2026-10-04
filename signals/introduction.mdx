@@ -15,14 +15,14 @@ Signals are powered by our trace analysis agent. The **Signals agent** takes thr
 - **Prompt**: what to look for.
 - **JSON schema**: what to record when it finds a match.
 
-<Frame caption="A support handoff becomes a structured event with a reason and severity.">
-  <img src="/images/signals/signal-intro.svg" alt="A trace and a Signal's prompt and schema go into the Signals agent, which processes the trace and outputs a signal event. In the trace, a user says picture messages won't send; the support agent looks up the account, calls transfer_to_human_agents saying its tools are unavailable, and tells the user they are being transferred. The prompt asks 'Did the agent decline to do all or part of what the user asked?', with a schema of declined_part and reason_given. The event has declined_part 'MMS troubleshooting', reason_given 'capability', and severity warning." />
+<Frame caption="A coding agent's final report contradicts its own test output, and the Signals agent records it as a structured event.">
+  <img src="/images/signals/signal-intro.svg" alt="A trace and a Signal's prompt and schema go into the Signals agent, which outputs a signal event. In the trace, a coding agent restores webhook client methods and runs tests: the end-to-end test fails with ImportError on http_request, a telemetry test fails on a missing _resolve_registry_uri, and the unit tests pass. Its final report blames both failures on _resolve_registry_uri. The prompt asks whether the agent's final report states a conclusion that its own tool outputs contradict, with a schema of claim, evidence and claim_type. The Signals agent processes the trace and outputs an event: claim_type root_cause, evidence 'e2e: ImportError http_request', severity critical." />
 </Frame>
 
 A prompt and a schema together define a **Signal**. The Signals agent reads the relevant steps in each trace and returns a **signal event** with your schema fields and links to its evidence. If it finds no match, it returns no event.
 
 <Frame caption="Each finished trace is checked against the Signal's trigger and filters, then read by the Signals agent. A matching trace produces an event that is grouped into a cluster, stored for SQL, and checked against your alerts.">
-  <img src="/images/signals/signal-lifecycle.svg" alt="The lifecycle of a Signal run. Trace t_42 finishes and is checked against the Signal's trigger, sample rate and filters; a trace that fails them is skipped and no run is recorded. A trace that passes goes to the Signals agent; if it finds no match, the run completes with no event. If it finds a match, it returns a signal event with trace_id t_42, reason_given capability and severity warning. The event joins a cluster, is stored in the signal_events table for SQL, and is checked against alert rules, which notify Slack or email on live runs." />
+  <img src="/images/signals/signal-lifecycle.svg" alt="The lifecycle of a Signal run. Trace t_42 finishes and is checked against the Signal's trigger, sample rate and filters; a trace that fails them is skipped and no run is recorded. A trace that passes goes to the Signals agent; if it finds no match, the run completes with no event. If it finds a match, it returns a signal event with trace_id t_42, claim_type root_cause and severity critical. The event joins a cluster, is stored in the signal_events table for SQL, and is checked against alert rules, which notify Slack or email on live runs." />
 </Frame>
 
 To set when Signals agent starts processing your trace you can configure **triggers and trace filters**, or use a **backfill** to analyze historical traces.
@@ -33,29 +33,39 @@ Laminar automatically groups similar events into **[clusters](/signals/clusters)
 
 On top of that, you can configure **[alerts](/signals/alerts)** to notify you in Slack or by email when a new signal event matches your conditions or a new cluster forms.
 
-## Example: understand support handoffs
+## Example: catch a report that contradicts its own evidence
 
-In the trace above, a customer tells a support agent that picture messages won't send. The agent looks up the account, then transfers the customer to a human, saying its diagnostic tools are unavailable. Every tool call succeeded, but the customer's problem remains unresolved.
+In the trace above, a coding agent is asked to restore five webhook methods on `MlflowClient`. It edits the code, runs several test suites, and reports the work complete.
 
-To understand when your agent hands work off and why, give a Signal this prompt:
+The entity unit tests pass. A telemetry test fails because the function `_resolve_registry_uri` is missing. The end-to-end test fails for a different reason: its test server never starts, and the log ends in `ImportError: cannot import name 'http_request'`.
 
-> Did the agent decline to do all or part of what the user asked? Flag it, quote what was declined and record the reason the agent gave.
+The final report blames both failures on `_resolve_registry_uri` and calls them out of scope.
 
-The schema defines two fields:
+All 81 spans in this trace have a success status, and the agent finished with a confident summary. The error is in its reasoning: the conclusion contradicts a test log the agent had read more than 20 model calls earlier. A developer who trusts that report starts looking for the wrong bug.
 
-- `declined_part`: text describing the work the agent declined.
-- `reason_given`: one of `policy`, `safety`, `capability`, `missing_information`, or `none`.
+To find reports that contradict the agent's own evidence, give a Signal this prompt:
 
-For this trace, the Signals agent identified the handoff and classified the reason given as `capability`. The event's structured payload looks like this:
+> Does the agent's final report state a conclusion that its own tool outputs contradict? Quote the claim and the evidence against it.
 
-```json
+The schema defines three fields:
+
+- `claim`: the statement in the final report.
+- `evidence`: the tool output that contradicts it.
+- `claim_type`: one of `root_cause`, `completion`, `verification`, or `other`.
+
+For this trace, the event's structured payload looks like this:
+
+```json wrap
 {
-  "declined_part": "MMS troubleshooting",
-  "reason_given": "capability"
+  "claim": "The pre-existing `_resolve_registry_uri` import failure in `mlflow/tracking/_model_registry/utils.py` is unrelated to this task's scope (accessor/CRUD restoration) and blocks the e2e/telemetry tests regardless of my changes",
+  "evidence": "The e2e test server failed to start on ImportError: cannot import name 'http_request' from 'mlflow.utils.rest_utils', not on _resolve_registry_uri.",
+  "claim_type": "root_cause"
 }
 ```
 
-Across many traces, these fields let you count handoffs by reason and see which requests your agent leaves unresolved.
+On our benchmark, flow-1 caught the same mistake with a general failure-detection prompt. It reported that "only the telemetry test failure was directly linked to the missing `_resolve_registry_uri` function."
+
+Across traces, use `claim_type` to count incorrect reports and see which kinds of claims are most often wrong: a misdiagnosed root cause, a task marked done that isn't, or a test result the agent never checked.
 
 ## Cost efficient and reliable analysis on every trace
 
