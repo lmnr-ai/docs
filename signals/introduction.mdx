@@ -15,14 +15,14 @@ Signals are powered by our trace analysis agent. The **Signals agent** takes thr
 - **Prompt**: what to look for.
 - **JSON schema**: what to record when it finds a match.
 
-<Frame caption="A support handoff becomes a structured event with a reason and severity.">
-  <img src="/images/signals/signal-intro.svg" alt="A trace and a Signal's prompt and schema go into the Signals agent, which processes the trace and outputs a signal event. In the trace, a user says picture messages won't send; the support agent looks up the account, calls transfer_to_human_agents saying its tools are unavailable, and tells the user they are being transferred. The prompt asks 'Did the agent decline to do all or part of what the user asked?', with a schema of declined_part and reason_given. The event has declined_part 'MMS troubleshooting', reason_given 'capability', and severity warning." />
+<Frame caption="A coding agent's report contradicts its own test output, and the Signals agent records it as a structured event.">
+  <img src="/images/signals/signal-intro.svg" alt="A trace and a Signal's prompt and schema go into the Signals agent, which outputs a signal event. In the trace, a coding agent runs tests: one test fails on a missing function, the end-to-end test fails on a different error, and the unit tests pass. Its final report blames both failures on the same missing function. The prompt asks whether the agent's final report states a conclusion that its own tool outputs contradict, with a schema of claim, evidence and claim_type. The Signals agent outputs an event: claim_type root_cause, evidence 'e2e test: different error', severity critical." />
 </Frame>
 
 A prompt and a schema together define a **Signal**. The Signals agent reads the relevant steps in each trace and returns a **signal event** with your schema fields and links to its evidence. If it finds no match, it returns no event.
 
 <Frame caption="Each finished trace is checked against the Signal's trigger and filters, then read by the Signals agent. A matching trace produces an event that is grouped into a cluster, stored for SQL, and checked against your alerts.">
-  <img src="/images/signals/signal-lifecycle.svg" alt="The lifecycle of a Signal run. Trace t_42 finishes and is checked against the Signal's trigger, sample rate and filters; a trace that fails them is skipped and no run is recorded. A trace that passes goes to the Signals agent; if it finds no match, the run completes with no event. If it finds a match, it returns a signal event with trace_id t_42, reason_given capability and severity warning. The event joins a cluster, is stored in the signal_events table for SQL, and is checked against alert rules, which notify Slack or email on live runs." />
+  <img src="/images/signals/signal-lifecycle.svg" alt="The lifecycle of a Signal run. A trace finishes and is checked against the Signal's trigger, sample rate and filters; a trace that fails them is skipped and no run is recorded. A trace that passes goes to the Signals agent; if it finds no match, the run completes with no event. If it finds a match, it returns a signal event with its trace_id, claim_type root_cause and severity critical. The event joins a cluster, is stored in the signal_events table for SQL, and is checked against alert rules, which notify Slack or email on live runs." />
 </Frame>
 
 To set when Signals agent starts processing your trace you can configure **triggers and trace filters**, or use a **backfill** to analyze historical traces.
@@ -33,29 +33,33 @@ Laminar automatically groups similar events into **[clusters](/signals/clusters)
 
 On top of that, you can configure **[alerts](/signals/alerts)** to notify you in Slack or by email when a new signal event matches your conditions or a new cluster forms.
 
-## Example: understand support handoffs
+## Example: catch a report that contradicts its own evidence
 
-In the trace above, a customer tells a support agent that picture messages won't send. The agent looks up the account, then transfers the customer to a human, saying its diagnostic tools are unavailable. Every tool call succeeded, but the customer's problem remains unresolved.
+In the trace above, a coding agent reports its work as done despite two failing tests. It blames both failures on the same pre-existing problem, but one test log shows a different error.
 
-To understand when your agent hands work off and why, give a Signal this prompt:
+Every tool call succeeded. The mistake is in the agent's reasoning, and if you trust its report, you'll look for the wrong bug.
 
-> Did the agent decline to do all or part of what the user asked? Flag it, quote what was declined and record the reason the agent gave.
+To find reports that contradict the agent's own evidence, we created a Signal with the following prompt:
 
-The schema defines two fields:
+> Does the agent's final report state a conclusion that its own tool outputs contradict? Record the claim and the evidence against it.
 
-- `declined_part`: text describing the work the agent declined.
-- `reason_given`: one of `policy`, `safety`, `capability`, `missing_information`, or `none`.
+The schema defines three fields:
 
-For this trace, the Signals agent identified the handoff and classified the reason given as `capability`. The event's structured payload looks like this:
+- `claim`: the statement in the final report.
+- `evidence`: the tool output that contradicts it.
+- `claim_type`: one of `root_cause`, `completion`, `verification`, or `other`.
+
+For this trace, the event looks like this:
 
 ```json
 {
-  "declined_part": "MMS troubleshooting",
-  "reason_given": "capability"
+  "claim": "Both test failures come from the same pre-existing missing function.",
+  "evidence": "The end-to-end test failed on a different missing import.",
+  "claim_type": "root_cause"
 }
 ```
 
-Across many traces, these fields let you count handoffs by reason and see which requests your agent leaves unresolved.
+Now, we can use `claim_type` across traces to see which kinds of claims our agent gets wrong most often.
 
 ## Cost efficient and reliable analysis on every trace
 
