@@ -1,0 +1,208 @@
+---
+title: Heabsy observability
+sidebarTitle: Heabsy
+description: "Trace every Heabsy chat completion made with the OpenAI SDK, with the model, messages, token usage, and latency, all readable in Laminar's transcript view."
+---
+
+## Overview
+
+Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. Trace, debug, and monitor every Heabsy call your app makes, with prompts, responses, token counts, and latency on each span, in both TypeScript and Python.
+
+[Heabsy](https://heabsy.com/platform) is an OpenAI-compatible inference API for open models. Models in the EEA tier run on dedicated GPUs in EEA data centers with zero data retention; models routed through third parties are labeled as such in the [model catalog](https://heabsy.com/models). Because the API speaks the OpenAI protocol, Laminar traces it through the OpenAI SDK: point the client at the Heabsy base URL, initialize Laminar once, and every chat completion is traced.
+
+## Getting Started
+
+<Note>
+Get an API key in the [Heabsy console](https://platform.heabsy.com). Accounts are opened on request at [heabsy.com/contacts](https://heabsy.com/contacts).
+</Note>
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ### 1. Install Laminar and the OpenAI SDK
+
+    ```bash
+    npm install @lmnr-ai/lmnr@latest openai@latest
+    ```
+
+    ### 2. Set up your environment variables
+
+    Store your API keys in a `.env` file:
+
+    ```bash
+    # .env file
+    LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+    HEABSY_API_KEY=your-heabsy-api-key
+    ```
+
+    Then load them in your application using a package like [dotenv](https://www.npmjs.com/package/dotenv).
+
+    ### 3. Initialize Laminar
+
+    Pass the OpenAI module to `instrumentModules`, then create the client with the Heabsy base URL:
+
+    ```typescript {5-7}
+    import { Laminar } from '@lmnr-ai/lmnr';
+    import OpenAI from 'openai';
+    import 'dotenv/config';
+
+    Laminar.initialize({
+      instrumentModules: { OpenAI: OpenAI },
+    });
+
+    const openai = new OpenAI.OpenAI({
+      baseURL: 'https://api.heabsy.com/v1',
+      apiKey: process.env.HEABSY_API_KEY,
+    });
+    ```
+
+    ### 4. Use the OpenAI SDK as usual
+
+    ```typescript
+    const response = await openai.chat.completions.create({
+      model: 'qwen38',
+      messages: [
+        { role: 'user', content: 'What is the meaning of life?' }
+      ],
+    });
+
+    console.log(response.choices[0].message.content);
+    ```
+
+    All Heabsy calls made through the OpenAI SDK are now traced in Laminar.
+  </Tab>
+  <Tab title="Python">
+    ### 1. Install Laminar and the OpenAI SDK
+
+    ```bash
+    pip install -U 'lmnr[all]' openai python-dotenv
+    ```
+
+    ### 2. Set up your environment variables
+
+    Store your API keys in a `.env` file:
+
+    ```bash
+    # .env file
+    LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+    HEABSY_API_KEY=your-heabsy-api-key
+    ```
+
+    ### 3. Initialize Laminar
+
+    Laminar instruments the OpenAI SDK automatically. Create the client with the Heabsy base URL:
+
+    ```python {9}
+    import os
+
+    from dotenv import load_dotenv
+    from lmnr import Laminar
+    from openai import OpenAI
+
+    load_dotenv()
+
+    Laminar.initialize()
+
+    client = OpenAI(
+        base_url="https://api.heabsy.com/v1",
+        api_key=os.environ["HEABSY_API_KEY"],
+    )
+    ```
+
+    ### 4. Use the OpenAI SDK as usual
+
+    ```python
+    response = client.chat.completions.create(
+        model="qwen38",
+        messages=[
+            {"role": "user", "content": "What is the meaning of life?"}
+        ],
+    )
+
+    print(response.choices[0].message.content)
+    ```
+
+    All Heabsy calls made through the OpenAI SDK are now traced in Laminar.
+  </Tab>
+</Tabs>
+
+## What Laminar captures
+
+Each chat completion goes through Laminar's OpenAI instrumentation and becomes an LLM span named `openai.chat`. Every span carries:
+
+- The requested model (`qwen38` in the examples above) and the model reported in the response.
+- The request messages, shown as the span input.
+- The response, shown as the span output, including any tool calls the model made.
+- Input and output token counts.
+
+Streamed responses are recorded once the stream is consumed.
+
+<Note>
+Laminar prices spans from a built-in table covering the major providers. If your Heabsy spans show a cost of `$0`, add the model under [Custom model costs](/platform/custom-model-costs) with the per-million-token rates from the [Heabsy model catalog](https://heabsy.com/models).
+</Note>
+
+## See what happened in a trace
+
+Open a trace in Laminar and you land on the transcript view: Laminar extracts the agent input, the model's turns, and any tool calls into a conversation, so you read what happened instead of clicking through a tree of span names. Token counts and latency sit on each LLM span. To iterate on a Heabsy prompt with **Open in Playground**, add Heabsy as a Custom (OpenAI-compatible) [LLM profile](/platform/llm-profiles) with the base URL `https://api.heabsy.com/v1`, so the [playground](/playground) can call the same model.
+
+More on the trace UX: [Viewing traces](/platform/viewing-traces).
+
+## Track outcomes with Signals
+
+Traces answer *what happened on this run*. **[Signals](/signals/introduction) answer the cross-trace question**: *how often does the model pick the wrong tool, which requests hit the output token limit, when do structured outputs stop matching your schema*. A Signal pairs a plain-language prompt with a JSON output schema. Laminar runs it live on new traces (Triggers) or backfills it across history (Jobs) and records a structured event every time it matches. From there you [query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on events across every trace.
+
+<Note>
+Every new project ships with a **Failure Detector** Signal that categorizes issues on any trace over 1000 tokens. Open it from the Signals sidebar to see events as soon as your Heabsy traces arrive.
+</Note>
+
+## Query across traces
+
+- **[SQL editor](/platform/sql-editor)** for ad-hoc queries across traces, spans, signals, and evals.
+- **SQL API** for programmatic access from scripts and pipelines.
+- **[CLI](/platform/cli)** (`lmnr-cli sql query`) for terminal-driven queries and piping JSON into shell tools or coding agents.
+- **[MCP server](/platform/mcp)** to query Laminar directly from Claude Code, Cursor, Codex, or any MCP-aware client.
+
+## Enrich your Heabsy traces
+
+- Attach sessions, user IDs, metadata, and tags to Heabsy spans via the [SDK reference](/sdk/reference).
+- Wrap the functions around your Heabsy calls with `observe` and mark them as [TOOL spans](/tracing/structure/span-types) so they show up in the transcript.
+- Images you send to vision-capable models are captured automatically ([Tracing Images](/tracing/structure/images)).
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Viewing traces" href="/platform/viewing-traces">
+    Read the transcript view, filter, and search across traces.
+  </Card>
+  <Card title="Signals" href="/signals/introduction">
+    Detect behaviors and failures across every run, then query, cluster, and alert on them.
+  </Card>
+  <Card title="SQL editor and MCP server" href="/platform/sql-editor">
+    Query traces programmatically from the UI, API, or your IDE.
+  </Card>
+  <Card title="Tracing structure" href="/tracing/structure/overview">
+    Add sessions, metadata, and tags, and group calls under your own spans.
+  </Card>
+</CardGroup>
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="OpenAI" href="/integrations/openai">
+    Trace the OpenAI SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="OpenRouter" href="/integrations/openrouter">
+    Trace OpenRouter requests with model and cost attribution.
+  </Card>
+  <Card title="LiteLLM" href="/integrations/litellm">
+    One integration for every model LiteLLM routes to.
+  </Card>
+  <Card title="Anthropic" href="/integrations/anthropic">
+    Trace the Anthropic SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="Vercel AI SDK" href="/integrations/vercel-ai-sdk">
+    Trace `generateText` and `streamText` in Next.js and Node.js.
+  </Card>
+  <Card title="All integrations" href="/integrations">
+    Browse every provider, framework, coding agent, and browser integration Laminar supports.
+  </Card>
+</CardGroup>
