@@ -39,7 +39,7 @@ In the trace above, a coding agent reports its work as done despite two failing 
 
 Every tool call succeeded. The mistake is in the agent's reasoning, and if you trust its report, you'll look for the wrong bug.
 
-To find reports that contradict the agent's own evidence, give a Signal this prompt:
+To find reports that contradict the agent's own evidence, we created a Signal with the following prompt:
 
 > Does the agent's final report state a conclusion that its own tool outputs contradict? Record the claim and the evidence against it.
 
@@ -59,7 +59,7 @@ For this trace, the event looks like this:
 }
 ```
 
-Use `claim_type` across traces to see which kinds of claims your agent gets wrong most often.
+Now, we can use `claim_type` across traces to see which kinds of claims our agent gets wrong most often.
 
 ## Cost efficient and reliable analysis on every trace
 
