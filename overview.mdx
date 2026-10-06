@@ -9,8 +9,8 @@ These findings help you turn real failures into eval cases, discover unknown fai
 
 Get started with Laminar Cloud or [self-host](/self-hosting/overview) Laminar on your own infrastructure.
 
-<Frame caption="flow-1 reads each production trace as it lands. Traces that match a Signal become events and reach you as an alert.">
-  <img src="/images/overview-every-trace.svg" alt="flow-1 reads every production trace as it lands. Six traces from support, coding, browser and research agents are read one after another. Four show no issue; two are flagged: a coding agent whose report contradicts its test output, and a support agent that promised a refund without approval. The two signal events go to Slack as an alert." />
+<Frame caption="flow-1 reads every trace your agent produces. Failures collect into issues, including ones you didn't know about, and the top issue goes back to the agent through eval cases and a fix.">
+  <img src="/images/overview-every-trace.svg" alt="Traces stream from your agent in production into flow-1, which reads every one of them; the count of traces read goes up with each. Most traces have no issue. Failing ones turn orange and land in Issues: Wrong refund amount grows from 3 to 5, Report contradicts tests from 1 to 2, and a new issue, Stuck retrying login, is discovered. The top issue then goes round the improvement loop: its traces are turned into eval cases, the fix is shipped to the agent, and the issue is marked fixed." />
 </Frame>
 
 <CardGroup cols={2}>
