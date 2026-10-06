@@ -13,83 +13,71 @@ interface LaminarSpanContext {
   spanIdsPath?: string[];
   userId?: string;
   sessionId?: string;
-  rolloutSessionId?: string;
   metadata?: Record<string, any>;
   traceType?: TraceType;
   tracingLevel?: TracingLevel;
+  debug?: DebugContext;
 }
 ```
 
 ---
 
-## RolloutParam
+## DebugContext
+
+Debugger coordinates carried on a `LaminarSpanContext` so a downstream service joins the same debug session and replay window.
 
 ```typescript
-interface RolloutParam {
-  name: string;
-  type?: string;
-  required?: boolean;
-  nested?: RolloutParam[];
-  default?: string;
-}
+type DebugContext = {
+  enabled: boolean;
+  sessionId?: string;
+  replayTraceId?: string;
+  cacheUntil?: string;
+};
 ```
 
 ---
 
-## LanguageModelTextBlock
+## SessionBlock
+
+One block in a [debugger](/debugger/introduction) session, as returned by `client.rolloutSessions.listBlocks(...)`.
 
 ```typescript
-interface LanguageModelTextBlock {
-  type: 'text';
+type SessionBlockType = "trace" | "evaluation" | "text" | "command";
+
+interface TraceBlockContent {
+  traceId: string;
+  note?: string | null;
+}
+
+interface EvaluationBlockContent {
+  evaluationId: string;
+  note?: string | null;
+}
+
+interface TextBlockContent {
   text: string;
 }
-```
 
----
-
-## LanguageModelToolDefinitionOverride
-
-```typescript
-interface LanguageModelToolDefinitionOverride {
-  name: string;
-  description?: string;
-  parameters?: Record<string, any>;
+interface CommandBlockContent {
+  command: string;
+  args: string[];
+  exitCode: number;
+  output?: string | null;
+  stderr?: string | null;
+  reasoning?: string | null;
 }
-```
 
----
+type SessionBlockContent =
+  | TraceBlockContent
+  | EvaluationBlockContent
+  | TextBlockContent
+  | CommandBlockContent;
 
-## RolloutRunEvent
-
-```typescript
-interface RolloutRunEvent {
-  event_type: 'run';
-  data: {
-    trace_id?: string;
-    path_to_count?: Record<string, number>;
-    args: Record<string, any> | any[];
-    overrides?: Record<
-      string,
-      {
-        system?: string | LanguageModelTextBlock[];
-        tools?: LanguageModelToolDefinitionOverride[];
-      }
-    >;
-  };
-}
-```
-
----
-
-## RolloutHandshakeEvent
-
-```typescript
-interface RolloutHandshakeEvent {
-  event_type: 'handshake';
-  data: {
-    session_id: string;
-    project_id: string;
-  };
+interface SessionBlock {
+  id: string;
+  createdAt: string; // ISO-8601
+  type: string; // one of SessionBlockType for known blocks
+  content: Record<string, unknown>; // narrow with the *BlockContent interfaces
 }
 ```
 

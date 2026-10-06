@@ -3,7 +3,7 @@ title: Viewing Traces
 sidebarTitle: Viewing traces
 ---
 
-A Laminar trace can have thousands of spans. The trace view gives you several ways to read it: **Transcript** (the default), **Tree**, [custom render templates](#custom-views-with-render-templates), and **Timeline**, plus **Metadata** and **Chat with trace** side panels. Selecting any span in any view opens the full span detail pane on the right.
+A Laminar trace can have thousands of spans. The trace view gives you several ways to read it: **Transcript** (the default), **Tree**, [custom render templates](#custom-views-with-render-templates), and **Timeline**, plus **Metadata** and **Chat** side panels. Selecting any span in any view opens the full span detail pane on the right.
 
 ## Transcript view
 
@@ -110,21 +110,21 @@ Use the condensed timeline when diagnosing latency, overlaps, gaps, or long-runn
 
 Use Metadata when you need to verify context fields (inputs, run config, tags, custom attributes) without digging through spans. See [Metadata](/tracing/structure/metadata).
 
-## Chat with trace
-
-### Open Chat with trace
+## Chat about a trace
 
 1. Open a trace (from **Traces**).
-2. In the trace view toolbar, click **Chat with trace**.
+2. In the trace view toolbar, click **Chat**.
 
-![Ask AI](/images/ai-view.png)
+This opens [Laminar Agent](/platform/laminar-agent) in a side panel with the open trace as context.
+
+![Chat panel open next to a trace](/images/ai-view.png)
 
 - **Automatic summary**: Generates a trace summary (and deeper analysis) to orient you quickly.
 - **Span-aware answers**: When the assistant cites spans, they show up as clickable chips that jump you to the referenced span.
 - **Iterate fast**: Ask follow-ups about errors, unexpected outputs, tool calls, or performance.
 - **Resettable**: Start a new chat when you want a fresh thread.
 
-Use Chat with trace when you want a quick narrative explanation or guided debugging without manually scanning the whole trace.
+Use the chat when you want a quick narrative explanation or guided debugging without manually scanning the whole trace.
 
 ## Open in SQL Editor
 

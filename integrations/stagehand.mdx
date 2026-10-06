@@ -44,7 +44,7 @@ const main = async () => {
     },
   });
   const page = stagehand.context.pages()[0];
-  await page.goto('https://www.lmnr.ai');
+  await page.goto('https://laminar.sh');
   await stagehand.act('go to Laminar pricing page');
   const pricing = await stagehand.extract(
     "get the hobby tier pricing",
@@ -85,7 +85,7 @@ const main = async () => {
     },
   });
   const page = stagehand.page;
-  await page.goto('https://www.lmnr.ai');
+  await page.goto('https://laminar.sh');
   await page.act('go to Laminar pricing page');
   const pricing = await page.extract({
     instruction: "get the hobby tier pricing",
