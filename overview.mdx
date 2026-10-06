@@ -3,47 +3,24 @@ title: Laminar
 sidebarTitle: Laminar
 ---
 
-Laminar is an [**open-source**](https://github.com/lmnr-ai/lmnr), OpenTelemetry-native observability platform for AI agents that reads every trace your agent produces and tells you when a run went wrong. Traditional observability records traces and waits for you to search them after a user reports a problem. Laminar analyzes each trace as it arrives with **flow-1**, our model trained for agent trace analysis, and catches failures that never raise an error.
+Laminar is an [**open-source**](https://github.com/lmnr-ai/lmnr) observability platform for AI agents that proactively analyzes every trace and alerts you when a run goes wrong. Our fine-tuned model [**flow-1**](https://laminar.sh/blog/flow-1) delivers frontier-level trace analysis at a cost that makes it practical to monitor every run without sampling.
+
+These findings help you turn real failures into eval cases, discover unknown failure modes, and prioritize improvements based on where users struggle.
+
+Get started with Laminar Cloud or [self-host](/self-hosting/overview) Laminar on your own infrastructure.
 
 <Frame caption="flow-1 reads each production trace as it lands. Traces that match a Signal become events and reach you as an alert.">
   <img src="/images/overview-every-trace.svg" alt="flow-1 reads every production trace as it lands. Six traces from support, coding, browser and research agents are read one after another. Four show no issue; two are flagged: a coding agent whose report contradicts its test output, and a support agent that promised a refund without approval. The two signal events go to Slack as an alert." />
 </Frame>
 
-## Catch failures that raise no error
-
-Most agent failures don't throw exceptions. Every tool call succeeds, latency looks normal, and the run still ends wrong: the agent reports a fix its own test output contradicts, or promises a refund it had no approval for.
-
-[Signals](/signals/introduction) catch these failures. You describe what to look for in plain language and define a JSON schema for what to record. Laminar checks every new trace against it and returns a structured event when it finds a match.
-
-Laminar groups events into [clusters](/signals/clusters). You can query them in [SQL](/platform/sql-editor) and receive them in Slack or email through [alerts](/signals/alerts).
-
-## flow-1 reads every trace, not a sample
-
-Analyzing a long agent trace accurately takes a frontier-level model. At frontier prices, teams can only afford to check a sample.
-
-We trained flow-1 with reinforcement learning specifically for agent trace analysis. It matches GPT-6-sol in failure detection on [our benchmark](https://laminar.sh/blog/flow-1) at 23x lower cost. At that cost, Signals on Laminar Cloud analyze every production trace.
-
-## Know why in seconds
-
-When an alert fires, the event links to the steps in the trace that support it.
-
-- **Open the trace** in the [transcript view](/platform/viewing-traces): agent inputs, LLM turns, tool calls, and sub-agents collapsed into cards, instead of a span tree.
-- **Fix it** with the [debugger](/debugger/introduction), which records a run and replays it with everything before your change served from cache, so each iteration takes seconds instead of a full live run. Your coding agent can drive the whole loop.
-
-Use managed Laminar Cloud or [self-host](/self-hosting/overview) the whole platform.
-
 <CardGroup cols={2}>
 
-<Card title="Signals" icon="radio" href="/signals/introduction">
-  Describe outcomes and failures in plain language. Laminar reads every trace and produces structured events you can query, cluster, and alert on.
-</Card>
-
 <Card title="Tracing" icon="list-tree" href="/tracing/introduction">
-  Trace LLM calls, tool use, and custom functions. First-class support for **AI SDK, Claude Agent SDK, LangChain, Browser Use**, and more.
+  Set up comprehensive tracing for your agents in minutes. First-class support for **AI SDK, Claude Agent SDK, LangChain, Browser Use**, and much more.
 </Card>
 
-<Card title="Viewing traces" icon="message-square-text" href="/platform/viewing-traces">
-  Read each trace as a transcript: agent inputs, LLM turns, tool calls, and sub-agents collapsed into cards. Not a span tree.
+<Card title="Signals" icon="radio" href="/signals/introduction">
+  Set up Signals to automatically catch errors in your agent runs. Describe what to flag in plain language,  spot recurring issues and get notified in Slack or email.
 </Card>
 
 <Card title="Debugger" icon="bug" href="/debugger/introduction">
