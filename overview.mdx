@@ -3,30 +3,28 @@ title: Laminar
 sidebarTitle: Laminar
 ---
 
-Laminar is an [**open-source**](https://github.com/lmnr-ai/lmnr), OpenTelemetry-native observability and debugging platform built for AI agents. Trace, debug, and monitor every LLM call, tool call, and sub-agent your agent runs, whether it finishes in one turn or works through hundreds of steps across parallel sub-agents. Use managed Laminar Cloud or [self-host](/self-hosting/overview) the whole platform.
+Laminar is an [**open-source**](https://github.com/lmnr-ai/lmnr) observability platform for AI agents that proactively analyzes every trace and alerts you when a run goes wrong. Our fine-tuned model [**flow-1**](https://laminar.sh/blog/flow-1) delivers frontier-level trace analysis at a cost that makes it practical to monitor every run without sampling.
 
-Agents produce enormous amounts of data, and a tree of span names tells you little about what the agent actually did. Laminar is built to turn that data into answers:
+These findings help you turn real failures into eval cases, discover unknown failure modes, and prioritize improvements based on where users struggle.
 
-- **During development**, the [debugger](/debugger/introduction) records a run and replays it with everything before your change served from cache, so each iteration takes seconds instead of a full live run. Your coding agent can drive the whole loop.
+Get started with Laminar Cloud or [self-host](/self-hosting/overview) Laminar on your own infrastructure.
 
-- **In production**, [Signals](/signals/introduction) let you describe outcomes and failures in plain language and extract structured events across all your traces, so you're notified when your agent breaks and know why in seconds.
+<Frame caption="flow-1 reads every trace your agent produces. Failures collect into issues, including ones you didn't know about, and the top issue goes back to the agent through eval cases and a fix.">
+  <img src="/images/overview-every-trace.svg" alt="Traces stream from your agent in production into flow-1, which reads every one of them; the count of traces read goes up with each. Most traces have no issue. Failing ones turn orange and land in Issues: Wrong refund amount grows from 3 to 5, Report contradicts tests from 1 to 2, and a new issue, Stuck retrying login, is discovered. The top issue then goes round the improvement loop: its traces are turned into eval cases, the fix is shipped to the agent, and the issue is marked fixed." />
+</Frame>
 
 <CardGroup cols={2}>
 
 <Card title="Tracing" icon="list-tree" href="/tracing/introduction">
-  Trace LLM calls, tool use, and custom functions. First-class support for **AI SDK, Claude Agent SDK, LangChain, Browser Use**, and more.
+  Set up comprehensive tracing for your agents in minutes. First-class support for **AI SDK, Claude Agent SDK, LangChain, Browser Use**, and much more.
 </Card>
 
-<Card title="Viewing traces" icon="message-square-text" href="/platform/viewing-traces">
-  Read each trace as a transcript: agent inputs, LLM turns, tool calls, and sub-agents collapsed into cards. Not a span tree.
+<Card title="Signals" icon="radio" href="/signals/introduction">
+  Set up Signals to automatically catch errors in your agent runs. Describe what to flag in plain language,  spot recurring issues and get notified in Slack or email.
 </Card>
 
 <Card title="Debugger" icon="bug" href="/debugger/introduction">
   Record a run, replay it from cache up to the point you're testing, and prove the fix with an eval. Built for a coding agent to run.
-</Card>
-
-<Card title="Signals" icon="radio" href="/signals/introduction">
-  Describe outcomes and failures in plain language. Laminar reads every trace and produces structured events you can query, cluster, and alert on.
 </Card>
 
 <Card title="Evaluations" icon="chart-line" href="/evaluations/introduction">
