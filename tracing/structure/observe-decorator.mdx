@@ -25,7 +25,7 @@ Observed functions automatically nest. If function A calls function B, and both 
 
 You can also create additional spans inside an observed function. Those spans become children of the observed function’s span.
 
-<Frame caption="Nested spans in the tree view: handle_request calls answer_question, which calls retrieve_context and the OpenAI model.">
+<Frame caption="Nested spans in the trace view">
   <img src="/images/nested-trace.png" alt="Trace view showing nested spans for observed function calls" />
 </Frame>
 

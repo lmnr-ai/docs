@@ -65,7 +65,7 @@ This is a dynamic way to tag a span: decide which tags to apply at runtime when 
   </Tab>
 </Tabs>
 
-Note that only the span created by this `startSpan` / `start_span` call will have the tags. Child spans don’t inherit tags automatically.
+Note that only the span created by this `startSpan` / `start_span` call will have the tags—child spans don’t inherit tags automatically.
 
 ### Example: Tagging an observed function
 
@@ -158,11 +158,11 @@ This is useful for incorporating user feedback into a trace for further analysis
 
 Once you’ve created and sent a trace to Laminar, you can add tags to spans in the Laminar UI.
 
-- Open a trace (in **Traces**).
-- Click the **Tags** icon in the trace header, then select existing tags (or type a new name to create one).
-- Tags you add here are attached to the trace and show up as pills under the trace header.
+- Open a trace (in **Traces**) or a span (in **Spans**).
+- Select the span you want to tag.
+- Click **Tags**, then select existing tags (or type a new name to create one).
 
-<Frame caption="The Tags dropdown in the trace header lists existing tags and lets you create a new one.">
+<Frame caption="Tagging in the Laminar UI">
 <img src="/images/add-tag.png" alt="Adding tags to a span in the Laminar UI" />
 </Frame>
 
@@ -222,9 +222,9 @@ Make sure to call `Laminar.getTraceId()` / `Laminar.get_trace_id()` inside a spa
 
 ## Viewing tags
 
-Tags show up as pills in the span header when you select a span.
+The tags will be visible in the Laminar UI, shown on each span as shields.
 
-<Frame caption="The foo span with its my_tag and my_other_tag tags.">
+<Frame caption="Tags in the Laminar UI">
 <img src="/images/traces/tags-example.png" alt="Span tags displayed as shields in the Laminar UI" />
 </Frame>
 
@@ -232,12 +232,8 @@ Tags show up as pills in the span header when you select a span.
 
 In the **Traces** view and the **Spans** view, you can filter by span tags.
 
-Click **Add filter**, choose the **Span tags** column, and type the name of the tag you want to include. To filter by tags added in the UI, choose **Tags** instead.
+Simply add a “Tags” filter and type the name of the tag you want to include.
 
-<Frame caption="A Span tags filter for my_tag in the Add filter popover.">
 <img src="/images/traces/tags-add-filter.png" alt="Adding a tag filter" />
-</Frame>
 
-<Frame caption="The traces table filtered to traces whose spans include my_tag.">
 <img src="/images/traces/tags-filtered.png" alt="Filtered traces" />
-</Frame>

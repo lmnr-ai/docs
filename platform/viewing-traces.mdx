@@ -29,13 +29,13 @@ This matters most when you are reading a trace that someone else wrote, or a tra
 
 Multi-agent runs (Claude Agent SDK, OpenAI Agents SDK, LangGraph, custom orchestrators) produce deeply nested trees. Transcript view collapses each subagent invocation into a named card that shows the subagent's name, duration, token/cost badges, the **Input** prompt it was given, and an **Output** preview of its final message.
 
-<Frame caption="Transcript view of a multi-agent Claude Agent SDK run. Each Research Assistant subagent is a single card with its input prompt and output preview inline. Click a card to expand it in place.">
+<Frame caption="Transcript view of a multi-agent Claude Agent SDK run. Each Code Analyst subagent is a single card with its input prompt and output preview inline. Click a card to expand it in place.">
   <img src="/images/transcript-view/multi-agent.png" alt="Multi-agent trace in transcript view" />
 </Frame>
 
 Clicking a card expands it in place: the card fills out with the subagent's own LLM turns, tool calls, and any further nested subagents. Other cards on the page stay collapsed, so you can drill into one branch without flooding the rest of the view.
 
-<Frame caption="The first Research Assistant subagent card expanded in place. Its Input, the subagent's LLM turns, and the Read tool call it made sit inside the card.">
+<Frame caption="The first Code Analyst subagent card expanded in place. Its Input, the subagent's LLM turn, and the Read tool call it made sit inside the card.">
   <img src="/images/transcript-view/subagent-expanded.png" alt="Subagent card expanded in place" />
 </Frame>
 
@@ -85,9 +85,7 @@ This is what the trace view is built for when you review the same shape of trace
 2. In the trace header, click the **Timeline** toggle (Gantt icon) below the search bar.
 3. The condensed timeline appears at the top of the trace view. Click the toggle again to hide it.
 
-<Frame caption="The condensed timeline above the span tree of a multi-agent run. Parallel subagents show up as overlapping bars.">
-  <img src="/images/timeline-view.png" alt="Condensed timeline at the top of the trace view" />
-</Frame>
+![Timeline view](/images/timeline-view.png)
 
 - **Time-first overview**: Spans render as colored bars on a single time axis.
 - **Zoom controls**: Use the +/- buttons (or cmd/ctrl + scroll) to zoom in and out.
@@ -102,11 +100,9 @@ Use the condensed timeline when diagnosing latency, overlaps, gaps, or long-runn
 ### Open Metadata
 
 1. Open a trace (from **Traces**).
-2. In the trace header, click the **Metadata** icon (shown only when the trace has metadata).
+2. In the trace view toolbar, click **Metadata**.
 
-<Frame caption="The Metadata popover showing the key-value pairs set on the trace.">
-  <img src="/images/metadata-view.png" alt="Metadata popover open in the trace header" />
-</Frame>
+![Metadata view](/images/metadata-view.png)
 
 - **Read-only source of truth**: Shows the trace metadata exactly as stored.
 - **JSON-first**: Defaults to a JSON view with formatting and syntax highlighting.
