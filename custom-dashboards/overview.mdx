@@ -5,7 +5,7 @@ sidebarTitle: "Dashboards"
 
 Dashboards are a grid of charts you build over your traces, spans, and signal events. Mix line charts, bar charts, horizontal bars, and tables on one canvas, resize each card, and every chart shares the same time range so you read everything against the same window.
 
-<Frame>
+<Frame caption="A dashboard with line, horizontal bar, and table charts over an 11-day range.">
   <img src="/images/custom-dashboard/dashboards-overview.png" alt="A Laminar dashboard showing a mix of line, bar, horizontal bar, and table charts" />
 </Frame>
 
@@ -13,7 +13,7 @@ Dashboards are a grid of charts you build over your traces, spans, and signal ev
 
 The **`+ Chart`** button opens a preset picker grouped by data source: **Traces**, **Spans**, **Signals**, plus **Custom** for the blank chart builder. Pick one and you land in the chart editor with the query already shaped; tweak filters, group-bys, or the name before saving.
 
-<Frame>
+<Frame caption="The + Chart popover. Pick Custom to open the editor, or a preset from the Traces, Spans, or Signals tab.">
   <img src="/images/custom-dashboard/chart-presets.png" alt="Chart presets popover with Custom option and Traces/Spans/Signals tabs" />
 </Frame>
 
@@ -25,7 +25,7 @@ Presets that ship today:
 
 ## Chart types
 
-<Frame>
+<Frame caption="The Type dropdown in the chart editor.">
   <img src="/images/custom-dashboard/chart-types.png" alt="Chart type dropdown showing Line Chart, Bar Chart, Horizontal Bar, and Table" />
 </Frame>
 
@@ -38,7 +38,7 @@ Presets that ship today:
 
 Drag across any time-series chart to highlight a range. The same range overlays every other chart on the dashboard via a shared sync, so you can see the selection land across every panel at once.
 
-<Frame>
+<Frame caption="Dragging across one time-series chart highlights the same range on every chart and opens the selection toolbar.">
   <img src="/images/custom-dashboard/drag-to-select.png" alt="Drag selection across dashboard charts with a Zoom to selection and Open in traces toolbar" />
 </Frame>
 
@@ -65,7 +65,7 @@ The editor asks for:
 
 1. **Type**: line, bar, horizontal bar, or table (see above).
 2. **Table**: `traces`, `spans`, or `signal_events`.
-3. **Metric**: one of `count`, `sum`, `avg`, `min`, `max`, `p90`, `p95`, `p99` on a column, or **Custom SQL** for an arbitrary expression (covered below). Tables use a column picker instead of a metric.
+3. **Metric**: one of `count`, `sum`, `average`, `min`, `max`, `P90`, `P95`, `P99` on a column, or **Custom SQL** for an arbitrary expression (covered below). Tables use a column picker instead of a metric.
 4. **Filters**: narrow rows before aggregation.
 5. **Group By**: break the metric down by a dimension (e.g. `model`, `provider`, `span_type`).
 6. **Order By** and **Limit**: relevant to horizontal bar and table.
@@ -113,7 +113,7 @@ The same schema autocomplete and table reference apply: see the [SQL editor tabl
 
 Line and bar charts can render a headline number above the plot: the total across the visible window, the average across buckets, or nothing.
 
-<Frame>
+<Frame caption="The Display Value dropdown: None, Total, or Average.">
   <img src="/images/custom-dashboard/display-value.png" alt="Display Value dropdown with None, Total, Average" />
 </Frame>
 
@@ -125,7 +125,7 @@ The displayed value uses smart unit formatting: cost columns render with a `$` p
 
 See which models consume the most tokens, and how that breakdown shifts over time.
 
-<Frame>
+<Frame caption="Sum of total_tokens per day, one line per model, filtered to LLM spans.">
   <img src="/images/custom-dashboard/total-tokens-by-model.png" alt="Total tokens by model chart" />
 </Frame>
 
@@ -139,11 +139,11 @@ See which models consume the most tokens, and how that breakdown shifts over tim
 
 Track what your p90 (the cost of your more expensive requests) looks like across providers, so you can spot cost regressions early.
 
-<Frame>
+<Frame caption="P90 of total_cost per day, one line per provider.">
   <img src="/images/custom-dashboard/p90-cost-by-provider.png" alt="p90 cost by provider chart" />
 </Frame>
 
 - Type: Line Chart
 - Table: `spans`
-- Metric: `cost` with `p90`
+- Metric: `total_cost` with `P90`
 - Group By: `provider`
