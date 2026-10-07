@@ -132,7 +132,7 @@ Learn more about the `instrumentation.ts` file in the [Next.js docs](https://nex
 Laminar must be registered at the entry point of the application, before the first AI SDK call.
 For Next.js, the `instrumentation.ts` file is ideal for this purpose as it's loaded early in the application lifecycle.
 
-If you already register a tracer provider with `registerOTel` from `@vercel/otel`, don't let Laminar register a second one: see [Coexisting with @vercel/otel](/integrations/vercel-ai-sdk#coexisting-with-vercel-otel).
+If you already register a tracer provider with `registerOTel` from `@vercel/otel`, don't let Laminar register a second one: see [Coexisting with @vercel/otel](/integrations/vercel-ai-sdk#coexisting-with-@vercel/otel).
 </Note>
 
 ### 2. app/page.tsx

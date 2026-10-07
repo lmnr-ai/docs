@@ -55,7 +55,7 @@ Refund requests (50da5457-4b5d-4937-b834-4a73f50ce473)
 
 `llm profile: env` means the Signal runs on the deployment's own model credentials, which is how every Signal on Laminar Cloud runs. On a self-hosted deployment you pick a profile instead: see [Run a Signal on an LLM profile](#run-a-signal-on-an-llm-profile).
 
-The trigger defaults to `root-span-finished`, the filter to `total_token_count > 1000`, and the mode to `realtime`, so the Signal is already live on new traces. See [Triggers](/signals/quickstart#triggers) and [Filters](/signals/quickstart#filters) for how they work.
+The trigger defaults to `root-span-finished`, the filter to `total_token_count > 1000`, and the mode to `realtime`, so the Signal is already live on new traces. See [Triggers](/signals/quickstart#3-write-the-signal) and [Filters](/signals/quickstart#3-write-the-signal) for how they work.
 
 `--schema` takes a JSON Schema object:
 
@@ -63,7 +63,7 @@ The trigger defaults to `root-span-finished`, the filter to `total_token_count >
 - Field types are `string`, `number`, or `boolean`. For a fixed set of values, use `"type": "string"` with an `enum` array.
 - Every field is required. `type` and `required` are filled in for you if you omit them.
 
-To override the [trigger](/signals/quickstart#triggers), [filters](/signals/quickstart#filters), or mode from the CLI:
+To override the [trigger](/signals/quickstart#3-write-the-signal), [filters](/signals/quickstart#3-write-the-signal), or mode from the CLI:
 
 ```bash
 lmnr-cli signal create "Fabricated tool data" \
