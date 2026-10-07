@@ -77,7 +77,6 @@ client.rolloutSessions.addBlock
 client.rolloutSessions.delete
 client.rolloutSessions.listBlocks
 client.rolloutSessions.register
-client.rolloutSessions.setName
 client.rollout_sessions
 client.rollout_sessions.add_block
 client.rollout_sessions.delete

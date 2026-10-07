@@ -134,25 +134,10 @@ title: Client
 
     | Name | Type | Default | Description |
     |------|------|---------|-------------|
-    | `options.sessionId` | `string` | — | Debug session id |
+    | `options.sessionId` | `string` | — | Debug session id (UUID) |
     | `options.name` | `string` | — | Optional session name |
 
     **Returns:** `Promise<string | null>`: the project id resolved from the API key, or `null` if the response can't be parsed.
-
-    ---
-
-    <Heading level={3} id="ts-client-rollout-sessions-set-name">client.rolloutSessions.setName(options)</Heading>
-
-    Rename an existing debug session. Throws if the session id is unknown for the project.
-
-    **Parameters:**
-
-    | Name | Type | Default | Description |
-    |------|------|---------|-------------|
-    | `options.sessionId` | `string` | — | Debug session id |
-    | `options.name` | `string` | — | New session name |
-
-    **Returns:** `Promise<void>`
 
     ---
 
@@ -164,7 +149,7 @@ title: Client
 
     | Name | Type | Default | Description |
     |------|------|---------|-------------|
-    | `options.sessionId` | `string` | — | Debug session id |
+    | `options.sessionId` | `string` | — | Debug session id (UUID) |
     | `options.type` | `SessionBlockType` | — | Block type, see [SessionBlock](/sdk/typescript/types#sessionblock) |
     | `options.content` | `SessionBlockContent` | — | Type-specific payload, e.g. `{ text }` for a `text` block |
     | `options.failOnNotFound` | `boolean` | `false` | Throw on an unknown session instead of logging a warning |
@@ -182,7 +167,7 @@ title: Client
 
     | Name | Type | Default | Description |
     |------|------|---------|-------------|
-    | `options.sessionId` | `string` | — | Debug session id |
+    | `options.sessionId` | `string` | — | Debug session id (UUID) |
 
     **Returns:** `Promise<SessionBlock[]>`
 
@@ -196,11 +181,13 @@ title: Client
 
     | Name | Type | Default | Description |
     |------|------|---------|-------------|
-    | `options.sessionId` | `string` | — | Debug session id |
+    | `options.sessionId` | `string` | — | Debug session id (UUID) |
 
     **Returns:** `Promise<void>`
 
     **Note:** `client.rolloutSessions.cache(...)` also exists. It is the replay cache lookup the instrumentations call during a [cached replay](/debugger/caching) and is not meant to be called directly.
+
+    `client.rolloutSessions.setName(...)` only works with `lmnr-cli` user authentication and returns a 404 for a client created with a project API key. To name or rename a session with a project API key, call `register` with a `name`.
 
     ---
 
@@ -475,7 +462,7 @@ title: Client
 
     | Name | Type | Default | Description |
     |------|------|---------|-------------|
-    | `session_id` | `uuid.UUID` &#124; `str` | — | Debug session id |
+    | `session_id` | `uuid.UUID` &#124; `str` | — | Debug session id (UUID) |
     | `name` | `str` &#124; `None` | `None` | Optional session name |
 
     **Returns:** `str | None`: the project id resolved from the API key, or `None` if the response can't be parsed.
@@ -490,7 +477,7 @@ title: Client
 
     | Name | Type | Default | Description |
     |------|------|---------|-------------|
-    | `session_id` | `uuid.UUID` &#124; `str` | — | Debug session id |
+    | `session_id` | `uuid.UUID` &#124; `str` | — | Debug session id (UUID) |
     | `type` | `SessionBlockType` | — | Block type, see [SessionBlock](/sdk/python/types#sessionblock) |
     | `content` | `SessionBlockContent` | — | Type-specific payload, e.g. `{"text": ...}` for a `text` block |
     | `fail_on_not_found` | `bool` | `False` | Raise on an unknown session instead of logging a warning |
@@ -507,7 +494,7 @@ title: Client
 
     | Name | Type | Default | Description |
     |------|------|---------|-------------|
-    | `session_id` | `uuid.UUID` &#124; `str` | — | Debug session id |
+    | `session_id` | `uuid.UUID` &#124; `str` | — | Debug session id (UUID) |
 
     **Returns:** `list[SessionBlock]`
 
@@ -521,7 +508,7 @@ title: Client
 
     | Name | Type | Default | Description |
     |------|------|---------|-------------|
-    | `session_id` | `uuid.UUID` &#124; `str` | — | Debug session id |
+    | `session_id` | `uuid.UUID` &#124; `str` | — | Debug session id (UUID) |
 
     **Returns:** `None`
 

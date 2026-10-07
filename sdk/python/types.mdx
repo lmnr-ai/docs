@@ -98,10 +98,10 @@ Debugger coordinates carried on a `LaminarSpanContext` so a downstream service j
 
 ```python
 class DebugContext(BaseModel):
-    enabled: bool
-    session_id: str | None
-    replay_trace_id: str | None
-    cache_until: str | None
+    enabled: bool = False
+    session_id: str | None = None
+    replay_trace_id: str | None = None
+    cache_until: str | None = None
 ```
 
 ---
