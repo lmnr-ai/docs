@@ -42,7 +42,7 @@ These describe the trace, not the individual span. Set them once on the root spa
 | --- | --- | --- |
 | `lmnr.association.properties.session_id` | string | Groups traces into a [session](/tracing/structure/sessions). |
 | `lmnr.association.properties.user_id` | string | Attaches a [user id](/tracing/structure/user-id) to the trace. |
-| `lmnr.association.properties.rollout_session_id` | string | Used by the agent debugger for rollout grouping. |
+| `lmnr.association.properties.metadata.rollout.session_id` | string | Set by the SDK under `LMNR_DEBUG=true`. Adds the trace to that [debugger](/debugger/introduction) session. |
 | `lmnr.association.properties.trace_type` | string | Trace classification (`"DEFAULT"` / `"EVALUATION"`). Most callers leave this alone. |
 | `lmnr.association.properties.tags` | string array | Span-level [tags](/tracing/structure/tags). Tags are unioned across every span in the trace (not root-only) and the union becomes the trace tag set. |
 | `lmnr.association.properties.metadata.<key>` | primitive or JSON-stringified | Trace [metadata](/tracing/structure/metadata): one attribute per key. Primitives (string, number, boolean, arrays of those) pass through; complex values must be `JSON.stringify`d before set. |

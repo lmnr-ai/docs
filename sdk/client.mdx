@@ -111,86 +111,83 @@ title: Client
 
     <Heading level={3} id="ts-client-rollout-sessions">client.rolloutSessions</Heading>
 
-    Rollout session management and SSE connections for rollout debugging.
+    Debugger session management. The SDK and `lmnr-cli` call these for you during a [debugger](/debugger/introduction) run; reach for them directly only when you script against a debug session yourself. The resource keeps its `rollout` name for backward compatibility, and it is the same session you see in the debugger UI.
 
     ```typescript
-    const response = await client.rolloutSessions.connect({
+    const projectId = await client.rolloutSessions.register({
       sessionId: 'session-uuid',
-      name: 'generateStream',
-      params: [{ name: 'messages', required: true }],
+      name: 'checkout-agent',
+    });
+
+    await client.rolloutSessions.addBlock({
+      sessionId: 'session-uuid',
+      type: 'text',
+      content: { text: 'Planner skipped the inventory check.' },
     });
     ```
 
-    <Heading level={3} id="ts-client-rollout-sessions-connect">client.rolloutSessions.connect(options)</Heading>
+    <Heading level={3} id="ts-client-rollout-sessions-register">client.rolloutSessions.register(options)</Heading>
 
-    Connect to a rollout session and return the SSE streaming response.
+    Idempotently create (upsert) a debug session so it shows up in the UI. Omitting `name` never overwrites a name set elsewhere.
 
     **Parameters:**
 
     | Name | Type | Default | Description |
     |------|------|---------|-------------|
-    | `options.sessionId` | `string` | — | Rollout session UUID |
-    | `options.name` | `string` | — | Rollout entrypoint name |
-    | `options.params` | `RolloutParam[]` | — | Entrypoint parameter metadata |
+    | `options.sessionId` | `string` | — | Debug session id (UUID) |
+    | `options.name` | `string` | — | Optional session name |
+
+    **Returns:** `Promise<string | null>`: the project id resolved from the API key, or `null` if the response can't be parsed.
+
+    ---
+
+    <Heading level={3} id="ts-client-rollout-sessions-add-block">client.rolloutSessions.addBlock(options)</Heading>
+
+    Append a block to a debug session. `trace` and `evaluation` blocks are written by the backend at ingest, so the usual use is a `text` block: a standalone note tied to the session, the same thing `lmnr-cli debug session add-note` posts.
+
+    **Parameters:**
+
+    | Name | Type | Default | Description |
+    |------|------|---------|-------------|
+    | `options.sessionId` | `string` | — | Debug session id (UUID) |
+    | `options.type` | `SessionBlockType` | — | Block type, see [SessionBlock](/sdk/typescript/types#sessionblock) |
+    | `options.content` | `SessionBlockContent` | — | Type-specific payload, e.g. `{ text }` for a `text` block |
+    | `options.failOnNotFound` | `boolean` | `false` | Throw on an unknown session instead of logging a warning |
     | `options.signal` | `AbortSignal` | — | Abort signal for the request |
 
-    **Returns:** `Promise<Response>`
+    **Returns:** `Promise<string | null>`: the created block id, or `null` if the session was not found or the response can't be parsed.
 
     ---
 
-    <Heading level={3} id="ts-client-rollout-sessions-set-status">client.rolloutSessions.setStatus(options)</Heading>
+    <Heading level={3} id="ts-client-rollout-sessions-list-blocks">client.rolloutSessions.listBlocks(options)</Heading>
 
-    Update the rollout session status.
+    List a debug session's blocks in creation order, the same data the debugger UI renders.
 
     **Parameters:**
 
     | Name | Type | Default | Description |
     |------|------|---------|-------------|
-    | `options.sessionId` | `string` | — | Rollout session UUID |
-    | `options.status` | `'PENDING'` &#124; `'RUNNING'` &#124; `'FINISHED'` &#124; `'STOPPED'` | — | New status |
+    | `options.sessionId` | `string` | — | Debug session id (UUID) |
 
-    **Returns:** `Promise<void>`
-
-    ---
-
-    <Heading level={3} id="ts-client-rollout-sessions-send-span-update">client.rolloutSessions.sendSpanUpdate(options)</Heading>
-
-    Stream span updates to the rollout session.
-
-    **Parameters:**
-
-    | Name | Type | Default | Description |
-    |------|------|---------|-------------|
-    | `options.sessionId` | `string` | — | Rollout session UUID |
-    | `options.span` | `object` | — | Span payload (OTel IDs and attributes) |
-
-    **Returns:** `Promise<void>`
-
-    **Span payload:**
-
-    | Name | Type | Description |
-    |------|------|-------------|
-    | `name` | `string` | Span name |
-    | `startTime` | `string` | ISO timestamp |
-    | `spanId` | `string` | OTel span ID |
-    | `traceId` | `string` | OTel trace ID |
-    | `parentSpanId` | `string` &#124; `undefined` | Parent span ID |
-    | `attributes` | `Record<string, any>` | Span attributes |
-    | `spanType` | `SpanType` | Span type |
+    **Returns:** `Promise<SessionBlock[]>`
 
     ---
 
     <Heading level={3} id="ts-client-rollout-sessions-delete">client.rolloutSessions.delete(options)</Heading>
 
-    Delete a rollout session.
+    Delete a debug session.
 
     **Parameters:**
 
     | Name | Type | Default | Description |
     |------|------|---------|-------------|
-    | `options.sessionId` | `string` | — | Rollout session UUID |
+    | `options.sessionId` | `string` | — | Debug session id (UUID) |
 
     **Returns:** `Promise<void>`
+
+    **Note:** `client.rolloutSessions.cache(...)` also exists. It is the replay cache lookup the instrumentations call during a [cached replay](/debugger/caching) and is not meant to be called directly.
+
+    `client.rolloutSessions.setName(...)` only works with `lmnr-cli` user authentication and returns a 404 for a client created with a project API key. To name or rename a session with a project API key, call `register` with a `name`.
 
     ---
 
@@ -345,40 +342,6 @@ title: Client
 
     **Returns:** `Promise<void>`
 
-    ---
-
-    <Heading level={3} id="ts-client-agent-run">client.agent.run(options)</Heading>
-
-    Run a browser agent.
-
-    ```typescript
-    const result = await client.agent.run({
-      prompt: 'Find the pricing on example.com',
-      maxSteps: 50,
-      returnScreenshots: true,
-    });
-    ```
-
-    **Parameters:**
-
-    | Name | Type | Default | Description |
-    |------|------|---------|-------------|
-    | `prompt` | `string` | — | Agent instruction (required) |
-    | `parentSpanContext` | `string` | Current span | Parent trace context |
-    | `model` | `string` | — | Model to use |
-    | `stream` | `boolean` | `false` | Stream responses |
-    | `maxSteps` | `number` | `100` | Maximum steps |
-    | `startUrl` | `string` | — | Starting URL |
-    | `timeout` | `number` | — | Timeout in ms |
-    | `returnScreenshots` | `boolean` | `false` | Include screenshots |
-    | `returnAgentState` | `boolean` | `false` | Return agent state |
-    | `returnStorageState` | `boolean` | `false` | Return storage state |
-    | `disableGiveControl` | `boolean` | `false` | Disable “give control” |
-    | `enableThinking` | `boolean` | `true` | Enable thinking |
-
-    **Returns:**
-    - `Promise<AgentOutput>` when `stream` is `false`
-    - `Promise<ReadableStream<RunAgentResponseChunk>>` when `stream` is `true`
   </Tab>
   <Tab title="Python">
     <Heading level={2} id="py-laminar-client">LaminarClient</Heading>
@@ -477,69 +440,79 @@ title: Client
 
     ---
 
-    <Heading level={3} id="py-client-rollout">client.rollout</Heading>
+    <Heading level={3} id="py-client-rollout-sessions">client.rollout_sessions</Heading>
 
-    Rollout session management for rollout debugging.
+    Debugger session management. The SDK and `lmnr-cli` call these for you during a [debugger](/debugger/introduction) run; reach for them directly only when you script against a debug session yourself. The resource keeps its `rollout` name for backward compatibility, and it is the same session you see in the debugger UI.
 
-    <Heading level={3} id="py-client-rollout-connect">client.rollout.connect(session_id, function_name, params=None)</Heading>
+    ```python
+    project_id = client.rollout_sessions.register("session-uuid", name="checkout-agent")
 
-    Connect to a rollout session and return the SSE streaming response.
+    client.rollout_sessions.add_block(
+        "session-uuid",
+        type="text",
+        content={"text": "Planner skipped the inventory check."},
+    )
+    ```
+
+    <Heading level={3} id="py-client-rollout-sessions-register">client.rollout_sessions.register(session_id, name=None)</Heading>
+
+    Idempotently create (upsert) a debug session so it shows up in the UI. Omitting `name` never overwrites a name set elsewhere.
 
     **Parameters:**
 
     | Name | Type | Default | Description |
     |------|------|---------|-------------|
-    | `session_id` | `uuid.UUID` | — | Rollout session UUID |
-    | `function_name` | `str` | — | Rollout entrypoint name |
-    | `params` | `list[RolloutParam]` | `None` | Entrypoint parameter metadata |
+    | `session_id` | `uuid.UUID` &#124; `str` | — | Debug session id (UUID) |
+    | `name` | `str` &#124; `None` | `None` | Optional session name |
 
-    **Returns:** Context manager yielding `httpx.Response`
+    **Returns:** `str | None`: the project id resolved from the API key, or `None` if the response can't be parsed.
 
     ---
 
-    <Heading level={3} id="py-client-rollout-update-span-info">client.rollout.update_span_info(session_id, span_data)</Heading>
+    <Heading level={3} id="py-client-rollout-sessions-add-block">client.rollout_sessions.add_block(session_id, type, content, fail_on_not_found=False)</Heading>
 
-    Stream a span update to the rollout session.
+    Append a block to a debug session. `trace` and `evaluation` blocks are written by the backend at ingest, so the usual use is a `text` block: a standalone note tied to the session, the same thing `lmnr-cli debug session add-note` posts.
 
     **Parameters:**
 
     | Name | Type | Default | Description |
     |------|------|---------|-------------|
-    | `session_id` | `str` | — | Rollout session UUID |
-    | `span_data` | `SpanStartData` | — | Span payload (name, IDs, attributes, start time) |
+    | `session_id` | `uuid.UUID` &#124; `str` | — | Debug session id (UUID) |
+    | `type` | `SessionBlockType` | — | Block type, see [SessionBlock](/sdk/python/types#sessionblock) |
+    | `content` | `SessionBlockContent` | — | Type-specific payload, e.g. `{"text": ...}` for a `text` block |
+    | `fail_on_not_found` | `bool` | `False` | Raise on an unknown session instead of logging a warning |
 
-    **Returns:** `None`
+    **Returns:** `str | None`: the created block id, or `None` if the session was not found or the response can't be parsed.
 
     ---
 
-    <Heading level={3} id="py-client-rollout-update-status">client.rollout.update_status(session_id, status)</Heading>
+    <Heading level={3} id="py-client-rollout-sessions-list-blocks">client.rollout_sessions.list_blocks(session_id)</Heading>
 
-    Update the rollout session status.
+    List a debug session's blocks in creation order, the same data the debugger UI renders.
 
     **Parameters:**
 
     | Name | Type | Default | Description |
     |------|------|---------|-------------|
-    | `session_id` | `str` | — | Rollout session UUID |
-    | `status` | `'PENDING'` &#124; `'RUNNING'` &#124; `'FINISHED'` &#124; `'STOPPED'` | — | New status |
+    | `session_id` | `uuid.UUID` &#124; `str` | — | Debug session id (UUID) |
 
-    **Returns:** `None`
+    **Returns:** `list[SessionBlock]`
 
     ---
 
-    <Heading level={3} id="py-client-rollout-delete-session">client.rollout.delete_session(session_id)</Heading>
+    <Heading level={3} id="py-client-rollout-sessions-delete">client.rollout_sessions.delete(session_id)</Heading>
 
-    Delete a rollout session.
+    Delete a debug session.
 
     **Parameters:**
 
     | Name | Type | Default | Description |
     |------|------|---------|-------------|
-    | `session_id` | `str` | — | Rollout session UUID |
+    | `session_id` | `uuid.UUID` &#124; `str` | — | Debug session id (UUID) |
 
     **Returns:** `None`
 
-    **Note:** `AsyncLaminarClient.rollout` exposes the same methods; `update_span_info`, `update_status`, and `delete_session` are awaitable.
+    **Note:** `AsyncLaminarClient.rollout_sessions` exposes the same methods as awaitables. `rollout_sessions.cache(...)` also exists. It is the replay cache lookup the instrumentations call during a [cached replay](/debugger/caching) and is not meant to be called directly.
 
     ---
 
