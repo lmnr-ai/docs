@@ -522,6 +522,10 @@ const result = await travelAgent.generate({
 
 Both shapes produce the same trace structure in Laminar: one parent span per call, nested tool-call spans, and the final model output in the transcript.
 
+### Decisions with experimental_decide
+
+`experimental_decide` answers typed questions (choice, boolean, score) about a piece of state in one call, using `openai.decisionModel('gpt-6-luna')`. With `@lmnr-ai/lmnr` 0.8.50 or later, each call becomes an `ai.decide` LLM span with the state as input, the questions in the span's output schema, and the answers as output. See [Decisions API](/integrations/openai#decisions-api) for a full example.
+
 ## Debugging with the replay debugger
 
 The [Laminar debugger](/debugger/introduction) records a run, lets you edit your code, and replays from a cached checkpoint so unchanged LLM calls are served from cache. For the AI SDK, caching needs one extra step: wrap each model with `wrapLanguageModel`, which hashes the call's input and asks the Laminar backend for a cached response. The telemetry wiring above is unchanged.
