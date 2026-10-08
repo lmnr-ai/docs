@@ -1,0 +1,280 @@
+---
+title: Microsoft Agent Framework observability
+sidebarTitle: Microsoft Agent Framework
+description: "Trace Microsoft Agent Framework runs in Python: every agent, model turn, tool call, and workflow step, readable as a conversation in Laminar."
+---
+
+## Overview
+
+Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. Trace, debug, and monitor every [Microsoft Agent Framework](https://learn.microsoft.com/en-us/agent-framework/) agent run, model turn, and tool call with a single `Laminar.initialize()` call. Self-host via Helm or use managed cloud.
+
+Microsoft Agent Framework ([GitHub](https://github.com/microsoft/agent-framework)) is Microsoft's open-source framework for building agents and multi-agent workflows, the successor to Semantic Kernel and AutoGen. It emits its own OpenTelemetry GenAI semconv spans for agent runs, model calls, and tool executions. Laminar routes those spans to your project, turns on prompt and response capture, and nests everything your tools do under the right span, so you don't call `configure_otel_providers()` or `enable_instrumentation()` yourself.
+
+What Laminar captures:
+
+- Every agent run, named after the agent, with its model turns and tool calls nested inside.
+- Every `chat <model>` turn with prompts, responses, tool definitions, token counts, latency, and cost.
+- Every tool call with arguments and return value, and failed tool calls as error spans.
+- Sub-agents called as tools, workflow steps, and MCP tool calls nested under the call that spawned them.
+
+## Getting started
+
+<Steps>
+<Step title="Install">
+
+Ensure you have `lmnr` version `0.7.65` or higher and `agent-framework` 1.x:
+
+```bash
+pip install -U lmnr agent-framework
+```
+
+The `agent-framework` package installs the core framework plus every provider client. If you only install `agent-framework-core`, add the client package you use, such as `agent-framework-openai`.
+
+</Step>
+<Step title="Set environment variables">
+
+```bash
+export LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+export OPENAI_API_KEY=your-openai-api-key
+```
+
+</Step>
+<Step title="Initialize Laminar">
+
+`Laminar.initialize()` auto-instruments Microsoft Agent Framework when `agent-framework-core` is installed. Importing `agent_framework` before or after `initialize()` both work.
+
+```python {6,8,22}
+import asyncio
+from typing import Annotated
+
+from agent_framework import Agent, tool
+from agent_framework.openai import OpenAIChatClient
+from lmnr import Laminar, observe
+
+Laminar.initialize()
+
+@tool
+def get_weather(city: Annotated[str, "City name"]) -> str:
+    """Get the current weather for a city."""
+    return f"Sunny, 22C in {city}"
+
+agent = Agent(
+    client=OpenAIChatClient(model="gpt-5-mini"),
+    name="WeatherAgent",
+    instructions="You are a weather assistant. Answer in one sentence.",
+    tools=[get_weather],
+)
+
+@observe(name="weather-question")
+async def main():
+    result = await agent.run("What's the weather in Paris?")
+    print(result.text)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+<Note>
+Wrapping your entry point in `@observe()` is optional but recommended: it creates a root span that captures inputs and outputs and makes the trace easy to find in the UI. Sessions, user IDs, and metadata you set with `Laminar.set_trace_session_id()` and friends apply to the framework's spans too.
+</Note>
+
+</Step>
+</Steps>
+
+<Info>
+The framework's `chat` span already records the model call, so Laminar doesn't trace the OpenAI or Anthropic SDK call underneath it a second time. Provider SDK calls you make directly, outside an agent run, are still traced as usual.
+</Info>
+
+## See what happened in a trace
+
+Each agent run shows up as a span named after the agent, with its model turns and tool calls inside it. Laminar extracts the inputs, LLM outputs, and tool calls into a transcript view, so you read the conversation instead of a span tree. Switch to tree view to see how sub-agents and tools nest.
+
+More on the trace UX: [Viewing traces](/platform/viewing-traces).
+
+## Multi-agent with agents as tools
+
+A coordinator agent can delegate to specialist agents by passing them as tools with `agent.as_tool()`. Each delegated run nests under the tool call that started it, so the hierarchy in the trace mirrors the conversation.
+
+```python
+import asyncio
+from typing import Annotated
+
+from agent_framework import Agent, tool
+from agent_framework.openai import OpenAIChatClient
+from lmnr import Laminar, observe
+
+Laminar.initialize()
+
+@tool
+def search_flights(
+    origin: Annotated[str, "Origin airport code"],
+    destination: Annotated[str, "Destination airport code"],
+    date: Annotated[str, "Departure date, YYYY-MM-DD"],
+) -> str:
+    """Search flights between two airports."""
+    return f"Options {origin}->{destination} on {date}: DL204 Delta $412, UA880 United $438."
+
+@tool
+def search_hotels(
+    city: Annotated[str, "City name"],
+    check_in: Annotated[str, "Check-in date, YYYY-MM-DD"],
+    check_out: Annotated[str, "Check-out date, YYYY-MM-DD"],
+) -> str:
+    """Search hotels in a city."""
+    return f"Hotels in {city}: Kimpton Gray $285/nt, Hyatt Place $199/nt."
+
+client = OpenAIChatClient(model="gpt-5-mini")
+
+flight_agent = Agent(
+    client=client,
+    name="FlightAgent",
+    instructions="You are a flight search specialist. Return one recommended flight.",
+    tools=[search_flights],
+)
+
+hotel_agent = Agent(
+    client=client,
+    name="HotelAgent",
+    instructions="You are a hotel booking specialist. Return one recommended hotel.",
+    tools=[search_hotels],
+)
+
+concierge = Agent(
+    client=client,
+    name="Concierge",
+    instructions=(
+        "You are a travel concierge. Always call book_flight and book_hotel, "
+        "then summarize the trip. Do not ask follow-up questions."
+    ),
+    tools=[
+        flight_agent.as_tool(name="book_flight", description="Find and book a flight."),
+        hotel_agent.as_tool(name="book_hotel", description="Find and book a hotel."),
+    ],
+)
+
+@observe(name="plan-trip")
+async def main():
+    result = await concierge.run(
+        "Plan a trip from JFK to Chicago on 2026-05-12, returning 2026-05-15."
+    )
+    print(result.text)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+The trace for this run nests like this:
+
+```text
+plan-trip
+└── Concierge
+    ├── chat gpt-5-mini
+    ├── book_flight
+    │   └── FlightAgent
+    │       ├── chat gpt-5-mini
+    │       ├── search_flights
+    │       └── chat gpt-5-mini
+    ├── book_hotel
+    │   └── HotelAgent
+    │       ├── chat gpt-5-mini
+    │       ├── search_hotels
+    │       └── chat gpt-5-mini
+    └── chat gpt-5-mini
+```
+
+## Streaming, workflows, and MCP tools
+
+These are traced with no extra setup:
+
+- **Streaming**: `agent.run(..., stream=True)` produces the same spans as a non-streaming run, with the full response recorded on the `chat` span once the stream finishes.
+- **Workflows**: orchestrations such as `SequentialBuilder` emit workflow and executor spans, with each participant agent's run nested inside its step.
+- **MCP tools**: tools from `MCPStdioTool` and the other MCP clients show up as tool calls, with the MCP session's requests nested underneath.
+- **Your own code**: functions decorated with `@observe`, and provider SDK calls made inside a tool, nest under that tool's span.
+
+## Track outcomes with Signals
+
+Traces answer *what happened on this run*. **[Signals](/signals/introduction) answer the cross-trace question**: *how often does the concierge skip a sub-agent, when does a tool get called with a malformed date, how many runs end without a booking*. A Signal pairs a plain-language prompt with a JSON output schema. Laminar runs it live on new traces (Triggers) or backfills it across history (Jobs) and records a structured event every time it matches. From there you [query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on events across every trace.
+
+<Note>
+Every new project ships with a **Failure Detector** Signal that categorizes issues on any trace over 1000 tokens. Open it from the Signals sidebar to see events as soon as your Microsoft Agent Framework traces arrive.
+</Note>
+
+## Query across traces
+
+- **[SQL editor](/platform/sql-editor)** for ad-hoc queries across traces, spans, signals, and evals.
+- **SQL API** for programmatic access from scripts and pipelines.
+- **[CLI](/platform/cli)** (`lmnr-cli sql query`) for terminal-driven queries and piping JSON into shell tools or coding agents.
+- **[MCP server](/platform/mcp)** to query Laminar directly from Claude Code, Cursor, or Codex.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="I don't see any traces in Laminar">
+    - Confirm `LMNR_PROJECT_API_KEY` is set in the same process that runs the agent.
+    - `agent-framework-core` must be installed when `Laminar.initialize()` runs. The integration requires `agent-framework-core` 1.x and `lmnr >= 0.7.65`.
+    - If you set `ENABLE_INSTRUMENTATION=false` or called `agent_framework.observability.disable_instrumentation()`, the framework emits no spans of its own. Laminar respects that, and only the underlying provider SDK calls are traced.
+  </Accordion>
+  <Accordion title="Model calls have no prompts or responses">
+    Laminar turns on the framework's sensitive-data capture so `chat` spans carry messages and tool spans carry arguments and results. It leaves the setting alone if you set `ENABLE_SENSITIVE_DATA` yourself, so check that it isn't set to `false`. Set `ENABLE_SENSITIVE_DATA=false` or `LMNR_TRACE_CONTENT=false` when you want to keep content out of traces on purpose.
+  </Accordion>
+  <Accordion title="I want to disable the Microsoft Agent Framework integration">
+    Pass `disabled_instruments={Instruments.MICROSOFT_AGENT_FRAMEWORK}` to `Laminar.initialize()`. The framework's spans are then exported as the framework emits them: no message content unless you enable sensitive data yourself, no nesting of your own spans under tool calls, and provider SDK calls traced as separate LLM spans.
+
+    ```python
+    from lmnr import Laminar, Instruments
+
+    Laminar.initialize(disabled_instruments={Instruments.MICROSOFT_AGENT_FRAMEWORK})
+    ```
+  </Accordion>
+  <Accordion title="Self-hosting Laminar">
+    Set `base_url` and the ports of your instance when initializing. For a local OSS deployment:
+
+    ```python
+    Laminar.initialize(
+        base_url="http://localhost",
+        http_port=8000,
+        grpc_port=8001,
+    )
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Viewing traces" href="/platform/viewing-traces">
+    Read the transcript view, filter, and search across traces.
+  </Card>
+  <Card title="Signals" href="/signals/introduction">
+    Detect behaviors and failures across every run, then query, cluster, and alert on them.
+  </Card>
+  <Card title="SQL editor and MCP server" href="/platform/sql-editor">
+    Query traces programmatically from the UI, API, or your IDE.
+  </Card>
+  <Card title="Tracing structure" href="/tracing/structure/overview">
+    Sessions, metadata, and tags for deeper control.
+  </Card>
+</CardGroup>
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="OpenAI" href="/integrations/openai">
+    Using the OpenAI SDK directly without an agent framework? Trace it here.
+  </Card>
+  <Card title="Anthropic" href="/integrations/anthropic">
+    Trace the Anthropic SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="OpenAI Agents SDK" href="/integrations/openai-agents-sdk">
+    Trace agent runs, handoffs, and tool calls.
+  </Card>
+  <Card title="Pydantic AI" href="/integrations/pydantic-ai">
+    Trace Pydantic AI agents, typed tools, and sub-agents.
+  </Card>
+  <Card title="LangChain / LangGraph" href="/integrations/langchain">
+    Trace LangChain chains and LangGraph graphs.
+  </Card>
+  <Card title="All integrations" href="/integrations">
+    Browse every provider, framework, coding agent, and browser integration Laminar supports.
+  </Card>
+</CardGroup>
