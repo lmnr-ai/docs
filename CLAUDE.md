@@ -274,6 +274,14 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - **Multi-agent delegation pattern**: Have a coordinator `Agent` expose `@agent.tool` methods that internally call `await sub_agent.run(...)`. Laminar nests the sub-agent's full run (its own turns and tool calls) directly underneath the parent `execute_tool <name>` span. This is the shape Rainhunter13 asked for in PR #139 — it produces rich tree-view screenshots (concierge → gpt-5-mini → book_flight → flight_agent → gpt-5-mini → search_flights). Single-agent-with-flat-tools demos look thin by comparison.
 - Opening paragraphs on integration pages should lead with "Laminar is an open-source, OpenTelemetry-native observability platform for AI agents" (generic), then name the framework in the *second* clause ("...Trace, debug, and monitor every [Framework] ..."). Phrasing the opener as "observability platform for [Framework]" reads like the platform only serves that one framework — Rainhunter13 flagged this on PR #139.
 
+## Microsoft Agent Framework integration
+
+- Page `integrations/microsoft-agent-framework.mdx` (LAM-2348), Python only, listed after `pydantic-ai` in `docs.json` and `integrations.mdx`. Auto-instrumented by `Laminar.initialize()` when `agent-framework-core` is installed (instrumentor added in lmnr-python PR #366, first release `lmnr` 0.7.65). Install is `pip install -U lmnr agent-framework`; the `agent-framework` meta package pulls `agent-framework-core[all]`, which includes the OpenAI and Anthropic clients. Bare `agent-framework-core` does NOT include `agent_framework.openai`.
+- MAF 1.x API for samples: `Agent(client=OpenAIChatClient(model=...), name=..., instructions=..., tools=[...])`, `@tool` with `Annotated[str, "desc"]` params, `(await agent.run(...)).text`, streaming via `async for u in agent.run(..., stream=True)`, sub-agents via `agent.as_tool(name=..., description=...)`. Old `ChatAgent` / `chat_client=` names from 2025 previews are gone.
+- Unlike Pydantic AI, Laminar does NOT remove the provider instrumentors: it suppresses them only inside MAF `chat` spans, so direct provider calls outside an agent are still traced. Don't copy the Pydantic AI "auto-removes provider instrumentors" warning onto this page.
+- Content capture: Laminar turns on MAF's sensitive data unless `ENABLE_SENSITIVE_DATA` is set or `LMNR_TRACE_CONTENT=false`. Disable with `disabled_instruments={Instruments.MICROSOFT_AGENT_FRAMEWORK}`.
+- gpt-5-mini concierge demos often ask clarifying questions instead of calling the sub-agent tools; the instructions need "Always call X and Y ... Do not ask follow-up questions." Check the span tree in ClickHouse before trusting a multi-agent sample.
+
 ## deepagents integration
 
 - Auto-instrumented by `Laminar.initialize()` when `deepagents` AND `langchain` are both importable. Requires `lmnr >= 0.7.50` and `deepagents >= 0.5.0`. Released in lmnr-python PR #290.
