@@ -22,7 +22,7 @@ What Laminar captures:
 <Steps>
 <Step title="Install">
 
-Ensure you have `lmnr` version `0.7.65` or higher and `agent-framework` 1.x:
+Ensure you have `lmnr` version `0.7.66` or higher and `agent-framework` 1.x:
 
 ```bash
 pip install -U lmnr agent-framework
@@ -211,7 +211,7 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
 <AccordionGroup>
   <Accordion title="I don't see any traces in Laminar">
     - Confirm `LMNR_PROJECT_API_KEY` is set in the same process that runs the agent.
-    - `agent-framework-core` must be installed when `Laminar.initialize()` runs. The integration requires `agent-framework-core` 1.x and `lmnr >= 0.7.65`.
+    - `agent-framework-core` must be installed when `Laminar.initialize()` runs. The integration requires `agent-framework-core` 1.x and `lmnr >= 0.7.66`.
     - If you set `ENABLE_INSTRUMENTATION=false` or called `agent_framework.observability.disable_instrumentation()`, the framework emits no spans of its own. Laminar respects that, and only the underlying provider SDK calls are traced.
   </Accordion>
   <Accordion title="Model calls have no prompts or responses">
