@@ -22,11 +22,15 @@ What Laminar captures:
 <Steps>
 <Step title="Install">
 
-Ensure you have `lmnr` version `0.7.62` or higher and `google-adk` version `2.0.0` or higher:
+Ensure you have `lmnr` version `0.7.62` or higher and `google-adk` between `2.0.0` and `2.9.x`:
 
 ```bash
-pip install -U lmnr "google-adk>=2.0.0"
+pip install -U lmnr "google-adk>=2.0.0,<2.10"
 ```
+
+<Warning>
+On `google-adk` 2.10 and later, `call_llm` spans are recorded without the prompt and the model's response: you still get the model, token counts, cost, and every tool call, but the transcript can't show what was sent to Gemini or what it answered. Stay on `google-adk` 2.9.x or earlier until a Laminar SDK release adds support for 2.10.
+</Warning>
 
 </Step>
 <Step title="Set environment variables">
@@ -112,6 +116,10 @@ Laminar.initialize(instruments={Instruments.GOOGLE_ADK, Instruments.GOOGLE_GENAI
 
 Open the trace in Laminar. The transcript view extracts the user message, each model turn, and every tool call with its arguments and result, so you read the conversation instead of a span tree. Switch to tree view to see how ADK nests `call_llm` and tool spans under the agent span for each `invocation`.
 
+<Frame caption="Transcript of the travel-assistant run. The first Gemini turn calls `get_weather` and `get_local_time` in parallel, the second turn answers. The selected `call_llm` span shows the system instruction, the user message, and the model's tool calls, and the session and user ID from ADK sit in the trace header.">
+<img src="/images/traces/google-adk-transcript.png" alt="Google ADK trace in Laminar: transcript with two Gemini turns and two tool calls, and the call_llm span's system prompt, user message, and tool calls" />
+</Frame>
+
 More on the trace UX: [Viewing traces](/platform/viewing-traces).
 
 ## Sessions and users
@@ -143,7 +151,10 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
   <Accordion title="I don't see any traces in Laminar">
     - Confirm `LMNR_PROJECT_API_KEY` is set in the same process that runs the agent.
     - `google-adk` must be installed when `Laminar.initialize()` runs.
-    - The integration requires `lmnr >= 0.7.62` and `google-adk >= 2.0.0, < 3.0.0`.
+    - The integration requires `lmnr >= 0.7.62` and `google-adk >= 2.0.0, < 3.0.0`. For full prompt and response capture, use `google-adk` 2.9.x or earlier.
+  </Accordion>
+  <Accordion title="LLM spans have no messages, only model, tokens, and cost">
+    Check your `google-adk` version with `pip show google-adk`. On 2.10 and later, the prompt and response are not yet attached to `call_llm` spans. Install `"google-adk>=2.0.0,<2.10"`. If you're on an earlier version, check `ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS` (see below).
   </Accordion>
   <Accordion title="Tool spans have no input or output">
     Check whether `ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS` is set to `false`. With content capture off, ADK records tool and model payloads as empty, and Laminar keeps them empty.
