@@ -4,6 +4,10 @@ title: Changelog
 
 New releases and improvements.
 
+## October 2026
+
+- **OpenAI Decisions API tracing** - Laminar now auto-instruments `client.decisions.create` in the [OpenAI Python SDK](/integrations/openai#decisions-api), sync and async. Every call becomes an LLM span with the input, the typed questions (predicate, choice, score), the answers with their probabilities, and token counts, so routing and guardrail decisions show up in the trace next to the LLM calls they gate. Python-only for now: ships in `lmnr` 0.7.65 and needs `openai` 3.26.0 or later.
+
 ## September 2026
 
 - **Terraform provider** - Manage [Signals](/signals/introduction) and [LLM profiles](/platform/llm-profiles) as code with the [Laminar Terraform provider](/platform/terraform), `lmnr-ai/lmnr` on the Terraform Registry. Resources cover the Signal prompt, output schema, trigger, filters, sampling, and mode, plus profile credentials and models. Data sources look up existing Signals and profiles, and anything created in the UI can be imported. It works with Laminar Cloud, self-hosted deployments, and OpenTofu.

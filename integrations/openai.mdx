@@ -206,6 +206,64 @@ Laminar automatically traces image inputs (data URLs and external URLs) sent to 
   </Tab>
 </Tabs>
 
+## Decisions API
+
+The [Decisions API](https://developers.openai.com/api/reference/resources/decisions) answers a list of typed questions about a piece of input in one call: predicates (yes or no, with a probability), choices (one value from a fixed list), and scores (a level on a scale). Use it for routing, guardrails, and grading steps in your agent. Laminar traces every `client.decisions.create` call, sync and async, with no extra setup.
+
+<Note>
+Decisions tracing is Python-only for now. It needs `lmnr` 0.7.65 or later and `openai` 3.26.0 or later.
+</Note>
+
+```bash
+pip install -U lmnr 'openai>=3.26.0'
+```
+
+```python
+from lmnr import Laminar
+from openai import OpenAI
+
+Laminar.initialize()
+
+client = OpenAI()
+
+decision = client.decisions.create(
+    model="gpt-6-luna",
+    input="I was charged twice for my subscription this month. Please fix it today.",
+    questions=[
+        {
+            "type": "choice",
+            "name": "queue",
+            "instructions": "Which support queue should handle this ticket?",
+            "choices": [{"value": "billing"}, {"value": "technical"}, {"value": "account"}],
+        },
+        {
+            "type": "predicate",
+            "name": "urgent",
+            "instructions": "Does the customer need a response today?",
+        },
+        {
+            "type": "score",
+            "name": "frustration",
+            "instructions": "How frustrated is the customer?",
+            "levels": [{"label": "calm"}, {"label": "annoyed"}, {"label": "angry"}],
+        },
+    ],
+)
+
+for answer in decision.answers:
+    print(answer)
+```
+
+Each call becomes an LLM span named `openai.decision` that carries:
+
+- The model, and the `input` you sent as the span input. A string becomes a user message, and message lists (including image parts) are recorded as you passed them.
+- The full question set, with instructions, choices, and levels for every question, in the span's output schema.
+- The typed answers as the span output, with probabilities and confidence intact.
+- Token counts, including cached input tokens.
+- `safety_identifier`, recorded as the span's user.
+
+Failed calls, such as a question with an empty `choices` list, are marked as errors with the exception recorded. A Decisions call sits in the transcript next to the LLM calls it routes or guards, so you can see the decision next to the action it triggered. `LMNR_TRACE_CONTENT=false` keeps the model and token counts but omits the input, questions, and answers.
+
 ## Related integrations
 
 <CardGroup cols={2}>

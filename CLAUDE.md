@@ -356,6 +356,13 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - **Demo for screenshots** lives at `/sandbox/scratch/temporal-demo/` (client.ts, worker.ts, workflows.ts, activities.ts): client `observe('run-summary')` → `summaryWorkflow` → `summarizeTopic` activity (gpt-5-mini LLM span) → `countWords` activity (`count_words` TOOL span). This cross-process trace is the canonical "show span nesting across processes" case, so ship BOTH transcript (`/images/traces/temporal.png`) and tree (`/images/traces/temporal-tree.png`) views per the trace-screenshot rule. Needs the Temporal CLI dev server (`temporal server start-dev`, port 7233) running alongside the worker + client.
 - **Running the demo: source the .env, do NOT use `--env-file`.** The sandbox's global dotenvx shim mangles `LMNR_PROJECT_API_KEY` when you pass `--env-file`/`node --env-file` (auth fails with `16 UNAUTHENTICATED` on span export while the workflow itself still runs). Working invocation: `cd /sandbox/scratch/temporal-demo && set -a && source .env && set +a && npx tsx src/<file>.ts`.
 
+## OpenAI Decisions API (`integrations/openai.mdx#decisions-api`)
+
+- Python-only (lmnr-python PR #362, `lmnr` 0.7.65, `openai>=3.26.0`); the TS SDK does not trace it yet, so the section is a single Python block, not `<Tabs>`. Decisions only accepts model `gpt-6-luna`; other models return 404 `model_not_found`.
+- Questions are recorded in the span's **output schema** (`gen_ai.request.structured_output_schema`), the same as the TypeSafe Jev page says, not as a system message. Keep the two pages' wording consistent.
+- Link the OpenAI reference as `https://developers.openai.com/api/reference/resources/decisions`; `platform.openai.com/docs/api-reference/decisions` 403s for non-browser clients.
+- **Verify OpenAI samples in a clean venv** (`uv venv` + `uv pip install -e /repos/lmnr-python openai==3.26.0`), not `/repos/lmnr-python/.venv`: that venv has Pydantic AI installed, and Laminar then drops the raw OpenAI instrumentor on purpose, so the sample runs fine but produces no `openai.*` span. Attach an `InMemorySpanExporter` via `TracerWrapper.instance._tracer_provider.add_span_processor(...)` after `Laminar.initialize()` to read span attributes without a backend.
+
 ## OpenRouter SDK integration
 
 - `integrations/openrouter.mdx` covers THREE paths, in this order: the native OpenRouter SDK (auto-instrumented, primary), the OpenAI SDK pointed at `https://openrouter.ai/api/v1` (still supported, demoted to a short section), and raw HTTP via `observe()`. Before LAM-2265 the page claimed "Laminar does not auto-instrument the OpenRouter SDK" and told users to wrap calls in `observe()` — that is dead, don't let it creep back.
