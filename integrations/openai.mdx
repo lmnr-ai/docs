@@ -208,61 +208,106 @@ Laminar automatically traces image inputs (data URLs and external URLs) sent to 
 
 ## Decisions API
 
-The [Decisions API](https://developers.openai.com/api/reference/resources/decisions) answers a list of typed questions about a piece of input in one call: predicates (yes or no, with a probability), choices (one value from a fixed list), and scores (a level on a scale). Use it for routing, guardrails, and grading steps in your agent. Laminar traces every `client.decisions.create` call, sync and async, with no extra setup.
+The [Decisions API](https://developers.openai.com/api/reference/resources/decisions) answers a list of typed questions about a piece of input in one call: predicates (yes or no, with a probability), choices (one value from a fixed list), and scores (a level on a scale). Use it for routing, guardrails, and grading steps in your agent.
 
-<Note>
-Decisions tracing is Python-only for now. It needs `lmnr` 0.7.65 or later and `openai` 3.26.0 or later.
-</Note>
+In TypeScript, call Decisions through the [Vercel AI SDK](/integrations/vercel-ai-sdk) v7 `experimental_decide` function. Laminar traces it through `LaminarAiSdkTelemetry`, which needs `@lmnr-ai/lmnr` 0.8.50 or later. In Python, Laminar traces every `client.decisions.create` call in the OpenAI SDK, sync and async, with no extra setup. That needs `lmnr` 0.7.65 or later and `openai` 3.26.0 or later.
 
-```bash
-pip install -U lmnr 'openai>=3.26.0'
-```
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```bash
+    npm install @lmnr-ai/lmnr@latest ai@latest @ai-sdk/openai@latest
+    ```
 
-```python
-from lmnr import Laminar
-from openai import OpenAI
+    ```typescript
+    import { experimental_decide as decide, registerTelemetry } from 'ai';
+    import { openai } from '@ai-sdk/openai';
+    import { Laminar, LaminarAiSdkTelemetry } from '@lmnr-ai/lmnr';
 
-Laminar.initialize()
+    Laminar.initialize();
+    registerTelemetry(new LaminarAiSdkTelemetry());
 
-client = OpenAI()
-
-decision = client.decisions.create(
-    model="gpt-6-luna",
-    input="I was charged twice for my subscription this month. Please fix it today.",
-    questions=[
-        {
-            "type": "choice",
-            "name": "queue",
-            "instructions": "Which support queue should handle this ticket?",
-            "choices": [{"value": "billing"}, {"value": "technical"}, {"value": "account"}],
+    const { answers } = await decide({
+      model: openai.decisionModel('gpt-6-luna'),
+      state: 'I was charged twice for my subscription this month. Please fix it today.',
+      questions: {
+        queue: {
+          type: 'choice',
+          instructions: 'Which support queue should handle this ticket?',
+          criteria: { billing: null, technical: null, account: null },
         },
-        {
-            "type": "predicate",
-            "name": "urgent",
-            "instructions": "Does the customer need a response today?",
+        urgent: {
+          type: 'boolean',
+          instructions: 'Does the customer need a response today?',
         },
-        {
-            "type": "score",
-            "name": "frustration",
-            "instructions": "How frustrated is the customer?",
-            "levels": [{"label": "calm"}, {"label": "annoyed"}, {"label": "angry"}],
+        frustration: {
+          type: 'score',
+          instructions: 'How frustrated is the customer?',
+          criteria: ['calm', 'annoyed', 'angry'],
         },
-    ],
-)
+      },
+      telemetry: {
+        functionId: 'triage-ticket',
+        includeRuntimeContext: { userId: true },
+      },
+      runtimeContext: { userId: 'user-123' },
+    });
 
-for answer in decision.answers:
-    print(answer)
-```
+    console.log(answers.queue, answers.urgent, answers.frustration);
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```bash
+    pip install -U lmnr 'openai>=3.26.0'
+    ```
 
-Each call becomes an LLM span named `openai.decision` that carries:
+    ```python
+    from lmnr import Laminar
+    from openai import OpenAI
 
-- The model, and the `input` you sent as the span input. A string becomes a user message, and message lists (including image parts) are recorded as you passed them.
+    Laminar.initialize()
+
+    client = OpenAI()
+
+    decision = client.decisions.create(
+        model="gpt-6-luna",
+        input="I was charged twice for my subscription this month. Please fix it today.",
+        questions=[
+            {
+                "type": "choice",
+                "name": "queue",
+                "instructions": "Which support queue should handle this ticket?",
+                "choices": [{"value": "billing"}, {"value": "technical"}, {"value": "account"}],
+            },
+            {
+                "type": "predicate",
+                "name": "urgent",
+                "instructions": "Does the customer need a response today?",
+            },
+            {
+                "type": "score",
+                "name": "frustration",
+                "instructions": "How frustrated is the customer?",
+                "levels": [{"label": "calm"}, {"label": "annoyed"}, {"label": "angry"}],
+            },
+        ],
+        safety_identifier="user-123",
+    )
+
+    for answer in decision.answers:
+        print(answer)
+    ```
+  </Tab>
+</Tabs>
+
+Each call becomes an LLM span, named `ai.decide` in TypeScript (`ai.decide triage-ticket` when you set `telemetry.functionId`) and `openai.decision` in Python. The span carries:
+
+- The model, and the input you sent as the span input. A string becomes a user message. Objects, part arrays, and message lists (including image parts) are recorded as you passed them.
 - The full question set, with instructions, choices, and levels for every question, in the span's output schema.
-- The typed answers as the span output, with probabilities and confidence intact.
+- The typed answers as the span output, with probabilities intact.
 - Token counts, including cached input tokens.
-- `safety_identifier`, recorded as the span's user.
+- The user ID: `runtimeContext.userId` in TypeScript (opted in with `includeRuntimeContext`), `safety_identifier` in Python.
 
-Failed calls, such as a question with an empty `choices` list, are marked as errors with the exception recorded. A Decisions call sits in the transcript next to the LLM calls it routes or guards, so you can see the decision next to the action it triggered. `LMNR_TRACE_CONTENT=false` keeps the model and token counts but omits the input, questions, and answers.
+Failed calls, such as an unknown model, are marked as errors with the exception recorded. A Decisions call sits in the transcript next to the LLM calls it routes or guards, so you can see the decision next to the action it triggered. To keep the model and token counts but omit the input, questions, and answers, set `recordInputs: false` and `recordOutputs: false` in the AI SDK `telemetry` options, or `LMNR_TRACE_CONTENT=false` in Python.
 
 ## Related integrations
 
