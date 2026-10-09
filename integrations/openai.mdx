@@ -307,7 +307,7 @@ Each call becomes an LLM span, named `ai.decide` in TypeScript (`ai.decide triag
 - Token counts, including cached input tokens.
 - The user ID: `runtimeContext.userId` in TypeScript (opted in with `includeRuntimeContext`), `safety_identifier` in Python.
 
-Failed calls, such as an unknown model, are marked as errors with the exception recorded. A Decisions call sits in the transcript next to the LLM calls it routes or guards, so you can see the decision next to the action it triggered. To keep the model and token counts but omit the input, questions, and answers, set `recordInputs: false` and `recordOutputs: false` in the AI SDK `telemetry` options, or `LMNR_TRACE_CONTENT=false` in Python.
+Failed calls, such as an unknown model, are marked as errors with the exception recorded. A Decisions call sits in the transcript next to the LLM calls it routes or guards, so you can see the decision next to the action it triggered. To keep the model and token counts but omit the input, questions, and answers, pass `recordInputs: false` and `recordOutputs: false` to `new LaminarAiSdkTelemetry()` in TypeScript (see [Configure the integration](/integrations/vercel-ai-sdk#configure-the-integration)), or set `LMNR_TRACE_CONTENT=false` in Python.
 
 ## Related integrations
 
