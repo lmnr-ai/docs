@@ -1,6 +1,7 @@
 ---
-title: Harbor Agent Evaluations in Laminar
+title: Harbor agent evaluations
 sidebarTitle: Harbor
+description: "Add one flag to harbor run and read every trial as a scored datapoint with a full agent transcript, for Claude Code, Codex, or your own agent."
 ---
 
 Laminar has a plugin for [Harbor](https://www.harborframework.com), so the runs you already launch with `harbor run` show up in Laminar as [evaluations](/evaluations/introduction). Every trial gets its own trace with the agent's LLM calls and tool calls, the verifier's rewards become scores, and runs on the same dataset are charted together so you can see whether a new agent or model moved the score.
@@ -142,5 +143,28 @@ harbor run --dataset terminal-bench@2.0 --agent claude-code \
   </Card>
   <Card title="Query across trials" href="/platform/sql-editor" icon="database">
     Ask which tasks fail for every agent from the SQL editor, the SQL API, or the MCP server.
+  </Card>
+</CardGroup>
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="Claude Code" href="/integrations/claude-code">
+    Trace Claude Code sessions with a one-command plugin.
+  </Card>
+  <Card title="Codex" href="/integrations/codex">
+    Trace Codex CLI sessions with a one-command plugin.
+  </Card>
+  <Card title="OpenCode" href="/integrations/opencode">
+    Trace OpenCode coding agent sessions.
+  </Card>
+  <Card title="Claude Agent SDK" href="/integrations/claude-agent-sdk">
+    Trace Claude Agent SDK runs and their subagents.
+  </Card>
+  <Card title="LangChain / LangGraph" href="/integrations/langchain">
+    Trace LangChain chains and LangGraph graphs.
+  </Card>
+  <Card title="All integrations" href="/integrations">
+    Browse every provider, framework, coding agent, and browser integration Laminar supports.
   </Card>
 </CardGroup>

@@ -83,7 +83,6 @@
               "evaluations/custom-rendering",
               "evaluations/datasets",
               "evaluations/manual-evaluation",
-              "evaluations/harbor",
               "evaluations/self-hosted"
             ]
           },
@@ -175,6 +174,12 @@
               "integrations/kernel",
               "integrations/playwright",
               "integrations/puppeteer"
+            ]
+          },
+          {
+            "group": "Eval frameworks",
+            "pages": [
+              "integrations/harbor"
             ]
           },
           {
