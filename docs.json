@@ -177,6 +177,12 @@
             ]
           },
           {
+            "group": "Eval frameworks",
+            "pages": [
+              "integrations/harbor"
+            ]
+          },
+          {
             "group": "Other platforms",
             "pages": [
               "integrations/langfuse"

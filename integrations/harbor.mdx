@@ -1,0 +1,170 @@
+---
+title: Harbor agent evaluations
+sidebarTitle: Harbor
+description: "Add one flag to harbor run and read every trial as a scored datapoint with a full agent transcript, for Claude Code, Codex, or your own agent."
+---
+
+Laminar has a plugin for [Harbor](https://www.harborframework.com), so the runs you already launch with `harbor run` show up in Laminar as [evaluations](/evaluations/introduction). Every trial gets its own trace with the agent's LLM calls and tool calls, the verifier's rewards become scores, and runs on the same dataset are charted together so you can see whether a new agent or model moved the score.
+
+Harbor is a framework for evaluating agents in sandboxed environments: it runs an agent such as Claude Code, Codex, or your own on a dataset like Terminal-Bench, then runs each task's verifier to score the result. The Laminar plugin hooks into Harbor's job and trial events. You don't change your agent or your tasks.
+
+## Getting started
+
+<Steps>
+  <Step title="Install the Laminar SDK next to Harbor">
+    Install `lmnr` in the same Python environment as `harbor`:
+
+    ```bash
+    pip install lmnr
+    ```
+
+    If you installed Harbor with `uv tool install harbor`, add `lmnr` to that tool environment instead:
+
+    ```bash
+    uv tool install harbor --with lmnr
+    ```
+
+    Check that Harbor picked up the plugin:
+
+    ```bash
+    harbor plugins list
+    ```
+
+    The output lists `laminar` with the import path `lmnr.integrations.harbor:LaminarPlugin`.
+  </Step>
+  <Step title="Set your project API key">
+    ```bash
+    export LMNR_PROJECT_API_KEY=your-project-api-key
+    ```
+
+    Get the key from **Project Settings → Project API keys** in Laminar.
+  </Step>
+  <Step title="Run Harbor with the plugin">
+    Add `--plugin laminar` to your usual command:
+
+    ```bash
+    harbor run --dataset terminal-bench@2.0 \
+      --agent claude-code \
+      --model anthropic/claude-sonnet-5 \
+      --plugin laminar
+    ```
+
+    The plugin logs a link to the evaluation when the job starts. Trials appear in Laminar as they finish.
+  </Step>
+</Steps>
+
+## Agents written in TypeScript or any other language
+
+Harbor loads plugins from Python, so the Laminar plugin ships in the Python SDK (`lmnr`), not in `@lmnr-ai/lmnr`. That doesn't limit which agents you can evaluate. The plugin reads Harbor's trial results and the agent's [ATIF](https://docs.harborframework.com/agents/atif) trajectory, not the agent process, so it reports any agent Harbor can run:
+
+- Node.js and TypeScript agents such as Claude Code, Gemini CLI, OpenCode, and Harbor's `langgraph` agent on its Node runtime.
+- Python agents, and agents in any other language Harbor can run in its sandboxes.
+
+For a TypeScript agent, you still install `lmnr` with `pip` next to `harbor`. Nothing gets installed inside the sandbox.
+
+## What you see in Laminar
+
+Each Harbor job becomes one evaluation, and each trial becomes one datapoint in it.
+
+| Harbor | Laminar |
+| --- | --- |
+| Job | Evaluation, named after the job. Job id, job name, and agents are stored in its metadata. |
+| Dataset, e.g. `terminal-bench@2.0` | Evaluation [group](/evaluations/comparing-runs#group-runs-to-compare-them), so runs on the same dataset are charted together. |
+| Trial | Datapoint. `data` holds the task name and instruction. |
+| Verifier rewards | Scores, one per reward key (for example `reward`). |
+| Agent's final message | Executor output. |
+| Agent, model, trial URI, exception type | Datapoint metadata. |
+
+Every trial is its own trace. The root `EVALUATION` span holds the trial's rewards and, if the trial failed, the exception. Under it are four spans for the trial's phases, with Harbor's own timings:
+
+- `environment_setup`
+- `agent_setup`
+- `agent`, an `EXECUTOR` span with the agent's total tokens and cost.
+- `verifier`, an `EVALUATOR` span whose output is the rewards.
+
+When the agent writes an ATIF trajectory (`agent/trajectory.json` in the trial directory), the plugin replays it under the `agent` span. Every model turn becomes an LLM span with the model, provider, messages, tokens, and cost. Every tool call becomes a TOOL span with its arguments and result. Subagent trajectories are nested under the tool call that started them. Open a datapoint and you read the agent's run as a [transcript](/platform/viewing-traces), not a list of span names.
+
+A few details on how results are counted:
+
+- **Retries** overwrite the same datapoint, so a trial Harbor retried shows the final attempt.
+- **Trials without rewards** (for example, the agent crashed before the verifier ran) score `0`. Harbor's mean counts them the same way, so the averages in Laminar match Harbor's.
+- **Cancelled trials** get no scores and are marked `cancelled` in metadata.
+- **Errors talking to Laminar** are logged and don't stop the Harbor run, unless you set `fail_fast`.
+
+## Options
+
+Pass options with `--pk key=value` on `harbor run`. Most options can also be set with an environment variable.
+
+| Option | Environment variable | Default |
+| --- | --- | --- |
+| `project_api_key` | `LMNR_PROJECT_API_KEY` | None. Required. |
+| `evaluation_name` | `HARBOR_LAMINAR_EVALUATION` | Harbor job name |
+| `group_name` | `HARBOR_LAMINAR_GROUP` | Dataset name, or `harbor` if the job has none |
+| `trajectory_spans` | | `true`. Set to `false` to skip replaying ATIF trajectories. |
+| `fail_fast` | `HARBOR_LAMINAR_FAIL_FAST` | `false`. Set to `true` to fail the Harbor job when Laminar returns an error. |
+| `base_url` | `LMNR_BASE_URL` | Laminar Cloud |
+| `http_port`, `grpc_port` | | SDK defaults |
+
+For example, to compare two agents in one group:
+
+```bash
+harbor run --dataset terminal-bench@2.0 --agent codex --model openai/gpt-5.6-sol \
+  --plugin laminar \
+  --pk evaluation_name=codex-gpt-5.6-sol \
+  --pk group_name=terminal-bench-agents
+```
+
+If you pass more than one `--plugin`, target the Laminar plugin with `--pk laminar.group_name=terminal-bench-agents`.
+
+### Self-hosted Laminar
+
+Point the plugin at your instance with `base_url`, `http_port`, and `grpc_port`, the same settings as [self-hosted evaluations](/evaluations/self-hosted):
+
+```bash
+harbor run --dataset terminal-bench@2.0 --agent claude-code \
+  --model anthropic/claude-sonnet-5 \
+  --plugin laminar \
+  --pk base_url=http://localhost \
+  --pk http_port=8000 \
+  --pk grpc_port=8001
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Read a failing trial" href="/platform/viewing-traces" icon="scroll-text">
+    Open a low-scoring datapoint and read the agent's run in the transcript view to see where it went wrong.
+  </Card>
+  <Card title="Compare runs" href="/evaluations/comparing-runs" icon="chart-line">
+    Runs in the same group share a progression chart, and you can diff two runs side by side.
+  </Card>
+  <Card title="Track failure patterns" href="/signals/introduction" icon="radar">
+    Define a Signal such as "the agent gave up before running the tests" and count it across every trial.
+  </Card>
+  <Card title="Query across trials" href="/platform/sql-editor" icon="database">
+    Ask which tasks fail for every agent from the SQL editor, the SQL API, or the MCP server.
+  </Card>
+</CardGroup>
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="Claude Code" href="/integrations/claude-code">
+    Trace Claude Code sessions with a one-command plugin.
+  </Card>
+  <Card title="Codex" href="/integrations/codex">
+    Trace Codex CLI sessions with a one-command plugin.
+  </Card>
+  <Card title="OpenCode" href="/integrations/opencode">
+    Trace OpenCode coding agent sessions.
+  </Card>
+  <Card title="Claude Agent SDK" href="/integrations/claude-agent-sdk">
+    Trace Claude Agent SDK runs and their subagents.
+  </Card>
+  <Card title="LangChain / LangGraph" href="/integrations/langchain">
+    Trace LangChain chains and LangGraph graphs.
+  </Card>
+  <Card title="All integrations" href="/integrations">
+    Browse every provider, framework, coding agent, and browser integration Laminar supports.
+  </Card>
+</CardGroup>
