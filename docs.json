@@ -83,6 +83,7 @@
               "evaluations/custom-rendering",
               "evaluations/datasets",
               "evaluations/manual-evaluation",
+              "evaluations/harbor",
               "evaluations/self-hosted"
             ]
           },
