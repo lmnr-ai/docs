@@ -22,15 +22,15 @@ What Laminar captures:
 <Steps>
 <Step title="Install">
 
-Ensure you have `lmnr` version `0.7.62` or higher and `google-adk` between `2.0.0` and `2.9.x`:
+Ensure you have `lmnr` version `0.7.67` or higher and `google-adk` version `2.0.0` or higher:
 
 ```bash
-pip install -U lmnr "google-adk>=2.0.0,<2.10"
+pip install -U lmnr google-adk
 ```
 
-<Warning>
-On `google-adk` 2.10 and later, `call_llm` spans are recorded without the prompt and the model's response: you still get the model, token counts, cost, and every tool call, but the transcript can't show what was sent to Gemini or what it answered. Stay on `google-adk` 2.9.x or earlier until a Laminar SDK release adds support for 2.10.
-</Warning>
+<Note>
+`lmnr` 0.7.62 through 0.7.66 record `call_llm` spans without the prompt and the model's response on `google-adk` 2.10 and later. Upgrade `lmnr`, or stay on `google-adk` 2.9.x with those versions.
+</Note>
 
 </Step>
 <Step title="Set environment variables">
@@ -151,10 +151,10 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
   <Accordion title="I don't see any traces in Laminar">
     - Confirm `LMNR_PROJECT_API_KEY` is set in the same process that runs the agent.
     - `google-adk` must be installed when `Laminar.initialize()` runs.
-    - The integration requires `lmnr >= 0.7.62` and `google-adk >= 2.0.0, < 3.0.0`. For full prompt and response capture, use `google-adk` 2.9.x or earlier.
+    - The integration requires `lmnr >= 0.7.62` and `google-adk >= 2.0.0, < 3.0.0`. `google-adk` 2.10 and later need `lmnr >= 0.7.67` for full prompt and response capture.
   </Accordion>
   <Accordion title="LLM spans have no messages, only model, tokens, and cost">
-    Check your `google-adk` version with `pip show google-adk`. On 2.10 and later, the prompt and response are not yet attached to `call_llm` spans. Install `"google-adk>=2.0.0,<2.10"`. If you're on an earlier version, check `ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS` (see below).
+    Check your versions with `pip show lmnr google-adk`. With `google-adk` 2.10 or later, `lmnr` before 0.7.67 doesn't attach the prompt and response to `call_llm` spans: upgrade with `pip install -U lmnr`. If your versions are fine, check `ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS` (see below).
   </Accordion>
   <Accordion title="Tool spans have no input or output">
     Check whether `ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS` is set to `false`. With content capture off, ADK records tool and model payloads as empty, and Laminar keeps them empty.
