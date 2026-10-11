@@ -68,6 +68,8 @@ New cluster alerts and similarity-based suppression require the clustering servi
 
 Every alert posts to the in-app notification center by default. Alerts auto-created with a Signal also email the Signal's creator. Slack and any additional email subscriptions are configured per alert.
 
+On Laminar Cloud, accepting a workspace invitation also subscribes your email to the alerts that already exist across that workspace. You can unsubscribe from any alert in its edit form.
+
 ### Slack
 
 Slack messages contain the signal name, the extracted payload fields, and a link to the trace. Connect Slack once per workspace, from either place:
@@ -79,7 +81,7 @@ Both cards manage the same connection, and it covers every project in the worksp
 
 ### Email
 
-Email alerts go to the subscribed user's address. Each user manages their own email subscription from the alert's edit form.
+Email alerts go to the subscribed user's address. Each user manages their own email subscription from the alert's edit form. Links in a new-event email open the Signal's Events view with the source trace and event selected.
 
 ## Create an alert
 
