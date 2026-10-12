@@ -100,17 +100,11 @@ export default otel({
 
 This policy is a capture ceiling: a destination cannot restore content excluded here. Leave `agent/instrumentation/laminar.ts` in place to export the remaining spans.
 
-## See what happened in a trace
-
-Open the trace in Laminar and you get the transcript view: the user message, each model turn, tool calls with their arguments, and tool results laid out as a conversation. The timeline on the right shows how the turn's spans overlap in time, so you see where the agent spent its time.
-
-eve's lifecycle spans show up in the trace tree but stay out of the transcript, so the conversation reads cleanly. More on the trace UX: [Viewing traces](/platform/viewing-traces).
-
 ## Run evals
 
-eve ships its own eval runner (`eve eval`). Laminar plugs into it as a reporter. Every run becomes a Laminar [evaluation](/evaluations/introduction): one evaluation per run and one datapoint per eval. With an eve-native trace context, each datapoint links to the agent trace that produced it. From there you [compare runs](/evaluations/comparing-runs) and chart scores across a group.
+eve ships its own eval runner (`eve eval`). Add Laminar as a reporter to see each run as an [evaluation](/evaluations/introduction), with one datapoint per eval. You can [compare runs](/evaluations/comparing-runs) and chart scores across a group.
 
-Use eve 0.76.3 or newer with `@lmnr-ai/lmnr` 0.8.51 or newer. The reporter reads the agent's trace context from eve's eval result; it does not inject a context into the agent request.
+Use eve 0.76.3 or newer with `@lmnr-ai/lmnr` 0.8.51 or newer.
 
 <Steps>
 <Step title="Register the Laminar reporter">
@@ -132,13 +126,6 @@ export default defineEvalConfig({
 ```
 
 `groupName` is what makes runs comparable: every run under the same group appears on one progression chart. On run start the reporter prints the URL of the evaluation to stdout.
-
-</Step>
-<Step title="Connect the datapoint to the agent's trace">
-
-No propagation flag or `WORKFLOW_TRACE_MODE` setting is needed for eval linking. eve supplies the session's native `traceContexts` to the reporter. The reporter selects a context and writes the eval grades into that trace, so the datapoint opens alongside the agent and LLM spans. If an eval uses multiple sessions, the datapoint metadata lists all their contexts under `traceContexts`.
-
-Keep `agent/instrumentation/laminar.ts` in the agent so its spans reach the **same Laminar project** as the reporter's grades. Merely exporting agent spans is not enough when the runner cannot associate them with a datapoint.
 
 </Step>
 <Step title="Run the evals">
