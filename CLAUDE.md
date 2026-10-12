@@ -107,6 +107,14 @@ This is a Mintlify site. Pages are `.mdx`, navigation lives in `docs.json`, reus
 - Both raw-SDK paths work on Next 16 and `guides/nextjs.mdx` documents them as alternatives, not as a replacement: `instrumentModules` (all setup in `instrumentation.ts`) or `Laminar.patch()` at the client construction site. Tell the reader to pick one.
 - Note the two different argument shapes in `instrumentModules`: `OpenAI` is the exported class (`const { OpenAI } = await import('openai')`), `anthropic` is the whole module namespace (`await import('@anthropic-ai/sdk')`). Key names come from `lmnr-ts/packages/lmnr/src/opentelemetry-lib/interfaces/initialize-options.interface.ts` (`OpenAI`, `anthropic`, `bedrock`, `cohere`, `langchain`, `chromadb`, `qdrant`, `pinecone`; lowercase `openAI` is deprecated).
 
+## Usage limits (`/platform/usage-limits.mdx`, LAM-2361)
+
+- Source of truth is `lmnr-private` (`frontend/components/workspace/usage/`, `app-server/src/utils/limits.rs`, `app-server/src/notifications/email.rs`; notes in `docs/internal/billing.md`). Cloud-only: don't document it for self-hosted.
+- Easy-to-get-wrong facts: thresholds and caps count total usage from zero (included GB and the credit don't offset them). The one-time $5 Signals credit exists on every plan, not just Free. Email subjects say **Signals cost** (not "Signals usage") and format amounts as `$50.00` / `8.00 GB`. Upgrading seeds a data warning at the included GB (3 Starter / 10 Pro). Starter also gets a $100 Signals warning, a 40 GB warning, and a $100 Signals hard limit; Pro gets no default limit.
+- Screenshots: the Warnings + Hard limits sections render only for an owner on a non-Free tier. Staging has no paid `subscription_tiers` row: insert a temporary "Pro" row, a workspace on it with an owner `members_of_workspaces` row, and a project, then delete them all (tier last). Build and start the lmnr-private frontend with `LAMINAR_CLOUD=true` (both steps) and `PORT=3000`.
+- Staging lagged migration 0113 (`users.preferences`) during LAM-2361, so sign-in failed until `preferences` was dropped locally from `lib/db/migrations/schema.ts` and the announcement dismissal helpers were stubbed. Revert both afterward and never commit them. `usage-breakdown` 500s on staging ClickHouse (`original_size_bytes` missing), which shows a red "Failed to load daily usage." line above the meter cards, so crop around it.
+- The "below the included amount" note under the data hard limit renders as soon as you type a value, before Save, so you can shoot it without persisting the limit. PIL is only on `/usr/local/bin/python3` for cropping.
+
 ## Screenshots
 
 - Capture from the production build of the frontend, not the dev server: dev overlays and the Next.js dev indicator look unprofessional in published shots.

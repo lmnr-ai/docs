@@ -110,6 +110,7 @@
               "platform/search",
               "platform/render-templates",
               "platform/custom-model-costs",
+              "platform/usage-limits",
               "platform/pii-redaction",
               "custom-dashboards/overview",
               "queues/quickstart",

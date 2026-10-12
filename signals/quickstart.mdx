@@ -168,6 +168,8 @@ Use **Backfill** to run a Signal across historical traces, for example to evalua
 4. Choose **specific traces** or **all traces matching your filters**.
 5. Click **Start backfill**. Laminar enqueues one Run per trace.
 
+Backfills count toward your workspace's Signals usage. If the workspace has reached its Signals hard limit, the backfill is rejected: see [Usage limits](/platform/usage-limits).
+
 Runs appear on the **Runs** tab with a status (Pending, Processing, Completed, Failed), a source that distinguishes backfilled Runs from the ones a live trigger produced, and the token cost of the evaluation. Each Run that detected the Signal links to the event it created.
 
 <Frame caption="The Runs tab: one row per evaluated trace with its source, status, cost, and the event it produced">
