@@ -10,7 +10,7 @@ import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
 
 Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. Trace, debug, and monitor every run of an [eve](https://eve.dev/docs/introduction) durable agent by adding Laminar as an OpenTelemetry destination. eve emits spans for agent turns, model calls, and tool calls; Laminar captures the full run without per-call wiring. Self-host via Helm or use managed cloud.
 
-What Laminar captures from an eve agent:
+What Laminar can capture from an eve agent, depending on eve's content settings:
 
 - User messages and system instructions sent to the model.
 - Model output and reasoning for each turn.
@@ -61,7 +61,7 @@ export default otelIntegration({
 });
 ```
 
-Do not call `Laminar.initialize()` in the agent: eve owns the tracer provider. A separate `otel.ts` file is only needed if you want process-wide settings such as sampling or a content-capture policy.
+Do not call `Laminar.initialize()` in the agent: eve owns the tracer provider.
 
 <Note>
 Set `LMNR_PROJECT_API_KEY` in the **agent server's** environment, not just the eval runner's. The agent exports its own spans; the reporter exports the eval grades separately.
@@ -81,24 +81,6 @@ Send the agent a message and the trace appears in Laminar.
 
 </Step>
 </Steps>
-
-## Keeping payloads off your spans
-
-eve's default OpenTelemetry policy records prompts and responses in development and public conversations. Private conversations in preview or production are metadata-only. To exclude content for **all** OpenTelemetry destinations, add a process-wide policy in `agent/instrumentation/otel.ts`. Token counts, latency, and cost remain available.
-
-```typescript agent/instrumentation/otel.ts {1,3-8}
-import { otel } from "eve/instrumentation/otel";
-
-export default otel({
-  tracePolicy: () => ({
-    emit: true,
-    recordInputs: false,
-    recordOutputs: false,
-  }),
-});
-```
-
-This policy is a capture ceiling: a destination cannot restore content excluded here. Leave `agent/instrumentation/laminar.ts` in place to export the remaining spans.
 
 ## Run evals
 
@@ -220,7 +202,7 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
     - Check that the agent and reporter use the same project key. On an existing Vercel deployment, check its tracing sampling settings too: an unsampled agent trace cannot be exported.
   </Accordion>
   <Accordion title="I see the model and tool calls but no message content">
-    Check `otel({ tracePolicy })` in `agent/instrumentation/otel.ts`. eve captures content by default in development and public conversations, but private conversations in preview or production are metadata-only. A policy that sets `recordInputs` or `recordOutputs` to `false` excludes that content for every OpenTelemetry destination.
+    eve controls whether prompts and responses are included in its spans. Laminar cannot display content eve did not record. Check your agent's content settings in [eve's OpenTelemetry guide](https://eve.dev/docs/observability/otel).
   </Accordion>
   <Accordion title="My eval datapoints link to a trace with no agent work in it">
     Check the datapoint's `metadata.traceResolution`: `eve-native` means the reporter used a context from eve, while `reporter-fallback` means it received no usable context and created a separate trace for the grades. An agent can still export LLM spans to Laminar when its eval datapoint uses the fallback trace.
