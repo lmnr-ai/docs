@@ -26,7 +26,7 @@ eve uses the AI SDK's OpenTelemetry support under the hood, so its spans follow 
 
 ## Getting Started
 
-eve discovers files under `agent/instrumentation/` automatically. Add a Laminar destination using eve's `otelIntegration()`; eve owns the tracer provider and the agent's trace context. This setup requires `@lmnr-ai/lmnr` 0.8.51 or newer and eve 0.76.3 or newer (Node.js 24). If upgrading an older agent, see [Migrate from legacy eve instrumentation](#migrate-from-legacy-eve-instrumentation).
+eve discovers files under `agent/instrumentation/` automatically. Add a Laminar destination using eve's `otelIntegration()`; eve owns the tracer provider and the agent's trace context. This setup requires `@lmnr-ai/lmnr` 0.8.51 or newer and eve 0.76.3 or newer (Node.js 24).
 
 <Steps>
 <Step title="Install">
@@ -34,8 +34,6 @@ eve discovers files under `agent/instrumentation/` automatically. Add a Laminar 
 ```bash
 npm install @lmnr-ai/lmnr@latest eve@latest
 ```
-
-The agent does not need `@vercel/otel` for this integration. eve registers its own OpenTelemetry pipeline.
 
 </Step>
 <Step title="Set environment variables">
@@ -165,19 +163,6 @@ Per-assertion detail goes to the datapoint metadata under `assertions`, with a s
 | `projectApiKey` | `LMNR_PROJECT_API_KEY` | Project API key. |
 | `baseUrl` | `https://api.lmnr.ai` | Laminar API base URL. Set this for self-hosted Laminar. |
 
-## Migrate from legacy eve instrumentation
-
-Older eve agents used a single `agent/instrumentation.ts` file with `defineInstrumentation({ setup: ...registerOTel(...) })`. The old Laminar reporter patched eve's `ClientSession.send` to inject a `traceparent` header; an agent configured with `traceChannelRequests: true` could attach its spans to the runner's trace. The 0.8.51 reporter no longer patches requests. **Upgrading only Laminar while keeping eve 0.29.x detaches the eval datapoint from the agent's trace**, even though the agent's LLM spans are still exported and the eval passes.
-
-To migrate:
-
-1. Upgrade eve to 0.76.3 or newer and Laminar to 0.8.51 or newer.
-2. Remove `agent/instrumentation.ts`. Create the `agent/instrumentation/laminar.ts` destination shown above. `@vercel/otel` and `registerOTel` are not needed for Laminar.
-3. Move custom sampling or input/output policy into `agent/instrumentation/otel.ts`. If other requests still need inbound channel spans, move `traceChannelRequests: true` there too; eval linking does not require it.
-4. Remove `propagateTraceContext` from the reporter config. It is deprecated and ignored in 0.8.51.
-
-Your agent's model can stay the same. Check eval assertions when upgrading eve: assert against the completed turn (`const turn = await t.send("..."); turn.messageIncludes("expected")`) rather than reading `t.reply`. See [eve's instrumentation migration guide](https://eve.dev/docs/observability/instrumentation-migration) for other custom instrumentation.
-
 ## Track outcomes with Signals
 
 Traces answer *what happened on this run*. **[Signals](/signals/introduction) answer the cross-trace question**: *how often does the agent call a tool that returns an empty result, when does a turn run more steps than expected, how often does the agent answer without calling the tool it should have*. A Signal pairs a plain-language prompt with a JSON output schema. Laminar runs it live on new traces (Triggers) or backfills it across history (Jobs) and records a structured event every time it matches. From there you [query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on events across every run.
@@ -204,11 +189,6 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
   <Accordion title="I see the model and tool calls but no message content">
     eve controls whether prompts and responses are included in its spans. Laminar cannot display content eve did not record. Check your agent's content settings in [eve's OpenTelemetry guide](https://eve.dev/docs/observability/otel).
   </Accordion>
-  <Accordion title="My eval datapoints link to a trace with no agent work in it">
-    Check the datapoint's `metadata.traceResolution`: `eve-native` means the reporter used a context from eve, while `reporter-fallback` means it received no usable context and created a separate trace for the grades. An agent can still export LLM spans to Laminar when its eval datapoint uses the fallback trace.
-
-    If you upgraded `@lmnr-ai/lmnr` to 0.8.51 but kept eve 0.29.x, [migrate to eve's native instrumentation](#migrate-from-legacy-eve-instrumentation). Check that `agent/instrumentation/laminar.ts` exports the agent spans to the same project as the reporter. `traceChannelRequests`, `WORKFLOW_TRACE_MODE`, and the ignored `propagateTraceContext` option do not restore the old reporter patch.
-  </Accordion>
   <Accordion title="I see the eval scores but no judge model call">
     Add `registerTelemetry(new LaminarAiSdkTelemetry())` to `evals/evals.config.ts`. Judge assertions run in the eval runner, which the agent's instrumentation never sees.
   </Accordion>
@@ -216,7 +196,7 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
     Reload the evaluation page. Rows written by the eve reporter do not stream their result into an open page yet. The stored data is complete, so a reload shows every score.
   </Accordion>
   <Accordion title="I see two tracer providers or duplicated spans">
-    Remove `Laminar.initialize()` and any `registerOTel()` setup from the agent. eve owns its tracer provider and attaches `agent/instrumentation/laminar.ts` to it; adding another provider can duplicate or detach spans.
+    Remove `Laminar.initialize()` or other extra tracer-provider setup from the agent. eve owns its tracer provider and attaches `agent/instrumentation/laminar.ts` to it; adding another provider can duplicate or detach spans.
 
     This does not apply to `evals/evals.config.ts`. That file runs in the eval runner, where the reporter and the AI SDK telemetry integration share one provider.
   </Accordion>
