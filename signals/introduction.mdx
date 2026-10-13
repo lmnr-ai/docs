@@ -16,7 +16,7 @@ Signals are powered by our trace analysis agent. The **Signals agent** takes thr
 - **JSON schema**: what to record when it finds a match.
 
 <Frame caption="A coding agent's report contradicts its own test output, and the Signals agent records it as a structured event.">
-  <img src="/images/signals/signal-intro.svg" alt="A trace and a Signal's prompt and schema go into the Signals agent, which outputs a signal event. In the trace, a coding agent runs tests: one test fails on a missing function, the end-to-end test fails on a different error, and the unit tests pass. Its final report blames both failures on the same missing function. The prompt asks whether the agent's final report states a conclusion that its own tool outputs contradict, with a schema of claim, evidence and claim_type. The Signals agent outputs an event: claim_type root_cause, evidence 'e2e test: different error', severity critical." />
+  <img src="/images/signals/signal-intro.gif" alt="A trace and a Signal's prompt and schema go into the Signals agent, which outputs a signal event. In the trace, a coding agent runs tests: one test fails on a missing function, the end-to-end test fails on a different error, and the unit tests pass. Its final report blames both failures on the same missing function. The prompt asks whether the agent's final report states a conclusion that its own tool outputs contradict, with a schema of claim, evidence and claim_type. The Signals agent outputs an event: claim_type root_cause, evidence 'e2e test: different error', severity critical." />
 </Frame>
 
 A prompt and a schema together define a **Signal**. The Signals agent reads the relevant steps in each trace and returns a **signal event** with your schema fields and links to its evidence. If it finds no match, it returns no event.
@@ -71,11 +71,11 @@ We trained **flow-1** with reinforcement learning specifically for agent trace a
 - **Cost**: It would cost just **$3.5 on average to process 1k traces of 100k tokens each**. Learn more about Signals pricing [here](https://laminar.sh/pricing), and cap your spend with [usage warnings and hard limits](/platform/usage-limits).
 
 <Frame caption="Description F1 against traces analyzed per $1. flow-1 lands at GPT-6-sol quality with 23x more traces per $1.">
-  <video src="/images/signals/flow-1-quality-vs-cost.mp4" autoPlay loop muted playsInline className="block w-full" aria-label="Description F1 against traces analyzed per $1. Zoomed in to 0 to 50 traces per dollar, Claude Opus 5, Claude Sonnet 5 and GPT-6-sol spread out. Zoomed out to 1,000, they bunch up at the left edge, and GPT-6-luna (668) and flow-1 (888) appear on the right at the same quality as GPT-6-sol." />
+  <img src="/images/signals/flow-1-quality-vs-cost.gif" alt="Description F1 against traces analyzed per $1. Zoomed in to 0 to 50 traces per dollar, Claude Opus 5, Claude Sonnet 5 and GPT-6-sol spread out. Zoomed out to 1,000, they bunch up at the left edge, and GPT-6-luna (668) and flow-1 (888) appear on the right at the same quality as GPT-6-sol." />
 </Frame>
 
 <Frame caption="One dot per trace analyzed for $1.">
-  <video src="/images/signals/flow-1-traces-per-dollar.mp4" autoPlay loop muted playsInline className="block w-full" aria-label="One dot per trace analyzed for $1: GPT-6-sol analyzes 38 traces, flow-1 analyzes 888, about 23 times as many." />
+  <img src="/images/signals/flow-1-traces-per-dollar.gif" alt="One dot per trace analyzed for $1: GPT-6-sol analyzes 38 traces, flow-1 analyzes 888, about 23 times as many." />
 </Frame>
 
 That makes it practical to analyze every production trace with the quality needed to catch subtle failures.
