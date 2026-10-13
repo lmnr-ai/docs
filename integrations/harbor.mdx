@@ -84,8 +84,8 @@ Every trial is its own trace. The root `EVALUATION` span holds the trial's rewar
 
 When the agent writes an ATIF trajectory (`agent/trajectory.json` in the trial directory), the plugin replays it under the `agent` span. Every model turn becomes an LLM span with the model, provider, messages, tokens, and cost. Every tool call becomes a TOOL span with its arguments and result. Subagent trajectories are nested under the tool call that started them. Open a datapoint and you read the agent's run as a [transcript](/platform/viewing-traces), not a list of span names.
 
-<Frame caption="A Harbor job on aider/aider-polyglot as a Laminar evaluation: one datapoint per trial with its reward, and a failed trial's trace with the agent's model turns, its commands, and the verifier output showing why the tests failed.">
-<img src="/images/integrations/harbor-evaluation.png" alt="Harbor job as a Laminar evaluation, with a failed trial's trace and verifier output open" />
+<Frame caption="A failed Harbor trial in Laminar: the agent's model calls and commands, and the verifier output explaining the failure.">
+<img src="/images/integrations/harbor-evaluation.png" alt="Harbor evaluation in Laminar with a failed trial's trace and verifier output open" />
 </Frame>
 
 A few details on how results are counted:
