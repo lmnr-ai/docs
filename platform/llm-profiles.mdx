@@ -98,6 +98,41 @@ Deleting a profile, or removing a model, is **refused while a Signal uses it**. 
 
 Other AI features on a self-hosted deployment (chat with trace, SQL with AI) still use the server's `LLM_PROVIDER` and `LLM_API_KEY`. Profiles do not replace those. See [Self-hosting configuration](/self-hosting/configuration#ai-features-and-llm-provider).
 
+### Run self-hosted Signals on the Laminar Cloud model
+
+A self-hosted deployment can send its Signal LLM calls to Laminar Cloud and run them on the same model that Cloud Signals use. Your traces, runs, and events stay on your deployment. Cloud receives only the model requests a Signal run makes, which include the parts of a trace the Signal reads, the same as with any other hosted provider. This requires a Laminar Cloud workspace on the **Pro** plan.
+
+<Steps>
+  <Step title="Create a project API key on Laminar Cloud">
+    In a project that belongs to your Pro workspace, open **Settings > API keys** and create a project API key. Use a regular key: an ingest-only key cannot call the endpoint.
+  </Step>
+  <Step title="Add a profile on your self-hosted deployment">
+    Create a profile with these values:
+
+    | Field | Value |
+    |---|---|
+    | Provider | **Custom (OpenAI-compatible)** |
+    | API shape | **Chat Completions** |
+    | Base URL | `https://api.lmnr.ai/v1` |
+    | API key | The project API key from the previous step |
+    | Models | Any name, for example `laminar-signals` |
+
+    Laminar Cloud picks the model, so the model name you list is only a label for the Signal picker. **Test connection** is expected to fail with `unsupported_request`, because its probe is not a Signal request. Save the profile anyway.
+  </Step>
+  <Step title="Point your Signals at the profile">
+    Select the profile and its model in each Signal's **LLM** section. Runs, events, and clusters stay on your deployment as before.
+  </Step>
+</Steps>
+
+The endpoint only serves requests that Laminar Signals send. Streaming is not supported. Laminar Cloud does not store the prompts or completions it serves this way; it records token counts per request. Errors a Signal run can report from this profile:
+
+| Status | Code | What to do |
+|---|---|---|
+| `401` | - | The API key is wrong or revoked. Create a new one on Laminar Cloud and update the profile. |
+| `403` | `plan_not_eligible` | The key's project is not in a Pro workspace. Upgrade the workspace or use a key from a Pro workspace. |
+| `400` | `unsupported_request` | The request did not come from a Signal run, or your self-hosted Laminar version sends Signal requests the endpoint does not recognize. Update your deployment to the latest release. |
+| `503` | `service_unavailable` | The endpoint is temporarily unavailable. Runs fail and can be retried later. |
+
 ## Manage profiles from the CLI
 
 `lmnr-cli llm-profile` is full CRUD over the same profiles the settings page edits, so you can script provisioning or hand the surface to a coding agent. It works on Laminar Cloud and on self-hosted deployments; only [pinning a Signal to a profile](#route-signals-through-a-profile) is self-hosted only.
