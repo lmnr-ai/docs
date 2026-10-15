@@ -117,7 +117,7 @@ A self-hosted deployment can send its Signal LLM calls to Laminar Cloud and run 
     | API key | The project API key from the previous step |
     | Models | Any name, for example `laminar-signals` |
 
-    Laminar Cloud picks the model, so the model name you list is only a label for the Signal picker. **Test connection** is expected to fail with `unsupported_request`, because its probe is not a Signal request. Save the profile anyway.
+    Laminar Cloud picks the model, so the model name you list is only a label for the Signal picker. **Test connection** checks the API key, the Pro plan, and the workspace's Signals hard limit without running a model call. If it fails, the message matches one of the errors in the table below.
   </Step>
   <Step title="Point your Signals at the profile">
     Select the profile and its model in each Signal's **LLM** section. Runs, events, and clusters stay on your deployment as before.
