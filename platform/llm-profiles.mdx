@@ -124,12 +124,13 @@ A self-hosted deployment can send its Signal LLM calls to Laminar Cloud and run 
   </Step>
 </Steps>
 
-The endpoint only serves requests that Laminar Signals send. Streaming is not supported. Laminar Cloud does not store the prompts or completions it serves this way; it records token counts per request. Errors a Signal run can report from this profile:
+The endpoint only serves requests that Laminar Signals send. Streaming is not supported. Laminar Cloud does not store the prompts or completions it serves this way; it records token counts per request. Those tokens are billed as Signals usage of the Cloud workspace, the same as Signals that run on Cloud: they draw down the workspace's Signals credit first and count toward its [usage warnings and hard limits](/platform/usage-limits). Errors a Signal run can report from this profile:
 
 | Status | Code | What to do |
 |---|---|---|
 | `401` | - | The API key is wrong or revoked. Create a new one on Laminar Cloud and update the profile. |
 | `403` | `plan_not_eligible` | The key's project is not in a Pro workspace. Upgrade the workspace or use a key from a Pro workspace. |
+| `403` | `signal_limit_exceeded` | The Cloud workspace has reached its Signals hard limit. Raise or remove the limit in **Settings > Usage** on Laminar Cloud, or wait for the next billing cycle. |
 | `400` | `unsupported_request` | The request did not come from a Signal run, or your self-hosted Laminar version sends Signal requests the endpoint does not recognize. Update your deployment to the latest release. |
 | `503` | `service_unavailable` | The endpoint is temporarily unavailable. Runs fail and can be retried later. |
 
