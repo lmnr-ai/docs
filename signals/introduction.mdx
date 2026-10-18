@@ -25,6 +25,10 @@ A prompt and a schema together define a **Signal**. The Signals agent reads the 
   <img src="/images/signals/signal-lifecycle.svg" alt="The lifecycle of a Signal run. A trace finishes and is checked against the Signal's trigger, sample rate and filters; a trace that fails them is skipped and no run is recorded. A trace that passes goes to the Signals agent; if it finds no match, the run completes with no event. If it finds a match, it returns a signal event with its trace_id, claim_type root_cause and severity critical. The event joins a cluster, is stored in the signal_events table for SQL, and is checked against alert rules, which notify Slack or email on live runs." />
 </Frame>
 
+<Note>
+After the trigger and filters pass, a trace with no usable content can finish as a **Completed** Run without calling the Signals agent or creating an event. This is different from a filter skip, which records no Run, and from a no-match result after the agent runs. See [Traces without content to analyze](/signals/quickstart#traces-without-content-to-analyze).
+</Note>
+
 To set when Signals agent starts processing your trace you can configure **triggers and trace filters**, or use a **backfill** to analyze historical traces.
 
 Once a signal event is created, its structured fields are available to **[query in SQL](/platform/sql-editor)**. You can filter events, count how often a behavior occurs, and compare outcomes across traces.
