@@ -98,6 +98,8 @@ appServerConsumer:
 
 [Signals](/signals/introduction) extract structured events from your traces. On a self-hosted deployment, each Signal runs on an [LLM profile](/platform/llm-profiles) that a workspace member creates in the app: the provider, its credentials, and the models the Signal may use live in the profile, not in `laminar.yaml`. Signals are **enabled by default** in the frontend, and no `LLM_API_KEY` is required to turn them on.
 
+You can supply your own provider credentials or [run self-hosted Signals on the Laminar Cloud model](/platform/llm-profiles#run-self-hosted-signals-on-the-laminar-cloud-model) from a Pro Cloud workspace.
+
 Signals created before profiles existed keep running on the `LLM_PROVIDER` configuration above until you point them at a profile. Signals that use a profile ignore `LLM_PROVIDER`, `LLM_BASE_URL`, and the `LLM_MODEL_*` overrides entirely.
 
 To disable Signals:
