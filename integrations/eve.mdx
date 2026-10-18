@@ -168,7 +168,7 @@ Per-assertion detail goes to the datapoint metadata under `assertions`, with a s
 Traces answer *what happened on this run*. **[Signals](/signals/introduction) answer the cross-trace question**: *how often does the agent call a tool that returns an empty result, when does a turn run more steps than expected, how often does the agent answer without calling the tool it should have*. A Signal pairs a plain-language prompt with a JSON output schema. Laminar runs it live on new traces (Triggers) or backfills it across history (Jobs) and records a structured event every time it matches. From there you [query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on events across every run.
 
 <Note>
-Every new project ships with a **Failure Detector** Signal that categorizes issues on any trace over 1000 tokens. Open it from the Signals sidebar to see events as soon as your eve traces arrive.
+New self-hosted projects and Cloud projects on an active trial or paid plan ship with a **Failure Detector** Signal that categorizes issues on any trace over 1000 tokens. Open it from the Signals sidebar to see events as soon as your eve traces arrive.
 </Note>
 
 ## Query across traces

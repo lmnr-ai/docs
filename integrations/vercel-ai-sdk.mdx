@@ -559,7 +559,7 @@ Tool calls appear as nested spans with their arguments and return values capture
 Traces answer *what happened on this run*. **[Signals](/signals/introduction) answer the cross-trace question**: *how often does the agent recommend a product that wasn't in stock, when does a tool call return an empty result, which generateText calls fan out into more steps than expected*. A Signal pairs a plain-language prompt with a JSON output schema. Laminar runs it live on new traces (Triggers) or backfills it across history (Jobs) and records a structured event every time it matches. From there you [query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on events across every trace.
 
 <Note>
-Every new project ships with a **Failure Detector** Signal that categorizes issues on any trace over 1000 tokens. Open it from the Signals sidebar to see events as soon as your AI SDK traces arrive.
+New self-hosted projects and Cloud projects on an active trial or paid plan ship with a **Failure Detector** Signal that categorizes issues on any trace over 1000 tokens. Open it from the Signals sidebar to see events as soon as your AI SDK traces arrive.
 </Note>
 
 ## Query across traces

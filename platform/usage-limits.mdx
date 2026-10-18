@@ -18,14 +18,14 @@ Eligible workspace owners can start a 14-day Starter trial during onboarding or 
 - Data ingestion stops at the Starter plan's included 3 GB.
 - Signals stop when the workspace's one-time \$5 Signals credit is used up.
 
-These trial caps apply even if you configure a higher hard limit. Add a payment method before the end date to continue on Starter automatically, or select **Start now** to begin the paid plan immediately. Without a payment method, the workspace moves to Free when the trial ends. You can also select **Cancel subscription** to keep the trial until its end date and then move to Free without a charge.
+These trial caps apply even if you configure a higher hard limit. Add a payment method before the end date to continue on Starter automatically, or select **Start now** to begin the paid plan immediately. Without a payment method, the workspace moves to Free when the trial ends. You can also select **Cancel subscription** to keep the trial until its end date and then move to Free without a charge. After a trial or subscription ends, only the workspace owner can access the Free workspace.
 
 ## What counts toward usage
 
 | Meter | Unit | Counts | Included |
 |---|---|---|---|
 | **Data ingestion** | GB | Trace data ingested by every project in the workspace this billing cycle. | 1 GB on Free, 3 GB on Starter, 10 GB on Pro. Paid plans bill usage above that at the overage rate on the [pricing page](https://laminar.sh/pricing). |
-| **Signals usage** | USD | The token cost of every Signal run this billing cycle: live triggers and backfills. | Every new workspace gets a one-time \$5 Signals credit, on any plan. Paid plans bill usage beyond the credit per token. |
+| **Signals usage** | USD | The token cost of every Signal run this billing cycle: live triggers and backfills. | Active trials and paid plans can use the workspace's one-time \$5 Signals credit. Paid plans bill usage beyond the credit per token. Signals are not available on Free. |
 
 The estimated bill on the Usage page shows how much of the included data and of the one-time credit is left.
 
@@ -115,9 +115,9 @@ Usage resumes on its own when the next billing cycle starts. To resume sooner, r
 The Free plan is never billed, so it has fixed hard limits in place of configurable ones:
 
 - **Data ingestion** stops when the workspace reaches the included 1 GB for the billing cycle, with the same `403` and `RESOURCE_EXHAUSTED` errors as a paid-plan limit.
-- **Signals** stop when the one-time \$5 credit is used up. The credit doesn't renew each cycle. Backfills fail with `One-time Signals credit exhausted. This workspace has used its $5.00 sign-up credit. Please upgrade your plan.`, and owners get a single email saying the credit is used up.
+- **Signals, clustering, and Slack alert delivery** are not available. Existing Signals, runs, events, and clusters remain visible, but Signals do not evaluate new traces and backfills cannot start.
 
-To keep ingesting or running Signals, upgrade the workspace on the [pricing page](https://laminar.sh/pricing). Paid plans let you set your own warnings and limits.
+To keep ingesting after 1 GB or resume Signals, upgrade the workspace on the [pricing page](https://laminar.sh/pricing). Paid plans let you set your own warnings and limits.
 
 ## What's next
 

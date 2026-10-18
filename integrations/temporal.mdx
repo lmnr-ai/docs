@@ -514,7 +514,7 @@ await bundleWorkflowCode({
 Traces answer *what happened on this run*. **[Signals](/signals/introduction) answer the cross-trace question**: *how often does an activity retry before succeeding, which workflows exceed their timeout, when does the model return an empty summary*. A Signal pairs a plain-language prompt with a JSON output schema. Laminar runs it live on new traces (Triggers) or backfills it across history (Jobs) and records a structured event every time it matches. From there you [query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on events across every trace.
 
 <Note>
-Every new project ships with a **Failure Detector** Signal that categorizes issues on any trace over 1000 tokens. Open it from the Signals sidebar to see events as soon as your workflow traces arrive.
+New self-hosted projects and Cloud projects on an active trial or paid plan ship with a **Failure Detector** Signal that categorizes issues on any trace over 1000 tokens. Open it from the Signals sidebar to see events as soon as your workflow traces arrive.
 </Note>
 
 ## Query across traces
