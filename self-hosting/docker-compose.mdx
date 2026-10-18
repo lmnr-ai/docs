@@ -19,6 +19,22 @@ The dashboard is available at `http://localhost:5667/`. Create a project through
 `docker compose up -d` brings up the lightweight stack. For a heavier single-node setup closer to production, the repo also ships `docker-compose-full.yml` (`docker compose -f docker-compose-full.yml up -d`), which adds RabbitMQ for queued span processing.
 </Note>
 
+## Anonymous usage telemetry
+
+Self-hosted Laminar sends an anonymous usage heartbeat by default. To opt out, add this to the repository-root `.env` file:
+
+```bash
+LAMINAR_TELEMETRY_DISABLED=true
+```
+
+Then recreate the frontend container so it receives the setting:
+
+```bash
+docker compose up -d --force-recreate frontend
+```
+
+See [Anonymous usage telemetry](/self-hosting/configuration#anonymous-usage-telemetry) for what the heartbeat contains and the Helm and manual-frontend configuration.
+
 ## Point the SDK to your instance
 
 Initialize the SDK with the local app server's host and ports. `baseUrl` / `base_url` is the scheme and host only; the ports go in `httpPort` / `grpcPort`.

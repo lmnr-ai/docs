@@ -250,6 +250,23 @@ Chart `0.2.0` and newer require an app-server tag of `0.1.628` or newer and will
 
 Available tags are listed under the [Packages tab on GitHub](https://github.com/orgs/lmnr-ai/packages). To mirror images into a private registry, retag and push each image, point `images.repository` at the mirror, and attach `imagePullSecrets` to the default ServiceAccount (the chart does not template this; see the [chart reference](https://github.com/lmnr-ai/lmnr-helm/blob/main/CONFIGURATION.md#container-images)).
 
+## Anonymous usage telemetry
+
+Self-hosted deployments send an anonymous usage heartbeat at most once every six hours. It contains an opaque deployment ID, the Laminar version and deployment environment, and aggregate row counts for platform tables. It does not include user identities, customer content, trace contents, or source IP addresses.
+
+To disable the heartbeat on Helm, add the environment variable to the frontend pod:
+
+```yaml
+frontend:
+  extraEnv:
+    - name: LAMINAR_TELEMETRY_DISABLED
+      value: "true"
+```
+
+Apply the change with the same `helm upgrade` command you use for other configuration updates.
+
+For Docker Compose, set `LAMINAR_TELEMETRY_DISABLED=true` in the repository-root `.env` file and recreate the frontend container. For a manually run frontend, set it in `frontend/.env.local` and restart the process.
+
 ## Storage
 
 ClickHouse and Quickwit hold the bulk of Laminar's data, and both can be backed by S3.
