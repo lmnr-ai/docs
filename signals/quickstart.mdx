@@ -179,6 +179,12 @@ Runs appear on the **Runs** tab with a status (Pending, Processing, Completed, F
   />
 </Frame>
 
+### Traces without content to analyze
+
+Signals skips the model call when a trace does not contain usable content to analyze. The Run finishes as **Completed** without creating an event. A trace is skipped only when it has no failed span, no tool or other non-LLM span with input or output, and no usable LLM input and output content. Traces with an error are still analyzed even when the failed LLM call has no output.
+
+The first time this happens for a Signal, Laminar emails the workspace owners with links to the trace and the Signal. This warning is sent once per Signal.
+
 ### Pause and resume a Signal
 
 A Signal you're not ready to delete can be paused. Open the Signal's **Settings > General** section and flip the **Active** switch off.
