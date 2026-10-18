@@ -64,6 +64,12 @@ Turn this on when a Signal fires often on repetitive cases (the same timeout loo
 New cluster alerts and similarity-based suppression require the clustering service. On a deployment without clustering, New cluster alerts remain silent and **Skip notifications for similar events** behaves like a regular New event alert.
 </Note>
 
+## Notification rate limit
+
+Each **New event** alert sends at most one notification every 30 seconds. The cooldown is scoped to the alert and applies across the in-app notification center, email, and Slack. Matching events received during the cooldown remain available on the Signal's **Events** tab and in SQL, but they do not create notifications.
+
+Each alert has its own cooldown, so separate alerts can notify independently. **New cluster** alerts are not subject to this rate limit.
+
 ## Notification channels
 
 Every alert posts to the in-app notification center by default. Alerts auto-created with a Signal also email the Signal's creator. Slack and any additional email subscriptions are configured per alert.
