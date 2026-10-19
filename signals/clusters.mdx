@@ -52,6 +52,8 @@ Clustering runs asynchronously, after events are created:
 
 An event shows up in the events table immediately but can take a minute or two to land in a cluster, so during a live incident expect cluster counts to trail the event count slightly.
 
+A new Signal also needs events to accumulate before named clusters appear. Until related events pile up, they sit in **Unclustered**. As a rough guide, expect the first clusters at around 50 events, but this varies heavily between projects: it depends on how similar your events are to each other.
+
 Clusters are a view over the underlying events, not a copy. Deleting a Signal or purging events removes cluster membership automatically.
 
 ## When clusters earn their keep

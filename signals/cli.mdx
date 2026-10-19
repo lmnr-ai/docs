@@ -91,7 +91,7 @@ Fabricated tool data (0e5b6466-eeab-47f9-a5d4-6b2ff6c7a365)
   model:        env default
 ```
 
-`--filter` takes JSON `{"column":"...","operator":"...","value":"..."}` and is repeatable. Columns: `total_token_count`, `status`, `span_names`. Pass it on create to replace the default.
+`--filter` takes JSON `{"column":"...","operator":"...","value":"..."}` and is repeatable. Columns: `total_token_count`, `status`, `span_names`, `tags`. Pass it on create to replace the default.
 
 <Note>
 `--span-name` is the trigger flag. `span_names` is a filter column: it matches a name anywhere in the trace.

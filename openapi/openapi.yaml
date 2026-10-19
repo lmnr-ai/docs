@@ -80,7 +80,10 @@ paths:
     post:
       tags: [Ingestion]
       summary: Ingest OpenTelemetry logs
-      description: Accepts an OTLP ExportLogsServiceRequest encoded as protobuf.
+      description: >-
+        Accepts an OTLP ExportLogsServiceRequest encoded as protobuf. JSON-encoded OTLP is not accepted.
+        This endpoint is in beta: ingested logs are stored in the `logs` table and can only be queried with SQL.
+        They are not shown anywhere in the Laminar UI, and Signals do not read them when analyzing traces.
       operationId: ingestLogs
       security: [{ projectApiKey: [] }, { ingestApiKey: [] }]
       requestBody:

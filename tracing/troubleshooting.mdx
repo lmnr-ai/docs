@@ -108,6 +108,41 @@ await Laminar.flush(); // NOTE: don't forget to await
 
 Use `Laminar.flush()` (and `shutdown()` when needed) to ensure spans are sent before process exit; see the SDK reference for details.
 
+## My AI SDK v7 calls are not traced.
+
+### Problem
+
+I'm on Vercel AI SDK v7 and set up Laminar, but no AI SDK spans show up in the Laminar UI.
+
+### Cause
+
+AI SDK v7 changed its telemetry API. The v5 and v6 setup, `Laminar.initialize()` plus `experimental_telemetry: { isEnabled: true, tracer: getTracer() }` on every call, is not the v7 setup. On v7, Laminar is registered once with the AI SDK's `registerTelemetry`, and calls are traced without any per-call options.
+
+Check your version with `npm ls ai`. If your code imports `registerTelemetry` from `ai` or passes a `telemetry` block to calls, you are on v7.
+
+### Solution
+
+Register Laminar once at your application's entry point, before the first AI SDK call. In Next.js, put this in `instrumentation.ts`.
+
+```typescript
+import { registerTelemetry } from 'ai';
+import { LaminarAiSdkTelemetry } from '@lmnr-ai/lmnr';
+
+registerTelemetry(new LaminarAiSdkTelemetry());
+```
+
+`registerTelemetry` comes from `ai`, not from `@lmnr-ai/lmnr`. If you'd rather import from a single package, `registerAiSdkTelemetry()` from `@lmnr-ai/lmnr` does the same thing.
+
+Then check the following:
+
+- Remove `experimental_telemetry` and `getTracer()` from your call sites. They are the v5/v6 pattern.
+- Make sure no call passes `telemetry: { isEnabled: false }`, which turns tracing off for that call.
+- Don't call `Laminar.initialize()` separately. `LaminarAiSdkTelemetry` initializes Laminar itself. Pass init options through `laminarOptions`.
+- In short-lived scripts and serverless functions, call `await Laminar.shutdown()` before the process exits.
+- To see what the SDK is doing, set `laminarOptions: { logLevel: 'debug' }`. There is no `debug: true` option.
+
+See [Migrating from v5 or v6 to v7](/integrations/vercel-ai-sdk#migrating-from-v5-or-v6-to-v7) for the full walkthrough.
+
 ## My Python auto-instrumentation is not working.
 
 ### Problem
@@ -144,7 +179,7 @@ Laminar calculates the prices based on the model name and the provider name stor
 ### Solution
 
 Make sure the model you are using is supported by Laminar.
-If the model/provider pair is not supported by Laminar, reach out to us and we'll add it.
+If the model/provider pair is not in Laminar's price table, add your own per-token prices for it in [Custom model costs](/platform/custom-model-costs). Custom prices match on the span's model and provider names, so copy them exactly as they appear on the span.
 
 ## I can see traces and spans in the UI, but they are not showing inputs and/or outputs.
 

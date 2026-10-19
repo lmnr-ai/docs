@@ -87,6 +87,15 @@ For example, you could ask a Signal to:
 - **Extract information**: *Which integrations did the user ask for?* Collect the integration names and the requests they made.
 - **Compare evidence**: *Do the amounts in the contract agree with the accompanying memo?* Record any mismatches and where they appear.
 
+## How Signals are billed
+
+On Laminar Cloud, Signals run on Laminar's own model, so you don't bring a model API key. They are not free: every Signal run is billed by the tokens the Signals agent uses to read the trace and write its result (input, cached input, and output tokens).
+
+- **What counts**: every run, from live triggers and from [backfills](/signals/quickstart). A trace that doesn't pass the Signal's trigger, filters, or sample rate is skipped and costs nothing.
+- **Credit**: every new workspace gets a one-time \$5 Signals credit. On the Free plan, Signals stop when the credit is used up. Paid plans bill usage beyond the credit per token.
+- **Rates**: per-token prices for each plan are on the [pricing page](https://laminar.sh/pricing).
+- **Control spend**: filters and the sample rate decide how many traces each Signal analyzes. Track spend in **Settings > Usage** and cap it with [usage warnings and hard limits](/platform/usage-limits).
+
 ## Get started
 
 If you're new to Laminar, start by [sending your agent's traces](/getting-started). Every new project includes a **Failure Detector** Signal. Open **Signals** in your project to inspect its findings.
