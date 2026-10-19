@@ -16,13 +16,19 @@ Signals are powered by our trace analysis agent. The **Signals agent** takes thr
 - **JSON schema**: what to record when it finds a match.
 
 <Frame caption="A coding agent's report contradicts its own test output, and the Signals agent records it as a structured event.">
-  <img src="/images/signals/signal-intro.svg" alt="A trace and a Signal's prompt and schema go into the Signals agent, which outputs a signal event. In the trace, a coding agent runs tests: one test fails on a missing function, the end-to-end test fails on a different error, and the unit tests pass. Its final report blames both failures on the same missing function. The prompt asks whether the agent's final report states a conclusion that its own tool outputs contradict, with a schema of claim, evidence and claim_type. The Signals agent outputs an event: claim_type root_cause, evidence 'e2e test: different error', severity critical." />
+  <img
+    src="/images/signals/signal-intro.svg"
+    alt="A trace and a Signal's prompt and schema go into the Signals agent, which outputs a signal event. In the trace, a coding agent runs tests: one test fails on a missing function, the end-to-end test fails on a different error, and the unit tests pass. Its final report blames both failures on the same missing function. The prompt asks whether the agent's final report states a conclusion that its own tool outputs contradict, with a schema of claim, evidence and claim_type. The Signals agent outputs an event: claim_type root_cause, evidence 'e2e test: different error', severity critical."
+  />
 </Frame>
 
 A prompt and a schema together define a **Signal**. The Signals agent reads the relevant steps in each trace and returns a **signal event** with your schema fields and links to its evidence. If it finds no match, it returns no event.
 
 <Frame caption="Each finished trace is checked against the Signal's trigger and filters, then read by the Signals agent. A matching trace produces an event that is grouped into a cluster, stored for SQL, and checked against your alerts.">
-  <img src="/images/signals/signal-lifecycle.svg" alt="The lifecycle of a Signal run. A trace finishes and is checked against the Signal's trigger, sample rate and filters; a trace that fails them is skipped and no run is recorded. A trace that passes goes to the Signals agent; if it finds no match, the run completes with no event. If it finds a match, it returns a signal event with its trace_id, claim_type root_cause and severity critical. The event joins a cluster, is stored in the signal_events table for SQL, and is checked against alert rules, which notify Slack or email on live runs." />
+  <img
+    src="/images/signals/signal-lifecycle.svg"
+    alt="The lifecycle of a Signal run. A trace finishes and is checked against the Signal's trigger, sample rate and filters; a trace that fails them is skipped and no run is recorded. A trace that passes goes to the Signals agent; if it finds no match, the run completes with no event. If it finds a match, it returns a signal event with its trace_id, claim_type root_cause and severity critical. The event joins a cluster, is stored in the signal_events table for SQL, and is checked against alert rules, which notify Slack or email on live runs."
+  />
 </Frame>
 
 To set when Signals agent starts processing your trace you can configure **triggers and trace filters**, or use a **backfill** to analyze historical traces.
@@ -71,7 +77,10 @@ We trained **flow-1** with reinforcement learning specifically for agent trace a
 - **Cost**: It would cost just **$3.5 on average to process 1k traces of 100k tokens each**. Learn more about Signals pricing [here](https://laminar.sh/pricing), and cap your spend with [usage warnings and hard limits](/platform/usage-limits).
 
 <Frame caption="One dot per trace analyzed for $1.">
-  <img src="/images/signals/signal-flow-1.svg" alt="flow-1 gives GPT-6-sol level trace analysis with 23 times more traces processed per $1. One dot per trace analyzed for $1: GPT-6-sol analyzes 38 traces, flow-1 analyzes 888." />
+  <img
+    src="/images/signals/signal-flow-1.svg"
+    alt="flow-1 gives GPT-6-sol level trace analysis with 23 times more traces processed per $1. One dot per trace analyzed for $1: GPT-6-sol analyzes 38 traces, flow-1 analyzes 888."
+  />
 </Frame>
 
 That makes it practical to analyze every production trace with the quality needed to catch subtle failures.
@@ -82,14 +91,14 @@ Signals are a general way to analyze traces. You decide what to look for and wha
 
 For example, you could ask a Signal to:
 
-- **Detect a specific behavior**: *Did the agent promise a refund without calling the refund tool?* Record the promise and the missing action.
-- **Classify a conversation**: *What was the user trying to accomplish, and was it resolved?* Return an intent and an outcome.
-- **Extract information**: *Which integrations did the user ask for?* Collect the integration names and the requests they made.
-- **Compare evidence**: *Do the amounts in the contract agree with the accompanying memo?* Record any mismatches and where they appear.
+- **Detect a specific behavior**: _Did the agent promise a refund without calling the refund tool?_ Record the promise and the missing action.
+- **Classify a conversation**: _What was the user trying to accomplish, and was it resolved?_ Return an intent and an outcome.
+- **Extract information**: _Which integrations did the user ask for?_ Collect the integration names and the requests they made.
+- **Compare evidence**: _Do the amounts in the contract agree with the accompanying memo?_ Record any mismatches and where they appear.
 
 ## How Signals are billed
 
-On Laminar Cloud, Signals run on Laminar's own model, so you don't bring a model API key. They are not free: every Signal run is billed by the tokens the Signals agent uses to read the trace and write its result (input, cached input, and output tokens).
+On Laminar Cloud, Signals run on Laminar's own model, so you don't bring a model API key. Every Signal run is billed by the tokens the Signals agent uses to read the trace and write its result (input, cached input, and output tokens).
 
 - **What counts**: every run, from live triggers and from [backfills](/signals/quickstart). A trace that doesn't pass the Signal's trigger, filters, or sample rate is skipped and costs nothing.
 - **Credit**: every new workspace gets a one-time \$5 Signals credit. On the Free plan, Signals stop when the credit is used up. Paid plans bill usage beyond the credit per token.
