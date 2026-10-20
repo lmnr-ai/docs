@@ -8,7 +8,7 @@ You can add datapoints either from file or by manually adding datapoints one-by-
 ## 1. Export from a span
 
 You can export a span as a datapoint from both Traces and Evaluation traces. To do so,
-select a span and click "Add to dataset" in the top right corner.
+select a span, click the span's name at the top of the span view to open its actions menu, and choose **Add to dataset**.
 
 Select the dataset you want to export to and click "Add to dataset".
 
@@ -16,6 +16,10 @@ This will fill the `data` field of the datapoint with the input of the span and
 the `target` field with the output of the span.
 
 <img src="/images/datasets/export-span.png" alt="Export span to dataset" />
+
+<Tip>
+To review or correct a span's output before it becomes a datapoint, choose **Add to labeling queue** from the same menu instead. A reviewer can edit the `target` in the queue and push the approved item to a dataset. See [Labeling queues](/queues/quickstart#from-a-span).
+</Tip>
 
 ## 2. File upload
 
