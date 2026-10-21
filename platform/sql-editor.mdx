@@ -164,7 +164,6 @@ Some columns store data as arrays of tuples. The most common examples are:
 - `evaluation_datapoints.trace_spans`: `Array(Tuple(name String, duration Float64, type String))`
 - `traces.signal_events`: `Array(Tuple(event_id UUID, signal_id UUID, severity UInt8, payload String))`
 - `traces.clusters`: `Array(Tuple(id UUID, signal_id UUID, name String, level UInt8, parent_id UUID, num_signal_events UInt32, created_at DateTime64(9, 'UTC'), updated_at DateTime64(9, 'UTC')))`
-- `traces.agent_versions`: `Array(Tuple(agent_hash String, version_hash String, model String))`
 
 Use `tupleElement(tuple, 'fieldName')` to extract fields from tuples:
 
@@ -436,7 +435,6 @@ LIMIT 100
 | `has_browser_session` | `Bool` | `true` |
 | `signal_events` | `Array(Tuple(event_id UUID, signal_id UUID, severity UInt8, payload String))` | `[Tuple('01234567-89ab-4def-8234-426614174000', '11111111-2222-4333-9444-555555555555', 2, '{"error_type": "timeout"}')]` |
 | `clusters` | `Array(Tuple(id UUID, signal_id UUID, name String, level UInt8, parent_id UUID, num_signal_events UInt32, created_at DateTime64(9, 'UTC'), updated_at DateTime64(9, 'UTC')))` | `[Tuple('aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee', '11111111-2222-4333-9444-555555555555', 'Checkout timeouts', 1, 'ffffffff-0000-4111-8222-333333333333', 42, '2021-01-01 00:00:00', '2021-01-02 00:00:00')]` |
-| `agent_versions` | `Array(Tuple(agent_hash String, version_hash String, model String))` | `[Tuple('<agent_hash>', '<version_hash>', 'gpt-5.6-terra')]` |
 
 `id` is the trace ID; join to spans with `spans.trace_id = traces.id`.
 
@@ -530,28 +528,6 @@ LIMIT 100
 ```
 
 `num_signal_events` is the size of the whole cluster, not this trace's contribution to it.
-
-#### Agent versions
-
-`agent_versions` lists the agent versions that ran in the trace, one element per `(agent_hash, version_hash, model)` combination seen. An agent gets a new version when its system prompt or tool set changes. The model is tracked separately, so one version can appear with several models.
-
-The array is empty when agent versioning is off, which is the default. `ARRAY JOIN` it to compare versions:
-
-```sql
--- Error rate and cost per agent version and model
-SELECT
-    v.agent_hash,
-    v.version_hash,
-    v.model,
-    count() AS traces,
-    round(countIf(status = 'error') / traces * 100, 2) AS error_rate,
-    round(avg(total_cost), 4) AS avg_cost
-FROM traces
-ARRAY JOIN agent_versions AS v
-WHERE start_time > now() - INTERVAL 7 DAY
-GROUP BY v.agent_hash, v.version_hash, v.model
-ORDER BY traces DESC
-```
 
 ### trace_outputs
 
