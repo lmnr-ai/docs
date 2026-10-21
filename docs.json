@@ -139,7 +139,8 @@
               "integrations/cohere",
               "integrations/litellm",
               "integrations/openrouter",
-              "integrations/typesafe"
+              "integrations/typesafe",
+              "integrations/heabsy"
             ]
           },
           {
