@@ -81,6 +81,19 @@ LLM_API_KEY=your-llm-key
 
 The Helm chart exposes the same variables plus per-tier model overrides and OpenAI-compatible gateways. See the [configuration reference](/self-hosting/configuration#ai-features-and-llm-provider) for the full set.
 
+## SQL access to Signals, evaluations, and datasets
+
+The [SQL editor](/platform/sql-editor) reads the `signals`, `evaluations`, and `datasets` tables, plus the `signal_name`, `evaluation_name`, and `dataset_name` columns, live from Postgres. ClickHouse connects to Postgres through a dedicated read-only role, which stays off until you set both of these in your `.env`:
+
+```bash
+CLICKHOUSE_POSTGRES_USER=clickhouse_ro
+CLICKHOUSE_POSTGRES_PASSWORD=choose-a-strong-password
+```
+
+On boot, the frontend creates that role with `SELECT` on only the columns those tables expose. Use a dedicated role name: the frontend refuses the app's own Postgres user or a privileged role. Until both are set, queries that touch those tables or columns return a `503`, and every other SQL query works as before.
+
+If Postgres is not the compose `postgres` service, also set `CLICKHOUSE_POSTGRES_HOST` and `CLICKHOUSE_POSTGRES_PORT` to the address ClickHouse uses to reach it.
+
 ## What's next
 
 <CardGroup cols={2}>

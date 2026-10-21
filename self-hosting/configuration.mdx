@@ -383,6 +383,26 @@ global:
 
 On first boot the frontend runs `CREATE SCHEMA IF NOT EXISTS` for a non-`public` schema. If the schema is pre-provisioned or the DB role lacks `CREATE`, disable that step with `frontend.env.postgresCreateSchema: "false"`.
 
+## SQL access to Signals, evaluations, and datasets
+
+The `signals`, `evaluations`, and `datasets` [SQL tables](/platform/sql-editor), and the `signal_name` / `evaluation_name` / `dataset_name` columns, are read live from Postgres through a dedicated read-only role. The chart has no dedicated values for it yet, so set the variables on the frontend with `extraEnv`. `CLICKHOUSE_POSTGRES_HOST` is the Postgres address as ClickHouse reaches it:
+
+```yaml
+frontend:
+  extraEnv:
+    - name: CLICKHOUSE_POSTGRES_HOST
+      value: "laminar-postgres-service"
+    - name: CLICKHOUSE_POSTGRES_USER
+      value: "clickhouse_ro"
+    - name: CLICKHOUSE_POSTGRES_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: laminar-clickhouse-postgres
+          key: password
+```
+
+On boot the frontend creates the role with `SELECT` on only the exposed columns, and refuses the app's own Postgres user or a privileged role. Without these variables, queries that touch those tables or columns return a `503` and everything else works.
+
 ## What's next
 
 <CardGroup cols={2}>
