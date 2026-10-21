@@ -863,10 +863,6 @@ One row per [dataset](/datasets/introduction).
 
 Join to `dataset_datapoints` on `datasets.id = dataset_id`. `indexed_on` is a legacy setting and is usually `NULL`.
 
-<Note>
-`signals`, `evaluations`, and `datasets`, plus the `signal_name`, `evaluation_name`, and `dataset_name` columns, are read live from Laminar's Postgres database. On a self-hosted deployment they return a `503` until you [enable Postgres access for SQL](/self-hosting/docker-compose#sql-access-to-signals-evaluations-and-datasets).
-</Note>
-
 ## Example Queries
 
 **Cost breakdown by model:**
@@ -1161,7 +1157,6 @@ Errors return a JSON body with a single `error` field:
 | 400 | The query failed validation or the database rejected it (bad syntax, unknown column, missing parameter) |
 | 401 | Missing or invalid project API key |
 | 429 | Project rate limit exceeded. Retry with backoff |
-| 503 | Self-hosted only: the query reads `signals`, `evaluations`, `datasets`, or a `*_name` column, and the deployment has no Postgres access for SQL. See [SQL access to Signals, evaluations, and datasets](/self-hosting/docker-compose#sql-access-to-signals-evaluations-and-datasets) |
 
 ## Full Reference
 
