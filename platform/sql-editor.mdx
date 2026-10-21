@@ -856,7 +856,7 @@ Join to `signal_events`, `signal_runs`, or `traces.signal_events` on `signals.id
 
 `version` is the Signal's current definition version. Compare it with [`signal_events.signal_version`](#signal-version) to find events produced under an older definition.
 
-`llm_model` is set when a self-hosted Signal runs on a model from an [LLM profile](/platform/llm-profiles), and `NULL` when the Signal runs on the deployment's default model.
+`llm_model` is the model a self-hosted Signal runs on, picked from its [LLM profile](/platform/llm-profiles). It is `NULL` on Laminar Cloud, where Signals run on Laminar's own model, and for self-hosted Signals created before LLM profiles, which still run on the `LLM_PROVIDER` configuration.
 
 
 ### evaluations
