@@ -25,6 +25,8 @@ The input to the root call and to each subagent is parsed out of system and user
 
 This matters most when you are reading a trace that someone else wrote, or a trace from a run you started three days ago. Before transcript view, recovering *what did we actually ask this agent to do?* meant opening the first LLM span, finding the input JSON, expanding the messages array, and scrolling to the last user message. Now it is the first thing on the page.
 
+The same task appears as the **Input** column in the traces table and as `agent_input` in SQL. See [Task extraction](/tracing/task-extraction) for how Laminar finds it and how to query it.
+
 ### Subagents are cards, not a flood of spans
 
 Multi-agent runs (Claude Agent SDK, OpenAI Agents SDK, LangGraph, custom orchestrators) produce deeply nested trees. Transcript view collapses each subagent invocation into a named card that shows the subagent's name, duration, token/cost badges, the **Input** prompt it was given, and an **Output** preview of its final message.

@@ -41,6 +41,7 @@
                   "tracing/structure/flushing-and-shutdown"
                 ]
               },
+              "tracing/task-extraction",
               "tracing/cost-tracking",
               "tracing/browser-agent-observability",
               "tracing/langgraph-visualization",
