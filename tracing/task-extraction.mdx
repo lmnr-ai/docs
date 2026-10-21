@@ -1,0 +1,142 @@
+---
+title: Task extraction for AI agent runs
+sidebarTitle: Task extraction
+description: Laminar extracts the task from every agent run, shows it in the traces table and transcript view, and makes it queryable with SQL.
+---
+
+Task extraction is how Laminar answers "what was this agent asked to do?" for every trace. Laminar reads the LLM calls in each agent run, finds the user's actual request, and stores it on the trace as its **input**. You see it as a column in the traces table, at the top of the transcript view, and as `agent_input` in SQL, so you can search, group, and filter agent runs by the task they were given.
+
+It needs no configuration. You do not have to pass the task to the root span, name a span in a special way, or set an attribute. If your agent makes LLM calls that Laminar traces, it gets a task.
+
+## Where the task shows up
+
+### Traces table
+
+Every trace has an **Input** column next to the root span name. Instead of reading a list of identical `agent.run` rows, you read the requests your users sent. Drag the column edge to widen it, sort by it, or filter on it like any other column.
+
+<Frame caption="The Input column in the traces table shows the task from each run of a support agent. Red bars mark runs that failed, and every one of them is a request about order A-9999.">
+  <img src="/images/tracing/traces-table-input-column.png" alt="Traces table with the Input column showing each agent run's task" />
+</Frame>
+
+### Transcript view
+
+Open a trace and the task is the first block in the [transcript view](/platform/viewing-traces#transcript-view), labelled **Input**. Each subagent card shows its own input the same way, so in a multi-agent run you can see what the orchestrator asked every subagent to do without expanding anything.
+
+<Frame caption="The transcript view of a failed run opens with the extracted task. The small title-generation call below it uses the same request inside a different prompt, and Laminar does not mistake it for the task.">
+  <img src="/images/tracing/transcript-view-task.png" alt="Transcript view of a failed support agent run with the extracted Input block at the top" />
+</Frame>
+
+The task also appears on traces in the [sessions view](/tracing/structure/sessions) and in the [debugger](/debugger/introduction), and it fills in while a trace is still running, so you can see what a live agent is working on in [realtime](/platform/live-tracing).
+
+## How Laminar finds the task
+
+Real agents rarely send the user's request as a clean string. It sits in the last user message, wrapped in system reminders, environment details, user profiles, retrieved context, and earlier turns of the conversation. The root span often carries something else entirely: a request ID, a config object, or nothing at all.
+
+Laminar looks for the task where the model actually received it:
+
+- **Any span, any depth.** There is no requirement to put the task on the root span or anywhere else. Laminar reads the LLM calls inside the trace, wherever your framework or your own code created them.
+- **The main agent's call, not a helper's.** Agents make small side calls: generating a title, classifying intent, summarizing a tool result. Laminar takes the request from the call that drives the agent and ignores the rest.
+- **Only the request, not the scaffolding.** From the last user turn, Laminar keeps the part a person wrote and drops the template around it, such as `<system_reminder>` blocks, environment details, and user info.
+- **Subagents get their own input.** Each subagent's input is extracted separately, so the trace-level task stays the user's original request while subagent cards show the instructions the orchestrator passed down.
+
+Laminar learns the shape of each agent's prompt template from its traces and reuses it for later runs, which keeps extraction consistent across thousands of runs of the same agent. If you change the template, Laminar picks up the new shape on its own.
+
+## Query tasks with SQL
+
+The task is stored in the `agent_input` column of the [`traces` table](/platform/sql-editor#traces), as plain text. Every way of running SQL against Laminar can read it:
+
+- **[SQL editor](/platform/sql-editor)** in the Laminar UI.
+- **[SQL API](/platform/sql-editor#sql-api)**: `POST /v1/sql/query` with your project API key, for notebooks, scheduled jobs, and your own dashboards.
+- **[Laminar CLI](/platform/cli#query-data-with-sql)**: `lmnr-cli sql query "..."`, from a terminal or a coding agent.
+- **[MCP server](/platform/mcp)**: the `query_laminar_sql` tool, so Claude Code, Cursor, or Codex can query tasks while they debug your agent.
+
+Find runs about a topic:
+
+```sql
+SELECT id, start_time, status, agent_input
+FROM traces
+WHERE start_time > now() - INTERVAL 1 DAY
+  AND agent_input ILIKE '%refund%'
+ORDER BY start_time DESC
+LIMIT 50
+```
+
+Pair each task with the agent's final answer, which lives in the [`trace_outputs`](/platform/sql-editor#trace_outputs) table:
+
+```sql
+SELECT
+    t.id,
+    substring(t.agent_input, 1, 2000) AS task,
+    o.agent_output[-1] AS final_message
+FROM traces t
+JOIN trace_outputs o ON o.trace_id = t.id
+WHERE t.start_time > now() - INTERVAL 1 DAY
+ORDER BY t.start_time DESC
+LIMIT 20
+```
+
+Long tasks can be large. Wrap `agent_input` in `substring(agent_input, 1, 2000)` when you select many rows.
+
+## What you can do with it
+
+### Error rate per task
+
+A project-wide error rate tells you the agent is failing. Grouping by task tells you on what:
+
+```sql
+SELECT
+    agent_input AS task,
+    count() AS runs,
+    countIf(status = 'error') AS errors,
+    round(errors / runs, 2) AS error_rate
+FROM traces
+WHERE start_time > now() - INTERVAL 7 DAY
+  AND agent_input != ''
+GROUP BY task
+ORDER BY error_rate DESC, runs DESC
+LIMIT 20
+```
+
+Exact grouping works well for agents with a fixed set of tasks, like evaluation suites, scheduled jobs, or a product with a handful of entry points. For free-form user requests, group on keywords with `multiIf(agent_input ILIKE '%refund%', 'refund', agent_input ILIKE '%status%', 'order status', 'other')`, or use [Signals](/signals/introduction) to label each run with a category and group by that.
+
+The same pattern works for cost and latency: swap the error columns for `avg(total_cost)` or `quantile(0.95)(duration)` to find the tasks that are expensive or slow.
+
+### Understand what users ask your agent
+
+Read the Input column, or query it, to see the real distribution of requests. It is the fastest way to learn which tasks matter, which ones your prompt never anticipated, and which ones users keep retrying.
+
+### Build datasets and evals from real tasks
+
+Filter the traces table on the Input column, or query `agent_input`, to find runs worth keeping, then [export their spans](/datasets/adding-data) to a [dataset](/datasets/introduction). Real tasks from production make better evaluation inputs than examples you write by hand.
+
+### Find a run from what the user said
+
+When a user reports a problem, search for their words in the Input column instead of hunting for a trace ID. For text that appears anywhere in a trace, not just the task, use [search](/platform/search).
+
+## Limitations
+
+- **Very long user turns.** When the user message is a large pasted document or log, the extracted task can be long or include part of that content.
+- **Short follow-up turns.** In a chat agent, a turn like "Continue" or "yes, do it" is extracted as written. It is the right answer for that turn, but it says little on its own. Use a [session](/tracing/structure/sessions) to read the turns together.
+- **New and low-traffic agents.** Laminar learns each agent's template from its runs, so the first runs of a new agent or a new prompt version may take a moment to get a task, and agents with very little traffic take longer to settle.
+- **Agents without LLM calls.** A trace with no traced LLM call has no user turn to read, and its task stays empty. `countIf(agent_input = '')` in SQL tells you how many runs are affected.
+
+<Note>
+On a [self-hosted](/self-hosting/overview) deployment, task extraction uses the server's AI provider configuration, the same `LLM_PROVIDER` and `LLM_API_KEY` that power chat with trace and SQL with AI. If they are not set, tasks can come back empty. See [Self-hosting configuration](/self-hosting/configuration#ai-features-and-llm-provider).
+</Note>
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Viewing traces" icon="eye" href="/platform/viewing-traces">
+    Read a run as a transcript, starting from its task.
+  </Card>
+  <Card title="SQL editor" icon="database" href="/platform/sql-editor">
+    The full `traces` and `trace_outputs` schema, with more example queries.
+  </Card>
+  <Card title="Signals" icon="signal" href="/signals/introduction">
+    Describe an outcome in plain language and track it across every run.
+  </Card>
+  <Card title="Datasets" icon="table" href="/datasets/introduction">
+    Turn real tasks from production into evaluation data.
+  </Card>
+</CardGroup>

@@ -404,7 +404,7 @@ LIMIT 100
 | `tags` | `Array(String)` | `["needs-review", "production"]` |
 | `trace_tags` | `Array(String)` | `["reviewed", "flagged"]` |
 | `span_names` | `Array(String)` | `["run", "openai.chat", "tool.search"]` |
-| `agent_input` | `String` | `"[{\"role\": \"user\", \"content\": \"Hello\"}]"` |
+| `agent_input` | `String` | `"Where is my order A-1002?"` |
 | `has_browser_session` | `Bool` | `true` |
 | `signal_events` | `Array(Tuple(event_id UUID, signal_id UUID, severity UInt8, payload String))` | `[Tuple('01234567-89ab-4def-8234-426614174000', '11111111-2222-4333-9444-555555555555', 2, '{"error_type": "timeout"}')]` |
 | `clusters` | `Array(Tuple(id UUID, signal_id UUID, name String, level UInt8, parent_id UUID, num_signal_events UInt32, created_at DateTime64(9, 'UTC'), updated_at DateTime64(9, 'UTC')))` | `[Tuple('aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee', '11111111-2222-4333-9444-555555555555', 'Checkout timeouts', 1, 'ffffffff-0000-4111-8222-333333333333', 42, '2021-01-01 00:00:00', '2021-01-02 00:00:00')]` |
@@ -421,7 +421,7 @@ LIMIT 100
 
 #### Agent input
 
-`agent_input` is the extracted agent task / user input for the trace. Same parsing rules apply as [span input/output](#input-and-output): try to parse as JSON, fall back to raw string.
+`agent_input` is the extracted agent task / user input for the trace. Same parsing rules apply as [span input/output](#input-and-output): try to parse as JSON, fall back to raw string. See [Task extraction](/tracing/task-extraction) for how it is extracted and example queries, such as error rate per task.
 
 There is no matching output column on `traces`. The trace's final agent output lives in [trace_outputs](#trace_outputs).
 
