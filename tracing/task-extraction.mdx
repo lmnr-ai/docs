@@ -41,14 +41,19 @@ Laminar looks for the task where the model actually received it:
 
 Laminar learns the shape of each agent's prompt template from its traces and reuses it for later runs, which keeps extraction consistent across thousands of runs of the same agent. If you change the template, Laminar picks up the new shape on its own.
 
+For how this works under the hood, and how it holds up across millions of runs, read [Extracting Tasks from Millions of Agent Runs](https://laminar.sh/blog/extracting-tasks-from-agent-runs) on the Laminar blog.
+
+<Note>
+On a [self-hosted](/self-hosting/overview) deployment, task extraction uses the server's AI provider configuration, the same `LLM_PROVIDER` and `LLM_API_KEY` that power chat with trace and SQL with AI. If they are not set, tasks can come back empty. See [Self-hosting configuration](/self-hosting/configuration#ai-features-and-llm-provider).
+</Note>
+
 ## Query tasks with SQL
 
-The task is stored in the `agent_input` column of the [`traces` table](/platform/sql-editor#traces), as plain text. Every way of running SQL against Laminar can read it:
+The task is stored in the `agent_input` column of the [`traces` table](/platform/sql-editor#traces), as plain text. You can query it from:
 
 - **[SQL editor](/platform/sql-editor)** in the Laminar UI.
 - **[SQL API](/platform/sql-editor#sql-api)**: `POST /v1/sql/query` with your project API key, for notebooks, scheduled jobs, and your own dashboards.
 - **[Laminar CLI](/platform/cli#query-data-with-sql)**: `lmnr-cli sql query "..."`, from a terminal or a coding agent.
-- **[MCP server](/platform/mcp)**: the `query_laminar_sql` tool, so Claude Code, Cursor, or Codex can query tasks while they debug your agent.
 
 Find runs about a topic:
 
@@ -108,21 +113,6 @@ Read the Input column, or query it, to see the real distribution of requests. It
 ### Build datasets and evals from real tasks
 
 Filter the traces table on the Input column, or query `agent_input`, to find runs worth keeping, then [export their spans](/datasets/adding-data) to a [dataset](/datasets/introduction). Real tasks from production make better evaluation inputs than examples you write by hand.
-
-### Find a run from what the user said
-
-When a user reports a problem, search for their words in the Input column instead of hunting for a trace ID. For text that appears anywhere in a trace, not just the task, use [search](/platform/search).
-
-## Limitations
-
-- **Very long user turns.** When the user message is a large pasted document or log, the extracted task can be long or include part of that content.
-- **Short follow-up turns.** In a chat agent, a turn like "Continue" or "yes, do it" is extracted as written. It is the right answer for that turn, but it says little on its own. Use a [session](/tracing/structure/sessions) to read the turns together.
-- **New and low-traffic agents.** Laminar learns each agent's template from its runs, so the first runs of a new agent or a new prompt version may take a moment to get a task, and agents with very little traffic take longer to settle.
-- **Agents without LLM calls.** A trace with no traced LLM call has no user turn to read, and its task stays empty. `countIf(agent_input = '')` in SQL tells you how many runs are affected.
-
-<Note>
-On a [self-hosted](/self-hosting/overview) deployment, task extraction uses the server's AI provider configuration, the same `LLM_PROVIDER` and `LLM_API_KEY` that power chat with trace and SQL with AI. If they are not set, tasks can come back empty. See [Self-hosting configuration](/self-hosting/configuration#ai-features-and-llm-provider).
-</Note>
 
 ## What's next
 
