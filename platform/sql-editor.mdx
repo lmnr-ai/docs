@@ -21,6 +21,9 @@ Query all your Laminar data directly with SQL. Find patterns, debug issues, and 
 | dataset_datapoint_versions | Dataset datapoints (all versions/history) |
 | evaluation_datapoints | Evaluation datapoints with scores, executor output, dataset links, and associated trace data |
 | labeling_queue_items | Per-item rows of labeling queues |
+| signals | Signal definitions: prompt, output schema, model, and current version |
+| evaluations | Evaluation runs: name, group, and metadata |
+| datasets | Datasets: name and creation time |
 
 Only `SELECT` queries are allowed.
 
@@ -75,6 +78,21 @@ SELECT id, duration
 FROM traces
 WHERE id IN ('id1', 'id2', 'id3')
 ```
+
+Joins to [signals](#signals), [evaluations](#evaluations), and [datasets](#datasets) are the exception. Those tables hold one row per definition, so joining them on an id is cheap:
+
+```sql
+-- Events produced under an older version of their Signal
+SELECT s.name, s.version AS current_version, se.signal_version, count() AS events
+FROM signal_events se
+JOIN signals s ON s.id = se.signal_id
+WHERE se.timestamp > now() - INTERVAL 7 DAY
+  AND se.signal_version < s.version
+GROUP BY s.name, current_version, se.signal_version
+ORDER BY events DESC
+```
+
+If all you need is the name, skip the join: `signal_events.signal_name`, `evaluation_datapoints.evaluation_name`, and `dataset_datapoints.dataset_name` already carry it.
 
 ### Read signals and clusters off traces
 
@@ -217,7 +235,9 @@ LIMIT 10
 |------|----------|
 | `UUID` | Most ID columns (`trace_id`, `span_id`, `id`) |
 | `DateTime64(9, 'UTC')` | Timestamps (always UTC) |
+| `DateTime64(6)` | `created_at` on `signals`, `evaluations`, and `datasets` |
 | `String` | Text, JSON stored as strings, and enum-like columns (`span_type`, `trace_type`, `status`) |
+| `Nullable(String)` | Optional text on `signals`, `evaluations`, and `datasets` (for example, `signals.llm_model`) |
 | `LowCardinality(String)` | Low-cardinality enums |
 | `Float64` | Floating point numbers |
 | `Decimal(18, 9)` | Span-level durations in seconds (`spans.duration`, `evaluation_datapoints.duration`) |
@@ -251,6 +271,9 @@ These are the logical tables exposed in the SQL Editor. The schemas below reflec
 | `input_tokens` | `Int64` | `150` |
 | `output_tokens` | `Int64` | `100` |
 | `total_tokens` | `Int64` | `250` |
+| `cache_read_input_tokens` | `UInt64` | `33042` |
+| `cache_creation_input_tokens` | `UInt64` | `1200` |
+| `reasoning_tokens` | `UInt64` | `512` |
 | `request_model` | `String` | `"gpt-5-mini"` |
 | `response_model` | `String` | `"gpt-5-mini-2025-08-07"` |
 | `model` | `String` | `"gpt-5-mini-2025-08-07"` |
@@ -321,6 +344,10 @@ The `model` column is set to the response model if present, otherwise it is set 
 Usually, `total_tokens = input_tokens + output_tokens` and `total_cost = input_cost + output_cost`.
 
 However, you can manually report these values using the relevant attributes. In this case, totals may not be equal to the sum of the input and output tokens and costs.
+
+#### Cache and reasoning tokens
+
+`cache_read_input_tokens` and `cache_creation_input_tokens` count prompt-cache reads and writes on an LLM span, and `reasoning_tokens` counts reasoning tokens. They are `0` on non-LLM spans and when the provider reports nothing. The same columns on [traces](#traces) sum them across the trace.
 
 #### Tags
 
@@ -462,7 +489,7 @@ Metadata is stored as a string in JSON format. That is, you can safely `JSON.par
 
 The array is empty for traces no Signal fired on, and older traces are filled in progressively, so a trace can read empty here while its events are present in the [signal_events](#signal_events) table.
 
-The tuple carries no timestamp or Signal name. An event happens at the end of the trace it came from, so use the trace's `end_time`, and resolve names from `signal_id`.
+The tuple carries no timestamp or Signal name. An event happens at the end of the trace it came from, so use the trace's `end_time`, and get the name by joining [signals](#signals) on `signals.id = e.signal_id`.
 
 `ARRAY JOIN` gives one row per event:
 
@@ -533,9 +560,10 @@ LIMIT 10
 |--------|------|---------------|
 | `id` | `UUID` | `"01234567-89ab-4def-8234-426614174000"` |
 | `signal_id` | `UUID` | `"11111111-2222-4333-9444-555555555555"` |
+| `signal_name` | `String` | `"Checkout failures"` |
 | `trace_id` | `UUID` | `"01234567-1234-4def-a234-426614174000"` |
 | `run_id` | `UUID` | `"22222222-3333-4444-b555-666666666666"` |
-| `name` | `String` | `"error.clustered"` |
+| `name` | `String` | `"Checkout failures"` |
 | `payload` | `String` | `"{\"error_type\": \"timeout\", \"count\": 3}"` |
 | `timestamp` | `DateTime64(9, 'UTC')` | `"2021-01-01 00:00:00"` |
 | `severity` | `UInt8` | `2` |
@@ -547,6 +575,12 @@ LIMIT 10
 <Note>
 If the row you want back is a trace rather than an event, read [signal events](#signal-events-on-traces) and [clusters](#clusters-on-traces) off the `traces` table instead. They answer the same questions with no join.
 </Note>
+
+#### Signal name
+
+`signal_name` is the Signal's current name, so renaming a Signal renames its past events too (within about a minute). `name` returns the same value and is kept so older queries keep working; use `signal_name` in new ones.
+
+Filtering on `signal_name` reads events from every Signal in the project. When you know the Signal, filter on `signal_id` instead, which only reads that Signal's events.
 
 #### Payload
 
@@ -697,6 +731,7 @@ The `attributes` column is stored as a string in JSON format. That is, you can s
 |--------|------|---------------|
 | `id` | `UUID` | `"01234567-89ab-4def-8234-426614174000"` |
 | `evaluation_id` | `UUID` | `"98765432-1098-4654-9210-987654321098"` |
+| `evaluation_name` | `String` | `"prompt-v2"` |
 | `data` | `String` | `"{\"key\": \"value\"}"` |
 | `target` | `String` | `"{\"key\": \"value\"}"` |
 | `metadata` | `String` | `"{\"key\": \"value\"}"` |
@@ -727,6 +762,8 @@ The `attributes` column is stored as a string in JSON format. That is, you can s
 
 `data`, `target`, `metadata`, `executor_output`, `scores`, and `trace_metadata` are JSON stored as strings. `scores` is a JSON object of string keys to numeric values.
 
+`evaluation_name` is the evaluation's current name, so a renamed evaluation shows its new name here within about a minute.
+
 When the datapoint is not sourced from a dataset, `dataset_id` and `dataset_datapoint_id` are a nil UUID (all zeroes) and `dataset_datapoint_created_at` is the Unix epoch.
 
 The trace-related columns (`duration`, `input_cost`, `output_cost`, `total_cost`, `start_time`, `end_time`, `input_tokens`, `output_tokens`, `total_tokens`, `trace_status`, `trace_metadata`, `trace_tags`, `trace_spans`, `top_span_id`) are joined from the associated trace. If no trace exists for the datapoint, these columns will be nil/empty/zero.
@@ -739,11 +776,12 @@ The trace-related columns (`duration`, `input_cost`, `output_cost`, `total_cost`
 | `id` | `UUID` | `"019c6634-0cb4-7f9d-8192-f36604488483"` |
 | `created_at` | `DateTime64(9, 'UTC')` | `"2021-01-01 00:00:00"` |
 | `dataset_id` | `UUID` | `"11111111-2222-4333-a444-555555555555"` |
+| `dataset_name` | `String` | `"support-golden-set"` |
 | `data` | `String` | `"{\"query\": \"What is 2+2?\"}"` |
 | `target` | `String` | `"{\"answer\": \"4\"}"` |
 | `metadata` | `String` | `"{\"source\": \"prod\"}"` |
 
-`data`, `target`, and `metadata` are JSON stored as strings.
+`data`, `target`, and `metadata` are JSON stored as strings. `dataset_name` is the dataset's current name.
 
 
 ### dataset_datapoint_versions
@@ -771,6 +809,59 @@ One row per item in a labeling queue.
 `status` is `0` (unlabeled) or `1` (approved).
 
 Note the timestamps here are `DateTime64(3, 'UTC')` (millisecond precision), not the `DateTime64(9, 'UTC')` used by the other tables.
+
+
+### signals
+
+One row per [Signal](/signals/introduction) in the project, with its current definition.
+
+| Column | Type | Example value |
+|--------|------|---------------|
+| `id` | `UUID` | `"11111111-2222-4333-9444-555555555555"` |
+| `name` | `String` | `"Checkout failures"` |
+| `prompt` | `String` | `"Flag traces where the agent failed to complete checkout..."` |
+| `structured_output_schema` | `String` | `"{\"type\": \"object\", \"properties\": {...}}"` |
+| `metadata` | `String` | `"{\"disabled\": true}"` |
+| `llm_model` | `Nullable(String)` | `NULL` |
+| `created_at` | `DateTime64(6)` | `"2021-01-01 00:00:00.000000"` |
+| `version` | `Int32` | `3` |
+
+Join to `signal_events`, `signal_runs`, or `traces.signal_events` on `signals.id = signal_id`.
+
+`structured_output_schema` and `metadata` are JSON stored as strings. A [paused](/signals/quickstart#pause-and-resume-a-signal) Signal has `"disabled": true` in `metadata`.
+
+`version` is the Signal's current definition version. Compare it with [`signal_events.signal_version`](#signal-version) to find events produced under an older definition.
+
+`llm_model` is the model a self-hosted Signal runs on, picked from its [LLM profile](/platform/llm-profiles). It is `NULL` on Laminar Cloud, where Signals run on Laminar's own model, and for self-hosted Signals created before LLM profiles, which still run on the `LLM_PROVIDER` configuration.
+
+
+### evaluations
+
+One row per [evaluation](/evaluations/introduction) run.
+
+| Column | Type | Example value |
+|--------|------|---------------|
+| `id` | `UUID` | `"98765432-1098-4654-9210-987654321098"` |
+| `name` | `String` | `"prompt-v2"` |
+| `group_id` | `String` | `"group_a"` |
+| `metadata` | `Nullable(String)` | `"{\"model\": \"gpt-5.6-terra\"}"` |
+| `created_at` | `DateTime64(6)` | `"2021-01-01 00:00:00.000000"` |
+
+Join to `evaluation_datapoints` on `evaluations.id = evaluation_id`. `metadata` is JSON stored as a string.
+
+
+### datasets
+
+One row per [dataset](/datasets/introduction).
+
+| Column | Type | Example value |
+|--------|------|---------------|
+| `id` | `UUID` | `"11111111-2222-4333-a444-555555555555"` |
+| `name` | `String` | `"support-golden-set"` |
+| `indexed_on` | `Nullable(String)` | `NULL` |
+| `created_at` | `DateTime64(6)` | `"2021-01-01 00:00:00.000000"` |
+
+Join to `dataset_datapoints` on `datasets.id = dataset_id`. `indexed_on` is a legacy setting and is usually `NULL`.
 
 ## Example Queries
 
@@ -868,6 +959,32 @@ FROM traces
 WHERE start_time > now() - INTERVAL 1 DAY
   AND notEmpty(signal_events)
   AND empty(clusters)
+```
+
+**Events per Signal by name:**
+```sql
+SELECT
+    signal_name,
+    count() AS events,
+    countIf(severity = 2) AS critical
+FROM signal_events
+WHERE timestamp > now() - INTERVAL 7 DAY
+GROUP BY signal_name
+ORDER BY events DESC
+```
+
+**Average score per evaluation in a group:**
+```sql
+SELECT
+    evaluation_id,
+    evaluation_name,
+    min(created_at) AS started,
+    avg(simpleJSONExtractFloat(scores, 'accuracy')) AS avg_accuracy,
+    count() AS datapoints
+FROM evaluation_datapoints
+WHERE group_id = {group_id:String}
+GROUP BY evaluation_id, evaluation_name
+ORDER BY started
 ```
 
 **Average cost per evaluation datapoint:**
