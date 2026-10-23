@@ -40,11 +40,11 @@ you find what to look for.
 
 To get started, head to the signals section, create a new signal, and click the "Failure" card to select
 the "Failure Detector" template. You can edit
-the prompt and the schema definition, but for our example, we'll keep it at default
+the instruction and the schema definition, but for our example, we'll keep it at default
 settings.
 
-<Frame caption="Default prompt and structured output schema for Failure Detector signal">
-    ![Prompt for Failure Detector and one output field `description`](/images/guides/signals/failure-detector-definition.png)
+<Frame caption="Default instruction and structured output schema for Failure Detector signal">
+    ![Instruction for Failure Detector and one output field `description`](/images/guides/signals/failure-detector-definition.png)
 </Frame>
 
 In our structured output, we choose one field, `description` of type string, where Laminar Signals
@@ -54,17 +54,22 @@ agent can write the description for each failure it detects.
     One signal can produce at most one event per trace. If you are assessing multiple specific criteria,
     try to define an output schema such that the agent can report those in separate fields, e.g.
     `{ too_wordy: boolean, success: boolean }`. If this is not possible, define multiple Signals, i.e.
-    multiple runs with different prompts.
+    multiple runs with different instructions.
 </Tip>
 
-### Prompt and schema configuration
+### Instruction and schema configuration
 
-Laminar's default template prompts are tuned to work best for most of the usage scenarios. However,
-if you wish to tune the prompt or the structured output schema for the signal, you can:
+Laminar's default template instructions are tuned to work best for most of the usage scenarios. However,
+if you wish to tune the instruction or the structured output schema for the signal, you can:
 
-- Amend the prompt slightly, or completely change it;
+- Amend the instruction slightly, or completely change it;
 - Add other fields to the structured output schema;
 - Alter fields' types. Each field can be one of string, number, boolean, or a predefined enum.
+
+When you write your own, keep in mind that the instruction is not a full LLM prompt. The Signals agent already
+knows its role, how to read the trace, and how to return an event in your schema, so the instruction only needs
+to say what to look for. A general description such as "Find runs where the agent gave up before completing
+the user's request" is a good start. See [Write the instruction](/signals/introduction#write-the-instruction).
 
 ## Signal configuration
 
@@ -268,7 +273,7 @@ the final itinerary, or malformed final itinerary — are much harder to catch i
 Now that we've had a look at the cluster distribution, it may make sense to create a more specific Signal that
 looks into a specific class of issues.
 
-Let's create a signal called "Constraint Violation". The prompt is
+Let's create a signal called "Constraint Violation". The instruction is
 
 > Report cases where the agent fails to follow instructions and constraints given in the travel plan. This can
 > include explicit failures, like an incorrect number of nights booked, or more implicit issues in the final

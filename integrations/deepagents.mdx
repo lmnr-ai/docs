@@ -250,7 +250,7 @@ Custom tools called from inside a subagent nest under that subagent's `task` spa
 
 ## Track outcomes with Signals
 
-Traces answer *what happened on this run*. **[Signals](/signals/introduction) answer the cross-trace question**: *how often does a subagent exceed its scoped tool list, when does the main agent forget to call `write_todos` before delegating, which runs loop through more than five `task` calls*. A Signal pairs a plain-language prompt with a JSON output schema. Laminar runs it live on new traces (Triggers) or backfills it across history (Jobs) and records a structured event every time it matches. From there you [query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on events across every trace.
+Traces answer *what happened on this run*. **[Signals](/signals/introduction) answer the cross-trace question**: *how often does a subagent exceed its scoped tool list, when does the main agent forget to call `write_todos` before delegating, which runs loop through more than five `task` calls*. A Signal pairs a plain-language instruction with a JSON output schema. Laminar runs it live on new traces (Triggers) or backfills it across history (Jobs) and records a structured event every time it matches. From there you [query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on events across every trace.
 
 <Note>
 Every new project ships with a **Failure Detector** Signal that categorizes issues on any trace over 1000 tokens. Open it from the Signals sidebar to see events as soon as your deepagents traces arrive.

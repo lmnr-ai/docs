@@ -4,11 +4,11 @@ sidebarTitle: Terraform
 description: "Define Laminar Signals and LLM profiles as code, review changes in a plan, and apply them to every project from CI."
 ---
 
-The Laminar Terraform provider, [`lmnr-ai/lmnr`](https://registry.terraform.io/providers/lmnr-ai/lmnr/latest), manages [Signals](/signals/introduction) and [LLM profiles](/platform/llm-profiles) with Terraform or OpenTofu. Keep Signal prompts and output schemas in your repo, review every change in `terraform plan`, and roll the same definitions out to staging and production projects. It works with Laminar Cloud and self-hosted deployments.
+The Laminar Terraform provider, [`lmnr-ai/lmnr`](https://registry.terraform.io/providers/lmnr-ai/lmnr/latest), manages [Signals](/signals/introduction) and [LLM profiles](/platform/llm-profiles) with Terraform or OpenTofu. Keep Signal instructions and output schemas in your repo, review every change in `terraform plan`, and roll the same definitions out to staging and production projects. It works with Laminar Cloud and self-hosted deployments.
 
 | Type | Name | What it manages |
 |---|---|---|
-| Resource | `lmnr_signal` | Prompt, structured output, trigger, filters, sampling, and processing mode |
+| Resource | `lmnr_signal` | Instruction (`prompt`), structured output, trigger, filters, sampling, and processing mode |
 | Resource | `lmnr_llm_profile` | Provider credentials and models, shared across the workspace |
 | Data source | `lmnr_signal`, `lmnr_llm_profile` | Look up an existing Signal or profile by `id` or exact `name` |
 | Data source | `lmnr_project` | The project that owns the API key |

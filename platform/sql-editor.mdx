@@ -21,7 +21,7 @@ Query all your Laminar data directly with SQL. Find patterns, debug issues, and 
 | dataset_datapoint_versions | Dataset datapoints (all versions/history) |
 | evaluation_datapoints | Evaluation datapoints with scores, executor output, dataset links, and associated trace data |
 | labeling_queue_items | Per-item rows of labeling queues |
-| signals | Signal definitions: prompt, output schema, model, and current version |
+| signals | Signal definitions: instruction (`prompt`), output schema, model, and current version |
 | evaluations | Evaluation runs: name, group, and metadata |
 | datasets | Datasets: name and creation time |
 
@@ -594,7 +594,7 @@ Payloads can be large. When selecting many rows, truncate with `substring(payloa
 
 #### Signal version
 
-`signal_version` tracks which revision of the Signal produced the event. It increments whenever the Signal's definition changes: its prompt, output schema, trigger, filters, or any other setting. Use it to tell events extracted under an older definition from current ones. It is `0` for events that predate versioning.
+`signal_version` tracks which revision of the Signal produced the event. It increments whenever the Signal's definition changes: its instruction, output schema, trigger, filters, or any other setting. Use it to tell events extracted under an older definition from current ones. It is `0` for events that predate versioning.
 
 #### Cluster columns
 
@@ -828,7 +828,7 @@ One row per [Signal](/signals/introduction) in the project, with its current def
 
 Join to `signal_events`, `signal_runs`, or `traces.signal_events` on `signals.id = signal_id`.
 
-`structured_output_schema` and `metadata` are JSON stored as strings. A [paused](/signals/quickstart#pause-and-resume-a-signal) Signal has `"disabled": true` in `metadata`.
+`prompt` holds the Signal's instruction. `structured_output_schema` and `metadata` are JSON stored as strings. A [paused](/signals/quickstart#pause-and-resume-a-signal) Signal has `"disabled": true` in `metadata`.
 
 `version` is the Signal's current definition version. Compare it with [`signal_events.signal_version`](#signal-version) to find events produced under an older definition.
 

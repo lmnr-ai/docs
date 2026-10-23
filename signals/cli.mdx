@@ -3,7 +3,7 @@ title: Manage Signals from the CLI
 sidebarTitle: CLI
 ---
 
-`lmnr-cli signal` creates, inspects, updates, and deletes [Signals](/signals/introduction) from your terminal. **Keep a Signal's prompt and schema in your repo, ship changes from CI, or hand the surface to a coding agent** that can shell out.
+`lmnr-cli signal` creates, inspects, updates, and deletes [Signals](/signals/introduction) from your terminal. **Keep a Signal's instruction and schema in your repo, ship changes from CI, or hand the surface to a coding agent** that can shell out.
 
 <Note>
 `signal` ships in the standalone [`lmnr-cli`](/platform/cli) npm package. You do not need the `@lmnr-ai/lmnr` SDK installed to use it.
@@ -31,7 +31,7 @@ The rest of this page assumes a global install. With `npx`, prefix each command 
 
 ## Create a Signal
 
-A Signal is a [prompt, a schema, a trigger, and filters](/signals/introduction). At minimum `signal create` needs a name, `--prompt`, and `--schema`:
+A Signal is an [instruction, a schema, a trigger, and filters](/signals/introduction). At minimum `signal create` needs a name, the instruction in `--prompt`, and `--schema`. Write the instruction as what to look for, not as a full LLM prompt: see [Write the instruction](/signals/introduction#write-the-instruction).
 
 ```bash
 lmnr-cli signal create "Refund requests" \
@@ -179,7 +179,7 @@ lmnr-cli signal get "Refund requests" --json
 }
 ```
 
-`version` is the current version of the judge definition (the prompt and schema). The full history is `signal versions`, below. `llmProfileId`, `llmProfileName`, and `model` are `null` when the Signal runs on the deployment's own credentials.
+`version` is the current version of the judge definition (the instruction and schema). The full history is `signal versions`, below. `llmProfileId`, `llmProfileName`, and `model` are `null` when the Signal runs on the deployment's own credentials.
 
 ```bash
 # Every Signal that is not currently active
@@ -188,7 +188,7 @@ lmnr-cli signal list --json | jq '.[] | select(.disabled) | .name'
 
 ### Version history
 
-Editing a Signal appends a new version of its definition: the name, prompt, schema, trigger, filters, mode, sampling, status, and LLM route as they were at that moment. An edit that changes nothing appends nothing. `signal versions` prints that history, oldest first, so you can see what the judge was asked at the time an old event was extracted:
+Editing a Signal appends a new version of its definition: the name, instruction, schema, trigger, filters, mode, sampling, status, and LLM route as they were at that moment. An edit that changes nothing appends nothing. `signal versions` prints that history, oldest first, so you can see what the judge was asked at the time an old event was extracted:
 
 ```bash
 lmnr-cli signal versions "Refund requests"
@@ -204,11 +204,11 @@ v2  2026-08-19T09:20:41.118204Z
   fields:  reason
 ```
 
-Like `get`, it takes an id or a name. The human output shows the prompt and the payload fields of each version; with `--json` each entry is `{"version","createdAt","definition"}` and `definition` carries the whole snapshot. The `version` field on `signal get` is only the current pointer; this command is the log.
+Like `get`, it takes an id or a name. The human output shows the instruction (as `prompt`) and the payload fields of each version; with `--json` each entry is `{"version","createdAt","definition"}` and `definition` carries the whole snapshot. The `version` field on `signal get` is only the current pointer; this command is the log.
 
 ## Update a Signal
 
-`signal update` is a **partial patch: any flag you omit keeps its stored value.** Changing the prompt cannot clear your sampling, reactivate a paused Signal, or alter when it fires.
+`signal update` is a **partial patch: any flag you omit keeps its stored value.** Changing the instruction cannot clear your sampling, reactivate a paused Signal, or alter when it fires.
 
 ```bash
 lmnr-cli signal update "Refund requests" --prompt "Detect refund asks only, ignore complaints."

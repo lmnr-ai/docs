@@ -12,17 +12,17 @@ Detecting these failures requires understanding what the agent was asked to do a
 Signals are powered by our trace analysis agent. The **Signals agent** takes three inputs:
 
 - **Trace**: the agent run to analyze.
-- **Prompt**: what to look for.
+- **Instruction**: what to look for, in plain language.
 - **JSON schema**: what to record when it finds a match.
 
 <Frame caption="A coding agent's report contradicts its own test output, and the Signals agent records it as a structured event.">
   <img
     src="/images/signals/signal-intro.svg"
-    alt="A trace and a Signal's prompt and schema go into the Signals agent, which outputs a signal event. In the trace, a coding agent runs tests: one test fails on a missing function, the end-to-end test fails on a different error, and the unit tests pass. Its final report blames both failures on the same missing function. The prompt asks whether the agent's final report states a conclusion that its own tool outputs contradict, with a schema of claim, evidence and claim_type. The Signals agent outputs an event: claim_type root_cause, evidence 'e2e test: different error', severity critical."
+    alt="A trace and a Signal's instruction and schema go into the Signals agent, which outputs a signal event. In the trace, a coding agent runs tests: one test fails on a missing function, the end-to-end test fails on a different error, and the unit tests pass. Its final report blames both failures on the same missing function. The instruction asks whether the agent's final report states a conclusion that its own tool outputs contradict, with a schema of claim, evidence and claim_type. The Signals agent outputs an event: claim_type root_cause, evidence 'e2e test: different error', severity critical."
   />
 </Frame>
 
-A prompt and a schema together define a **Signal**. The Signals agent reads the relevant steps in each trace and returns a **signal event** with your schema fields and links to its evidence. If it finds no match, it returns no event.
+An instruction and a schema together define a **Signal**. The Signals agent reads the relevant steps in each trace and returns a **signal event** with your schema fields and links to its evidence. If it finds no match, it returns no event.
 
 <Frame caption="Each finished trace is checked against the Signal's trigger and filters, then read by the Signals agent. A matching trace produces an event that is grouped into a cluster, stored for SQL, and checked against your alerts.">
   <img
@@ -45,7 +45,7 @@ In the trace above, a coding agent reports its work as done despite two failing 
 
 Every tool call succeeded. The mistake is in the agent's reasoning, and if you trust its report, you'll look for the wrong bug.
 
-To find reports that contradict the agent's own evidence, we created a Signal with the following prompt:
+To find reports that contradict the agent's own evidence, we created a Signal with the following instruction:
 
 > Does the agent's final report state a conclusion that its own tool outputs contradict? Record the claim and the evidence against it.
 
@@ -87,7 +87,7 @@ That makes it practical to analyze every production trace with the quality neede
 
 ## Define your own trace analysis
 
-Signals are a general way to analyze traces. You decide what to look for and what to record. A prompt can ask a broad question, combine several conditions, or compare evidence across different steps. The output schema gives you control over the fields and categories in the result.
+Signals are a general way to analyze traces. You decide what to look for and what to record. An instruction can ask a broad question, combine several conditions, or compare evidence across different steps. The output schema gives you control over the fields and categories in the result.
 
 For example, you could ask a Signal to:
 
@@ -95,6 +95,27 @@ For example, you could ask a Signal to:
 - **Classify a conversation**: _What was the user trying to accomplish, and was it resolved?_ Return an intent and an outcome.
 - **Extract information**: _Which integrations did the user ask for?_ Collect the integration names and the requests they made.
 - **Compare evidence**: _Do the amounts in the contract agree with the accompanying memo?_ Record any mismatches and where they appear.
+
+## Write the instruction
+
+The instruction is not a full LLM prompt. The Signals agent already knows that it is analyzing a trace, how the trace is laid out, how to cite the spans behind a finding, and how to return an event in your schema, or no event when nothing matches. **Your instruction only says what to look for.**
+
+A general description is usually enough. These are complete instructions:
+
+> Find runs where the agent gave up before completing the user's request.
+
+> Did the agent promise a refund without calling the refund tool?
+
+> What was the user trying to accomplish? Classify the primary intent.
+
+Leave out what the Signals agent already handles:
+
+- **A role or persona.** Don't open with _You are an expert judge evaluating AI agents_. The agent's role is fixed.
+- **How to read the trace.** The trace format, span types, and long inputs and outputs are handled for you.
+- **The output format.** Don't ask for JSON or describe the response shape. Put the fields you want in the output schema, and use each field's description to say what goes in it.
+- **When to stay quiet.** A trace with no match already returns no event.
+
+Add detail only when the results need it. If events include cases you don't consider matches, say what does and doesn't count, as in _Report tool calls with invalid arguments. Do not report tool calls that failed because of a network error._ The **Failure Detector** template in the Create Signal drawer is a longer example: it spells out what is reportable and what is not, and still leaves the role and output format to the Signals agent. [Clusters](/signals/clusters#when-clusters-earn-their-keep) show you where an instruction is too broad.
 
 ## How Signals are billed
 
