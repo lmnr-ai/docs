@@ -113,7 +113,7 @@
               "platform/custom-model-costs",
               "platform/usage-limits",
               "platform/pii-redaction",
-              "custom-dashboards/overview",
+              "platform/dashboards",
               "queues/quickstart",
               "platform/llm-profiles",
               "playground"
@@ -267,6 +267,10 @@
     ]
   },
   "redirects": [
+    {
+      "source": "/custom-dashboards/overview",
+      "destination": "/platform/dashboards"
+    },
     {
       "source": "/hosting-options",
       "destination": "/self-hosting/overview"
