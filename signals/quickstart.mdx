@@ -78,7 +78,7 @@ Click **Signals** in the project sidebar. If this is a new project, the **Failur
 
 To write your own, click **+ Signal**. The Create Signal drawer opens with the definition at the top and the trigger, filters, and sampling below it.
 
-<Frame caption="Create Signal drawer: name, template, prompt, and output schema on top, trigger and filters below">
+<Frame caption="Create Signal drawer: name, template, instruction, and output schema on top, trigger and filters below">
   <img
     src="/images/signals/create-signal-empty.png"
     alt="Empty Create Signal drawer showing the trigger options and the default total tokens filter"
@@ -87,10 +87,10 @@ To write your own, click **+ Signal**. The Create Signal drawer opens with the d
 
 ## 3. Write the Signal
 
-<Frame caption="Create Signal drawer filled in from the Task template: the prompt and output schema come prefilled">
+<Frame caption="Create Signal drawer filled in from the Task template: the instruction and output schema come prefilled">
   <img
     src="/images/signals/create-signal-filled.png"
-    alt="Create Signal drawer populated with a name, the Task template, a prompt, and two output schema fields"
+    alt="Create Signal drawer populated with a name, the Task template, an instruction, and two output schema fields"
   />
 </Frame>
 
@@ -98,10 +98,10 @@ To write your own, click **+ Signal**. The Create Signal drawer opens with the d
 <Step title="Name">
 </Step>
 
-<Step title="Template (optional)">Templates prefill the prompt and schema</Step>
+<Step title="Template (optional)">Templates prefill the instruction and schema</Step>
 
-<Step title="Prompt">
-  Describe what the Signal should detect or extract from the trace in plain English.
+<Step title="Instruction">
+  Describe what the Signal should detect or extract from the trace in plain English. This is an instruction to the Signals agent, not a full LLM prompt: skip the role (_You are a judge..._) and the output format, and say what to look for. One or two sentences is often enough. See [Write the instruction](/signals/introduction#write-the-instruction).
 </Step>
 
 <Step title="Structured output">
@@ -144,7 +144,7 @@ By default, Signals will notify the creator of critical events through the platf
 
 A Signal can evaluate new traces as they arrive, or a historical slice. Open a Signal and click **Settings** to manage both from a sidebar with four sections: **General** (definition, trigger, and filters), **Versions** (the history of the Signal's definition), **Alerts**, and **Backfill**. Every evaluation the Signal performs is listed on the **Runs** tab, next to **Events** and **Settings**.
 
-<Frame caption="Signal Settings > General: prompt, output schema, trigger, filters, and sampling">
+<Frame caption="Signal Settings > General: instruction, output schema, trigger, filters, and sampling">
   <img
     src="/images/signals/signal-settings.png"
     alt="Signal settings General section with the trigger options and the filters bar"
