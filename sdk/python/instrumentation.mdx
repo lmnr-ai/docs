@@ -27,6 +27,7 @@ Initialize Laminar tracing and auto-instrumentation.
 | `session_recording_options` | `SessionRecordingOptions` | `None` | Browser session recording options |
 | `force_http` | `bool` | `False` | Force OTLP HTTP exporter |
 | `metadata` | `dict[str, AttributeValue]` | `None` | Global trace metadata |
+| `release` | `str` &#124; `None` | `None` | Release stamped on every span, usually the git commit SHA. When `None`, read from `LMNR_RELEASE`, then deploy platform variables, then `.git`. See [Agent versions](/tracing/agent-versions#attach-a-release) |
 
 **Returns:** `None`
 

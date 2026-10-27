@@ -42,6 +42,7 @@
                 ]
               },
               "tracing/task-extraction",
+              "tracing/agent-versions",
               "tracing/cost-tracking",
               "tracing/browser-agent-observability",
               "tracing/langgraph-visualization",
