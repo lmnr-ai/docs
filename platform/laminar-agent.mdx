@@ -8,6 +8,8 @@ Laminar Agent is an AI agent that lives inside your project and answers question
 
 ## Where you can use it
 
+In the Laminar app, open the **Agent** panel from the bottom bar of any project page. Outside the app:
+
 <CardGroup cols={3}>
   <Card title="Slack" href="/platform/integrations#laminar-agent">
     Mention `@Laminar` in a connected channel and it replies in the thread.
@@ -28,6 +30,7 @@ The agent works by calling a set of tools against your project:
 - **Read a trace.** Given a trace, it pulls a compact view of the full span structure: agent inputs, LLM turns, tool calls, and errors. This is how it explains, summarizes, or debugs a specific run.
 - **Search inside a trace.** It fuzzy-matches a string across one trace's span inputs and outputs and returns the matching snippets with surrounding context.
 - **Fetch full span content.** When a preview is truncated, it pulls the complete input and output for specific spans.
+- **Build dashboards.** It creates, renames, and deletes [dashboards](/platform/dashboards), and adds, edits, rearranges, or deletes their charts. Every chart query is test-run before anything is saved, a batch of chart changes is saved all at once or not at all, and the agent replies with a link to the dashboard.
 
 ## Example questions
 
@@ -38,6 +41,10 @@ The agent works by calling a set of tools against your project:
 - "Compare token usage between the last two successful runs."
 - "How much did we spend on LLM calls today, broken down by model?"
 - "Which signal fired most often this week, and show me an example event."
+- "Create a dashboard of LLM cost and tokens by model, plus a table of the 10 most expensive traces."
+- "Add a chart of p90 trace duration to the cost dashboard and put it next to the cost chart."
+
+When you ask from the **Agent** panel on a dashboard, the agent knows which dashboard you are looking at, so "add a chart of errors per day here" works without naming it. See [Ask Laminar Agent to build a dashboard](/platform/dashboards#ask-laminar-agent-to-build-a-dashboard).
 
 
 ### Slack
@@ -72,5 +79,11 @@ With `--json`, the conversation id is returned as `conversationId` in the output
   </Card>
   <Card title="Signals" href="/signals/introduction">
     Define the outcomes and failures the agent can then query and explain.
+  </Card>
+  <Card title="Dashboards" href="/platform/dashboards">
+    Chart cost, tokens, and latency, or have the agent build the dashboard.
+  </Card>
+  <Card title="MCP server" href="/platform/mcp">
+    Call the agent from Claude Code, Cursor, or Codex.
   </Card>
 </CardGroup>

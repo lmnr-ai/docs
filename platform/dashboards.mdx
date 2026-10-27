@@ -1,0 +1,217 @@
+---
+title: "Dashboards: Chart Agent Cost, Tokens, and Latency"
+sidebarTitle: "Dashboards"
+---
+
+Dashboards are grids of charts built on your traces, spans, and signal events. Keep several dashboards per project, build charts with the visual builder or plain SQL, or ask [Laminar Agent](/platform/laminar-agent) to build a dashboard for you. Every chart on a dashboard shares one time range, so you read cost, tokens, latency, and failures over the same window.
+
+<Frame caption="A dashboard with line, bar, horizontal bar, and table charts over the last 14 days.">
+  <img src="/images/dashboards/dashboard-overview.png" alt="A Laminar dashboard with LLM cost, tokens by model, trace duration, and an expensive traces table" />
+</Frame>
+
+The header controls apply to every chart on the dashboard:
+
+- **Time range**: a preset such as the last 24 hours or 14 days, or a custom window.
+- **Group by**: the bucket size of time-series charts, **By minute**, **By hour**, or **By day**. The options depend on the length of the time range.
+- **Refresh**: re-runs every chart.
+- **`+ Chart`**: adds a chart (see [Add a chart](#add-a-chart)).
+
+Drag a chart by the grip handle next to its title to move it, and drag its bottom-right corner to resize it. The layout is saved as you go.
+
+## Switch between dashboards
+
+A project can have as many dashboards as you need: one for cost, one for a specific agent, one for an incident. Click the dashboard name in the header to open the dashboard strip, which shows a thumbnail of every dashboard's layout.
+
+<Frame caption="Click the dashboard name to see every dashboard in the project, with the current one highlighted.">
+  <img src="/images/dashboards/dashboard-picker.png" alt="Dashboard strip with thumbnails of each dashboard and a new dashboard card" />
+</Frame>
+
+- **Open** a dashboard by clicking its card. Laminar reopens the last dashboard you viewed the next time you visit **Dashboards**.
+- **Create** a dashboard with the **New dashboard** card at the end of the strip.
+- **Rename** or **delete** a dashboard from the buttons that appear when you hover its card. Deleting a dashboard also deletes its charts. The last dashboard in a project can't be deleted.
+
+## Organize charts
+
+Each chart's **More options** menu has **Rename**, **Edit**, **Duplicate**, **Move to**, and **Delete**.
+
+<Frame caption="Move a chart to another dashboard from its More options menu.">
+  <img src="/images/dashboards/chart-menu-move-to.png" alt="Chart More options menu with the Move to submenu listing other dashboards" />
+</Frame>
+
+To move a chart without the menu, drag it by its grip handle. The dashboard strip opens as soon as you start dragging; drop the chart on another dashboard's card to move it there.
+
+## Add a chart
+
+The **`+ Chart`** button opens a preset picker grouped by data source: **Traces**, **Spans**, and **Signals**, plus **Custom** for a blank chart. Pick a preset and the chart is added to the bottom of the dashboard right away. To change its filters, grouping, or name, choose **Edit** from the chart's **More options** menu. **Custom** opens the chart editor with an empty chart.
+
+<Frame caption="Presets for traces, spans, and signal events, or Custom for a blank chart.">
+  <img src="/images/dashboards/chart-presets.png" alt="Chart presets popover with Custom option and Traces, Spans, and Signals tabs" />
+</Frame>
+
+Available presets:
+
+- **Traces**: Trace p90 cost, Trace p90 duration, New traces, Total duration, Expensive traces, Longest traces.
+- **Spans**: Total cost, Total tokens, Tokens by model, Top span names, Expensive spans, Longest spans.
+- **Signals**: Signal events, Signal events table.
+
+## Chart types
+
+- **Line Chart**: a time series, bucketed by the dashboard's **Group by** interval.
+- **Bar Chart**: a time series as bars. With a group-by or breakdown column, bars stack per bucket.
+- **Horizontal Bar**: a ranked comparison, such as cost by model or the most common span names.
+- **Table**: rows from your query, with sortable columns and infinite scroll. Column order, width, and visibility are saved on the chart.
+
+Line and bar charts can show a **Display Value** above the plot: the **Total** across the window, the **Average** across buckets, or **None**. Cost values render with a `$` prefix and durations with a seconds suffix.
+
+## Build a chart
+
+The chart editor has a sidebar with the chart's settings and a live preview on the right. The preview has its own **Time range** and **Group by**, so you can check the chart against a different window without changing the dashboard. Pick a **Chart name** and **Chart type**, then build the query in one of two modes: **Standard** or **Advanced**.
+
+### Standard mode
+
+Standard mode builds the query from form fields.
+
+<Frame caption="Standard mode: sum of total_tokens on LLM spans, grouped by model.">
+  <img src="/images/dashboards/chart-editor-standard.png" alt="Chart editor in Standard mode with table, metric, filters, and group by fields next to a line chart preview" />
+</Frame>
+
+1. **Table**: `traces`, `spans`, or `signal_events`.
+2. **Metric**: `count`, `sum`, `avg`, `min`, `max`, `p90`, `p95`, or `p99` of a column, or **Custom SQL** for any expression (see below). Table charts take a list of **Columns** instead.
+3. **Filters**: narrow rows before aggregation, for example `span_type = LLM`.
+4. **Group By**: split the metric by a dimension such as `model`, `provider`, or `span_type`. Each value becomes its own series.
+5. **Order By** and **Limit**: for horizontal bars and tables.
+6. **Display Value**: for line and bar charts.
+
+When you pick a table that has an id column, the editor adds it to the query behind the scenes. That is what makes horizontal bars and table rows clickable: click one to open the underlying trace in a side panel.
+
+#### Custom SQL metrics
+
+Pick **Custom SQL** in the metric dropdown when the built-in aggregations aren't enough. The editor inserts your expression as `<expr>` in `SELECT <expr> FROM <table>` and applies the filters and group-by around it, so write a single aggregate without `WHERE` or `GROUP BY`:
+
+- **Conditional counts**: `countIf(span_type = 'LLM' AND status = 'error')`.
+- **Rates**: `countIf(status = 'error') / count() * 100` for an error rate in percent.
+- **Other percentiles**: `quantile(0.75)(duration)`.
+- **Expressions over several columns**: `sum(input_cost + output_cost)`.
+
+#### Custom columns on tables
+
+In a table chart, each entry in **Columns** is either a column or, with **Custom SQL**, an expression evaluated per row:
+
+- Combine fields: `concat(name, ' (', model, ')')`.
+- Read a JSON attribute: `JSONExtractString(attributes, 'gen_ai.request.model')`.
+- Derive a value: `total_tokens / duration` for tokens per second.
+
+Custom columns get a stable alias such as `column_ab12cd`, so reordering or removing other columns doesn't rename them.
+
+### Advanced mode
+
+Advanced mode is a SQL editor. Write any read-only query over the [SQL editor tables](/platform/sql-editor#table-schemas), including `WITH` clauses, joins, and window functions, then map the result columns to the chart.
+
+<Frame caption="The same chart in Advanced mode: the SQL Standard mode generated, with time on the X axis, total_tokens on the Y axis, and one line per model.">
+  <img src="/images/dashboards/chart-editor-advanced.png" alt="Chart editor in Advanced mode with a SQL query, X axis, Y axis, and Break down by selects next to a line chart preview" />
+</Frame>
+
+1. Write the query and click **Run** to preview it. The editor also re-runs it when you change the preview's time range or group-by.
+2. Map the result columns:
+   - **Line** and **bar** charts: **X axis**, **Y axis**, and an optional **Break down by** column that draws one series per value (for example per model).
+   - **Horizontal bar**: **Value** and **Category**.
+   - **Table**: every column in the result is shown.
+3. Click **Save** (**Update** on an existing chart).
+
+Use the dashboard's parameters so the chart follows the time range and **Group by** picker:
+
+| Parameter | Value |
+|-----------|-------|
+| `{start_time:DateTime64}` | Start of the dashboard's time range |
+| `{end_time:DateTime64}` | End of the dashboard's time range |
+| `{interval_unit:String}` | The **Group by** bucket: `MINUTE`, `HOUR`, or `DAY` |
+
+These are the only parameters a dashboard binds. A query that uses any other parameter can't be run or saved.
+
+This query charts p90 LLM latency per model, one line per model:
+
+```sql
+SELECT
+    toStartOfInterval(start_time, toInterval(1, {interval_unit:String})) AS time,
+    model,
+    quantile(0.9)(duration) AS p90_duration
+FROM spans
+WHERE
+    span_type = 'LLM'
+    AND start_time >= {start_time:DateTime64}
+    AND start_time <= {end_time:DateTime64}
+GROUP BY time, model
+ORDER BY time WITH FILL
+    FROM toStartOfInterval({start_time:DateTime64}, toInterval(1, {interval_unit:String}))
+    TO toStartOfInterval({end_time:DateTime64}, toInterval(1, {interval_unit:String}))
+    STEP toInterval(1, {interval_unit:String})
+```
+
+Set **X axis** to `time`, **Y axis** to `p90_duration`, and **Break down by** to `model`. `WITH FILL` adds empty buckets, so the line drops to zero instead of skipping gaps.
+
+Return a `trace_id` column (and `span_id` for spans) to make horizontal bars and table rows open the trace when clicked. Table charts page through results on scroll, and that works even if your query has its own `LIMIT`.
+
+### Switch between modes
+
+- **Standard to Advanced** keeps the chart: the editor opens the SQL that Standard mode generated, ready to edit.
+- **Advanced to Standard** converts the SQL back into form fields when it can. Queries with `WITH`, `JOIN`, `HAVING`, `UNION`, window functions, or anything else the form can't represent can't be converted; the editor asks before switching, and switching clears your SQL.
+
+When you open an existing chart, the editor picks the mode that can represent it.
+
+## Ask Laminar Agent to build a dashboard
+
+[Laminar Agent](/platform/laminar-agent) can create dashboards and add, edit, rearrange, or delete charts. Describe what you want to see and it writes the SQL, checks that each query runs, lays out the charts, and replies with a link to the dashboard.
+
+<Frame caption="Ask Laminar Agent for a dashboard and it creates the charts, then links to the result.">
+  <img src="/images/dashboards/agent-dashboard.png" alt="Laminar Agent panel next to a dashboard it created, listing the charts it added" />
+</Frame>
+
+Open the **Agent** panel from the bottom bar while you are on a dashboard and the agent knows which dashboard you are looking at, so requests like these work without naming it:
+
+- "Summarize what this dashboard shows."
+- "Add a chart of LLM cost by model."
+- "Tidy up this dashboard's layout."
+
+The same tools are available when you ask the agent from Slack, the [MCP server](/platform/mcp), or the [CLI](/platform/cli#ask-the-agent). Charts the agent writes are SQL charts: open one and it starts in Advanced mode, or in Standard mode if the SQL converts cleanly.
+
+## Read a dashboard
+
+### Linked hover across charts
+
+Hover a time-series chart and every other time-series chart on the dashboard highlights the same time bucket, so you can line up a cost spike with the latency or error chart next to it.
+
+### Click and drag to narrow the time range
+
+Drag across a time-series chart to select a window. When you release, a toolbar shows the window and its length with two actions:
+
+<Frame caption="Drag across a chart to select a window, then zoom in or open the matching traces. The other charts highlight the bucket under the cursor.">
+  <img src="/images/dashboards/drag-to-select.png" alt="Drag selection across dashboard charts with a Zoom to selection and Open in traces toolbar" />
+</Frame>
+
+- **Zoom to selection** sets the dashboard's time range to the selected window.
+- **Open in traces** opens the [Traces](/platform/viewing-traces) page in a new tab, filtered to the same window.
+
+### Open a trace from a chart
+
+Click a horizontal bar, or a `trace_id` or `id` cell in a table, to open that trace in a side panel without leaving the dashboard.
+
+## Query dashboards with SQL
+
+Dashboards and their charts are queryable as the [`dashboards`](/platform/sql-editor#dashboards) and [`dashboard_charts`](/platform/sql-editor#dashboard-charts) tables, so you can find which dashboards use a table or column, or export a chart's SQL.
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="SQL Editor" icon="database" href="/platform/sql-editor">
+    Tables, columns, and query patterns for Advanced mode charts.
+  </Card>
+  <Card title="Laminar Agent" icon="bot" href="/platform/laminar-agent">
+    Ask questions about your traces and have the agent build dashboards.
+  </Card>
+  <Card title="Cost tracking" icon="dollar-sign" href="/tracing/cost-tracking">
+    How Laminar computes the LLM cost your charts aggregate.
+  </Card>
+  <Card title="Signals" icon="radar" href="/signals/introduction">
+    Extract outcomes and failures from traces, then chart them.
+  </Card>
+</CardGroup>
