@@ -1,10 +1,10 @@
 ---
 title: "Agent versioning: track prompt and tool changes"
-sidebarTitle: Agent versions
+sidebarTitle: Introduction
 description: "Laminar detects the agents in your traces, versions their system prompts and tools, and tags every trace with the version that ran it."
 ---
 
-Agent versioning answers "which version of my agent produced this trace?" Laminar finds each agent in your traces, records every change to its system prompt and tool definitions as a new version, and tags every trace with the version that ran it. Open **Agent versions** under **Investigate** in the project sidebar to see each agent's versions, what changed between them, the models each one ran on, and how much traffic each version served.
+Agent versioning answers "which version of my agent produced this trace?" Laminar finds each agent in your traces, records every change to its system prompt and tool definitions as a new version, and tags every trace with the version that ran it. Open **Agent versions** in the project sidebar to see each agent's versions, what changed between them, the models each one ran on, and how much traffic each version served.
 
 It works with no setup, by reading your traces. For exact versions, attach a [release](#attach-a-release) (usually your git commit SHA) to your traces. We strongly recommend it for any agent you deploy.
 
@@ -13,7 +13,7 @@ Agent versioning is in beta.
 </Note>
 
 <Frame caption="Version 2 of this support agent shipped in two releases and ran on two models. Its system prompt is diffed against version 1, and the chart shows how many traces each version served.">
-  <img src="/images/tracing/agent-versions.png" alt="Agent versions page for a support agent: a traces-per-version chart, and version 2 expanded with its models, two releases, and a system prompt diff against version 1" />
+  <img src="/images/agent-versions/agent-versions.png" alt="Agent versions page for a support agent: a traces-per-version chart, and version 2 expanded with its models, two releases, and a system prompt diff against version 1" />
 </Frame>
 
 ## Agents and versions
@@ -35,25 +35,21 @@ Laminar versions an agent in one of two ways, depending on whether its traces ca
 
 ### Automatic, from traces
 
-Without a release, Laminar infers versions from the traces themselves. It compares the system prompts and tools of consecutive runs and starts a new version when a change holds for about 50 traces in a row. A new agent gets its first version after about 50 traces and 10 minutes. During a gradual rollout, where old and new prompts run side by side for up to 10 minutes, each trace is assigned by its content.
+Without a release, Laminar infers versions from the traces themselves: it compares the system prompts and tools of consecutive runs and starts a new version once a change sticks.
 
-This needs no setup, but it has limits:
-
-- **It waits for traffic.** A change is confirmed only after about 50 traces, and traces near a change are assigned once enough later traces arrive. An agent that runs a few times an hour can wait hours for its traces to get a version.
-- **It assigns by time outside the rollout window.** If two versions run side by side for longer than 10 minutes, for example a canary that lasts a day, or staging and production sending traces to the same project, traces can be attributed to the wrong version.
-- **It only sees prompts.** Versions are not linked to the code you deployed, so you can't tell which commit a version came from.
+This needs no setup, but it is an inference. A new version appears only after enough traces confirm the change, so a low-traffic agent can wait a while for its versions. When two prompts run side by side for a long time, such as a canary or several environments sending to one project, some traces can be attributed to the wrong version. And versions are not linked to the code you deployed.
 
 ### Exact, from releases (recommended)
 
 When your spans carry a release, Laminar versions the agent by release instead:
 
 - **Every trace gets the version of the release that produced it**, no matter when it ran or what else was running alongside it. Canaries, staged rollouts, rollbacks, and several environments in one project are all attributed correctly.
-- **New versions appear faster.** A release gets its version from its first 10 traces. A release with fewer traces gets one as soon as a newer release reaches 10 traces, or after 6 hours.
+- **New versions appear faster**, from the first few traces of a release.
 - **Each version lists the releases it shipped in**, so you can go from a regression to the commit that introduced it.
 
 Laminar still compares prompts and tools between releases: a release that doesn't change the system prompt or tool definitions stays on the same version, and a release that brings back an earlier prompt gets that earlier version.
 
-An agent switches to release-based versioning once at least 90% of its recent traces carry a release, and it stays there. From then on, traces of that agent without a release are not versioned, so set a release everywhere the agent runs: every service, worker, and environment. Traces from before the switch keep the versions they already had.
+An agent switches to release-based versioning once almost all of its recent traces carry a release, and it stays there. From then on, traces of that agent without a release are not versioned, so set a release everywhere the agent runs: every service, worker, and environment. Traces from before the switch keep the versions they already had.
 
 ## Attach a release
 
@@ -81,8 +77,7 @@ A release identifies the code that produced a trace. The Laminar SDKs stamp it o
    | Google App Engine | `GAE_DEPLOYMENT_ID` |
    | Fly.io | `FLY_IMAGE_REF` |
 
-4. On AWS Lambda, the published function version, as `<function name>:<version>`. `$LATEST` is ignored, because it stays the same across deploys.
-5. The commit checked out in the working directory or one of its parents, read from `.git` without running `git`.
+4. The commit checked out in the working directory or one of its parents, read from `.git`.
 
 Release detection ships in `lmnr` 0.8.3 (Python) and `@lmnr-ai/lmnr` 0.8.53 (TypeScript).
 
@@ -99,78 +94,46 @@ ENV LMNR_RELEASE=$GIT_SHA
 docker build --build-arg GIT_SHA=$(git rev-parse HEAD) .
 ```
 
-Or pass it to `Laminar.initialize()`:
+If your build already bakes the commit into your code, for example as a generated constant, pass it to `Laminar.initialize()` instead:
 
 <Tabs>
   <Tab title="TypeScript">
     ```typescript
     import { Laminar } from '@lmnr-ai/lmnr';
+    import { COMMIT_SHA } from './build-info';
 
-    Laminar.initialize({
-      release: process.env.GIT_SHA,
-    });
+    Laminar.initialize({ release: COMMIT_SHA });
     ```
   </Tab>
   <Tab title="Python">
     ```python
-    import os
-
     from lmnr import Laminar
 
-    Laminar.initialize(release=os.environ.get("GIT_SHA"))
+    from build_info import COMMIT_SHA
+
+    Laminar.initialize(release=COMMIT_SHA)
     ```
   </Tab>
 </Tabs>
 
-If the value is empty, the SDK falls back to automatic detection.
-
-### Choose a good release value
-
-- **It must change on every deploy.** A commit SHA is ideal. An environment name like `production`, or a version number you don't bump on every deploy, puts different prompts under one release, and they all get one version.
-- **Full and short SHAs match.** A full 40-character SHA is shortened to its 7-character form, so `4f2a9c1` and the full SHA of that commit are the same release.
-- **Up to 128 characters.** Longer values are cut.
+Whatever you use, it must change on every deploy. An environment name like `production` puts every deploy under one release.
 
 ### Without the Laminar SDK
 
 If you send traces with your own OpenTelemetry exporter, set the `lmnr.span.release` attribute on your spans. Laminar reads the release from each LLM span, so set it on every span rather than only the root. See the [span attribute reference](/tracing/structure/span-attribute-reference#span-shape-attributes).
 
-## Query versions and releases with SQL
+## Query agent versions with SQL
 
-Every trace carries its release in the `release` column of the [`traces` table](/platform/sql-editor#traces), and its agent versions in `agent_versions`, one element per agent, version, and model that ran in the trace. Query them from the [SQL editor](/platform/sql-editor), the [SQL API](/platform/sql-editor#sql-api), or the [Laminar CLI](/platform/cli#query-data-with-sql).
-
-Compare error rates across releases:
+Every trace carries the agent versions that ran in it in the `agent_versions` column of the [`traces` table](/platform/sql-editor#traces), one element per agent, version, and model. `ARRAY JOIN` it to break traces down by version or model:
 
 ```sql
-SELECT
-  release,
-  count() AS traces,
-  countIf(status = 'error') AS errors,
-  round(errors / traces, 3) AS error_rate,
-  min(start_time) AS first_seen
-FROM traces
-WHERE start_time > now() - INTERVAL 7 DAY
-  AND release != ''
-GROUP BY release
-ORDER BY first_seen DESC
-```
-
-Break down traffic and cost by release and model:
-
-```sql
-SELECT
-  release,
-  v.model AS model,
-  count() AS traces,
-  round(avg(total_cost), 4) AS avg_cost
+SELECT v.version_hash AS version, v.model AS model, count() AS traces
 FROM traces
 ARRAY JOIN agent_versions AS v
 WHERE start_time > now() - INTERVAL 7 DAY
-  AND release != ''
-GROUP BY release, model
+GROUP BY version, model
 ORDER BY traces DESC
 ```
-
-Pair releases with [Signals](/signals/introduction) to see which deploy introduced a failure: the `signal_events` column on `traces` holds the events that fired on each trace.
 
 <Note>
 On a [self-hosted](/self-hosting/overview) deployment, agent versioning is off by default. Set `AGENT_VERSIONING_ENABLED=true` in the environment of the app-server and the app-server consumer to turn it on. Agent names are generated with the server's `LLM_PROVIDER` and `LLM_API_KEY`; without them, agents show as **Unnamed agent** until you rename them.
@@ -183,12 +146,12 @@ On a [self-hosted](/self-hosting/overview) deployment, agent versioning is off b
     Read a version's runs as a transcript.
   </Card>
   <Card title="Signals" href="/signals/introduction">
-    Track outcomes and failures, then compare them across releases.
+    Track outcomes and failures across your traces.
   </Card>
   <Card title="Task extraction" href="/tracing/task-extraction">
     See what each run was asked to do.
   </Card>
-  <Card title="Metadata" href="/tracing/structure/metadata">
-    Add your own dimensions next to the release.
+  <Card title="SQL editor" href="/platform/sql-editor">
+    Query traces, versions, and signal events.
   </Card>
 </CardGroup>
