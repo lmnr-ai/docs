@@ -1,0 +1,157 @@
+---
+title: "Agent versioning: track prompt and tool changes"
+sidebarTitle: Introduction
+description: "Laminar detects the agents in your traces, versions their system prompts and tools, and tags every trace with the version that ran it."
+---
+
+Agent versioning answers "which version of my agent produced this trace?" Laminar finds each agent in your traces, records every change to its system prompt and tool definitions as a new version, and tags every trace with the version that ran it. Open **Agent versions** in the project sidebar to see each agent's versions, what changed between them, the models each one ran on, and how much traffic each version served.
+
+It works with no setup, by reading your traces. For exact versions, attach a [release](#attach-a-release) (usually your git commit SHA) to your traces. We strongly recommend it for any agent you deploy.
+
+<Note>
+Agent versioning is in beta.
+</Note>
+
+<Frame caption="Version 2 of this support agent shipped in two releases and ran on two models. Its system prompt is diffed against version 1, and the chart shows how many traces each version served.">
+  <img src="/images/agent-versions/agent-versions.png" alt="Agent versions page for a support agent: a traces-per-version chart, and version 2 expanded with its models, two releases, and a system prompt diff against version 1" />
+</Frame>
+
+## Agents and versions
+
+An **agent** is the set of LLM calls that share the opening of a system prompt. Laminar names each agent from its prompt; click the pencil icon next to the name to rename it. LLM calls without a system prompt don't belong to an agent, and traces from [evaluations](/evaluations/introduction) and the [playground](/playground) are not versioned.
+
+A **version** is the part of the system prompt and tool definitions that is the same in every run of the agent. Text that changes from request to request, such as the user's name, retrieved documents, or the current date, is not part of the version, so it doesn't create new ones. Change the prompt or a tool definition and the agent gets a new version; go back to an earlier prompt and the agent returns to the version it had before.
+
+For each version, the page shows:
+
+- **Models**: every model the version ran on.
+- **Releases**: the releases that shipped this version, when your traces carry them.
+- **System prompt** and **Tools**: the version's text, diffed against the previous version.
+- **Traces per version**: a chart of how many traces each version served over time.
+
+## How Laminar assigns versions
+
+Laminar versions an agent in one of two ways, depending on whether its traces carry a release.
+
+### Automatic, from traces
+
+Without a release, Laminar infers versions from the traces themselves: it compares the system prompts and tools of consecutive runs and starts a new version once a change sticks.
+
+This needs no setup, but it is an inference. A new version appears only after enough traces confirm the change, so a low-traffic agent can wait a while for its versions. When two prompts run side by side for a long time, such as a canary or several environments sending to one project, some traces can be attributed to the wrong version. And versions are not linked to the code you deployed.
+
+### Exact, from releases (recommended)
+
+When your spans carry a release, Laminar versions the agent by release instead:
+
+- **Every trace gets the version of the release that produced it**, no matter when it ran or what else was running alongside it. Canaries, staged rollouts, rollbacks, and several environments in one project are all attributed correctly.
+- **New versions appear faster**, from the first few traces of a release.
+- **Each version lists the releases it shipped in**, so you can go from a regression to the commit that introduced it.
+
+Laminar still compares prompts and tools between releases: a release that doesn't change the system prompt or tool definitions stays on the same version, and a release that brings back an earlier prompt gets that earlier version.
+
+An agent switches to release-based versioning once almost all of its recent traces carry a release, and it stays there. From then on, traces of that agent without a release are not versioned, so set a release everywhere the agent runs: every service, worker, and environment. Traces from before the switch keep the versions they already had.
+
+## Attach a release
+
+A release identifies the code that produced a trace. The Laminar SDKs stamp it on every span, and most deploy platforms need no code change: the SDK reads the commit SHA from the environment.
+
+### Automatic detection
+
+`Laminar.initialize()` uses the first release it finds, in this order:
+
+1. The `release` option passed to `Laminar.initialize()`.
+2. The `LMNR_RELEASE` environment variable.
+3. A deploy platform or CI variable:
+
+   | Platform | Variable |
+   | --- | --- |
+   | GitHub Actions | `GITHUB_SHA` |
+   | Sentry | `SENTRY_RELEASE` |
+   | Vercel | `VERCEL_GIT_COMMIT_SHA` |
+   | Render | `RENDER_GIT_COMMIT` |
+   | Railway | `RAILWAY_GIT_COMMIT_SHA` |
+   | Heroku | `HEROKU_BUILD_COMMIT`, then `SOURCE_VERSION` |
+   | AWS CodeBuild | `CODEBUILD_RESOLVED_SOURCE_VERSION` |
+   | CircleCI | `CIRCLE_SHA1` |
+   | Google Cloud Run | `K_REVISION` |
+   | Google App Engine | `GAE_DEPLOYMENT_ID` |
+   | Fly.io | `FLY_IMAGE_REF` |
+
+4. The commit checked out in the working directory or one of its parents, read from `.git`.
+
+Release detection ships in `lmnr` 0.8.3 (Python) and `@lmnr-ai/lmnr` 0.8.53 (TypeScript).
+
+### Set the release explicitly
+
+Container images usually ship without the `.git` directory and outside a platform that sets one of the variables above. Pass the commit SHA at build time and expose it as `LMNR_RELEASE`:
+
+```dockerfile Dockerfile
+ARG GIT_SHA
+ENV LMNR_RELEASE=$GIT_SHA
+```
+
+```bash
+docker build --build-arg GIT_SHA=$(git rev-parse HEAD) .
+```
+
+If your build already bakes the commit into your code, for example as a generated constant, pass it to `Laminar.initialize()` instead:
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```typescript
+    import { Laminar } from '@lmnr-ai/lmnr';
+    import { COMMIT_SHA } from './build-info';
+
+    Laminar.initialize({ release: COMMIT_SHA });
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import Laminar
+
+    from build_info import COMMIT_SHA
+
+    Laminar.initialize(release=COMMIT_SHA)
+    ```
+  </Tab>
+</Tabs>
+
+Whatever you use, it must change on every deploy. An environment name like `production` puts every deploy under one release.
+
+### Without the Laminar SDK
+
+If you send traces with your own OpenTelemetry exporter, set the `lmnr.span.release` attribute on your spans. Laminar reads the release from each LLM span, so set it on every span rather than only the root. See the [span attribute reference](/tracing/structure/span-attribute-reference#span-shape-attributes).
+
+## Query agent versions with SQL
+
+Every trace carries the agent versions that ran in it in the `agent_versions` column of the [`traces` table](/platform/sql-editor#traces), one element per agent, version, and model. `ARRAY JOIN` it to break traces down by version or model:
+
+```sql
+SELECT v.version_hash AS version, v.model AS model, count() AS traces
+FROM traces
+ARRAY JOIN agent_versions AS v
+WHERE start_time > now() - INTERVAL 7 DAY
+GROUP BY version, model
+ORDER BY traces DESC
+```
+
+<Note>
+On a [self-hosted](/self-hosting/overview) deployment, agent versioning is off by default. Set `AGENT_VERSIONING_ENABLED=true` in the environment of the app-server and the app-server consumer to turn it on. Agent names are generated with the server's `LLM_PROVIDER` and `LLM_API_KEY`; without them, agents show as **Unnamed agent** until you rename them.
+</Note>
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Viewing traces" href="/platform/viewing-traces">
+    Read a version's runs as a transcript.
+  </Card>
+  <Card title="Signals" href="/signals/introduction">
+    Track outcomes and failures across your traces.
+  </Card>
+  <Card title="Task extraction" href="/tracing/task-extraction">
+    See what each run was asked to do.
+  </Card>
+  <Card title="SQL editor" href="/platform/sql-editor">
+    Query traces, versions, and signal events.
+  </Card>
+</CardGroup>

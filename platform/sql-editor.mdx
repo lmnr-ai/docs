@@ -437,6 +437,8 @@ LIMIT 100
 | `has_browser_session` | `Bool` | `true` |
 | `signal_events` | `Array(Tuple(event_id UUID, signal_id UUID, severity UInt8, payload String))` | `[Tuple('01234567-89ab-4def-8234-426614174000', '11111111-2222-4333-9444-555555555555', 2, '{"error_type": "timeout"}')]` |
 | `clusters` | `Array(Tuple(id UUID, signal_id UUID, name String, level UInt8, parent_id UUID, num_signal_events UInt32, created_at DateTime64(9, 'UTC'), updated_at DateTime64(9, 'UTC')))` | `[Tuple('aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee', '11111111-2222-4333-9444-555555555555', 'Checkout timeouts', 1, 'ffffffff-0000-4111-8222-333333333333', 42, '2021-01-01 00:00:00', '2021-01-02 00:00:00')]` |
+| `agent_versions` | `Array(Tuple(agent_hash String, version_hash String, model String))` | `[Tuple('3f9c2a', '8b1e07', 'gpt-5.6-terra')]` |
+| `release` | `String` | `"4f2a9c1"` |
 
 `id` is the trace ID; join to spans with `spans.trace_id = traces.id`.
 
@@ -530,6 +532,10 @@ LIMIT 100
 ```
 
 `num_signal_events` is the size of the whole cluster, not this trace's contribution to it.
+
+#### Agent versions and release
+
+`agent_versions` holds the [agent versions](/agent-versions/introduction) that ran in the trace, one element per agent, version, and model. `ARRAY JOIN agent_versions AS v` to group by `v.model` or `v.version_hash`. `release` is the release the SDK stamped on the trace's spans, usually the short git SHA, and is empty when none was sent.
 
 ### trace_outputs
 

@@ -66,6 +66,12 @@
             ]
           },
           {
+            "group": "Agent versions",
+            "pages": [
+              "agent-versions/introduction"
+            ]
+          },
+          {
             "group": "Debugger",
             "pages": [
               "debugger/introduction",
