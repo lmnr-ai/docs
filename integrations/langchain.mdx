@@ -1,117 +1,387 @@
 ---
 title: LangChain and LangGraph observability
 sidebarTitle: LangChain
-description: "Trace LangChain chains and LangGraph graphs in Python: every chain step, tool call, LLM call, token count, and cost."
+description: "Trace LangChain chains and LangGraph agents in TypeScript and Python: every graph node, tool call, and LLM call, with token usage and cost, read as a transcript."
 ---
 
 ## Overview
 
-Laminar automatically instruments [LangChain](https://www.langchain.com/) and [LangGraph](https://www.langchain.com/langgraph) operations by simply initializing Laminar at the beginning of your Python application. This allows you to trace and monitor your LLM chains, agents, and graph-based workflows, providing complete visibility into your AI application's performance, costs, and behavior without needing to modify your existing LangChain/LangGraph code.
+Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. Trace, debug, and monitor every [LangChain](https://www.langchain.com/) chain and [LangGraph](https://www.langchain.com/langgraph) agent in TypeScript and Python: each graph node, tool call, retriever query, and LLM call is recorded with its inputs, outputs, token usage, and cost. Self-host via Helm or use managed cloud.
 
-## Getting Started
+Your LangChain and LangGraph code stays as it is. Laminar builds the run tree from LangChain's own callbacks. Calls to OpenAI and Anthropic models are recorded by Laminar's [OpenAI](/integrations/openai) and [Anthropic](/integrations/anthropic) integrations, so each call is one LLM span with the provider's full request and response.
 
-### 1. Install Laminar and LangChain/LangGraph
+## Getting started
 
-You'll need Laminar, LangChain core, any specific LangChain LLM/tool integrations (e.g., for OpenAI), and LangGraph:
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ### 1. Install Laminar and LangChain
 
-```bash
-pip install -U 'lmnr[all]' langchain langchain-openai langgraph python-dotenv
-# Add other packages like langchain-community for specific tools if needed
-```
+    ```bash
+    npm install @lmnr-ai/lmnr @langchain/core @langchain/langgraph @langchain/openai openai zod
+    ```
 
-### 2. Set up environment variables & Initialize Laminar
+    This needs `@lmnr-ai/lmnr` 0.8.53 or later. Install the model provider's SDK (`openai` here, `@anthropic-ai/sdk` if you use `@langchain/anthropic`) as a direct dependency, because you pass it to Laminar in step 3.
 
-Store your API keys in a `.env` file and initialize Laminar once at the start of your application, before any LangChain or LangGraph code is executed.
+    ### 2. Set up your environment variables
 
-```python {1,16}
-from lmnr import Laminar
-from dotenv import load_dotenv
-import os
-from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.messages import HumanMessage
-from langgraph.graph import StateGraph, END
-from typing import TypedDict, Annotated, Sequence
-import operator
+    ```bash .env
+    LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+    OPENAI_API_KEY=your-openai-api-key
+    ```
 
-# Load environment variables from .env file
-load_dotenv()
+    Load them with a package like [dotenv](https://www.npmjs.com/package/dotenv), or `node --env-file=.env`.
 
-# Initialize Laminar - this single step enables automatic tracing
-Laminar.initialize()
-```
+    ### 3. Initialize Laminar with your LangChain modules
+
+    Laminar can't patch an ES module that your code has already imported, so pass the LangChain modules, and the SDK of each model provider you call, to `instrumentModules`. Do it once, in its own file:
+
+    ```typescript instrumentation.ts
+    import { Laminar } from '@lmnr-ai/lmnr';
+    import * as callbackManagerModule from '@langchain/core/callbacks/manager';
+    import * as chatModelsModule from '@langchain/core/language_models/chat_models';
+    import * as llmsModule from '@langchain/core/language_models/llms';
+    import * as singletonsModule from '@langchain/core/singletons';
+    import * as langgraphModule from '@langchain/langgraph';
+    import OpenAI from 'openai';
+
+    Laminar.initialize({
+      instrumentModules: {
+        OpenAI,
+        langchain: {
+          callbackManagerModule,
+          chatModelsModule,
+          llmsModule,
+          singletonsModule,
+          langgraphModule,
+        },
+      },
+    });
+    ```
+
+    Then import it first in your entry point, before any LangChain code runs:
+
+    ```typescript index.ts
+    import './instrumentation.js';
+    ```
+
+    Each module turns on part of the trace. The LangChain modules go under `instrumentModules.langchain`, and the provider SDKs go at the top level:
+
+    | Key | Import | What you lose without it |
+    |---|---|---|
+    | `callbackManagerModule` | `@langchain/core/callbacks/manager` | Nothing from LangChain is recorded. |
+    | `singletonsModule` | `@langchain/core/singletons` | Spans created inside a chain step, tool, or graph node (`observe()`, direct SDK calls) don't nest under it. |
+    | `chatModelsModule`, `llmsModule` | `@langchain/core/language_models/chat_models`, `@langchain/core/language_models/llms` | OpenAI and Anthropic calls are recorded twice, once by LangChain and once by the provider integration. |
+    | `langgraphModule` | `@langchain/langgraph` | The graph's nodes and edges aren't recorded, so the trace has no [LangGraph view](/tracing/langgraph-visualization). |
+    | `OpenAI` | `openai` (default export) | OpenAI calls are recorded by LangChain as a `ChatOpenAI.chat` span instead of the OpenAI integration's span. |
+    | `anthropic` | `@anthropic-ai/sdk` (`import * as anthropic`) | Anthropic calls are recorded by LangChain as a `ChatAnthropic.chat` span instead of the Anthropic integration's span. |
+
+    <Warning>
+    Pass the same copy of the provider SDK that the LangChain package loads. `@langchain/anthropic` and `@langchain/openai` each depend on a specific version of their provider's SDK, and if your app depends on a different major version, npm installs two copies and Laminar patches the one LangChain doesn't use. Run `npm ls openai @anthropic-ai/sdk` and check that each package resolves to a single version. When the copies differ, the calls are still recorded once, as the LangChain-side span.
+    </Warning>
+
+    <Note>
+    In a CommonJS app, calling `Laminar.initialize()` before LangChain is loaded instruments it without `instrumentModules`. Passing the modules works in both module systems, so it's the setup we recommend.
+    </Note>
+
+    ### 4. Use LangChain and LangGraph as usual
+
+    A chain:
+
+    ```typescript chain.ts {1-2,17}
+    import './instrumentation.js';
+    import { Laminar } from '@lmnr-ai/lmnr';
+    import { StringOutputParser } from '@langchain/core/output_parsers';
+    import { ChatPromptTemplate } from '@langchain/core/prompts';
+    import { ChatOpenAI } from '@langchain/openai';
+
+    const prompt = ChatPromptTemplate.fromMessages([
+      ['system', 'You are a helpful assistant. Answer in one sentence.'],
+      ['human', '{question}'],
+    ]);
+    const chain = prompt
+      .pipe(new ChatOpenAI({ model: 'gpt-5.6-terra' }))
+      .pipe(new StringOutputParser());
+
+    console.log(await chain.invoke({ question: 'What is the capital of France?' }));
+
+    await Laminar.shutdown();
+    ```
+
+    A LangGraph agent with a tool:
+
+    ```typescript agent.ts {1-2,37}
+    import './instrumentation.js';
+    import { Laminar } from '@lmnr-ai/lmnr';
+    import { HumanMessage } from '@langchain/core/messages';
+    import { tool } from '@langchain/core/tools';
+    import { MemorySaver, MessagesAnnotation, START, StateGraph } from '@langchain/langgraph';
+    import { ToolNode, toolsCondition } from '@langchain/langgraph/prebuilt';
+    import { ChatOpenAI } from '@langchain/openai';
+    import { z } from 'zod';
+
+    const getWeather = tool(
+      async ({ city }) => `It is 18C and sunny in ${city}.`,
+      {
+        name: 'get_weather',
+        description: 'Get the current weather for a city.',
+        schema: z.object({ city: z.string() }),
+      },
+    );
+
+    const model = new ChatOpenAI({ model: 'gpt-5.6-terra' }).bindTools([getWeather]);
+
+    const agent = new StateGraph(MessagesAnnotation)
+      .addNode('agent', async (state) => ({
+        messages: [await model.invoke(state.messages)],
+      }))
+      .addNode('tools', new ToolNode([getWeather]))
+      .addEdge(START, 'agent')
+      .addConditionalEdges('agent', toolsCondition)
+      .addEdge('tools', 'agent')
+      .compile({ checkpointer: new MemorySaver() });
+
+    const result = await agent.invoke(
+      { messages: [new HumanMessage('What is the weather in Paris?')] },
+      { configurable: { thread_id: 'user-42' } },
+    );
+    console.log(result.messages.at(-1)?.text);
+
+    await Laminar.shutdown();
+    ```
+
+    Agents built with `createAgent` from the `langchain` package run on LangGraph, so they're traced the same way. `await Laminar.shutdown()` sends the last spans before a short-lived script exits; a long-running server doesn't need it.
+  </Tab>
+  <Tab title="Python">
+    ### 1. Install Laminar and LangChain
+
+    ```bash
+    pip install -U lmnr langchain-openai langgraph
+    ```
+
+    This needs `lmnr` 0.8.2 or later.
+
+    ### 2. Set up your environment variables
+
+    ```bash .env
+    LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+    OPENAI_API_KEY=your-openai-api-key
+    ```
+
+    Load them with [python-dotenv](https://pypi.org/project/python-dotenv/) or export them in your shell.
+
+    ### 3. Initialize Laminar
+
+    Call `Laminar.initialize()` once at startup, before any LangChain or LangGraph code runs. LangChain and LangGraph are instrumented automatically.
+
+    ```python
+    from lmnr import Laminar
+
+    Laminar.initialize()
+    ```
+
+    ### 4. Use LangChain and LangGraph as usual
+
+    A chain:
+
+    ```python chain.py {1,6,15}
+    from lmnr import Laminar
+    from langchain_core.output_parsers import StrOutputParser
+    from langchain_core.prompts import ChatPromptTemplate
+    from langchain_openai import ChatOpenAI
+
+    Laminar.initialize()
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are a helpful assistant. Answer in one sentence."),
+        ("human", "{question}"),
+    ])
+    chain = prompt | ChatOpenAI(model="gpt-5.6-terra") | StrOutputParser()
+
+    print(chain.invoke({"question": "What is the capital of France?"}))
+    Laminar.flush()
+    ```
+
+    A LangGraph agent with a tool:
+
+    ```python agent.py {1,9,41}
+    from lmnr import Laminar
+    from langchain_core.messages import HumanMessage
+    from langchain_core.tools import tool
+    from langchain_openai import ChatOpenAI
+    from langgraph.checkpoint.memory import MemorySaver
+    from langgraph.graph import START, MessagesState, StateGraph
+    from langgraph.prebuilt import ToolNode, tools_condition
+
+    Laminar.initialize()
+
+
+    @tool
+    def get_weather(city: str) -> str:
+        """Get the current weather for a city."""
+        return f"It is 18C and sunny in {city}."
+
+
+    model = ChatOpenAI(model="gpt-5.6-terra", use_responses_api=True).bind_tools([get_weather])
+
+
+    def call_model(state: MessagesState):
+        return {"messages": [model.invoke(state["messages"])]}
+
+
+    agent = (
+        StateGraph(MessagesState)
+        .add_node("agent", call_model)
+        .add_node("tools", ToolNode([get_weather]))
+        .add_edge(START, "agent")
+        .add_conditional_edges("agent", tools_condition)
+        .add_edge("tools", "agent")
+        .compile(checkpointer=MemorySaver())
+    )
+
+    result = agent.invoke(
+        {"messages": [HumanMessage("What is the weather in Paris?")]},
+        {"configurable": {"thread_id": "user-42"}},
+    )
+    print(result["messages"][-1].text)
+
+    Laminar.flush()
+    ```
+
+    `Laminar.flush()` sends the last spans before a short-lived script exits; a long-running server doesn't need it.
+
+    <Note>
+    To see Laminar inside a FastAPI application, check out the [FastAPI guide](/guides/fastapi).
+    </Note>
+  </Tab>
+</Tabs>
+
+## What Laminar records
+
+Each invocation of a chain or graph is one trace:
+
+| Span | What it holds |
+|---|---|
+| The run, named after the chain or graph (`RunnableSequence`, `LangGraph`, or the `runName` you set) | The input you passed and the final output or state. For a graph, also its nodes and edges, which power the [LangGraph view](/tracing/langgraph-visualization). |
+| `execute_task <name>` for every chain step and graph node | The step's input and output, nested under the run. |
+| A tool span, named after the tool | The tool's arguments, result, and tool call ID. Tool spans show up as tool calls in the transcript. |
+| `vector_db_retrieve <name>` | The retriever's query and the documents it returned. |
+| An LLM span for every model call | The messages, the response with any tool calls, the model, token usage, and cost. |
+
+### Which integration records each LLM call
+
+- **OpenAI (including Azure OpenAI) and Anthropic chat models** are recorded by Laminar's provider integrations, as `openai.chat`, `openai.response`, or `anthropic.chat` spans. In Python, Google GenAI (`langchain-google-genai` 4 or later) and Groq models are handed off the same way.
+- **Every other chat model** (Gemini in TypeScript, Mistral, Amazon Bedrock, Ollama, and so on) is recorded by LangChain as an LLM span named after the model class, such as `ChatGoogleGenerativeAI.chat` or `ChatMistralAI.chat`. It carries the same messages, tool calls, model, token usage, and cost. Any provider SDK instrumentation underneath is silenced for that call, so nothing is recorded twice.
+
+### Group a LangGraph thread into a session
+
+LangGraph's `thread_id` is recorded on the graph and node spans. To see every run of a thread together in Laminar's [sessions view](/tracing/structure/sessions), wrap the call in `observe` with the thread ID as the session ID:
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { observe } from '@lmnr-ai/lmnr';
+
+    const threadId = 'user-42';
+    const result = await observe({ name: 'weather_agent', sessionId: threadId }, () =>
+      agent.invoke(
+        { messages: [new HumanMessage('What is the weather in Paris?')] },
+        { configurable: { thread_id: threadId } },
+      ),
+    );
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import observe
+
+
+    @observe(name="weather_agent", session_id="user-42")
+    def run(question: str):
+        return agent.invoke(
+            {"messages": [HumanMessage(question)]},
+            {"configurable": {"thread_id": "user-42"}},
+        )
+    ```
+  </Tab>
+</Tabs>
+
+The graph's spans nest under the `weather_agent` span, and the whole trace joins the session.
+
+## See what happened in a trace
+
+Open a trace in Laminar and the default view is the transcript: the agent's auto-extracted input, every LLM turn with a one-line preview of its response, and each tool call with its arguments and result, in the order they ran. You read the conversation instead of clicking through a tree of `execute_task` spans. Switch to tree view for the span-by-span structure, or open the [LangGraph view](/tracing/langgraph-visualization) to see which nodes ran.
+
+More on the trace UX: [Viewing traces](/platform/viewing-traces).
+
+## Track outcomes with Signals
+
+Traces answer *what happened on this run*. **[Signals](/signals/introduction) answer the cross-trace question**: *how often does the agent answer without calling the tool it needed, when does a graph loop between the same two nodes, which runs end with an apology instead of an answer*. A Signal pairs a plain-language instruction with a JSON output schema. Laminar runs it live on new traces (Triggers) or backfills it across history (Jobs) and records a structured event every time it matches. From there you [query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts) on events across every trace.
 
 <Note>
-To see an example of how to integrate Laminar within a FastAPI application, check out our [FastAPI integration guide](/guides/fastapi).
+Every new project ships with a **Failure Detector** Signal that categorizes issues on any trace over 1000 tokens. Open it from the Signals sidebar to see events as soon as your LangChain traces arrive.
 </Note>
 
-### 3. Use LangChain and LangGraph as usual
+## Query across traces
 
-**LangChain Example (Simple LLMChain):**
+- **[SQL editor](/platform/sql-editor)** for ad-hoc queries across traces, spans, signals, and evals.
+- **SQL API** for programmatic access from scripts and pipelines.
+- **[CLI](/platform/cli)** (`lmnr-cli sql query`) for terminal-driven queries and piping JSON into shell tools or coding agents.
+- **[MCP server](/platform/mcp)** to query Laminar from Claude Code, Cursor, or Codex.
 
-```python
-# Ensure Laminar.initialize() was called as shown in Step 2.
+## Troubleshooting
 
-model = ChatOpenAI()
-prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are a helpful assistant."),
-    ("human", "{question}")
-])
-output_parser = StrOutputParser()
+<AccordionGroup>
+  <Accordion title="I don't see any traces in Laminar (TypeScript)">
+    - Pass the LangChain modules to `instrumentModules` as shown in step 3. In an ES module app, `Laminar.initialize()` without them records nothing from LangChain.
+    - Import your `instrumentation` file before any file that runs LangChain code.
+    - Confirm `LMNR_PROJECT_API_KEY` is set in the process that runs LangChain.
+    - Call `await Laminar.shutdown()` before a short-lived script exits.
+  </Accordion>
+  <Accordion title="Every OpenAI or Anthropic call shows up twice (TypeScript)">
+    Add `chatModelsModule` and `llmsModule` to `instrumentModules.langchain`. Without them, LangChain can't hand the call to the provider integration, so both record it. Laminar logs a warning at startup when `chatModelsModule` is missing.
+  </Accordion>
+  <Accordion title="I see `ChatOpenAI.chat` instead of an `openai.*` span (TypeScript)">
+    The OpenAI integration didn't record the call, so LangChain recorded it instead. Pass `OpenAI` from `openai` to `instrumentModules`, and check with `npm ls openai` that `@langchain/openai` uses the same copy of `openai` that you import. The same applies to `ChatAnthropic.chat` and `@anthropic-ai/sdk`.
+  </Accordion>
+  <Accordion title="Self-hosting Laminar">
+    Point the SDK at your instance when initializing. For a local OSS deployment:
 
-chain = prompt | model | output_parser
+    <Tabs items={['TypeScript', 'Python']}>
+      <Tab title="TypeScript">
+        ```typescript
+        Laminar.initialize({
+          baseUrl: 'http://localhost',
+          httpPort: 8000,
+          grpcPort: 8001,
+          instrumentModules: { /* as in step 3 */ },
+        });
+        ```
+      </Tab>
+      <Tab title="Python">
+        ```python
+        Laminar.initialize(base_url="http://localhost", http_port=8000, grpc_port=8001)
+        ```
+      </Tab>
+    </Tabs>
+  </Accordion>
+</AccordionGroup>
 
-# response = chain.invoke({"question": "What is the capital of France?"})
-# print(response)
-```
+## What's next
 
-**LangGraph Example (Simple Graph):**
-
-```python
-# Ensure Laminar.initialize() was called as shown in Step 2.
-
-class AgentState(TypedDict):
-    messages: Annotated[Sequence[HumanMessage], operator.add]
-
-llm = ChatOpenAI()
-
-def call_model(state: AgentState):
-    messages = state['messages']
-    response = llm.invoke(messages)
-    return {"messages": [response]} # Append new message
-
-# Define a new graph
-workflow = StateGraph(AgentState)
-workflow.add_node("agent", call_model)
-workflow.set_entry_point("agent")
-workflow.add_edge("agent", END)
-
-app = workflow.compile()
-
-# inputs = {"messages": [HumanMessage(content="Hi there!")]}
-# result = app.invoke(inputs)
-# print(result['messages'][-1].content)
-```
-
-All instrumentable LangChain and LangGraph operations are now automatically traced in Laminar.
-
-## Monitoring LangChain usage
-
-After instrumenting your LangChain and LangGraph applications with Laminar, you'll be able to:
-
-1.  **View detailed traces** of each chain, agent step, tool usage, and LLM call.
-2.  **Track token usage and cost** across different models used within LangChain.
-3.  **Monitor latency** and performance metrics for individual components and overall workflows.
-4.  **Analyze prompt engineering** by inspecting inputs/outputs at each step.
-5.  **Debug issues** with complex chains or graphs by visualizing their execution flow.
-
-Visit your Laminar dashboard to view your LangChain traces and analytics.
-
-## Enrich your LangChain traces
-
-- Attach sessions, user IDs, metadata, and tags to LangChain spans via the [SDK reference](/sdk/reference).
-- Wrap the functions around your chains and graphs with `observe` and mark them as [TOOL spans](/tracing/structure/span-types) so they show up in the transcript.
+<CardGroup cols={2}>
+  <Card title="Viewing traces" href="/platform/viewing-traces">
+    Read the transcript view, filter, and search across traces.
+  </Card>
+  <Card title="Signals" href="/signals/introduction">
+    Detect behaviors and failures across every run, then query, cluster, and alert on them.
+  </Card>
+  <Card title="SQL editor and MCP server" href="/platform/sql-editor">
+    Query traces programmatically from the UI, API, or your IDE.
+  </Card>
+  <Card title="Tracing structure" href="/tracing/structure/overview">
+    Sessions, user IDs, metadata, and tags.
+  </Card>
+</CardGroup>
 
 ## Related integrations
 
