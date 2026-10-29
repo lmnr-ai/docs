@@ -38,8 +38,11 @@ title: Evaluations
     | `groupName` | `string` | `'default'` | Group name |
     | `metadata` | `Record<string, any>` | — | Evaluation metadata |
     | `config.concurrencyLimit` | `number` | `5` | Parallel executions (min 1) |
+    | `config.trials` | `number` | `1` | Executions (Trials) per datapoint; positive integer. See [Tasks and trials](/evaluations/concepts#tasks-and-trials) |
     | `config.projectApiKey` | `string` | env | API key |
     | `config.traceExportBatchSize` | `number` | `64` | Batch size |
+
+    Each `Datapoint` takes `data`, plus optional `target`, `metadata`, and `taskId`: a stable Task id shared by every Trial. It defaults to the dataset row's task id, then the datapoint's position in the source data.
 
     **Returns:** `Promise<EvaluationRunResult | undefined>`
 
@@ -146,6 +149,7 @@ title: Evaluations
     | `group_name` | `str` | `None` | Group name (defaults to `'default'` when `None`) |
     | `metadata` | `dict` | `None` | Evaluation metadata |
     | `concurrency_limit` | `int` | `5` | Parallel executions |
+    | `trials` | `int` | `1` | Executions (Trials) per datapoint; integer `>= 1`. See [Tasks and trials](/evaluations/concepts#tasks-and-trials) |
     | `project_api_key` | `str` | `None` | Override API key |
     | `base_url` | `str` | `None` | Override base URL |
     | `base_http_url` | `str` | `None` | Override OTLP HTTP base URL |
@@ -231,6 +235,7 @@ title: Evaluations
     - `data` — Input data (required)
     - `target` — Expected output (optional)
     - `metadata` — Additional metadata (optional)
+    - `task_id` (alias `taskId`) — Stable Task id shared by every Trial (optional; defaults to the dataset row's task id, then the datapoint's source position)
     - `id` — UUID (auto-generated)
     - `created_at` — Timestamp (auto-generated)
   </Tab>

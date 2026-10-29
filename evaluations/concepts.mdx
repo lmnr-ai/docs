@@ -23,6 +23,55 @@ A datapoint is the unit of work.
 
 An evaluation takes either a list of datapoints or a `LaminarDataset`. See [Datasets](/evaluations/datasets) for dataset-backed runs.
 
+## Tasks and trials
+
+Each datapoint is a **Task**: one test case. Each execution of a Task in a run is a **Trial**. By default every Task runs once, so a run has one Trial per Task. Set `trials` to run each Task several times, which is useful when your agent is non-deterministic and one sample is too noisy to trust.
+
+Every Task has a string **task id**, and all of its Trials share it. Laminar uses the task id to match rows across runs, so set one explicitly when you want comparisons to stay stable as your datapoint list changes.
+
+<Tabs>
+<Tab title="TypeScript">
+```typescript
+evaluate({
+  data: [
+    { data: { country: 'France' }, target: 'Paris', taskId: 'france' },
+    { data: { country: 'Japan' }, target: 'Tokyo', taskId: 'japan' },
+  ],
+  executor: capitalOfCountry,
+  evaluators: { accuracy },
+  groupName: 'capitals',
+  config: { trials: 3 },
+});
+```
+</Tab>
+<Tab title="Python">
+```python
+from lmnr import Datapoint, evaluate
+
+evaluate(
+    data=[
+        Datapoint(data={"country": "France"}, target="Paris", task_id="france"),
+        Datapoint(data={"country": "Japan"}, target="Tokyo", task_id="japan"),
+    ],
+    executor=capital_of_country,
+    evaluators={"accuracy": accuracy},
+    group_name="capitals",
+    trials=3,
+)
+```
+</Tab>
+</Tabs>
+
+This run produces six Trials: three for `france`, three for `japan`. Each Trial gets its own trace and its own scores. In the run's datapoint table, Trials are grouped under their Task, and the Task row shows the average of its Trials. The run's average score weighs every Task equally, however many Trials it has.
+
+The task id is resolved in this order:
+
+1. **Explicit** `taskId` / `task_id` on the datapoint.
+2. **The dataset row's task id**, when the datapoint comes from a [Laminar dataset](/evaluations/datasets).
+3. **The datapoint's position in the source data**, as a string (`"0"`, `"1"`, ...). This is the position before any `take` / `select` / `shuffle`, so running a subset of the dataset keeps each datapoint's task id.
+
+If two different datapoints in one run ask for the same task id, the later ones are renamed `foo#2`, `foo#3`, and the SDK logs a warning. In Python, `Datapoint` accepts both `task_id` and `taskId`.
+
 ## Executor
 
 The executor is the function under test. It takes `data` and returns anything.
@@ -76,11 +125,11 @@ Pick one name for the thing under test and keep it stable across prompt, model, 
   <img src="/images/evaluations/eval-list.png" alt="Evaluations list filtered by the capitals group with a progression chart at the top" />
 </Frame>
 
-## The trace every datapoint produces
+## The trace every trial produces
 
-Every datapoint becomes a single trace with a known shape:
+Every Trial becomes a single trace with a known shape:
 
-- **Root span**: `EVALUATION` span covering the entire datapoint.
+- **Root span**: `EVALUATION` span covering the entire Trial.
 - **Executor child**: one `EXECUTOR` span with the executor's input and output.
 - **Any LLM / tool spans** your executor makes, auto-instrumented, nested under the executor.
 - **Evaluator children**: one `EVALUATOR` span per evaluator, each recording the score and the input it scored.
@@ -103,7 +152,7 @@ WHERE span_type = 'EXECUTOR'
 ## What gets stored where
 
 - **Postgres `evaluations`**: one row per run. Holds the name, group, and metadata.
-- **ClickHouse `evaluation_datapoints`**: one row per datapoint per run. Holds `data`, `target`, `metadata`, executor output, scores, `trace_id`, duration, cost.
+- **ClickHouse `evaluation_datapoints`**: one row per Trial per run. Holds `data`, `target`, `metadata`, executor output, scores, `task_id`, `trace_id`, duration, cost. The [SQL editor](/platform/sql-editor#table-schemas) exposes it as `evaluation_trials` (`evaluation_datapoints` still works as an alias).
 - **ClickHouse `spans`**: the EVALUATION / EXECUTOR / EVALUATOR spans and everything nested under them.
 
 Scores are just numbers on a row. You can build [dashboards](/platform/dashboards) off them, alert on them, or export them to a dataset. Same substrate as anything else in Laminar.

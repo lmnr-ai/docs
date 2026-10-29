@@ -265,6 +265,8 @@ title: Client
     | `options.batchSize` | `number` | `100` | Batch size |
     | `options.createDataset` | `boolean` | `false` | Create dataset if missing |
 
+    Each point may set `taskId`. Without one, the datapoint's task id defaults to its id; a task id already used by another datapoint in the dataset is renamed `<taskId>#2`, `#3`, and so on.
+
     **Returns:** `Promise<PushDatapointsResponse | undefined>`
 
     ---
@@ -311,6 +313,7 @@ title: Client
     | `options.metadata` | `Record<string, any>` | — | Datapoint metadata |
     | `options.index` | `number` | — | Dataset index |
     | `options.traceId` | `string` | — | Trace UUID |
+    | `options.taskId` | `string` | — | Task id shared by every Trial of the Task (server defaults to `index`) |
 
     **Returns:** `Promise<string>`
 
@@ -554,6 +557,8 @@ title: Client
     | `id` | `uuid.UUID` | `None` | Dataset ID |
     | `batch_size` | `int` | `100` | Batch size |
     | `create_dataset` | `bool` | `False` | Create dataset if missing |
+
+    Each point may set `task_id` (or `taskId`). Without one, the datapoint's task id defaults to its id; a task id already used by another datapoint in the dataset is renamed `<task_id>#2`, `#3`, and so on.
 
     **Returns:** `PushDatapointsResponse | None`
 

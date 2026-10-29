@@ -19,7 +19,7 @@ Query all your Laminar data directly with SQL. Find patterns, debug issues, and 
 | logs | Streaming logs (for example, sandbox command output) |
 | dataset_datapoints | Dataset datapoints (latest version per datapoint) |
 | dataset_datapoint_versions | Dataset datapoints (all versions/history) |
-| evaluation_datapoints | Evaluation datapoints with scores, executor output, dataset links, and associated trace data |
+| evaluation_trials | Evaluation results, one row per trial, with task id, scores, executor output, dataset links, and associated trace data (alias: `evaluation_datapoints`) |
 | labeling_queue_items | Per-item rows of labeling queues |
 | signals | Signal definitions: instruction (`prompt`), output schema, model, and current version |
 | evaluations | Evaluation runs: name, group, and metadata |
@@ -94,7 +94,7 @@ GROUP BY s.name, current_version, se.signal_version
 ORDER BY events DESC
 ```
 
-If all you need is the name, skip the join: `signal_events.signal_name`, `evaluation_datapoints.evaluation_name`, and `dataset_datapoints.dataset_name` already carry it.
+If all you need is the name, skip the join: `signal_events.signal_name`, `evaluation_trials.evaluation_name`, and `dataset_datapoints.dataset_name` already carry it.
 
 ### Read signals and clusters off traces
 
@@ -163,7 +163,7 @@ For complex operations (array indexing, nested paths), use `JSONExtract*` functi
 
 Some columns store data as arrays of tuples. The most common examples are:
 - `spans.events`: `Array(Tuple(timestamp Int64, name String, attributes String))`
-- `evaluation_datapoints.trace_spans`: `Array(Tuple(name String, duration Float64, type String))`
+- `evaluation_trials.trace_spans`: `Array(Tuple(name String, duration Float64, type String))`
 - `traces.signal_events`: `Array(Tuple(event_id UUID, signal_id UUID, severity UInt8, payload String))`
 - `traces.clusters`: `Array(Tuple(id UUID, signal_id UUID, name String, level UInt8, parent_id UUID, num_signal_events UInt32, created_at DateTime64(9, 'UTC'), updated_at DateTime64(9, 'UTC')))`
 
@@ -199,7 +199,7 @@ SELECT
     tupleElement(span, 'name') as span_name,
     tupleElement(span, 'duration') as span_duration,
     tupleElement(span, 'type') as span_type
-FROM evaluation_datapoints edp
+FROM evaluation_trials edp
 ARRAY JOIN edp.trace_spans as span
 WHERE edp.evaluation_id = 'your-evaluation-id'
 LIMIT 100
@@ -242,11 +242,11 @@ LIMIT 10
 | `Nullable(String)` | Optional text on `signals`, `evaluations`, and `datasets` (for example, `signals.llm_model`) |
 | `LowCardinality(String)` | Low-cardinality enums |
 | `Float64` | Floating point numbers |
-| `Decimal(18, 9)` | Span-level durations in seconds (`spans.duration`, `evaluation_datapoints.duration`) |
+| `Decimal(18, 9)` | Span-level durations in seconds (`spans.duration`, `evaluation_trials.duration`) |
 | `Int64` | Counts, token numbers |
 | `UInt8` | Small numeric enums (for example, `logs.severity_number`) |
 | `UInt32` | Flags and bitmasks (for example, `logs.flags`) |
-| `UInt64` | Indexes and counters (`evaluation_datapoints.index`) |
+| `UInt64` | Indexes and counters (`evaluation_trials.index`) |
 | `Bool` | Flags like `has_browser_session` |
 | `Array(String)` | Tag lists and other string arrays |
 | `Array(Tuple(...))` | Complex nested arrays (for example, `events`) |
@@ -733,7 +733,9 @@ Maps individual signal events to the clusters they belong to, including L0 clust
 
 The `attributes` column is stored as a string in JSON format. That is, you can safely `JSON.parse` / `json.loads` it. In addition, you can use JSON* and simpleJSON* functions on it right in the queries. Attributes are guaranteed to be a valid JSON object.
 
-### evaluation_datapoints
+### evaluation_trials
+
+One row per [trial](/evaluations/concepts#tasks-and-trials): a single execution of one evaluation datapoint. `evaluation_datapoints` is an alias for this table, so existing queries keep working.
 
 | Column | Type | Example value |
 |--------|------|---------------|
@@ -745,6 +747,7 @@ The `attributes` column is stored as a string in JSON format. That is, you can s
 | `metadata` | `String` | `"{\"key\": \"value\"}"` |
 | `executor_output` | `String` | `"{\"key\": \"value\"}"` |
 | `index` | `UInt64` | `0` |
+| `task_id` | `String` | `"france"` |
 | `trace_id` | `UUID` | `"01234567-1234-4def-a234-426614174000"` |
 | `group_id` | `String` | `"group_a"` |
 | `scores` | `String` | `"{\"score1\": 0.85}"` |
@@ -770,6 +773,8 @@ The `attributes` column is stored as a string in JSON format. That is, you can s
 
 `data`, `target`, `metadata`, `executor_output`, `scores`, and `trace_metadata` are JSON stored as strings. `scores` is a JSON object of string keys to numeric values.
 
+`task_id` identifies the Task (test case). Rows sharing a `task_id` within an evaluation are repeated trials of one Task, and evaluation comparison matches rows across runs on `task_id`. Rows written before task ids existed read their `index` as the task id.
+
 `evaluation_name` is the evaluation's current name, so a renamed evaluation shows its new name here within about a minute.
 
 When the datapoint is not sourced from a dataset, `dataset_id` and `dataset_datapoint_id` are a nil UUID (all zeroes) and `dataset_datapoint_created_at` is the Unix epoch.
@@ -788,8 +793,9 @@ The trace-related columns (`duration`, `input_cost`, `output_cost`, `total_cost`
 | `data` | `String` | `"{\"query\": \"What is 2+2?\"}"` |
 | `target` | `String` | `"{\"answer\": \"4\"}"` |
 | `metadata` | `String` | `"{\"source\": \"prod\"}"` |
+| `task_id` | `String` | `"019c6634-0cb4-7f9d-8192-f36604488483"` |
 
-`data`, `target`, and `metadata` are JSON stored as strings. `dataset_name` is the dataset's current name.
+`data`, `target`, and `metadata` are JSON stored as strings. `task_id` is the id evaluations group trials by; it defaults to the datapoint's `id` and is unique within the dataset. `dataset_name` is the dataset's current name.
 
 
 ### dataset_datapoint_versions
@@ -855,7 +861,7 @@ One row per [evaluation](/evaluations/introduction) run.
 | `metadata` | `Nullable(String)` | `"{\"model\": \"gpt-5.6-terra\"}"` |
 | `created_at` | `DateTime64(6)` | `"2021-01-01 00:00:00.000000"` |
 
-Join to `evaluation_datapoints` on `evaluations.id = evaluation_id`. `metadata` is JSON stored as a string.
+Join to `evaluation_trials` on `evaluations.id = evaluation_id`. `metadata` is JSON stored as a string.
 
 
 ### datasets
@@ -1026,10 +1032,22 @@ SELECT
     min(created_at) AS started,
     avg(simpleJSONExtractFloat(scores, 'accuracy')) AS avg_accuracy,
     count() AS datapoints
-FROM evaluation_datapoints
+FROM evaluation_trials
 WHERE group_id = {group_id:String}
 GROUP BY evaluation_id, evaluation_name
 ORDER BY started
+```
+
+**Average score per task across its trials:**
+```sql
+SELECT
+    task_id,
+    count() AS trials,
+    avg(simpleJSONExtractFloat(scores, 'accuracy')) AS avg_accuracy
+FROM evaluation_trials
+WHERE evaluation_id = {evaluation_id:UUID}
+GROUP BY task_id
+ORDER BY avg_accuracy
 ```
 
 **Average cost per evaluation datapoint:**
@@ -1039,7 +1057,7 @@ SELECT
     avg(total_cost) as avg_cost,
     avg(duration) as avg_duration_seconds,
     count(*) as datapoint_count
-FROM evaluation_datapoints
+FROM evaluation_trials
 WHERE evaluation_id = {evaluation_id:UUID}
 GROUP BY evaluation_id
 ```
@@ -1051,7 +1069,7 @@ SELECT
     group_id,
     scores,
     trace_spans
-FROM evaluation_datapoints
+FROM evaluation_trials
 WHERE arrayExists(s -> tupleElement(s, 'type') = 'LLM', trace_spans)
   AND evaluation_id = {evaluation_id:UUID}
 LIMIT 100
@@ -1063,7 +1081,7 @@ SELECT
     tupleElement(span, 'type') as span_type,
     count(*) as span_count,
     avg(tupleElement(span, 'duration')) as avg_duration
-FROM evaluation_datapoints
+FROM evaluation_trials
 ARRAY JOIN trace_spans as span
 WHERE evaluation_id = {evaluation_id:UUID}
 GROUP BY span_type
