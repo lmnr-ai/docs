@@ -86,6 +86,7 @@
               "evaluations/introduction",
               "evaluations/quickstart",
               "evaluations/concepts",
+              "evaluations/environment-evals",
               "evaluations/comparing-runs",
               "evaluations/custom-rendering",
               "evaluations/datasets",
