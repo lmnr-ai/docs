@@ -748,6 +748,7 @@ One row per [trial](/evaluations/concepts#tasks-and-trials): a single execution 
 | `executor_output` | `String` | `"{\"key\": \"value\"}"` |
 | `index` | `UInt64` | `0` |
 | `task_id` | `String` | `"france"` |
+| `attempt` | `UInt64` | `1` |
 | `trace_id` | `UUID` | `"01234567-1234-4def-a234-426614174000"` |
 | `group_id` | `String` | `"group_a"` |
 | `scores` | `String` | `"{\"score1\": 0.85}"` |
@@ -773,7 +774,7 @@ One row per [trial](/evaluations/concepts#tasks-and-trials): a single execution 
 
 `data`, `target`, `metadata`, `executor_output`, `scores`, and `trace_metadata` are JSON stored as strings. `scores` is a JSON object of string keys to numeric values.
 
-`task_id` identifies the Task (test case). Rows sharing a `task_id` within an evaluation are repeated trials of one Task, and evaluation comparison matches rows across runs on `task_id`. Rows written before task ids existed read their `index` as the task id.
+`task_id` identifies the Task (test case). Rows sharing a `task_id` within an evaluation are repeated trials of one Task, and evaluation comparison matches rows across runs on `task_id`. Rows written before task ids existed read their `index` as the task id. `attempt` numbers a Task's trials 1, 2, 3, … in the order they were first saved, so filtering keeps each trial's number.
 
 `evaluation_name` is the evaluation's current name, so a renamed evaluation shows its new name here within about a minute.
 
