@@ -5,7 +5,7 @@ sidebarTitle: Environment evals
 
 Environment evals run every eval case in its own isolated container: your real application, its real services (database, queue, cache), and the data that reproduces one specific scenario. A driver calls the app through an entry point it already has, and a verifier scores what happened. **You run them with `lmnr-cli eval run`, locally on Docker or in Laminar's cloud sandboxes, and every trial lands in Laminar as an [evaluation](/evaluations/introduction) datapoint with the agent's [full trace](/platform/viewing-traces) next to its score.**
 
-The case format is [Harbor](https://www.harborframework.com)'s, so an evals folder is plain Harbor tasks with a small amount of Laminar configuration on top. **The fastest way to start is `npx lmnr-cli@latest eval setup`**: it sets up Laminar in your repo and hands building the evals to your coding agent ([how it works](#start-with-lmnr-cli-eval-setup)). This page also covers why you'd use environment evals, the concepts, a hands-on quickstart, and how to build a harness that measures what your agent does in production.
+The case format is [Harbor](https://www.harborframework.com)'s, so an evals folder is plain Harbor tasks with a small amount of Laminar configuration on top. This page covers why you'd use environment evals, the concepts, a quickstart, and how to build a harness that measures what your agent does in production.
 
 <Frame caption="A Harbor trial in Laminar: the score, the agent's model calls and commands, and the verifier output explaining the failure.">
 <img src="/images/integrations/harbor-evaluation.png" alt="Evaluation in Laminar with a failed Harbor trial's trace and verifier output open" />
@@ -65,27 +65,9 @@ Each concept maps to something in Laminar:
 
 The trace shape and how retries, crashes, and cancellations are counted are the same as for the [Harbor integration](/integrations/harbor#what-you-see-in-laminar).
 
-## Start with lmnr-cli eval setup
-
-Run `eval setup` at your repo root. It gets the repo ready for `lmnr-cli eval run` and hands the work of building the evals folder to your coding agent:
-
-```bash
-npx lmnr-cli@latest eval setup
-```
-
-1. **It sets up Laminar.** It signs you in, links the directory to a Laminar project, writes `LMNR_PROJECT_API_KEY` to `.env`, and installs or updates the Laminar agent skill. These are the [`lmnr-cli setup`](/platform/cli) steps; whatever is already in place is skipped, and you see one status line.
-2. **It asks whether the agent you want to evaluate is instrumented with Laminar**, and if it isn't, whether to instrument it. Instrumenting adds the SDK, one `Laminar.initialize()` call, and spans around the agent's main steps, so every run, in production and in evals, shows each LLM and tool call. Evals work without it too: your coding agent rebuilds each trial's trajectory from what your app already stores, such as chat history (see [Capture the trajectory](#capture-the-trajectory)).
-3. **It opens your coding agent with a short task**: use the Laminar skill to instrument the agent if you chose to, build the evals folder, and run it with `lmnr-cli eval run`. It works with Claude Code, Codex, Cursor CLI, Gemini CLI, OpenCode, and GitHub Copilot CLI, whichever is installed; pass `--agent <name>` to skip the choice. With none installed, or if you decline, the task is printed for you to paste into any agent. Add `--copy` to also copy it to the clipboard.
-
-The skill follows the guidance on the rest of this page: find the entry point, build one image, seed per-case data, write the verifier, and run it locally. You review and approve its changes in your agent as usual.
-
-<Tip>
-Running `eval setup` from inside a coding agent works too. When there is no terminal to answer questions, or an agent's environment variable such as `CLAUDECODE` is set, it asks nothing and prints the task on stdout for that agent to follow. Pass `--instrumentation already`, `add`, or `skip` to answer the instrumentation question up front, `--print-prompt` to print the task instead of opening an agent, or `--json` for machine-readable output.
-</Tip>
-
 ## Quickstart
 
-To see what an evals folder contains, or to build one by hand, follow this quickstart. It evaluates a small support-ticket triage function: it sends a ticket to Claude and returns a category. You'll package it into an image, add two cases, and run them. The same layout scales to an app with a database and several services; [Build a harness that matches production](#build-a-harness-that-matches-production) covers that.
+This quickstart evaluates a small support-ticket triage function: it sends a ticket to Claude and returns a category. You'll package it into an image, add two cases, and run them. The same layout scales to an app with a database and several services; [Build a harness that matches production](#build-a-harness-that-matches-production) covers that.
 
 The app is one module, instrumented with Laminar:
 
@@ -306,7 +288,7 @@ with `anthropic` and `lmnr` in `requirements.txt`.
 </Steps>
 
 <Tip>
-To do the same for your own agent, run [`lmnr-cli eval setup`](#start-with-lmnr-cli-eval-setup). Once the Laminar skill is installed you can also ask your coding agent for something more specific: *"Set up environment evals for the refund flow with `lmnr-cli eval run`. Use our real Postgres and seed each case from a production trace."*
+`lmnr-cli setup` installs the Laminar agent skill, which knows this layout. In Claude Code, Cursor, or Codex, ask for it directly: *"Set up environment evals for the refund flow with `lmnr-cli eval run`. Use our real Postgres and seed each case from a production trace."* The skill follows the guidance on the rest of this page: find the entry point, build one image, seed per-case data, write the verifier, and run it locally.
 </Tip>
 
 ## Run evals with lmnr-cli
