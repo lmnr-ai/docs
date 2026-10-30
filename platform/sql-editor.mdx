@@ -535,7 +535,7 @@ LIMIT 100
 
 #### Agent versions and release
 
-`agent_versions` holds the [agent versions](/agent-versions/introduction) that ran in the trace, one element per agent, version, and model. `ARRAY JOIN agent_versions AS v` to group by `v.model` or `v.version_hash`. `release` is the release the SDK stamped on the trace's spans, usually the short git SHA, and is empty when none was sent.
+`agent_versions` holds the [agent versions](/tracing/agent-versions) that ran in the trace, one element per agent, version, and model. `ARRAY JOIN agent_versions AS v` to group by `v.model` or `v.version_hash`. `release` is the release the SDK stamped on the trace's spans, usually the short git SHA, and is empty when none was sent.
 
 ### trace_outputs
 

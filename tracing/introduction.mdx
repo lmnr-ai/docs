@@ -3,7 +3,7 @@ title: Tracing
 sidebarTitle: Introduction
 ---
 
-Tracing records what your agent does (LLM calls, tool use, and control flow) so you can debug individual runs and understand behavior over time. Laminar also [extracts the task from every agent run](/tracing/task-extraction), so the traces table lists what each run was asked to do and SQL can group runs by it. It also [versions each agent](/agent-versions/introduction) as its system prompt and tools change, and tags every trace with the version and release that produced it.
+Tracing records what your agent does (LLM calls, tool use, and control flow) so you can debug individual runs and understand behavior over time. Laminar also [extracts the task from every agent run](/tracing/task-extraction), so the traces table lists what each run was asked to do and SQL can group runs by it. It also [versions each agent](/tracing/agent-versions) as its system prompt and tools change, and tags every trace with the version and release that produced it.
 
 Tracing is also the entry point into Laminar: it’s how production runs become data in the platform. Once you’re tracing, you can read each run as a transcript in the [trace view](/platform/viewing-traces), define [Signals](/signals) to extract outcomes and failures across traces, and replay runs in the [Debugger](/debugger/introduction) to reproduce and fix what went wrong. From there, turn real failures into [Datasets](/datasets) and run comprehensive [Evaluations](/evaluations).
 
