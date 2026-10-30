@@ -7,13 +7,13 @@ Hosted evals run every eval case in its own isolated container: your real applic
 
 The case format is [Harbor](https://www.harborframework.com)'s, so an evals folder is plain Harbor tasks with a small amount of Laminar configuration on top. This page covers why you'd use hosted evals, the concepts, a quickstart, and how to build a harness that measures what your agent does in production.
 
+<Note>
+Hosted evals are in beta. The `lmnr-cli eval run` command, its flags, and the folder layout may still change.
+</Note>
+
 <Frame caption="A Harbor trial in Laminar: the score, the agent's model calls and commands, and the verifier output explaining the failure.">
 <img src="/images/integrations/harbor-evaluation.png" alt="Evaluation in Laminar with a failed Harbor trial's trace and verifier output open" />
 </Frame>
-
-<Info>
-Hosted evals and `lmnr-cli eval run` are in preview. The command, its flags, and the folder layout may still change.
-</Info>
 
 ## Why hosted evals
 
