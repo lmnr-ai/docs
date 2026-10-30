@@ -246,7 +246,7 @@ LIMIT 10
 | `Int64` | Counts, token numbers |
 | `UInt8` | Small numeric enums (for example, `logs.severity_number`) |
 | `UInt32` | Flags and bitmasks (for example, `logs.flags`) |
-| `UInt64` | Indexes and counters (`evaluation_trials.index`, `evaluation_trials.attempt`) |
+| `UInt64` | Indexes and counters (`evaluation_trials.index`) |
 | `Bool` | Flags like `has_browser_session` |
 | `Array(String)` | Tag lists and other string arrays |
 | `Array(Tuple(...))` | Complex nested arrays (for example, `events`) |
@@ -748,7 +748,6 @@ One row per [trial](/evaluations/concepts#tasks-and-trials): a single execution 
 | `executor_output` | `String` | `"{\"key\": \"value\"}"` |
 | `index` | `UInt64` | `0` |
 | `task_id` | `String` | `"france"` |
-| `attempt` | `UInt64` | `1` |
 | `trace_id` | `UUID` | `"01234567-1234-4def-a234-426614174000"` |
 | `group_id` | `String` | `"group_a"` |
 | `scores` | `String` | `"{\"score1\": 0.85}"` |
@@ -774,7 +773,7 @@ One row per [trial](/evaluations/concepts#tasks-and-trials): a single execution 
 
 `data`, `target`, `metadata`, `executor_output`, `scores`, and `trace_metadata` are JSON stored as strings. `scores` is a JSON object of string keys to numeric values.
 
-`task_id` identifies the Task (test case). Rows sharing a `task_id` within an evaluation are repeated trials of one Task, and evaluation comparison matches rows across runs on `task_id`. Rows written before task ids existed read their `index` as the task id. `attempt` numbers a Task's trials 1, 2, 3, … in the order they were first saved, so filtering keeps each trial's number. `created_at` is when a trial was first saved and `updated_at` when it was last written (the SDK saves each trial once before it runs and again with its output).
+`task_id` identifies the Task (test case). Rows sharing a `task_id` within an evaluation are repeated trials of one Task, and evaluation comparison matches rows across runs on `task_id`. Rows written before task ids existed read their `index` as the task id. `created_at` is when a trial was first saved and `updated_at` when it was last written (the SDK saves each trial once before it runs and again with its output).
 
 `evaluation_name` is the evaluation's current name, so a renamed evaluation shows its new name here within about a minute.
 
