@@ -311,24 +311,22 @@ To do the same for your own agent, run [`lmnr-cli eval setup`](#start-with-lmnr-
 
 ## Run evals with lmnr-cli
 
-`lmnr-cli eval run` has three modes. Run it from the repo root: `.env` and `.env.local` are read from the current directory, and every mode needs Docker on the machine that runs `lmnr-cli`, because it builds the images there.
+`lmnr-cli eval run` has two modes. Run it from the repo root: `.env` and `.env.local` are read from the current directory, and every mode needs Docker on the machine that runs `lmnr-cli`, because it builds the images there.
 
 | Mode | Harbor runs | Trials run | Needs |
 | --- | --- | --- | --- |
 | `lmnr-cli eval run` | On your machine | On your Docker | Docker, uv, `LMNR_PROJECT_API_KEY` |
 | `--remote` | In a Laminar sandbox | In Laminar sandboxes, one per trial | Docker, `lmnr-cli login` (or `LMNR_PROJECT_API_KEY` in CI) |
-| `--remote --attach` | On your machine | In Laminar sandboxes, one per trial | Docker, uv, `LMNR_PROJECT_API_KEY` |
 
 - **Local** is the iteration loop. Run it after every change.
-- **`--remote`** scales out. `lmnr-cli` builds or pulls every image the selected suites use for `linux/amd64`, uploads only the layers Laminar doesn't have yet, starts the run, and returns. Results appear in the project's evaluations as trials finish.
-- **`--remote --attach`** keeps Harbor and its job output on your machine while trials run in Laminar sandboxes, and waits for the results. Use it to debug a failure that only happens remotely.
+- **`--remote`** scales out. `lmnr-cli` builds or pulls every image the selected suites use for `linux/amd64`, uploads only the layers Laminar doesn't have yet, starts the run, and returns. Results appear in the project's evaluations as trials finish. Harbor's job output stays in the sandbox, so debug a failure that only happens remotely from the trial's trace in Laminar.
 
 ```bash
 lmnr-cli eval run                                    # every suite in ./evals
 lmnr-cli eval run --suite support --task "refund-*" --n-attempts 3
 lmnr-cli eval run --task refund-double-charge        # one case
 lmnr-cli eval run --remote --n-concurrent 20
-lmnr-cli eval run --remote --attach --model anthropic/claude-sonnet-5-5
+lmnr-cli eval run --remote --model anthropic/claude-sonnet-5-5
 ```
 
 | Flag | What it does |
@@ -344,7 +342,7 @@ lmnr-cli eval run --remote --attach --model anthropic/claude-sonnet-5-5
 
 ### In CI
 
-Use `--json` and the exit code. A local run prints `{mode, suites, failed, url}`; a `--remote` run prints `{mode: "detached", uploadId, sandboxId, suites, url}` once the run has started. Set `LMNR_PROJECT_API_KEY` and the secrets your `harbor.yaml` references as CI secrets.
+Use `--json` and the exit code. A local run prints `{mode, suites, failed, url}`; a `--remote` run prints `{mode: "remote", uploadId, sandboxId, suites, url}` once the run has started. Set `LMNR_PROJECT_API_KEY` and the secrets your `harbor.yaml` references as CI secrets.
 
 | Exit code | Meaning |
 | --- | --- |
@@ -357,7 +355,7 @@ Use `--json` and the exit code. A local run prints `{mode, suites, failed, url}`
 ### Remote limits and image requirements
 
 - **One container per trial.** docker-compose tasks don't run remotely. `cpus` and `memory_mb` above the sandbox limit are clamped, and a run that exceeds the time limit is stopped.
-- **The folder upload is capped at 100 MiB.** Symlinks, `.git`, `node_modules`, virtualenvs, caches, and `jobs/` directories are skipped, and `.env*` files are never uploaded. Keep large fixtures out of `evals/`.
+- **The folder upload is capped at 1 GiB.** Symlinks, `.git`, `node_modules`, virtualenvs, caches, and `jobs/` directories are skipped, and `.env*` files are never uploaded. Keep large fixtures out of `evals/`.
 - **Images need `tar`, `gzip`, and `bash`**, plus `su` if a task runs as a non-root user. They're built for `linux/amd64` (emulated, slowly, on Apple silicon), so architecture-specific downloads should use `ARG TARGETARCH`.
 - **Concurrency is capped per project** (50 sandboxes by default). A higher `--n-concurrent` queues rather than running more at once.
 - **Large images** may need a higher `build_timeout_sec` under `[environment]` in `task.toml` (default 600 seconds), which bounds image preparation plus sandbox start.
@@ -594,7 +592,9 @@ A new case should never need harness changes. If one does, generalize the shared
     A secret's value is very short, so every occurrence of it in the output is redacted. Use long, distinctive placeholder values.
   </Accordion>
   <Accordion title="Where are the logs for a failed trial?">
-    For local and `--attach` runs, in `evals/<suite>/jobs/<timestamp>/`. Each trial has `agent/` (your logs and `result.json`), `verifier/` (`reward.txt`, `test-stdout.txt`), and `exception.txt` with the agent's traceback if it raised.
+    For local runs, in `evals/<suite>/jobs/<timestamp>/`. For `--remote` runs, Harbor's job output stays in the sandbox: open the trial's trace in Laminar instead.
+
+    Each local trial has `agent/` (your logs and `result.json`), `verifier/` (`reward.txt`, `test-stdout.txt`), and `exception.txt` with the agent's traceback if it raised.
   </Accordion>
 </AccordionGroup>
 
