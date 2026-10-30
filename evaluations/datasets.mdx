@@ -36,7 +36,7 @@ evaluate(
 </Tab>
 </Tabs>
 
-The dataset name matches what you see in the [Datasets](/datasets/introduction) section of Laminar. Each dataset row's `data`, `target`, and `metadata` fields become the datapoint's `data`, `target`, `metadata`.
+The dataset name matches what you see in the [Datasets](/datasets/introduction) section of Laminar. Each dataset row's `data`, `target`, and `metadata` fields become the datapoint's `data`, `target`, `metadata`, and the row's `task_id` becomes its [task id](/evaluations/concepts#tasks-and-trials). Because the task id travels with the row, a run over `take` / `select` / `shuffle` of the dataset still compares cleanly against a full run.
 
 <Note>
 `LaminarDataset` takes an optional `fetchSize` / `fetch_size` parameter controlling how many datapoints are fetched per network round-trip (default `25`). For performance, set it to a multiple of the evaluation concurrency / batch size (default `5`).
@@ -115,7 +115,7 @@ The class is modelled on PyTorch's `Dataset`. Laminar's evaluation runner calls 
 
 ## Export evaluator outputs back into a dataset
 
-After an evaluation completes, you can turn any subset of its rows into a new dataset. From the **[SQL editor](/platform/sql-editor)**, write a query against `evaluation_datapoints` or `spans`, then click **Export to Dataset**. That dataset becomes your regression set for the next iteration of the prompt or model.
+After an evaluation completes, you can turn any subset of its rows into a new dataset. From the **[SQL editor](/platform/sql-editor)**, write a query against `evaluation_trials` or `spans`, then click **Export to Dataset**. That dataset becomes your regression set for the next iteration of the prompt or model.
 
 ## Next steps
 

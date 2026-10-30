@@ -103,3 +103,7 @@ After this, you want to update to version 1 (initial version). This will create 
 
 When you push a new datapoint to a dataset, a UUIDv7 is generated for it.
 This allows to sort datapoints by their creation order and preserve the order of insertion.
+
+### Task id
+
+Every datapoint also has a string `task_id`, which [evaluations](/evaluations/concepts#tasks-and-trials) use to match the same test case across runs. It defaults to the datapoint's id. Set your own by passing `taskId` / `task_id` on each point when pushing with the SDK. Task ids are unique within a dataset: a duplicate is renamed `<task_id>#2`, `#3`, and so on.

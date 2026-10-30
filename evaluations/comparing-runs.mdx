@@ -63,6 +63,12 @@ With a baseline selected:
 - The score card shows `old → new` with a colored delta badge, for example `0.83 → 0.74` with `▼ 11.5%`. Switch the score dropdown to see the delta for each dimension.
 - Every row in the datapoint table shows its own `old → new` delta per score column, so you can see exactly which datapoints moved.
 
+Rows are matched across runs by [task id](/evaluations/concepts#tasks-and-trials), not by position. A run that only executes a subset of the dataset still lines up with a full run, and a Task with several Trials compares its average against the baseline Task's average.
+
+<Note>
+Runs recorded before task ids existed use the row's index as the task id. They still compare with each other, but not with newer runs whose task ids come from a dataset or are set explicitly.
+</Note>
+
 <Frame caption="Comparing a text-to-SQL run without a style guide against the baseline with one. token_f1 drops from 0.83 to 0.74 (-11.5%); per-row deltas show which questions regressed">
   <img src="/images/evaluations/eval-compare.png" alt="Comparison view with the score card showing 0.83 to 0.74 and a datapoints table with per-row score deltas" />
 </Frame>
@@ -100,12 +106,12 @@ SELECT
     evaluation_id,
     AVG(scores['accuracy']) AS avg_accuracy,
     AVG(scores['length_ok']) AS avg_length_ok
-FROM evaluation_datapoints
+FROM evaluation_trials
 GROUP BY evaluation_id
 ORDER BY avg_accuracy DESC
 ```
 
-The SQL editor exposes `evaluation_datapoints` (one row per datapoint, with `scores`, `target`, `executor_output`, and the joined trace). Each run's name and group live in a separate Postgres table that the SQL editor does not expose, so filter and group by `evaluation_id` here and map ids back to runs in the UI. See the [SQL editor](/platform/sql-editor) page for more.
+The SQL editor exposes `evaluation_trials` (one row per Trial, with `task_id`, `scores`, `target`, `executor_output`, and the joined trace; `evaluation_datapoints` is an alias). Each row carries `evaluation_name`, and the `evaluations` table holds each run's group and metadata. Group by `task_id` within an evaluation to average a Task's Trials. See the [SQL editor](/platform/sql-editor) page for more.
 
 ## Next steps
 
@@ -117,7 +123,7 @@ The SQL editor exposes `evaluation_datapoints` (one row per datapoint, with `sco
     Keep the dataset constant across runs so comparisons are apples-to-apples.
   </Card>
   <Card title="SQL editor" href="/platform/sql-editor" icon="code">
-    Query `evaluation_datapoints` for bespoke comparisons and dashboards.
+    Query `evaluation_trials` for bespoke comparisons and dashboards.
   </Card>
   <Card title="SDK reference" href="/sdk/evaluations" icon="code">
     Full parameters for `evaluate`, `LaminarDataset`, and `EvaluationDataset`.
