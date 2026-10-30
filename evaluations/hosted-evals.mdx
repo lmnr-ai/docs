@@ -1,21 +1,21 @@
 ---
-title: Environment Evals for AI Agents with Harbor and lmnr-cli
-sidebarTitle: Environment evals
+title: Hosted Evals for AI Agents with Harbor and lmnr-cli
+sidebarTitle: Hosted evals
 ---
 
-Environment evals run every eval case in its own isolated container: your real application, its real services (database, queue, cache), and the data that reproduces one specific scenario. A driver calls the app through an entry point it already has, and a verifier scores what happened. **You run them with `lmnr-cli eval run`, locally on Docker or in Laminar's cloud sandboxes, and every trial lands in Laminar as an [evaluation](/evaluations/introduction) datapoint with the agent's [full trace](/platform/viewing-traces) next to its score.**
+Hosted evals run every eval case in its own isolated container: your real application, its real services (database, queue, cache), and the data that reproduces one specific scenario. A driver calls the app through an entry point it already has, and a verifier scores what happened. **You run them with `lmnr-cli eval run`, locally on Docker or in Laminar's cloud sandboxes, and every trial lands in Laminar as an [evaluation](/evaluations/introduction) datapoint with the agent's [full trace](/platform/viewing-traces) next to its score.**
 
-The case format is [Harbor](https://www.harborframework.com)'s, so an evals folder is plain Harbor tasks with a small amount of Laminar configuration on top. This page covers why you'd use environment evals, the concepts, a quickstart, and how to build a harness that measures what your agent does in production.
+The case format is [Harbor](https://www.harborframework.com)'s, so an evals folder is plain Harbor tasks with a small amount of Laminar configuration on top. This page covers why you'd use hosted evals, the concepts, a quickstart, and how to build a harness that measures what your agent does in production.
 
 <Frame caption="A Harbor trial in Laminar: the score, the agent's model calls and commands, and the verifier output explaining the failure.">
 <img src="/images/integrations/harbor-evaluation.png" alt="Evaluation in Laminar with a failed Harbor trial's trace and verifier output open" />
 </Frame>
 
 <Info>
-Environment evals and `lmnr-cli eval run` are in preview. The command, its flags, and the folder layout may still change.
+Hosted evals and `lmnr-cli eval run` are in preview. The command, its flags, and the folder layout may still change.
 </Info>
 
-## Why environment evals
+## Why hosted evals
 
 [SDK evaluations](/evaluations/concepts) call a function in your process: datapoint in, output out, evaluators score the output. That works well for a prompt, a classifier, or a single LLM call. It gets hard once the thing you're testing is an agent that acts on the world:
 
@@ -23,7 +23,7 @@ Environment evals and `lmnr-cli eval run` are in preview. The command, its flags
 - **The bugs are in the integration.** The query that returns the wrong rows, the tool that times out, the retry loop, the config that's only set in production. Mocks and fixtures in a unit-style eval hide exactly these.
 - **Production failures need their exact context.** Reproducing a failure means the same conversation, the same records, the same account state. Each case needs its own data, and cases can't share a database without interfering with each other.
 
-Environment evals answer all three by giving every case a fresh, complete copy of the stack:
+Hosted evals answer all three by giving every case a fresh, complete copy of the stack:
 
 - **Production fidelity.** The real code and the real services run in the container, started the way production starts them. You seed them; you don't mock them.
 - **Isolation.** Each case boots its own stack with its own data, so cases run in parallel with no shared state and no ordering.
@@ -31,7 +31,7 @@ Environment evals answer all three by giving every case a fresh, complete copy o
 - **Local and cloud from one folder.** `lmnr-cli eval run` runs trials on your Docker. Add `--remote` and the same folder runs in Laminar sandboxes, one per trial.
 - **No lock-in.** Tasks, image, agent, and verifier are plain Harbor. Laminar adds the trajectories, run history, comparisons, SQL access, and managed execution.
 
-| | SDK evaluations | Environment evals |
+| | SDK evaluations | Hosted evals |
 | --- | --- | --- |
 | Unit under test | A function in your process | Your app and its services in a container |
 | Case data | `data` / `target` on a datapoint | Per-case files seeded into the environment |
@@ -39,7 +39,7 @@ Environment evals answer all three by giving every case a fresh, complete copy o
 | Runs on | Your machine or CI | Local Docker, or Laminar sandboxes with `--remote` |
 | Best for | Prompts, single LLM calls, pipelines you can call directly | Agents with tools, multi-service apps, replaying production failures |
 
-The two coexist. Keep SDK evaluations for fast checks on a prompt or a function, and use environment evals when the answer depends on the whole system.
+The two coexist. Keep SDK evaluations for fast checks on a prompt or a function, and use hosted evals when the answer depends on the whole system.
 
 ## Core concepts
 
@@ -47,7 +47,7 @@ Harbor's vocabulary maps onto evals of your own product like this:
 
 - **Task (case)**: one scenario. A directory with a `task.toml` (which image, resources, timeouts), an `instruction.md`, the case's data in `environment/`, and a verifier in `tests/`. In production evals, tasks are variations of the same scenario: same code and services, different data.
 - **Environment**: the container a trial runs in. Here it's one prebuilt image holding your app, its services, and shared scripts. Each task's `environment/` files (for example `case.json`) are copied into it when the trial starts.
-- **Agent**: the code that drives the trial. In Harbor's original use this is a general-purpose agent like Claude Code. In environment evals of your product, it's a thin class that starts your stack, seeds the case, and calls your app's entry point. Your AI agent is the app under test, not the Harbor agent.
+- **Agent**: the code that drives the trial. In Harbor's original use this is a general-purpose agent like Claude Code. In hosted evals of your product, it's a thin class that starts your stack, seeds the case, and calls your app's entry point. Your AI agent is the app under test, not the Harbor agent.
 - **Verifier**: `tests/test.sh`, run after the agent finishes. Any language, any grading method (exact match, a rubric, an LLM judge). It writes a reward, such as `1` or `0`, to `/logs/verifier/reward.txt`.
 - **Trial**: one attempt at one task: start the environment, run the agent, run the verifier. Run a task several times with `--n-attempts` to measure variance.
 - **Suite**: a directory in `evals/` with a `harbor.yaml` (a Harbor job config) and its tasks. Most projects have one suite.
@@ -288,7 +288,7 @@ with `anthropic` and `lmnr` in `requirements.txt`.
 </Steps>
 
 <Tip>
-`lmnr-cli setup` installs the Laminar agent skill, which knows this layout. In Claude Code, Cursor, or Codex, ask for it directly: *"Set up environment evals for the refund flow with `lmnr-cli eval run`. Use our real Postgres and seed each case from a production trace."* The skill follows the guidance on the rest of this page: find the entry point, build one image, seed per-case data, write the verifier, and run it locally.
+`lmnr-cli setup` installs the Laminar agent skill, which knows this layout. In Claude Code, Cursor, or Codex, ask for it directly: *"Set up hosted evals for the refund flow with `lmnr-cli eval run`. Use our real Postgres and seed each case from a production trace."* The skill follows the guidance on the rest of this page: find the entry point, build one image, seed per-case data, write the verifier, and run it locally.
 </Tip>
 
 ## Run evals with lmnr-cli
@@ -428,7 +428,7 @@ Harbor redacts agent env values from its output files. A very short value, like 
 
 ## Build a harness that matches production
 
-The quickstart's app is a single function. Real products have a database, a queue, background workers, and an LLM configured somewhere. These practices keep an environment eval measuring what your agent does in production rather than what the harness does.
+The quickstart's app is a single function. Real products have a database, a queue, background workers, and an LLM configured somewhere. These practices keep a hosted eval measuring what your agent does in production rather than what the harness does.
 
 ### Principles
 
@@ -546,7 +546,7 @@ Run the suite locally until it passes, then test the harness itself:
 
 ## Turn production failures into cases
 
-Environment evals exist to close the loop between what breaks in production and what you test before shipping:
+Hosted evals exist to close the loop between what breaks in production and what you test before shipping:
 
 1. **Find the traces.** Pick production traces with the failure you care about, plus a few that were correctly not flagged. If you track the failure with a [Signal](/signals/introduction), query its events with `lmnr-cli signal list` and `lmnr-cli sql query`, or the [SQL editor](/platform/sql-editor).
 2. **Export the minimal input** for each into a `case.json`: the messages, tool calls, and records the app needs. Replace PII and secrets with plausible values, keep structure and ordering, and rebase timestamps.

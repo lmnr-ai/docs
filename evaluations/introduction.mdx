@@ -68,7 +68,7 @@ Both paths talk to the same `evaluate()` function. The CLI is just a runner.
 
 If you already benchmark agents with [Harbor](/integrations/harbor), you don't need an eval file: add `--plugin laminar` to `harbor run` and each job lands in Laminar as an evaluation.
 
-When the answer depends on the whole system (an agent with tools, a database, background jobs), use [environment evals](/evaluations/environment-evals) instead: each case runs your real app and services in an isolated container, seeded with that case's data, and `lmnr-cli eval run` runs them locally or in Laminar's cloud sandboxes.
+When the answer depends on the whole system (an agent with tools, a database, background jobs), use [hosted evals](/evaluations/hosted-evals) instead: each case runs your real app and services in an isolated container, seeded with that case's data, and `lmnr-cli eval run` runs them locally or in Laminar's cloud sandboxes.
 
 ## Next steps
 
