@@ -1,0 +1,598 @@
+---
+title: Hosted Evals for AI Agents with Harbor and lmnr-cli
+sidebarTitle: Hosted evals
+---
+
+Hosted evals run every eval case in its own isolated container: your real application, its real services (database, queue, cache), and the data that reproduces one specific scenario. A driver calls the app through an entry point it already has, and a verifier scores what happened. **You run them with `lmnr-cli eval run`, locally on Docker or in Laminar's cloud sandboxes, and every trial lands in Laminar as an [evaluation](/evaluations/introduction) datapoint with the agent's [full trace](/platform/viewing-traces) next to its score.**
+
+The case format is [Harbor](https://www.harborframework.com)'s, so an evals folder is plain Harbor tasks with a small amount of Laminar configuration on top. This page covers why you'd use hosted evals, the concepts, a quickstart, and how to build a harness that measures what your agent does in production.
+
+<Note>
+Hosted evals are in beta. The `lmnr-cli eval run` command, its flags, and the folder layout may still change.
+</Note>
+
+<Frame caption="A Harbor trial in Laminar: the score, the agent's model calls and commands, and the verifier output explaining the failure.">
+<img src="/images/integrations/harbor-evaluation.png" alt="Evaluation in Laminar with a failed Harbor trial's trace and verifier output open" />
+</Frame>
+
+## Why hosted evals
+
+[SDK evaluations](/evaluations/concepts) call a function in your process: datapoint in, output out, evaluators score the output. That works well for a prompt, a classifier, or a single LLM call. It gets hard once the thing you're testing is an agent that acts on the world:
+
+- **The outcome is state, not a return value.** A support agent issues a refund, a coding agent edits files, a pipeline writes rows. Scoring the final message misses whether the right thing actually happened.
+- **The bugs are in the integration.** The query that returns the wrong rows, the tool that times out, the retry loop, the config that's only set in production. Mocks and fixtures in a unit-style eval hide exactly these.
+- **Production failures need their exact context.** Reproducing a failure means the same conversation, the same records, the same account state. Each case needs its own data, and cases can't share a database without interfering with each other.
+
+Hosted evals answer all three by giving every case a fresh, complete copy of the stack:
+
+- **Production fidelity.** The real code and the real services run in the container, started the way production starts them. You seed them; you don't mock them.
+- **Isolation.** Each case boots its own stack with its own data, so cases run in parallel with no shared state and no ordering.
+- **No production changes.** The driver calls an entry point the app already has (an HTTP route, a CLI command, a queue message, an exported function), so you test the code path users hit.
+- **Local and cloud from one folder.** `lmnr-cli eval run` runs trials on your Docker. Add `--remote` and the same folder runs in Laminar sandboxes, one per trial.
+- **No lock-in.** Tasks, image, agent, and verifier are plain Harbor. Laminar adds the trajectories, run history, comparisons, SQL access, and managed execution.
+
+| | SDK evaluations | Hosted evals |
+| --- | --- | --- |
+| Unit under test | A function in your process | Your app and its services in a container |
+| Case data | `data` / `target` on a datapoint | Per-case files seeded into the environment |
+| Scoring | Evaluator functions on the output | A verifier script over the resulting state and artifacts |
+| Runs on | Your machine or CI | Local Docker, or Laminar sandboxes with `--remote` |
+| Best for | Prompts, single LLM calls, pipelines you can call directly | Agents with tools, multi-service apps, replaying production failures |
+
+The two coexist. Keep SDK evaluations for fast checks on a prompt or a function, and use hosted evals when the answer depends on the whole system.
+
+## Core concepts
+
+Harbor's vocabulary maps onto evals of your own product like this:
+
+- **Task (case)**: one scenario. A directory with a `task.toml` (which image, resources, timeouts), an `instruction.md`, the case's data in `environment/`, and a verifier in `tests/`. In production evals, tasks are variations of the same scenario: same code and services, different data.
+- **Environment**: the container a trial runs in. Here it's one prebuilt image holding your app, its services, and shared scripts. Each task's `environment/` files (for example `case.json`) are copied into it when the trial starts.
+- **Agent**: the code that drives the trial. In Harbor's original use this is a general-purpose agent like Claude Code. In hosted evals of your product, it's a thin class that starts your stack, seeds the case, and calls your app's entry point. Your AI agent is the app under test, not the Harbor agent.
+- **Verifier**: `tests/test.sh`, run after the agent finishes. Any language, any grading method (exact match, a rubric, an LLM judge). It writes a reward, such as `1` or `0`, to `/logs/verifier/reward.txt`.
+- **Trial**: one attempt at one task: start the environment, run the agent, run the verifier. Run a task several times with `--n-attempts` to measure variance.
+- **Suite**: a directory in `evals/` with a `harbor.yaml` (a Harbor job config) and its tasks. Most projects have one suite.
+- **Trajectory**: what the app did during the trial: its LLM calls and tool calls. Laminar shows it under the trial's trace.
+
+Each concept maps to something in Laminar:
+
+| Harbor | Laminar |
+| --- | --- |
+| Suite | Evaluation [group](/evaluations/comparing-runs#group-runs-to-compare-them). Every run of the suite is charted together, local and remote. |
+| One `lmnr-cli eval run` of a suite | Evaluation |
+| Trial | Datapoint, with its own trace |
+| Verifier rewards | Scores, one per reward key |
+| Trajectory | `LLM` and `TOOL` spans under the trial's `agent` span |
+
+The trace shape and how retries, crashes, and cancellations are counted are the same as for the [Harbor integration](/integrations/harbor#what-you-see-in-laminar).
+
+## Quickstart
+
+This quickstart evaluates a small support-ticket triage function: it sends a ticket to Claude and returns a category. You'll package it into an image, add two cases, and run them. The same layout scales to an app with a database and several services; [Build a harness that matches production](#build-a-harness-that-matches-production) covers that.
+
+The app is one module, instrumented with Laminar:
+
+```python app/triage.py
+import os
+
+from anthropic import Anthropic
+from lmnr import Laminar, observe
+
+Laminar.initialize()
+client = Anthropic()
+
+CATEGORIES = ["billing", "bug", "account", "other"]
+
+
+@observe()
+def triage(ticket: str) -> str:
+    response = client.messages.create(
+        model=os.environ.get("TRIAGE_MODEL", "claude-sonnet-5-5"),
+        max_tokens=16,
+        system=f"Classify the support ticket. Reply with one word: {', '.join(CATEGORIES)}.",
+        messages=[{"role": "user", "content": ticket}],
+    )
+    answer = response.content[0].text.strip().lower()
+    return answer if answer in CATEGORIES else "other"
+```
+
+with `anthropic` and `lmnr` in `requirements.txt`.
+
+<Steps>
+  <Step title="Install the prerequisites and link the project">
+    You need [Docker](https://docs.docker.com/get-docker/), [uv](https://docs.astral.sh/uv/), and Node.js for `lmnr-cli`. `lmnr-cli eval run` runs a pinned Harbor version with the Laminar plugin through `uvx`, so you don't install Harbor yourself.
+
+    From the repo root, link the directory to a Laminar project:
+
+    ```bash
+    npx lmnr-cli@latest setup
+    ```
+
+    `setup` signs you in, writes `LMNR_PROJECT_API_KEY` to `.env`, and installs the Laminar agent skill. See [Laminar CLI](/platform/cli) for details.
+  </Step>
+  <Step title="Lay out the evals folder">
+    Create this structure next to your code:
+
+    ```
+    evals/
+      lmnr.yaml                     # the image tasks use, and how to build it
+      image/
+        Dockerfile
+        shared/
+          run_case.py               # drives the entry point, writes result.json
+      support/                      # a suite
+        harbor.yaml
+        agent/
+          __init__.py               # empty
+          agent.py
+        tasks/
+          refund-double-charge/
+            task.toml
+            instruction.md
+            environment/
+              case.json             # this case's data
+            tests/
+              test.sh               # the verifier
+              expected.json         # the reference answer
+    ```
+  </Step>
+  <Step title="Describe the image">
+    `lmnr.yaml` names the image and how to build it. Paths are relative to `evals/`, and `context: ..` makes the repo root the build context, so the image is built from your live source:
+
+    ```yaml evals/lmnr.yaml
+    images:
+      triage-evals:
+        dockerfile: image/Dockerfile
+        context: ..
+    ```
+
+    ```dockerfile evals/image/Dockerfile
+    FROM python:3.12-slim-bookworm
+    COPY requirements.txt /srv/app/
+    RUN pip install --no-cache-dir -r /srv/app/requirements.txt
+    COPY evals/image/shared/ /opt/harness/
+    COPY app/ /srv/app/app/
+    WORKDIR /case
+    ```
+
+    The driver imports the production function unchanged, runs it on this case's data, and writes the outcome to `/logs/agent/result.json`:
+
+    ```python evals/image/shared/run_case.py
+    import json
+    import sys
+    import time
+
+    sys.path.insert(0, "/srv/app")
+    from app.triage import triage  # the production code path, unchanged
+
+    case = json.load(open("/case/case.json"))
+    started = time.time()
+    try:
+        result = {"outcome": triage(case["ticket"])}
+    except Exception as e:
+        result = {"outcome": "failed", "error": repr(e)}
+    result["duration_s"] = round(time.time() - started, 2)
+
+    json.dump(result, open("/logs/agent/result.json", "w"), indent=2)
+    print(json.dumps(result))
+    ```
+  </Step>
+  <Step title="Write the suite config and the agent">
+    `harbor.yaml` is a Harbor job config. Secrets are `${VAR}` placeholders, never literal values:
+
+    ```yaml evals/support/harbor.yaml
+    agents:
+      - import_path: agent.agent:TriageAgent
+        model_name: anthropic/claude-sonnet-5-5
+        env:
+          ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    datasets:
+      - path: tasks
+    n_concurrent_trials: 4
+    ```
+
+    The agent runs the driver inside the container. Everything it needs is already in the image, so `install()` does nothing. It passes `self.model_name` on so `--model` can override the model for a run:
+
+    ```python evals/support/agent/agent.py
+    from harbor.agents.installed.base import BaseInstalledAgent, with_prompt_template
+    from harbor.environments.base import BaseEnvironment
+    from harbor.models.agent.context import AgentContext
+
+
+    class TriageAgent(BaseInstalledAgent):
+        @staticmethod
+        def name() -> str:
+            return "triage"
+
+        async def install(self, environment: BaseEnvironment) -> None:
+            pass  # everything the agent needs is already in the image
+
+        @with_prompt_template
+        async def run(
+            self, instruction: str, environment: BaseEnvironment, context: AgentContext
+        ) -> None:
+            # "anthropic/claude-sonnet-5-5" -> "claude-sonnet-5-5"
+            model = (self.model_name or "").split("/", 1)[-1]
+            await self.exec_as_agent(
+                environment,
+                command="python /opt/harness/run_case.py",
+                env={"TRIAGE_MODEL": model},
+                timeout_sec=120,
+            )
+    ```
+  </Step>
+  <Step title="Add a case">
+    The task points at the image by name and says where its `environment/` files go:
+
+    ```toml evals/support/tasks/refund-double-charge/task.toml
+    [environment]
+    docker_image = "triage-evals"
+    workdir = "/case"
+
+    [agent]
+    timeout_sec = 180
+    ```
+
+    ```markdown evals/support/tasks/refund-double-charge/instruction.md
+    Triage the support ticket in case.json.
+    ```
+
+    ```json evals/support/tasks/refund-double-charge/environment/case.json
+    {"ticket": "Hi, I was charged twice for my October invoice (two identical charges of $49 on Oct 3). Can you refund one of them?"}
+    ```
+
+    The reference answer and the verifier live in `tests/`, which Harbor uploads only when the verifier runs, so the app never sees them:
+
+    ```json evals/support/tasks/refund-double-charge/tests/expected.json
+    {"category": "billing"}
+    ```
+
+    ```bash evals/support/tasks/refund-double-charge/tests/test.sh
+    #!/bin/bash
+    expected=$(python3 -c 'import json; print(json.load(open("/tests/expected.json"))["category"])')
+    actual=$(python3 -c 'import json; print(json.load(open("/logs/agent/result.json"))["outcome"])')
+
+    if [ "$expected" = "$actual" ]; then
+      echo 1 > /logs/verifier/reward.txt
+    else
+      echo "expected $expected, got $actual"
+      echo 0 > /logs/verifier/reward.txt
+    fi
+    ```
+
+    Make the verifier executable with `chmod +x`. A second case is a copy of this directory with a different `case.json` and `expected.json`.
+  </Step>
+  <Step title="Add secrets">
+    Put `ANTHROPIC_API_KEY` in `.env` at the repo root, next to the `LMNR_PROJECT_API_KEY` that `setup` wrote. `lmnr-cli` fills every `${VAR}` from your shell, then `.env.local` / `.env`, and stops before anything starts if one is missing.
+
+    Keep secrets and Harbor's job output out of git:
+
+    ```text .gitignore
+    .env
+    evals/*/jobs/
+    ```
+  </Step>
+  <Step title="Run the evals">
+    From the repo root:
+
+    ```bash
+    npx lmnr-cli@latest eval run
+    ```
+
+    `lmnr-cli` builds `triage-evals` with your Docker, runs every task in every suite, and prints a link to the results. The `support` suite becomes an evaluation group in your project, and this run is a new evaluation in it.
+  </Step>
+  <Step title="Read the results">
+    Open the evaluation. Each trial is a datapoint with its reward as the score. Because the app calls `Laminar.initialize()`, the trial's trace shows the Claude call under the `agent` span as a [transcript](/platform/viewing-traces), so a `0` takes one click to explain.
+
+    Locally, Harbor's raw output is in `evals/support/jobs/<timestamp>/`: each trial has `agent/` (your `result.json` and logs) and `verifier/` (`reward.txt`, `test-stdout.txt`).
+  </Step>
+</Steps>
+
+<Tip>
+`lmnr-cli setup` installs the Laminar agent skill, which knows this layout. In Claude Code, Cursor, or Codex, ask for it directly: *"Set up hosted evals for the refund flow with `lmnr-cli eval run`. Use our real Postgres and seed each case from a production trace."* The skill follows the guidance on the rest of this page: find the entry point, build one image, seed per-case data, write the verifier, and run it locally.
+</Tip>
+
+## Run evals with lmnr-cli
+
+`lmnr-cli eval run` has two modes. Run it from the repo root: `.env` and `.env.local` are read from the current directory, and every mode needs Docker on the machine that runs `lmnr-cli`, because it builds the images there.
+
+| Mode | Harbor runs | Trials run | Needs |
+| --- | --- | --- | --- |
+| `lmnr-cli eval run` | On your machine | On your Docker | Docker, uv, `LMNR_PROJECT_API_KEY` |
+| `--remote` | In a Laminar sandbox | In Laminar sandboxes, one per trial | Docker, `lmnr-cli login` (or `LMNR_PROJECT_API_KEY` in CI) |
+
+- **Local** is the iteration loop. Run it after every change.
+- **`--remote`** scales out. `lmnr-cli` builds or pulls every image the selected suites use for `linux/amd64`, uploads only the layers Laminar doesn't have yet, starts the run, and returns. Results appear in the project's evaluations as trials finish. Harbor's job output stays in the sandbox, so debug a failure that only happens remotely from the trial's trace in Laminar.
+
+```bash
+lmnr-cli eval run                                    # every suite in ./evals
+lmnr-cli eval run --suite support --task "refund-*" --n-attempts 3
+lmnr-cli eval run --task refund-double-charge        # one case
+lmnr-cli eval run --remote --n-concurrent 20
+lmnr-cli eval run --remote --model anthropic/claude-sonnet-5-5
+```
+
+| Flag | What it does |
+| --- | --- |
+| `[dir]` | The evals folder. Defaults to `evals`. |
+| `--suite <name>` | Run only this suite. Repeatable. |
+| `--task <glob>` | Run only tasks matching the glob. Repeatable. |
+| `--n-attempts <n>` | Trials per task. Overrides `harbor.yaml`. |
+| `--n-concurrent <n>` | Concurrent trials. Overrides `harbor.yaml`. |
+| `--model <name>` | Agent model. Overrides `harbor.yaml`. |
+| `--env KEY[=VALUE]` | Extra agent env var. Repeatable. A bare `KEY` is read from your environment. |
+| `--json` | Print a JSON summary instead of logs. |
+
+### In CI
+
+Use `--json` and the exit code. A local run prints `{mode, suites, failed, url}`; a `--remote` run prints `{mode: "remote", uploadId, sandboxId, suites, url}` once the run has started. Set `LMNR_PROJECT_API_KEY` and the secrets your `harbor.yaml` references as CI secrets.
+
+| Exit code | Meaning |
+| --- | --- |
+| `16` | Invalid evals folder, or the packed folder is over the upload limit |
+| `17` | `uv` or Docker isn't installed |
+| `18` | A suite's `harbor run` failed. The other suites still run. |
+| `19` | A `${VAR}` placeholder or `LMNR_PROJECT_API_KEY` is unset |
+| `20` | A Docker build, pull, or save failed, or an image isn't `linux/amd64` |
+
+### Remote limits and image requirements
+
+- **One container per trial.** docker-compose tasks don't run remotely. `cpus` and `memory_mb` above the sandbox limit are clamped, and a run that exceeds the time limit is stopped.
+- **The folder upload is capped at 1 GiB.** Symlinks, `.git`, `node_modules`, virtualenvs, caches, and `jobs/` directories are skipped, and `.env*` files are never uploaded. Keep large fixtures out of `evals/`.
+- **Images need `tar`, `gzip`, and `bash`**, plus `su` if a task runs as a non-root user. They're built for `linux/amd64` (emulated, slowly, on Apple silicon), so architecture-specific downloads should use `ARG TARGETARCH`.
+- **Concurrency is capped per project** (50 sandboxes by default). A higher `--n-concurrent` queues rather than running more at once.
+- **Large images** may need a higher `build_timeout_sec` under `[environment]` in `task.toml` (default 600 seconds), which bounds image preparation plus sandbox start.
+- **Self-hosted Laminar:** set `LMNR_GRPC_PORT` in your shell or `.env` for `--remote` runs, or the trial traces don't arrive.
+
+## The evals folder
+
+`lmnr-cli eval run` treats every directory directly inside `evals/` that has a `harbor.yaml` as a suite. A fuller layout, for an app with services and a database:
+
+```
+evals/
+  README.md                       # how to run, how to add a case
+  lmnr.yaml
+  image/
+    Dockerfile                    # services, app, shared scripts, baseline data
+    shared/
+      start_stack.sh              # boot dependencies + the app, wait for readiness
+      seed_baseline.*             # (optional) data every case shares
+      seed_case.*                 # load this case's data from environment/
+      run_case.*                  # drive the entry point, write result files
+      export_trajectory.*         # (optional) rebuild the trajectory if the app isn't instrumented
+  <suite>/
+    harbor.yaml
+    agent/
+      __init__.py
+      agent.py
+    tasks/
+      <case>/
+        task.toml
+        instruction.md
+        environment/
+          case.json               # any format seed_case reads
+        tests/
+          test.sh
+          expected.json           # (optional) reference answer
+```
+
+### lmnr.yaml and the image
+
+`lmnr.yaml` lists the images tasks can use. `dockerfile` and `context` are relative to `evals/`; `context` defaults to the Dockerfile's directory. `lmnr-cli` rebuilds these images on every run (a cached build when nothing changed), so there are no tags to bump and no registry to push to.
+
+When you write the Dockerfile:
+
+- **Order layers from rarely to often changing**: system packages, then dependencies, then shared scripts, then app code. An app change then rebuilds, and for `--remote` uploads, one small layer.
+- **`COPY` specific paths, never `COPY . .`** from the repo root. Docker only sends what `COPY` references, so a large repo costs nothing, while `COPY . .` would bake in everything, including every suite's `tests/` and their reference answers. From `evals/`, copy `image/shared/` only.
+- **Build from the live source**, not a vendored copy, so the app and its migrations always come from the same revision as the evals.
+
+`.dockerignore` applies, and builds that `lmnr-cli` runs never receive `.git` or `.env*` files.
+
+### harbor.yaml
+
+A suite's `harbor.yaml` is a plain Harbor job config: `agents`, `datasets`, `n_concurrent_trials`, and so on. Relative paths resolve from the suite directory, and the suite directory is on `PYTHONPATH`, so `import_path: agent.agent:ClassName` points at `<suite>/agent/agent.py`.
+
+### task.toml
+
+Set `docker_image` to an image name from `lmnr.yaml` and leave the Dockerfile out of `environment/`. Every trial then starts from the same built image, and Harbor uploads the contents of `environment/` into `workdir` after the container starts. That is how `case.json` reaches a shared image.
+
+```toml task.toml
+[environment]
+docker_image = "myapp-evals"
+workdir = "/case"          # where environment/ is uploaded; defaults to the image's WORKDIR
+cpus = 2
+memory_mb = 4096
+
+[agent]
+timeout_sec = 600
+```
+
+A full stack per case is heavy, so set `cpus` and `memory_mb`. Locally all trials share your machine, so keep `n_concurrent_trials` to what it can run; remotely each trial gets its own sandbox, so raise concurrency for that run with `--n-concurrent`.
+
+An image name that isn't in `lmnr.yaml` is pulled from its registry, so public images work as-is.
+
+A per-task Dockerfile in `environment/` is the exception, for a case that genuinely needs a different system setup. Remove `docker_image` from that task: while it's set, Harbor uses the image and ignores the Dockerfile. With a Dockerfile, `environment/` is the build context and nothing is uploaded at start, so the Dockerfile has to `COPY` the case data itself. It also can't `FROM` an image that only exists in `lmnr.yaml`; start from a public base.
+
+### Secrets and env vars
+
+Declare every secret and setting as a `${VAR}` placeholder:
+
+- `agents[].env` in `harbor.yaml`, for the agent and the app it starts.
+- `[verifier.env]` in `task.toml`, for example the key an LLM-graded verifier needs.
+- `[environment.env]` in `task.toml`, for the container.
+
+`${VAR:-default}` makes one optional. Values come from your shell first, then `.env.local` / `.env` in the current directory. For `--remote` they travel with the run as env vars; files containing secrets are never uploaded. Commit a `.env.example` listing the names so teammates know what to fill in.
+
+<Warning>
+Harbor redacts agent env values from its output files. A very short value, like a one-character placeholder `x`, turns every `x` in the job output into `[REDACTED]`. Keep placeholder values long and distinctive.
+</Warning>
+
+## Build a harness that matches production
+
+The quickstart's app is a single function. Real products have a database, a queue, background workers, and an LLM configured somewhere. These practices keep a hosted eval measuring what your agent does in production rather than what the harness does.
+
+### Principles
+
+1. **Production fidelity over convenience.** Run the real code and the real services for as much of the stack as you can. Seed them; don't mock them. Mock only what you can't run (a third-party SaaS, a private internal service), at the network edge through the app's existing base-URL config, never by editing the code path. Every mock is a gap in what the eval measures, so write each one down.
+2. **Zero production changes.** Drive an entry point the app already exposes. A harness-only code path tests the harness. If nothing existing reaches the behavior you want to test, treat adding an entry point as a deliberate decision (for example an internal endpoint disabled unless a config flag is set), not something to slip in.
+3. **One case, one environment.** Every container boots its own stack with its own data. Never share a database between cases.
+4. **Evals live next to the code**, built from the same source tree and revision.
+5. **Turn the run into artifacts, then verify the artifacts.** The driver leaves its observable result in files (a `result.json`, an exported row, a transcript), and the verifier grades those.
+
+### Find the entry point and the outcome
+
+Before writing any harness code, read the production path under test and write down:
+
+- the **entry point** you can call without modification (a route, a CLI command, a queue consumer, a function);
+- the **inputs it reads** (rows, files, messages) and where they live;
+- the **terminal state** it produces (a response body, a status row, an emitted record) and how to read it;
+- the **external calls** it makes (LLM, HTTP) and how they're configured.
+
+If existing tests seed a fixture for this path, copy their seeding shape. It's the best statement of which fields are actually required.
+
+### Boot the services in the container
+
+Everything the entry point touches runs inside the one container, with no docker-in-docker:
+
+- **Databases** start as background processes with the engine's own bootstrap (`initdb`, `redis-server`, `clickhouse server`). Install the version production runs, from the distro, the vendor's apt repo, or a multi-stage `COPY --from=<official image>:<version>`.
+- **Schemas** are created the way the app's own startup creates them: roles, databases, migrations in order, then anything created after migrations in code (views, grants, seed rows). If the app has no migrations, create only the tables the path under test needs, and note that the schema was inferred.
+- **Queues, caches, and object stores** with an in-memory or local-disk fallback can use it. That's production-supported code, not a mock.
+- **The app** runs as its production artifact: the real package, or a compiled binary built in a builder stage of the same Dockerfile (a binary built on a macOS host is the wrong format).
+- **Readiness**: poll the health endpoint with a timeout, and on failure print the app log to stderr so it shows up in the job output.
+
+Harbor starts the container with its own keep-alive command, so `CMD` and base-image entrypoints don't run. A start script in `image/shared/` launches each service in the background (`nohup ... &`) with its output redirected to `/logs/agent/*.log` (an unredirected background process can keep the exec call from returning), then waits for readiness. No ports are published to the host: every call to the app comes from inside the container, which is why the agent runs there.
+
+Start the app with `env -i` and an explicit minimal env so nothing from the host leaks in, and forward the names it needs: API keys and `LMNR_TRAJECTORY_PATH`.
+
+### Seed the data
+
+Decide for each dataset which kind it is:
+
+- **Shared baseline data** is the same for every case: reference tables, a default org and user, config rows, an LLM profile. Seed it in the image build or in a shared script that runs at startup. Each container still gets its own copy.
+- **Per-case data** is what reproduces one scenario: the conversation, the records, the account state. It lives in the task's `environment/` and is loaded by the same shared seed script for every case.
+
+Keep per-case data in one format your seed script reads (`case.json`, a SQL file, a directory of fixtures), so adding a case is a directory copy plus data and never a harness change.
+
+Seed through the app's own API when it involves encryption, validation, or derived fields (creating a record with secrets, for example: let the server encrypt them). Insert directly into the database for bulk fixtures and for things the API gates behind auth or plan limits. Mirror the columns the app reads, and hash credentials exactly the way the app does.
+
+### Make seed data look real
+
+Capable models notice when they're being tested, and an agent that suspects a test can behave differently from how it behaves in production. Fixtures are where this leaks most:
+
+- **Timestamps.** Data exported weeks ago reads as stale when replayed today. Default to relative timestamps (shift on load so the latest event is near now, keeping the intervals). Keep absolute dates only when the case depends on one, such as an end-of-month or DST boundary. Check dates outside timestamp columns too: free text, filenames, and time-ordered ids (UUIDv7, ULID).
+- **Ids.** Patterned ids like `user_1` or `12000000-0000-4000-8000-0123456789ab` give the game away. Generate them the way the app does and keep references consistent.
+- **Names and content.** No `John Doe`, `test@example.com`, `Acme`, or lorem ipsum. Replace scrubbed PII with plausible values, not placeholders.
+- **The harness itself.** If the agent can see the filesystem, process list, or environment, keep harness files out of sight or neutrally named: no `/eval`, `EVAL_MODE=1`, or `test_case` in anything it can read.
+
+### Write the agent
+
+Subclass Harbor's `BaseInstalledAgent`, so the agent's commands run inside the container next to your app. (`BaseAgent`, which runs on the host and reaches the container through `environment.exec`, is only for a product that can't run in the container.) `lmnr-cli` pins Harbor 0.25.0; see Harbor's [custom agents](https://docs.harborframework.com/agents/custom-agents) guide for the full interface.
+
+- **`install()` stays empty** with a prebuilt image. It runs in every trial, and anything it would install belongs in the image. Per-trial setup goes at the start of `run()`.
+- **`run()` stays thin**: start the stack, seed baseline and case data, run the driver.
+- **Run commands with `exec_as_agent`**, or `exec_as_root` when they need root. The `agents[].env` values from `harbor.yaml` reach every command the agent runs, so use `env=` only for per-command extras.
+- **Read the model from `self.model_name`**, so `--model` works.
+- **Import only `harbor`, the standard library, and modules in the suite directory.** The class runs in the Harbor process (your machine or Laminar's orchestrator), not in the container; everything else belongs in the image.
+- **Optionally override `populate_context_post_run(context)`**, which runs after the trial's logs are copied to the host, to parse `result.json` into the agent context.
+
+The driver it runs does two things: trigger, then wait for a terminal state.
+
+- For a **synchronous** entry point (an HTTP call or a function that returns the result), call it with a timeout and record the response.
+- For an **asynchronous** one (enqueue a job, the app writes a status later), poll the status the app writes until it's terminal, with a hard timeout. Don't sleep for a fixed time.
+- Map the result to an outcome the verifier can grade, with `failed` and `timeout` as distinct outcomes so they're never mistaken for a model verdict. Write the full detail (status, error, ids, duration) to `/logs/agent/result.json`.
+- Exit `0` whenever you produced an outcome, including `failed` and `timeout`. A non-zero exit makes the trial an error, which should mean the harness broke.
+
+Keep the driver's timeout below the exec `timeout_sec`, and both below the task's `[agent] timeout_sec`.
+
+### Use the real model
+
+Never substitute a fake or recorded model for the one under test: a canned response only tests the harness. Route the app's model calls through its normal configuration (a profile row, a base-URL env var), using the key from the agent env. A failing LLM endpoint often makes an app retry rather than fail, so your timeout is what ends the run; report it as `timeout`, not `failed`.
+
+### Write the verifier
+
+`tests/test.sh` is the entry point. It can call anything: a Python script comparing against `expected.json`, a rubric, an LLM judge with its key in `[verifier.env]`. It writes the reward to `/logs/verifier/reward.txt`. A discrete outcome (pass or fail, event or no event) is the easiest place to start.
+
+Where it runs is set by `environment_mode` under `[verifier]` in `task.toml`:
+
+- **`"shared"`** (the default) runs in the agent's container after the agent finishes and can read anything the run left behind, such as `/logs/agent/result.json`.
+- **`"separate"`** runs in a fresh container that sees only what the task declares: files listed in the top-level `artifacts = [...]`, plus snapshots of runtime state taken by `[[verifier.collect]]` commands before the environment is torn down. Use it when the verifier needs its own dependencies or must not see the app's internals.
+
+Keep reference answers in `tests/`, never in `environment/`.
+
+### Capture the trajectory
+
+The trial's trace is only as rich as what the app reports. Without a trajectory you see the reward but not the LLM calls and tool calls behind it.
+
+**If the app is instrumented with Laminar** (it calls `Laminar.initialize()`), there's nothing to convert. During a run, the plugin sets `LMNR_TRAJECTORY_PATH=/logs/agent/trajectory.json` in the agent env. With it set, the SDK writes the app's spans to that file instead of sending them to Laminar, and the plugin attaches them to the trial's trace: every LLM call with tokens and cost, and tool calls as `TOOL` spans. The app needs no Laminar API key and no network access to Laminar. This works with the Python SDK (`lmnr` 0.8.4 and later); TypeScript SDK support is in progress. Make sure the app process actually receives `LMNR_TRAJECTORY_PATH`, especially if the start script uses `env -i`.
+
+If the app isn't instrumented yet, adding Laminar is a small production change that also gives you production traces. See [Tracing](/tracing/introduction).
+
+**If it isn't instrumented, reconstruct the trajectory from the app's own history.** Most products already store the conversation for their UI, for audit, or as agent memory: message tables, run and step tables, LangGraph checkpointers, JSONL transcripts. After the driver finishes, including on `failed` and `timeout` since partial trajectories are the most useful, run an exporter that reads this case's history and writes `/logs/agent/trajectory.json` in Harbor's [ATIF](https://docs.harborframework.com/agents/atif) format:
+
+- Each message is a step with a sequential `step_id` (1, 2, 3…), a `source` (`system`, `user`, or `agent`), a `message`, and an ISO 8601 `timestamp`.
+- `model_name`, `tool_calls`, and `metrics` are only allowed on `agent` steps. Tool results go in that step's `observation.results`, paired by `source_call_id`.
+- History seeded from `case.json` gets `is_copied_context: true`, so it's shown but not mistaken for the agent's work.
+- Leave `metrics` unset rather than estimating: stored history usually lacks token counts, costs, and the exact prompt of each call. Say where the trajectory came from in `notes`.
+
+Don't write a reconstructed trajectory for an instrumented app, or the agent's steps show up twice.
+
+### Check that the harness can fail
+
+Run the suite locally until it passes, then test the harness itself:
+
+- Run a **positive** and a **negative** case that share the same prompt and config and differ only in input.
+- **Flip a reference answer** once and confirm the reward drops to `0`. A harness that can't fail is broken.
+- Open a trial's trace and confirm the LLM and tool calls are there.
+- Run `--remote` once to confirm the folder works in Laminar sandboxes.
+
+## Turn production failures into cases
+
+Hosted evals exist to close the loop between what breaks in production and what you test before shipping:
+
+1. **Find the traces.** Pick production traces with the failure you care about, plus a few that were correctly not flagged. If you track the failure with a [Signal](/signals/introduction), query its events with `lmnr-cli signal list` and `lmnr-cli sql query`, or the [SQL editor](/platform/sql-editor).
+2. **Export the minimal input** for each into a `case.json`: the messages, tool calls, and records the app needs. Replace PII and secrets with plausible values, keep structure and ordering, and rebase timestamps.
+3. **Set the reference answer** from the production outcome after a human check. Keep positive and negative cases paired against the same prompt and config.
+4. **Copy a task directory**, drop in the new data and reference answer, and run `lmnr-cli eval run --task <new-case>`, then the whole suite. Commit it.
+
+A new case should never need harness changes. If one does, generalize the shared seed or driver code so every case benefits.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="A change to the app or the image doesn't show up">
+    `lmnr-cli` rebuilds the `lmnr.yaml` images on every run, but Docker's layer cache can still hide a change, for example a `RUN` step that downloads "latest". Check the file inside a running container, then clear the cache with `docker builder prune` or bump a cache-busting `ARG` placed before the stale step.
+  </Accordion>
+  <Accordion title="A service won't start as root">
+    Some services, such as Postgres, refuse to run as root. Start them as a service user with `gosu` or `su`, and make sure that user can write the log directory (`chmod 777 /logs/agent`).
+  </Accordion>
+  <Accordion title="The app can't see an env var from harbor.yaml">
+    `agents[].env` reaches every command the agent runs. If the start script launches the app with `env -i`, it must forward each name explicitly.
+  </Accordion>
+  <Accordion title="The trial trace has no LLM or tool calls">
+    Either the app isn't instrumented with Laminar, or it didn't receive `LMNR_TRAJECTORY_PATH`. See [Capture the trajectory](#capture-the-trajectory).
+  </Accordion>
+  <Accordion title="Job output shows [REDACTED] in odd places">
+    A secret's value is very short, so every occurrence of it in the output is redacted. Use long, distinctive placeholder values.
+  </Accordion>
+  <Accordion title="Where are the logs for a failed trial?">
+    For local runs, in `evals/<suite>/jobs/<timestamp>/`. For `--remote` runs, Harbor's job output stays in the sandbox: open the trial's trace in Laminar instead.
+
+    Each local trial has `agent/` (your logs and `result.json`), `verifier/` (`reward.txt`, `test-stdout.txt`), and `exception.txt` with the agent's traceback if it raised.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Compare runs" href="/evaluations/comparing-runs" icon="chart-line">
+    Every run of a suite is charted in its group. Diff two runs side by side to see which cases regressed.
+  </Card>
+  <Card title="Read a failing trial" href="/platform/viewing-traces" icon="scroll-text">
+    Open a low-scoring datapoint and read the app's run as a transcript.
+  </Card>
+  <Card title="Track failures with Signals" href="/signals/introduction" icon="radar">
+    Detect a failure in production traces, then turn the flagged traces into cases.
+  </Card>
+  <Card title="Harbor integration" href="/integrations/harbor" icon="ship">
+    Already running `harbor run` on a benchmark? Add the Laminar plugin directly.
+  </Card>
+</CardGroup>
