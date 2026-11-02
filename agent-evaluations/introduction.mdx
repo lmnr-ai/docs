@@ -17,7 +17,7 @@ Agent evaluations are in beta. The `lmnr-cli eval run` command, its flags, and t
 
 Laminar has two ways to evaluate, named after what they look at:
 
-- **Agent evaluations** (this section) set up a working environment for the agent, let it run, and score the whole outcome: the state it changed, the files it wrote, and the trajectory it took to get there.
+- **Agent evaluations** (this section) set up a working environment for the agent, let it run, and score the whole outcome, including the state changes, and the agent trajectory.
 - **[LLM evaluations](/evaluations/introduction)** call a function in your process with `evaluate()`, then compare its output to target data with evaluator functions.
 
 You can evaluate an agent with LLM evaluations, and for a prompt, a classifier, or a short pipeline that's often the fastest option. Once the agent is large, uses tools, and acts on real systems, the answer to *did it do the right thing* lives in the environment and in the trace, not in a single return value. That's where agent evaluations fit.
@@ -34,17 +34,17 @@ The two coexist in the same project and share the same evaluation views, [run co
 
 ## Why evaluate the agent in its environment
 
-Unit-style evals get hard once the thing you're testing is an agent that acts on the world:
+Unit-style evals become hard once the thing you're testing is an agent that acts on the world:
 
-- **The outcome is state, not a return value.** A support agent issues a refund, a coding agent edits files, a pipeline writes rows. Scoring the final message misses whether the right thing actually happened.
-- **The bugs are in the integration.** The query that returns the wrong rows, the tool that times out, the retry loop, the config that's only set in production. Mocks and fixtures hide exactly these.
-- **Production failures need their exact context.** Reproducing a failure means the same conversation, the same records, the same account state. Each case needs its own data, and cases can't share a database without interfering with each other.
+- **The outcome is not just the final message.** Agent may issue refunds, write database rows, and affect the world around them. Scoring just the final message misses whether the right thing actually happened, and more importantly whether bugs not happened.
+- **The bugs are in the integration.** Queries time out; downstream services may experience transient issues; agents may or may not self-heal. Fixtures hide these kinds of issues.
+- **Production failures need their exact context.** Reproducing a failure means the same conversation, records, and account state. Each case needs its own data, and cases can't share a database without interfering with each other.
 
 Agent evaluations answer all three by giving every case a fresh, complete copy of the stack:
 
-- **Production fidelity.** The real code and the real services run in the container, started the way production starts them. You seed them; you don't mock them.
+- **Production fidelity.** The real code and the real services run in the container, started the way production starts them. You seed them and mock them only if absolutely necessary.
 - **Isolation.** Each case boots its own stack with its own data, so cases run in parallel with no shared state and no ordering.
-- **No production changes.** The driver calls an entry point the app already has (an HTTP route, a CLI command, a queue message, an exported function), so you test the code path users hit.
+- **No or minimal production changes.** The driver calls an entry point the app already has (an HTTP route, a CLI command, a queue message, an exported function), so you test the code path users hit.
 - **Local and cloud from one folder.** `lmnr-cli eval run` runs trials on your Docker. Add `--remote` and the same folder runs in Laminar sandboxes, one per trial.
 - **No lock-in.** The case format is [Harbor](https://www.harborframework.com)'s, so tasks, image, agent, and verifier are plain Harbor. Laminar adds the trajectories, run history, comparisons, SQL access, and managed execution.
 
