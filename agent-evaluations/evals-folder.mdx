@@ -35,9 +35,27 @@ evals/
           expected.json           # (optional) reference answer
 ```
 
-### lmnr.yaml and the image
+## lmnr.yaml and the image
 
-`lmnr.yaml` lists the images tasks can use. `dockerfile` and `context` are relative to `evals/`; `context` defaults to the Dockerfile's directory. `lmnr-cli` rebuilds these images on every run (a cached build when nothing changed), so there are no tags to bump and no registry to push to.
+`lmnr.yaml` lists the images tasks can use, keyed by the name a task puts in `docker_image`:
+
+```yaml evals/lmnr.yaml
+images:
+  myapp-evals:                  # referenced as docker_image = "myapp-evals"
+    dockerfile: image/Dockerfile
+    context: ..                 # the repo root, so COPY can reach the app's source
+  myapp-evals-browser:          # a second image, e.g. with a headless browser
+    dockerfile: image/browser/Dockerfile
+    # no context: builds from image/browser/
+```
+
+| Key | Required | What it does |
+| --- | --- | --- |
+| `images.<name>` | Yes | The image name tasks reference with `docker_image`. |
+| `images.<name>.dockerfile` | Yes | Path to the Dockerfile, relative to `evals/`. |
+| `images.<name>.context` | No | Docker build context, relative to `evals/`. Defaults to the Dockerfile's directory. |
+
+A run builds only the images its selected tasks reference, so an unused entry costs nothing. `lmnr-cli` rebuilds them on every run (a cached build when nothing changed), so there are no tags to bump and no registry to push to. `lmnr.yaml` is optional: without it, tasks pull `docker_image` from a registry or build their own `environment/Dockerfile`.
 
 When you write the Dockerfile:
 
@@ -47,11 +65,11 @@ When you write the Dockerfile:
 
 `.dockerignore` applies, and builds that `lmnr-cli` runs never receive `.git` or `.env*` files.
 
-### harbor.yaml
+## harbor.yaml
 
 A suite's `harbor.yaml` is a plain Harbor job config: `agents`, `datasets`, `n_concurrent_trials`, and so on. Relative paths resolve from the suite directory, and the suite directory is on `PYTHONPATH`, so `import_path: agent.agent:ClassName` points at `<suite>/agent/agent.py`.
 
-### task.toml
+## task.toml
 
 Set `docker_image` to an image name from `lmnr.yaml` and leave the Dockerfile out of `environment/`. Every trial then starts from the same built image, and Harbor uploads the contents of `environment/` into `workdir` after the container starts. That is how `case.json` reaches a shared image.
 
@@ -72,7 +90,7 @@ An image name that isn't in `lmnr.yaml` is pulled from its registry, so public i
 
 A per-task Dockerfile in `environment/` is the exception, for a case that genuinely needs a different system setup. Remove `docker_image` from that task: while it's set, Harbor uses the image and ignores the Dockerfile. With a Dockerfile, `environment/` is the build context and nothing is uploaded at start, so the Dockerfile has to `COPY` the case data itself. It also can't `FROM` an image that only exists in `lmnr.yaml`; start from a public base.
 
-### Secrets and env vars
+## Secrets and env vars
 
 Declare every secret and setting as a `${VAR}` placeholder:
 
