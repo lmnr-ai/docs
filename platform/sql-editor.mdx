@@ -26,6 +26,9 @@ Query all your Laminar data directly with SQL. Find patterns, debug issues, and 
 | datasets | Datasets: name and creation time |
 | dashboards | Dashboards: name and creation time |
 | dashboard_charts | Dashboard charts: title, SQL query, and settings (chart type, layout) |
+| alerts | Signal alerts: name, type, the Signal they watch, and settings (severities, skip similar, disabled) |
+| alert_targets | Where each alert is delivered: Slack channels and subscribed members' emails |
+| alert_filters | Output schema filter groups on each alert |
 
 Only `SELECT` queries are allowed.
 
@@ -237,9 +240,9 @@ LIMIT 10
 |------|----------|
 | `UUID` | Most ID columns (`trace_id`, `span_id`, `id`) |
 | `DateTime64(9, 'UTC')` | Timestamps (always UTC) |
-| `DateTime64(6)` | `created_at` on `signals`, `evaluations`, `datasets`, `dashboards`, and `dashboard_charts` |
+| `DateTime64(6)` | `created_at` on `signals`, `evaluations`, `datasets`, `dashboards`, `dashboard_charts`, `alerts`, `alert_targets`, and `alert_filters` |
 | `String` | Text, JSON stored as strings, and enum-like columns (`span_type`, `trace_type`, `status`) |
-| `Nullable(String)` | Optional text on `signals`, `evaluations`, and `datasets` (for example, `signals.llm_model`) |
+| `Nullable(String)` | Optional text on `signals`, `evaluations`, `datasets`, and `alert_targets` (for example, `signals.llm_model`) |
 | `LowCardinality(String)` | Low-cardinality enums |
 | `Float64` | Floating point numbers |
 | `Decimal(18, 9)` | Span-level durations in seconds (`spans.duration`, `evaluation_trials.duration`) |
@@ -913,6 +916,61 @@ FROM dashboard_charts c
 JOIN dashboards d ON d.id = c.dashboard_id
 ORDER BY dashboard, grid_row, grid_col
 ```
+
+### alerts
+
+One row per [alert](/signals/alerts).
+
+| Column | Type | Example value |
+|--------|------|---------------|
+| `id` | `UUID` | `"1e0c7a4b-5d1f-4a43-9b8e-2f6e1c3d9a10"` |
+| `name` | `String` | `"Refund requests alert"` |
+| `type` | `String` | `"SIGNAL_EVENT"` |
+| `signal_id` | `UUID` | `"11111111-2222-4333-9444-555555555555"` |
+| `metadata` | `String` | `"{\"severities\": [1, 2], \"skipSimilar\": true}"` |
+| `created_at` | `DateTime64(6)` | `"2021-01-01 00:00:00.000000"` |
+
+Join to `signals` on `alerts.signal_id = signals.id`, and to `alert_targets` and `alert_filters` on `alerts.id = alert_id`.
+
+`type` is `SIGNAL_EVENT` (a New event alert) or `NEW_CLUSTER` (a New cluster alert). `metadata` is JSON stored as a string:
+
+- `severities` lists the severity levels the alert fires on: `0` is info, `1` warning, `2` critical. When it is absent, the alert fires on critical only.
+- `skipSimilar` and `disabled` are `true` when set and absent otherwise.
+
+```sql
+-- Alerts that are switched off
+SELECT id, name FROM alerts
+WHERE JSONExtractBool(metadata, 'disabled')
+```
+
+### alert_targets
+
+One row per place an alert is delivered: a Slack channel or a subscribed member's email.
+
+| Column | Type | Example value |
+|--------|------|---------------|
+| `id` | `UUID` | `"44444444-5555-4666-a777-888888888888"` |
+| `alert_id` | `UUID` | `"1e0c7a4b-5d1f-4a43-9b8e-2f6e1c3d9a10"` |
+| `type` | `String` | `"SLACK"` |
+| `channel_id` | `Nullable(String)` | `"C0123456789"` |
+| `channel_name` | `Nullable(String)` | `"support"` |
+| `email` | `Nullable(String)` | `NULL` |
+| `created_at` | `DateTime64(6)` | `"2021-01-01 00:00:00.000000"` |
+
+`type` is `SLACK` or `EMAIL`. `channel_id` and `channel_name` are set on Slack targets, and `email` on email targets.
+
+### alert_filters
+
+One row per [output schema filter](/signals/alerts#output-schema-filters) group on an alert.
+
+| Column | Type | Example value |
+|--------|------|---------------|
+| `id` | `UUID` | `"55555555-6666-4777-a888-999999999999"` |
+| `alert_id` | `UUID` | `"1e0c7a4b-5d1f-4a43-9b8e-2f6e1c3d9a10"` |
+| `value` | `String` | `"[{\"column\": \"category\", \"operator\": \"eq\", \"value\": \"chargeback\"}]"` |
+| `created_at` | `DateTime64(6)` | `"2021-01-01 00:00:00.000000"` |
+
+`value` is a JSON array of conditions, each `{column, operator, value}`, where `column` is a field of the Signal's output. The conditions in one row must all match, and the alert fires if any of its rows matches. An alert with no rows fires on every event.
 
 ## Example Queries
 
