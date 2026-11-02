@@ -1,0 +1,56 @@
+---
+title: Write the Agent and Verifier for an Agent Evaluation
+sidebarTitle: Agent and verifier
+---
+
+Every trial runs two pieces of your code: a Harbor agent that starts the stack and drives your app's entry point, and a verifier that grades what the app produced. Both sit on top of the [production harness](/agent-evaluations/production-harness).
+
+## The Harbor agent
+
+Subclass Harbor's `BaseInstalledAgent`, so the agent's commands run inside the container next to your app. (`BaseAgent`, which runs on the host and reaches the container through `environment.exec`, is only for a product that can't run in the container.) `lmnr-cli` pins Harbor 0.25.0; see Harbor's [custom agents](https://docs.harborframework.com/agents/custom-agents) guide for the full interface.
+
+- **`install()` stays empty** with a prebuilt image. It runs in every trial, and anything it would install belongs in the image. Per-trial setup goes at the start of `run()`.
+- **`run()` stays thin**: start the stack, seed baseline and case data, run the driver.
+- **Run commands with `exec_as_agent`**, or `exec_as_root` when they need root. The `agents[].env` values from `harbor.yaml` reach every command the agent runs, so use `env=` only for per-command extras.
+- **Read the model from `self.model_name`**, so `--model` works.
+- **Import only `harbor`, the standard library, and modules in the suite directory.** The class runs in the Harbor process (your machine or Laminar's orchestrator), not in the container; everything else belongs in the image.
+- **Optionally override `populate_context_post_run(context)`**, which runs after the trial's logs are copied to the host, to parse `result.json` into the agent context.
+
+## The driver
+
+The driver the agent runs does two things: trigger, then wait for a terminal state.
+
+- For a **synchronous** entry point (an HTTP call or a function that returns the result), call it with a timeout and record the response.
+- For an **asynchronous** one (enqueue a job, the app writes a status later), poll the status the app writes until it's terminal, with a hard timeout. Don't sleep for a fixed time.
+- Map the result to an outcome the verifier can grade, with `failed` and `timeout` as distinct outcomes so they're never mistaken for a model verdict. Write the full detail (status, error, ids, duration) to `/logs/agent/result.json`.
+- Exit `0` whenever you produced an outcome, including `failed` and `timeout`. A non-zero exit makes the trial an error, which should mean the harness broke.
+
+Keep the driver's timeout below the exec `timeout_sec`, and both below the task's `[agent] timeout_sec`.
+
+## The verifier
+
+`tests/test.sh` is the entry point. It can call anything: a Python script comparing against `expected.json`, a rubric, an LLM judge with its key in `[verifier.env]`. It writes the reward to `/logs/verifier/reward.txt`. A discrete outcome (pass or fail, event or no event) is the easiest place to start.
+
+Where it runs is set by `environment_mode` under `[verifier]` in `task.toml`:
+
+- **`"shared"`** (the default) runs in the agent's container after the agent finishes and can read anything the run left behind, such as `/logs/agent/result.json`.
+- **`"separate"`** runs in a fresh container that sees only what the task declares: files listed in the top-level `artifacts = [...]`, plus snapshots of runtime state taken by `[[verifier.collect]]` commands before the environment is torn down. Use it when the verifier needs its own dependencies or must not see the app's internals.
+
+Keep reference answers in `tests/`, never in `environment/`.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Capture the trajectory" href="/agent-evaluations/trajectories" icon="route">
+    Get the app's LLM and tool calls into every trial's trace.
+  </Card>
+  <Card title="Build a production harness" href="/agent-evaluations/production-harness" icon="server">
+    Run the real services, seed realistic data, and keep the eval honest.
+  </Card>
+  <Card title="The evals folder" href="/agent-evaluations/evals-folder" icon="folder-tree">
+    Reference for `lmnr.yaml`, `harbor.yaml`, `task.toml`, and secrets.
+  </Card>
+  <Card title="Troubleshooting" href="/agent-evaluations/troubleshooting" icon="life-buoy">
+    Fixes for stale images, missing env vars, and empty traces.
+  </Card>
+</CardGroup>

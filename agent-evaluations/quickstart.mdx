@@ -1,0 +1,259 @@
+---
+title: Agent Evaluations Quickstart with lmnr-cli
+sidebarTitle: Quickstart
+---
+
+This quickstart gets a first [agent evaluation](/agent-evaluations/introduction) suite running with `lmnr-cli eval run`. The fastest path is to let your coding agent build it with the Laminar skill. If you'd rather see every file, follow [Get started manually](#get-started-manually) below.
+
+## Set up with your coding agent
+
+You need [Docker](https://docs.docker.com/get-docker/), [uv](https://docs.astral.sh/uv/), and Node.js. From the repo root, link the directory to a Laminar project:
+
+```bash
+npx lmnr-cli@latest setup
+```
+
+`setup` signs you in, writes `LMNR_PROJECT_API_KEY` to `.env`, and installs the Laminar agent skill, which knows the evals folder layout. In Claude Code, Cursor, or Codex, ask for the suite directly:
+
+> *Set up agent evaluations for the refund flow with `lmnr-cli eval run`. Use our real Postgres and seed each case from a production trace.*
+
+The skill follows the same guidance as these docs: it finds the entry point, builds one image, seeds per-case data, writes the verifier, and runs the suite locally. Review what it wrote against [Build a production harness](/agent-evaluations/production-harness), then open the run in Laminar.
+
+## Get started manually
+
+This walkthrough evaluates a small support-ticket triage function: it sends a ticket to Claude and returns a category. You'll package it into an image, add a case, and run it. The same layout scales to an app with a database and several services; [Build a production harness](/agent-evaluations/production-harness) covers that.
+
+The app is one module, instrumented with Laminar:
+
+```python app/triage.py
+import os
+
+from anthropic import Anthropic
+from lmnr import Laminar, observe
+
+Laminar.initialize()
+client = Anthropic()
+
+CATEGORIES = ["billing", "bug", "account", "other"]
+
+
+@observe()
+def triage(ticket: str) -> str:
+    response = client.messages.create(
+        model=os.environ.get("TRIAGE_MODEL", "claude-sonnet-5-5"),
+        max_tokens=16,
+        system=f"Classify the support ticket. Reply with one word: {', '.join(CATEGORIES)}.",
+        messages=[{"role": "user", "content": ticket}],
+    )
+    answer = response.content[0].text.strip().lower()
+    return answer if answer in CATEGORIES else "other"
+```
+
+with `anthropic` and `lmnr` in `requirements.txt`.
+
+<Steps>
+  <Step title="Install the prerequisites and link the project">
+    You need [Docker](https://docs.docker.com/get-docker/), [uv](https://docs.astral.sh/uv/), and Node.js for `lmnr-cli`. `lmnr-cli eval run` runs a pinned Harbor version with the Laminar plugin through `uvx`, so you don't install Harbor yourself.
+
+    From the repo root, link the directory to a Laminar project. Skip this if you already ran it above:
+
+    ```bash
+    npx lmnr-cli@latest setup
+    ```
+
+    `setup` signs you in and writes `LMNR_PROJECT_API_KEY` to `.env`. See [Laminar CLI](/platform/cli) for details.
+  </Step>
+  <Step title="Lay out the evals folder">
+    Create this structure next to your code:
+
+    ```
+    evals/
+      lmnr.yaml                     # the image tasks use, and how to build it
+      image/
+        Dockerfile
+        shared/
+          run_case.py               # drives the entry point, writes result.json
+      support/                      # a suite
+        harbor.yaml
+        agent/
+          __init__.py               # empty
+          agent.py
+        tasks/
+          refund-double-charge/
+            task.toml
+            instruction.md
+            environment/
+              case.json             # this case's data
+            tests/
+              test.sh               # the verifier
+              expected.json         # the reference answer
+    ```
+  </Step>
+  <Step title="Describe the image">
+    `lmnr.yaml` names the image and how to build it. Paths are relative to `evals/`, and `context: ..` makes the repo root the build context, so the image is built from your live source:
+
+    ```yaml evals/lmnr.yaml
+    images:
+      triage-evals:
+        dockerfile: image/Dockerfile
+        context: ..
+    ```
+
+    ```dockerfile evals/image/Dockerfile
+    FROM python:3.12-slim-bookworm
+    COPY requirements.txt /srv/app/
+    RUN pip install --no-cache-dir -r /srv/app/requirements.txt
+    COPY evals/image/shared/ /opt/harness/
+    COPY app/ /srv/app/app/
+    WORKDIR /case
+    ```
+
+    The driver imports the production function unchanged, runs it on this case's data, and writes the outcome to `/logs/agent/result.json`:
+
+    ```python evals/image/shared/run_case.py
+    import json
+    import sys
+    import time
+
+    sys.path.insert(0, "/srv/app")
+    from app.triage import triage  # the production code path, unchanged
+
+    case = json.load(open("/case/case.json"))
+    started = time.time()
+    try:
+        result = {"outcome": triage(case["ticket"])}
+    except Exception as e:
+        result = {"outcome": "failed", "error": repr(e)}
+    result["duration_s"] = round(time.time() - started, 2)
+
+    json.dump(result, open("/logs/agent/result.json", "w"), indent=2)
+    print(json.dumps(result))
+    ```
+  </Step>
+  <Step title="Write the suite config and the agent">
+    `harbor.yaml` is a Harbor job config. Secrets are `${VAR}` placeholders, never literal values:
+
+    ```yaml evals/support/harbor.yaml
+    agents:
+      - import_path: agent.agent:TriageAgent
+        model_name: anthropic/claude-sonnet-5-5
+        env:
+          ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    datasets:
+      - path: tasks
+    n_concurrent_trials: 4
+    ```
+
+    The agent runs the driver inside the container. Everything it needs is already in the image, so `install()` does nothing. It passes `self.model_name` on so `--model` can override the model for a run:
+
+    ```python evals/support/agent/agent.py
+    from harbor.agents.installed.base import BaseInstalledAgent, with_prompt_template
+    from harbor.environments.base import BaseEnvironment
+    from harbor.models.agent.context import AgentContext
+
+
+    class TriageAgent(BaseInstalledAgent):
+        @staticmethod
+        def name() -> str:
+            return "triage"
+
+        async def install(self, environment: BaseEnvironment) -> None:
+            pass  # everything the agent needs is already in the image
+
+        @with_prompt_template
+        async def run(
+            self, instruction: str, environment: BaseEnvironment, context: AgentContext
+        ) -> None:
+            # "anthropic/claude-sonnet-5-5" -> "claude-sonnet-5-5"
+            model = (self.model_name or "").split("/", 1)[-1]
+            await self.exec_as_agent(
+                environment,
+                command="python /opt/harness/run_case.py",
+                env={"TRIAGE_MODEL": model},
+                timeout_sec=120,
+            )
+    ```
+  </Step>
+  <Step title="Add a case">
+    The task points at the image by name and says where its `environment/` files go:
+
+    ```toml evals/support/tasks/refund-double-charge/task.toml
+    [environment]
+    docker_image = "triage-evals"
+    workdir = "/case"
+
+    [agent]
+    timeout_sec = 180
+    ```
+
+    ```markdown evals/support/tasks/refund-double-charge/instruction.md
+    Triage the support ticket in case.json.
+    ```
+
+    ```json evals/support/tasks/refund-double-charge/environment/case.json
+    {"ticket": "Hi, I was charged twice for my October invoice (two identical charges of $49 on Oct 3). Can you refund one of them?"}
+    ```
+
+    The reference answer and the verifier live in `tests/`, which Harbor uploads only when the verifier runs, so the app never sees them:
+
+    ```json evals/support/tasks/refund-double-charge/tests/expected.json
+    {"category": "billing"}
+    ```
+
+    ```bash evals/support/tasks/refund-double-charge/tests/test.sh
+    #!/bin/bash
+    expected=$(python3 -c 'import json; print(json.load(open("/tests/expected.json"))["category"])')
+    actual=$(python3 -c 'import json; print(json.load(open("/logs/agent/result.json"))["outcome"])')
+
+    if [ "$expected" = "$actual" ]; then
+      echo 1 > /logs/verifier/reward.txt
+    else
+      echo "expected $expected, got $actual"
+      echo 0 > /logs/verifier/reward.txt
+    fi
+    ```
+
+    Make the verifier executable with `chmod +x`. A second case is a copy of this directory with a different `case.json` and `expected.json`.
+  </Step>
+  <Step title="Add secrets">
+    Put `ANTHROPIC_API_KEY` in `.env` at the repo root, next to the `LMNR_PROJECT_API_KEY` that `setup` wrote. `lmnr-cli` fills every `${VAR}` from your shell, then `.env.local` / `.env`, and stops before anything starts if one is missing.
+
+    Keep secrets and Harbor's job output out of git:
+
+    ```text .gitignore
+    .env
+    evals/*/jobs/
+    ```
+  </Step>
+  <Step title="Run the evals">
+    From the repo root:
+
+    ```bash
+    npx lmnr-cli@latest eval run
+    ```
+
+    `lmnr-cli` builds `triage-evals` with your Docker, runs every task in every suite, and prints a link to the results. The `support` suite becomes an evaluation group in your project, and this run is a new evaluation in it.
+  </Step>
+  <Step title="Read the results">
+    Open the evaluation. Each trial is a datapoint with its reward as the score. Because the app calls `Laminar.initialize()`, the trial's trace shows the Claude call under the `agent` span as a [transcript](/platform/viewing-traces), so a `0` takes one click to explain.
+
+    Locally, Harbor's raw output is in `evals/support/jobs/<timestamp>/`: each trial has `agent/` (your `result.json` and logs) and `verifier/` (`reward.txt`, `test-stdout.txt`).
+  </Step>
+</Steps>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Run evals with lmnr-cli" href="/agent-evaluations/running-evals" icon="terminal">
+    Filter suites and tasks, run trials in Laminar sandboxes, and wire it into CI.
+  </Card>
+  <Card title="The evals folder" href="/agent-evaluations/evals-folder" icon="folder-tree">
+    Reference for `lmnr.yaml`, `harbor.yaml`, `task.toml`, and secrets.
+  </Card>
+  <Card title="Build a production harness" href="/agent-evaluations/production-harness" icon="server">
+    Grow this single function into a full stack with services and seeded data.
+  </Card>
+  <Card title="Read a failing trial" href="/platform/viewing-traces" icon="scroll-text">
+    Open a low-scoring datapoint and read the app's run as a transcript.
+  </Card>
+</CardGroup>

@@ -76,12 +76,26 @@
             ]
           },
           {
-            "group": "Evaluations",
+            "group": "Agent evaluations",
+            "pages": [
+              "agent-evaluations/introduction",
+              "agent-evaluations/quickstart",
+              "agent-evaluations/concepts",
+              "agent-evaluations/running-evals",
+              "agent-evaluations/evals-folder",
+              "agent-evaluations/production-harness",
+              "agent-evaluations/agent-and-verifier",
+              "agent-evaluations/trajectories",
+              "agent-evaluations/production-failures",
+              "agent-evaluations/troubleshooting"
+            ]
+          },
+          {
+            "group": "LLM evaluations",
             "pages": [
               "evaluations/introduction",
               "evaluations/quickstart",
               "evaluations/concepts",
-              "evaluations/hosted-evals",
               "evaluations/comparing-runs",
               "evaluations/custom-rendering",
               "evaluations/datasets",
@@ -276,6 +290,10 @@
     {
       "source": "/custom-dashboards/overview",
       "destination": "/platform/dashboards"
+    },
+    {
+      "source": "/evaluations/hosted-evals",
+      "destination": "/agent-evaluations/introduction"
     },
     {
       "source": "/hosting-options",
