@@ -3,10 +3,10 @@ title: Manage Signals from the CLI
 sidebarTitle: CLI
 ---
 
-`lmnr-cli signal` creates, inspects, updates, and deletes [Signals](/signals/introduction) from your terminal. **Keep a Signal's instruction and schema in your repo, ship changes from CI, or hand the surface to a coding agent** that can shell out.
+`lmnr-cli signal` creates, inspects, updates, and deletes [Signals](/signals/introduction) from your terminal, and `lmnr-cli alert` manages the [alerts](/signals/alerts) on them. **Keep a Signal's instruction and schema in your repo, ship changes from CI, or hand the surface to a coding agent** that can shell out.
 
 <Note>
-`signal` ships in the standalone [`lmnr-cli`](/platform/cli) npm package. You do not need the `@lmnr-ai/lmnr` SDK installed to use it.
+`signal` and `alert` ship in the standalone [`lmnr-cli`](/platform/cli) npm package. You do not need the `@lmnr-ai/lmnr` SDK installed to use it.
 </Note>
 
 ## Install and authenticate
@@ -103,7 +103,7 @@ Two more flags shape a new Signal:
 - `--disabled` creates the Signal paused. Turn it on later with `signal update --no-disabled`.
 
 <Note>
-Creating a Signal also creates two alerts: a **Critical**-severity event alert and, when clustering is enabled, a **New cluster** alert. Both notify you in-app and by email. Route them to Slack, change their severity, or add output-schema filters from the Signal's **Settings > Alerts** section. See [Alerts](/signals/alerts).
+Creating a Signal also creates two alerts: a **Critical**-severity event alert and, when clustering is enabled, a **New cluster** alert. Both notify you in-app and by email. Route them to Slack, change their severity, or add output-schema filters from the Signal's **Settings > Alerts** section, or with [`lmnr-cli alert update`](#manage-alerts). See [Alerts](/signals/alerts).
 </Note>
 
 ## List and inspect Signals
@@ -306,6 +306,107 @@ Deleted signal "Refund requests" (844258b2-b786-435b-924a-3884d518c36a), its tri
 Deletion is permanent and cascades: the Signal's triggers, its alerts, and every signal event it ever produced are removed. To stop a Signal without losing its history, pause it with `signal update --disabled` instead.
 </Warning>
 
+## Manage alerts
+
+`lmnr-cli alert` creates, updates, and deletes the [alerts](/signals/alerts) that notify you when a Signal fires. It sets the same things as the alert form in the Signal's **Settings > Alerts** section.
+
+### Create an alert
+
+`alert create` takes the Signal, by id or name:
+
+```bash
+lmnr-cli alert create "Refund requests"
+```
+
+With no other flags you get the same alert the UI creates by default: a **New event** alert named `Refund requests alert`, scoped to **Critical** severity, with your email subscribed. Every setting has a flag:
+
+```bash
+lmnr-cli alert create "Refund requests" \
+  --name "Refunds → #support" \
+  --severity warning --severity critical \
+  --skip-similar \
+  --slack-channel '#support'
+```
+
+- `--type` is `signal-event` (each new event, the default) or `new-cluster` (a new [cluster](/signals/clusters) forms). New cluster alerts need clustering, and `--severity`, `--skip-similar`, and filters only apply to `signal-event` alerts.
+- `--severity` is `info`, `warning`, or `critical`, and is repeatable. The alert fires on events with any of the listed severities.
+- `--skip-similar` notifies only on the first of a group of [similar events](/signals/alerts#skip-notifications-for-similar-events). It needs clustering.
+- `--slack-channel` takes a channel id (`C0123456789`) or `#name` in the workspace's connected Slack, and is repeatable. Connect Slack first (see [Slack](/signals/alerts#slack)). Private channels need the Laminar app invited, and archived channels can't be used.
+- `--no-notify-me` leaves your email off the alert.
+- `--disabled` creates the alert switched off.
+
+### Filter on the Signal's output
+
+[Output schema filters](/signals/alerts#output-schema-filters) narrow a New event alert to events whose extracted output matches. A condition is JSON `{"column","operator","value"}`, where `column` is one of the Signal's payload fields (`lmnr-cli signal get` lists them as `fields`) and `operator` is one of `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `includes`, `not_includes`.
+
+- `--filter` is repeatable, and all the `--filter` conditions form **one group: every one must match**.
+- `--filter-group` takes a JSON array of conditions and is repeatable. **Each group is OR'ed with the rest**, like adding another group in the UI.
+
+```bash
+# Fires on chargebacks over 100, or on any fraud event
+lmnr-cli alert create "Refund requests" \
+  --filter '{"column":"category","operator":"eq","value":"chargeback"}' \
+  --filter '{"column":"amount","operator":"gt","value":100}' \
+  --filter-group '[{"column":"category","operator":"eq","value":"fraud"}]'
+```
+
+A column that isn't one of the Signal's payload fields is rejected, and the error lists the fields you can use. With no filters, the alert fires on every event that matches its severities.
+
+### List and inspect alerts
+
+There is no `alert list` or `alert get`. Alerts are readable with SQL, through the [`alerts`, `alert_targets`, and `alert_filters`](/platform/sql-editor#alerts) tables, so you can filter and join them like any other data:
+
+```bash
+lmnr-cli sql query "SELECT id, name, type, signal_id, metadata FROM alerts"
+```
+
+```bash
+# Each alert with its Signal and Slack channels
+lmnr-cli sql query "
+  SELECT a.name AS alert, s.name AS signal, groupArray(t.channel_name) AS slack
+  FROM alerts a
+  JOIN signals s ON s.id = a.signal_id
+  LEFT JOIN alert_targets t ON t.alert_id = a.id AND t.type = 'SLACK'
+  GROUP BY alert, signal"
+```
+
+The `id` column is the `<alert-id>` that `alert update` and `alert delete` take.
+
+### Update an alert
+
+`alert update` is a **partial patch: any flag you omit keeps its stored value.**
+
+```bash
+# Pause, then resume
+lmnr-cli alert update 1e0c7a4b-5d1f-4a43-9b8e-2f6e1c3d9a10 --disabled
+lmnr-cli alert update 1e0c7a4b-5d1f-4a43-9b8e-2f6e1c3d9a10 --no-disabled
+
+# Fire on more severities
+lmnr-cli alert update 1e0c7a4b-5d1f-4a43-9b8e-2f6e1c3d9a10 --severity info --severity warning
+
+# Post to #oncall instead, and stop emailing me
+lmnr-cli alert update 1e0c7a4b-5d1f-4a43-9b8e-2f6e1c3d9a10 --slack-channel '#oncall' --no-notify-me
+
+# Fire on every event again
+lmnr-cli alert update 1e0c7a4b-5d1f-4a43-9b8e-2f6e1c3d9a10 --no-filters
+```
+
+- `--severity`, `--slack-channel`, and `--filter` / `--filter-group` **replace** the stored list rather than adding to it. `--no-slack-channels` and `--no-filters` clear it.
+- `--notify-me` and `--no-notify-me` only add or remove **your own** email. Other members' subscriptions are never changed.
+- An alert's type and Signal can't change. Delete it and create a new one instead.
+
+An update with no flags is an error rather than a silent no-op.
+
+### Delete an alert
+
+```bash
+lmnr-cli alert delete 1e0c7a4b-5d1f-4a43-9b8e-2f6e1c3d9a10
+```
+
+<Warning>
+Deleting an alert removes it for everyone subscribed to it, along with its Slack channels and filters. To stop only your own emails, use `alert update <alert-id> --no-notify-me`. To pause it for everyone without losing its settings, use `alert update <alert-id> --disabled`.
+</Warning>
+
 ## Reference
 
 ```bash
@@ -382,12 +483,87 @@ lmnr-cli signal versions <signal> # definition history, oldest first
 lmnr-cli signal delete <signal>
 ```
 
+### alert create
+
+```bash
+lmnr-cli alert create [options] <signal>
+```
+
+```
+Arguments:
+  signal                     Signal id or name
+
+Options:
+  --type <type>              signal-event (each new event, default) |
+                             new-cluster (events form a new cluster; needs
+                             clustering)
+  --name <name>              Alert name
+  --severity <level>         info | warning | critical (repeatable).
+                             SIGNAL_EVENT alerts fire on events with these
+                             severities
+  --skip-similar             Skip events similar to recent ones (needs
+                             clustering)
+  --no-skip-similar          Notify on every matching event
+  --disabled                 Deactivate the alert
+  --no-disabled              Activate the alert
+  --notify-me                Send the alert to your email
+  --no-notify-me             Don't send the alert to your email
+  --slack-channel <channel>  Slack channel id or #name in the connected
+                             workspace (repeatable). On update, REPLACES every
+                             Slack target
+  --filter <json>            Filter condition on the signal's output
+                             (repeatable, ANDed)
+  --filter-group <json>      JSON array of ANDed conditions; groups are OR'ed
+                             (repeatable)
+```
+
+### alert update
+
+```bash
+lmnr-cli alert update [options] <alert-id>
+```
+
+```
+Arguments:
+  alert-id                   Alert id (from the alerts SQL table)
+
+Options:
+  --no-slack-channels        Remove every Slack target
+  --no-filters               Remove every filter (fire on every event)
+  --name <name>              Alert name
+  --severity <level>         info | warning | critical (repeatable).
+                             SIGNAL_EVENT alerts fire on events with these
+                             severities
+  --skip-similar             Skip events similar to recent ones (needs
+                             clustering)
+  --no-skip-similar          Notify on every matching event
+  --disabled                 Deactivate the alert
+  --no-disabled              Activate the alert
+  --notify-me                Send the alert to your email
+  --no-notify-me             Don't send the alert to your email
+  --slack-channel <channel>  Slack channel id or #name in the connected
+                             workspace (repeatable). On update, REPLACES every
+                             Slack target
+  --filter <json>            Filter condition on the signal's output
+                             (repeatable, ANDed)
+  --filter-group <json>      JSON array of ANDed conditions; groups are OR'ed
+                             (repeatable)
+```
+
+### alert delete
+
+```bash
+lmnr-cli alert delete <alert-id>
+```
+
 Every command has examples in its own help text:
 
 ```bash
 lmnr-cli signal --help
 lmnr-cli signal create --help
 lmnr-cli signal update --help
+lmnr-cli alert create --help
+lmnr-cli alert update --help
 ```
 
 ## What's next

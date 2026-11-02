@@ -73,7 +73,7 @@ lmnr-cli logout   # Remove the stored credentials
 
 ## Self-hosting
 
-For a self-hosted deployment, point the CLI at your instance. `login` talks to your frontend (the auth issuer); the data commands (`sql`, `dataset`, `signal`, `llm-profile`, `project`, `debug`) talk to your API.
+For a self-hosted deployment, point the CLI at your instance. `login` talks to your frontend (the auth issuer); the data commands (`sql`, `dataset`, `signal`, `alert`, `llm-profile`, `project`, `debug`) talk to your API.
 
 The cleanest way is to set the URLs once via environment variables. The CLI reads them from your environment and from a `.env` or `.env.local` file in the current directory.
 ```bash
@@ -102,7 +102,7 @@ The CLI does not use a project API key. The `LMNR_PROJECT_API_KEY` that `lmnr-cl
 
 ## Directory-scoped projects
 
-Every project command (`sql`, `dataset`, `signal`, `llm-profile`, `project`, `debug`) resolves which project it targets from the directory you run in. `lmnr-cli setup` writes a `.lmnr/project.json` link file at the project root (it holds the project id and display details, never secrets). Commands then resolve the project in this order:
+Every project command (`sql`, `dataset`, `signal`, `alert`, `llm-profile`, `project`, `debug`) resolves which project it targets from the directory you run in. `lmnr-cli setup` writes a `.lmnr/project.json` link file at the project root (it holds the project id and display details, never secrets). Commands then resolve the project in this order:
 
 1. `--project-id <id>` flag.
 2. The nearest `.lmnr/project.json`, walking up from the current directory.
@@ -195,6 +195,19 @@ lmnr-cli signal delete "Refund requests"
 ```
 
 See [Signals CLI](/signals/cli) for the full reference, including the `--llm-profile-id` and `--model` pair that routes a Signal through an [LLM profile](/platform/llm-profiles) on self-hosted deployments.
+
+## Manage alerts
+
+Create, update, and delete the [alerts](/signals/alerts) on a Signal. List and inspect them with `sql query` over the [`alerts`, `alert_targets`, and `alert_filters`](/platform/sql-editor#alerts) tables.
+
+```bash
+lmnr-cli alert create "Refund requests" --severity critical --slack-channel '#support'
+lmnr-cli sql query "SELECT id, name, type, signal_id, metadata FROM alerts"
+lmnr-cli alert update <alert-id> --no-notify-me
+lmnr-cli alert delete <alert-id>
+```
+
+See [Manage alerts](/signals/cli#manage-alerts) for every flag, including output filters.
 
 ## Manage LLM profiles
 
