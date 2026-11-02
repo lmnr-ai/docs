@@ -1,11 +1,15 @@
 ---
-title: Evaluations
+title: LLM Evaluations
 sidebarTitle: Introduction
 ---
 
-Evaluations are how you answer one question before shipping a prompt, model, or agent change: *is this version better than the one in production*. You answer it by running the new version against a fixed set of inputs, scoring every output, and comparing the scores to the previous run.
+LLM evaluations are how you answer one question before shipping a prompt, model, or agent change: *is this version better than the one in production*. You answer it by running the new version against a fixed set of inputs, scoring every output, and comparing the scores to the previous run.
 
-**Laminar evaluations are the offline testing layer for your agents and LLM pipelines.** You define a list of inputs, a function that produces an output, and one or more functions that score it. Laminar runs them in parallel, traces every call, stores the scores, and **[compares them](/evaluations/comparing-runs) across [runs](/evaluations/concepts) and [groups](/evaluations/comparing-runs#group-runs-to-compare-them)**.
+**Laminar LLM evaluations are the offline testing layer for your prompts, LLM pipelines, and agents.** You define a list of inputs, a function that produces an output, and one or more functions that score it. Laminar runs them in parallel, traces every call, stores the scores, and **[compares them](/evaluations/comparing-runs) across [runs](/evaluations/concepts) and [groups](/evaluations/comparing-runs#group-runs-to-compare-them)**.
+
+<Note>
+LLM evaluations compare an output to target data. To evaluate a large agent end to end, in a working copy of its environment and over its whole trajectory, see [Agent evaluations](/agent-evaluations/introduction). [Which one to use](#llm-evaluations-and-agent-evaluations) is covered below.
+</Note>
 
 <Frame caption="A single run: the datapoint table with a score per evaluator, and the selected datapoint's trace showing the executor, the model call, and both evaluator scores">
   <img src="/images/evaluations/eval-detail.png" alt="Evaluation run page with a datapoint table on the left and the selected datapoint's transcript on the right" />
@@ -68,7 +72,14 @@ Both paths talk to the same `evaluate()` function. The CLI is just a runner.
 
 If you already benchmark agents with [Harbor](/integrations/harbor), you don't need an eval file: add `--plugin laminar` to `harbor run` and each job lands in Laminar as an evaluation.
 
-When the answer depends on the whole system (an agent with tools, a database, background jobs), use [hosted evals](/evaluations/hosted-evals) instead: each case runs your real app and services in an isolated container, seeded with that case's data, and `lmnr-cli eval run` runs them locally or in Laminar's cloud sandboxes.
+## LLM evaluations and agent evaluations
+
+Laminar has two ways to evaluate, named after what they look at:
+
+- **LLM evaluations** (this section) call a function in your process with `evaluate()` and compare its output to target data with evaluator functions.
+- **[Agent evaluations](/agent-evaluations/introduction)** set up a working environment for the agent (your real app and services in an isolated container, seeded with one case's data), let it run, and score the whole outcome: the state it changed and the trajectory it took. `lmnr-cli eval run` runs them locally or in Laminar's cloud sandboxes.
+
+You can evaluate an agent with LLM evaluations, and for a prompt, a classifier, or a pipeline you can call directly, it's the fastest loop. When the answer depends on the whole system (an agent with tools, a database, background jobs), agent evaluations measure what actually happened instead of a single return value.
 
 ## Next steps
 

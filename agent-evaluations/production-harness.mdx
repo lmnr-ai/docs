@@ -1,0 +1,89 @@
+---
+title: Build an Agent Evaluation Harness That Matches Production
+sidebarTitle: Build a production harness
+---
+
+The [quickstart](/agent-evaluations/quickstart)'s app is a single function. Real products have a database, a queue, background workers, and an LLM configured somewhere. These practices keep an [agent evaluation](/agent-evaluations/introduction) measuring what your agent does in production rather than what the harness does. The driver and verifier that sit on top of this stack are covered in [Write the agent and verifier](/agent-evaluations/agent-and-verifier).
+
+## Principles
+
+1. **Production fidelity over convenience.** Run the real code and the real services for as much of the stack as you can. Seed them; don't mock them. Mock only what you can't run (a third-party SaaS, a private internal service), at the network edge through the app's existing base-URL config, never by editing the code path. Every mock is a gap in what the eval measures, so write each one down.
+2. **Zero production changes.** Drive an entry point the app already exposes. A harness-only code path tests the harness. If nothing existing reaches the behavior you want to test, treat adding an entry point as a deliberate decision (for example an internal endpoint disabled unless a config flag is set), not something to slip in.
+3. **One case, one environment.** Every container boots its own stack with its own data. Never share a database between cases.
+4. **Evals live next to the code**, built from the same source tree and revision.
+5. **Turn the run into artifacts, then verify the artifacts.** The driver leaves its observable result in files (a `result.json`, an exported row, a transcript), and the verifier grades those.
+
+## Find the entry point and the outcome
+
+Before writing any harness code, read the production path under test and write down:
+
+- the **entry point** you can call without modification (a route, a CLI command, a queue consumer, a function);
+- the **inputs it reads** (rows, files, messages) and where they live;
+- the **terminal state** it produces (a response body, a status row, an emitted record) and how to read it;
+- the **external calls** it makes (LLM, HTTP) and how they're configured.
+
+If existing tests seed a fixture for this path, copy their seeding shape. It's the best statement of which fields are actually required.
+
+## Boot the services in the container
+
+Everything the entry point touches runs inside the one container, with no docker-in-docker:
+
+- **Databases** start as background processes with the engine's own bootstrap (`initdb`, `redis-server`, `clickhouse server`). Install the version production runs, from the distro, the vendor's apt repo, or a multi-stage `COPY --from=<official image>:<version>`.
+- **Schemas** are created the way the app's own startup creates them: roles, databases, migrations in order, then anything created after migrations in code (views, grants, seed rows). If the app has no migrations, create only the tables the path under test needs, and note that the schema was inferred.
+- **Queues, caches, and object stores** with an in-memory or local-disk fallback can use it. That's production-supported code, not a mock.
+- **The app** runs as its production artifact: the real package, or a compiled binary built in a builder stage of the same Dockerfile (a binary built on a macOS host is the wrong format).
+- **Readiness**: poll the health endpoint with a timeout, and on failure print the app log to stderr so it shows up in the job output.
+
+Harbor starts the container with its own keep-alive command, so `CMD` and base-image entrypoints don't run. A start script in `image/shared/` launches each service in the background (`nohup ... &`) with its output redirected to `/logs/agent/*.log` (an unredirected background process can keep the exec call from returning), then waits for readiness. No ports are published to the host: every call to the app comes from inside the container, which is why the agent runs there.
+
+Start the app with `env -i` and an explicit minimal env so nothing from the host leaks in, and forward the names it needs: API keys and `LMNR_TRAJECTORY_PATH`.
+
+## Seed the data
+
+Decide for each dataset which kind it is:
+
+- **Shared baseline data** is the same for every case: reference tables, a default org and user, config rows, an LLM profile. Seed it in the image build or in a shared script that runs at startup. Each container still gets its own copy.
+- **Per-case data** is what reproduces one scenario: the conversation, the records, the account state. It lives in the task's `environment/` and is loaded by the same shared seed script for every case.
+
+Keep per-case data in one format your seed script reads (`case.json`, a SQL file, a directory of fixtures), so adding a case is a directory copy plus data and never a harness change.
+
+Seed through the app's own API when it involves encryption, validation, or derived fields (creating a record with secrets, for example: let the server encrypt them). Insert directly into the database for bulk fixtures and for things the API gates behind auth or plan limits. Mirror the columns the app reads, and hash credentials exactly the way the app does.
+
+## Make seed data look real
+
+Capable models notice when they're being tested, and an agent that suspects a test can behave differently from how it behaves in production. Fixtures are where this leaks most:
+
+- **Timestamps.** Data exported weeks ago reads as stale when replayed today. Default to relative timestamps (shift on load so the latest event is near now, keeping the intervals). Keep absolute dates only when the case depends on one, such as an end-of-month or DST boundary. Check dates outside timestamp columns too: free text, filenames, and time-ordered ids (UUIDv7, ULID).
+- **Ids.** Patterned ids like `user_1` or `12000000-0000-4000-8000-0123456789ab` give the game away. Generate them the way the app does and keep references consistent.
+- **Names and content.** No `John Doe`, `test@example.com`, `Acme`, or lorem ipsum. Replace scrubbed PII with plausible values, not placeholders.
+- **The harness itself.** If the agent can see the filesystem, process list, or environment, keep harness files out of sight or neutrally named: no `/eval`, `EVAL_MODE=1`, or `test_case` in anything it can read.
+
+## Use the real model
+
+Never substitute a fake or recorded model for the one under test: a canned response only tests the harness. Route the app's model calls through its normal configuration (a profile row, a base-URL env var), using the key from the agent env. A failing LLM endpoint often makes an app retry rather than fail, so your timeout is what ends the run; report it as `timeout`, not `failed`.
+
+## Check that the harness can fail
+
+Run the suite locally until it passes, then test the harness itself:
+
+- Run a **positive** and a **negative** case that share the same prompt and config and differ only in input.
+- **Flip a reference answer** once and confirm the reward drops to `0`. A harness that can't fail is broken.
+- Open a trial's trace and confirm the LLM and tool calls are there.
+- Run `--remote` once to confirm the folder works in Laminar sandboxes.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Write the agent and verifier" href="/agent-evaluations/agent-and-verifier" icon="workflow">
+    Drive the entry point, wait for a terminal state, and grade the result.
+  </Card>
+  <Card title="Capture the trajectory" href="/agent-evaluations/trajectories" icon="route">
+    Get the app's LLM and tool calls into every trial's trace.
+  </Card>
+  <Card title="Turn production failures into cases" href="/agent-evaluations/production-failures" icon="radar">
+    Close the loop between what breaks in production and what you test.
+  </Card>
+  <Card title="The evals folder" href="/agent-evaluations/evals-folder" icon="folder-tree">
+    Reference for `lmnr.yaml`, `harbor.yaml`, `task.toml`, and secrets.
+  </Card>
+</CardGroup>

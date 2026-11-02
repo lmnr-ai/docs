@@ -1,0 +1,42 @@
+---
+title: Capture Agent Trajectories in Every Evaluation Trial
+sidebarTitle: Capture the trajectory
+---
+
+The trajectory is what your app did during a trial: its LLM calls and tool calls. Laminar shows it under the trial's trace, next to the verifier's score, so a failing [agent evaluation](/agent-evaluations/introduction) case takes one click to explain.
+
+The trace is only as rich as what the app reports: without a trajectory you see the reward but not the calls behind it. How you capture it depends on whether the app is instrumented with Laminar.
+
+## Instrumented apps
+
+**If the app is instrumented with Laminar** (it calls `Laminar.initialize()`), there's nothing to convert. During a run, the plugin sets `LMNR_TRAJECTORY_PATH=/logs/agent/trajectory.json` in the agent env. With it set, the SDK writes the app's spans to that file instead of sending them to Laminar, and the plugin attaches them to the trial's trace: every LLM call with tokens and cost, and tool calls as `TOOL` spans. The app needs no Laminar API key and no network access to Laminar. This works with the Python SDK (`lmnr` 0.8.4 and later); TypeScript SDK support is in progress. Make sure the app process actually receives `LMNR_TRAJECTORY_PATH`, especially if the start script uses `env -i`.
+
+If the app isn't instrumented yet, adding Laminar is a small production change that also gives you production traces. See [Tracing](/tracing/introduction).
+
+## Apps without instrumentation
+
+**If it isn't instrumented, reconstruct the trajectory from the app's own history.** Most products already store the conversation for their UI, for audit, or as agent memory: message tables, run and step tables, LangGraph checkpointers, JSONL transcripts. After the driver finishes, including on `failed` and `timeout` since partial trajectories are the most useful, run an exporter that reads this case's history and writes `/logs/agent/trajectory.json` in Harbor's [ATIF](https://docs.harborframework.com/agents/atif) format:
+
+- Each message is a step with a sequential `step_id` (1, 2, 3…), a `source` (`system`, `user`, or `agent`), a `message`, and an ISO 8601 `timestamp`.
+- `model_name`, `tool_calls`, and `metrics` are only allowed on `agent` steps. Tool results go in that step's `observation.results`, paired by `source_call_id`.
+- History seeded from `case.json` gets `is_copied_context: true`, so it's shown but not mistaken for the agent's work.
+- Leave `metrics` unset rather than estimating: stored history usually lacks token counts, costs, and the exact prompt of each call. Say where the trajectory came from in `notes`.
+
+Don't write a reconstructed trajectory for an instrumented app, or the agent's steps show up twice.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Write the agent and verifier" href="/agent-evaluations/agent-and-verifier" icon="workflow">
+    Drive the entry point, wait for a terminal state, and grade the result.
+  </Card>
+  <Card title="Read a failing trial" href="/platform/viewing-traces" icon="scroll-text">
+    Open a low-scoring datapoint and read the app's run as a transcript.
+  </Card>
+  <Card title="Track failures with Signals" href="/signals/introduction" icon="radar">
+    Detect a failure in production traces, then turn the flagged traces into cases.
+  </Card>
+  <Card title="Troubleshooting" href="/agent-evaluations/troubleshooting" icon="life-buoy">
+    Fixes for stale images, missing env vars, and empty traces.
+  </Card>
+</CardGroup>

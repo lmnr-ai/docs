@@ -1,0 +1,73 @@
+---
+title: Run Agent Evaluations with lmnr-cli eval run
+sidebarTitle: Run evals with lmnr-cli
+---
+
+`lmnr-cli eval run` runs every [agent evaluation](/agent-evaluations/introduction) suite in your `evals/` folder, locally on Docker or in Laminar's cloud sandboxes with `--remote`, and records each trial in Laminar with its trace.
+
+`lmnr-cli eval run` has two modes. Run it from the repo root: `.env` and `.env.local` are read from the current directory, and every mode needs Docker on the machine that runs `lmnr-cli`, because it builds the images there.
+
+| Mode | Harbor runs | Trials run | Needs |
+| --- | --- | --- | --- |
+| `lmnr-cli eval run` | On your machine | On your Docker | Docker, uv, `LMNR_PROJECT_API_KEY` |
+| `--remote` | In a Laminar sandbox | In Laminar sandboxes, one per trial | Docker, `lmnr-cli login` (or `LMNR_PROJECT_API_KEY` in CI) |
+
+- **Local** is the iteration loop. Run it after every change.
+- **`--remote`** scales out. `lmnr-cli` builds or pulls every image the selected suites use for `linux/amd64`, uploads only the layers Laminar doesn't have yet, starts the run, and returns. Results appear in the project's evaluations as trials finish. Harbor's job output stays in the sandbox, so debug a failure that only happens remotely from the trial's trace in Laminar.
+
+```bash
+lmnr-cli eval run                                    # every suite in ./evals
+lmnr-cli eval run --suite support --task "refund-*" --n-attempts 3
+lmnr-cli eval run --task refund-double-charge        # one case
+lmnr-cli eval run --remote --n-concurrent 20
+lmnr-cli eval run --remote --model anthropic/claude-sonnet-5-5
+```
+
+| Flag | What it does |
+| --- | --- |
+| `[dir]` | The evals folder. Defaults to `evals`. |
+| `--suite <name>` | Run only this suite. Repeatable. |
+| `--task <glob>` | Run only tasks matching the glob. Repeatable. |
+| `--n-attempts <n>` | Trials per task. Overrides `harbor.yaml`. |
+| `--n-concurrent <n>` | Concurrent trials. Overrides `harbor.yaml`. |
+| `--model <name>` | Agent model. Overrides `harbor.yaml`. |
+| `--env KEY[=VALUE]` | Extra agent env var. Repeatable. A bare `KEY` is read from your environment. |
+| `--json` | Print a JSON summary instead of logs. |
+
+### In CI
+
+Use `--json` and the exit code. A local run prints `{mode, suites, failed, url}`; a `--remote` run prints `{mode: "remote", uploadId, sandboxId, suites, url}` once the run has started. Set `LMNR_PROJECT_API_KEY` and the secrets your `harbor.yaml` references as CI secrets.
+
+| Exit code | Meaning |
+| --- | --- |
+| `16` | Invalid evals folder, or the packed folder is over the upload limit |
+| `17` | `uv` or Docker isn't installed |
+| `18` | A suite's `harbor run` failed. The other suites still run. |
+| `19` | A `${VAR}` placeholder or `LMNR_PROJECT_API_KEY` is unset |
+| `20` | A Docker build, pull, or save failed, or an image isn't `linux/amd64` |
+
+### Remote limits and image requirements
+
+- **One container per trial.** docker-compose tasks don't run remotely. `cpus` and `memory_mb` above the sandbox limit are clamped, and a run that exceeds the time limit is stopped.
+- **The folder upload is capped at 1 GiB.** Symlinks, `.git`, `node_modules`, virtualenvs, caches, and `jobs/` directories are skipped, and `.env*` files are never uploaded. Keep large fixtures out of `evals/`.
+- **Images need `tar`, `gzip`, and `bash`**, plus `su` if a task runs as a non-root user. They're built for `linux/amd64` (emulated, slowly, on Apple silicon), so architecture-specific downloads should use `ARG TARGETARCH`.
+- **Concurrency is capped per project** (50 sandboxes by default). A higher `--n-concurrent` queues rather than running more at once.
+- **Large images** may need a higher `build_timeout_sec` under `[environment]` in `task.toml` (default 600 seconds), which bounds image preparation plus sandbox start.
+- **Self-hosted Laminar:** set `LMNR_GRPC_PORT` in your shell or `.env` for `--remote` runs, or the trial traces don't arrive.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="The evals folder" href="/agent-evaluations/evals-folder" icon="folder-tree">
+    Reference for `lmnr.yaml`, `harbor.yaml`, `task.toml`, and secrets.
+  </Card>
+  <Card title="Compare runs" href="/evaluations/comparing-runs" icon="chart-line">
+    Every run of a suite is charted in its group. Diff two runs side by side to see which cases regressed.
+  </Card>
+  <Card title="Read a failing trial" href="/platform/viewing-traces" icon="scroll-text">
+    Open a low-scoring datapoint and read the app's run as a transcript.
+  </Card>
+  <Card title="Troubleshooting" href="/agent-evaluations/troubleshooting" icon="life-buoy">
+    Fixes for stale images, missing env vars, and empty traces.
+  </Card>
+</CardGroup>
