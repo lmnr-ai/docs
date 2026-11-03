@@ -3,14 +3,13 @@ title: Troubleshooting Agent Evaluations
 sidebarTitle: Troubleshooting
 ---
 
+## FAQ
+
 Fixes for the most common problems when running [agent evaluations](/agent-evaluations/introduction) with `lmnr-cli eval run`.
 
 <AccordionGroup>
   <Accordion title="A change to the app or the image doesn't show up">
     `lmnr-cli` rebuilds the `lmnr.yaml` images on every run, but Docker's layer cache can still hide a change, for example a `RUN` step that downloads "latest". Check the file inside a running container, then clear the cache with `docker builder prune` or bump a cache-busting `ARG` placed before the stale step.
-  </Accordion>
-  <Accordion title="A service won't start as root">
-    Some services, such as Postgres, refuse to run as root. Start them as a service user with `gosu` or `su`, and make sure that user can write the log directory (`chmod 777 /logs/agent`).
   </Accordion>
   <Accordion title="The app can't see an env var from harbor.yaml">
     `agents[].env` reaches every command the agent runs. If the start script launches the app with `env -i`, it must forward each name explicitly.

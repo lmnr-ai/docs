@@ -55,19 +55,18 @@ images:
 | `images.<name>.dockerfile` | Yes | Path to the Dockerfile, relative to `evals/`. |
 | `images.<name>.context` | No | Docker build context, relative to `evals/`. Defaults to the Dockerfile's directory. |
 
-A run builds only the images its selected tasks reference, so an unused entry costs nothing. `lmnr-cli` rebuilds them on every run (a cached build when nothing changed), so there are no tags to bump and no registry to push to. `lmnr.yaml` is optional: without it, tasks pull `docker_image` from a registry or build their own `environment/Dockerfile`.
+A run builds only the images its selected tasks reference. Entries that no selected task uses are skipped. `lmnr-cli` rebuilds them on every run. When nothing changed, Docker reuses the cached build from earlier runs, so there are no tags to bump and no registry to push to. `lmnr.yaml` is optional: without it, tasks pull `docker_image` from a registry or build their own `environment/Dockerfile`.
 
-When you write the Dockerfile:
+Two things matter when you write the Dockerfile:
 
-- **Order layers from rarely to often changing**: system packages, then dependencies, then shared scripts, then app code. An app change then rebuilds, and for `--remote` uploads, one small layer.
-- **`COPY` specific paths, never `COPY . .`** from the repo root. Docker only sends what `COPY` references, so a large repo costs nothing, while `COPY . .` would bake in everything, including every suite's `tests/` and their reference answers. From `evals/`, copy `image/shared/` only.
-- **Build from the live source**, not a vendored copy, so the app and its migrations always come from the same revision as the evals.
+- **Build from your live source**, so the evals exercise your production code.
+- **`COPY` the specific paths you need instead of `COPY . .`.** A broad copy from the repo root would bake every suite's `tests/` folder, including the reference answers, into the image where the agent can read them. From `evals/`, copy only `image/shared/`.
 
-`.dockerignore` applies, and builds that `lmnr-cli` runs never receive `.git` or `.env*` files.
+It also helps to order layers from rarely to often changing (system packages, dependencies, shared scripts, app code), so an app change rebuilds one small layer. `.dockerignore` applies, and builds started by `lmnr-cli` never receive `.git` or `.env*` files.
 
 ## harbor.yaml
 
-A suite's `harbor.yaml` is a plain Harbor job config: `agents`, `datasets`, `n_concurrent_trials`, and so on. Relative paths resolve from the suite directory, and the suite directory is on `PYTHONPATH`, so `import_path: agent.agent:ClassName` points at `<suite>/agent/agent.py`.
+A suite's `harbor.yaml` is a plain Harbor job config: `agents`, `datasets`, `n_concurrent_trials`, etc. Relative paths resolve from the suite directory, and the suite directory is on `PYTHONPATH`, so `import_path: agent.entry:ClassName` points at `ClassName` in `<suite>/agent/entry.py`.
 
 ## task.toml
 
@@ -84,25 +83,35 @@ memory_mb = 4096
 timeout_sec = 600
 ```
 
-A full stack per case is heavy, so set `cpus` and `memory_mb`. Locally all trials share your machine, so keep `n_concurrent_trials` to what it can run; remotely each trial gets its own sandbox, so raise concurrency for that run with `--n-concurrent`.
+A full stack per case is heavy, so set `cpus` and `memory_mb`. Locally all trials share your machine, so keep `n_concurrent_trials` low. Remotely, each trial gets its own sandbox, so you can raise concurrency for that run with `--n-concurrent`.
 
 An image name that isn't in `lmnr.yaml` is pulled from its registry, so public images work as-is.
 
-A per-task Dockerfile in `environment/` is the exception, for a case that genuinely needs a different system setup. Remove `docker_image` from that task: while it's set, Harbor uses the image and ignores the Dockerfile. With a Dockerfile, `environment/` is the build context and nothing is uploaded at start, so the Dockerfile has to `COPY` the case data itself. It also can't `FROM` an image that only exists in `lmnr.yaml`; start from a public base.
+If a case really needs a different system setup, give it its own Dockerfile. Put the Dockerfile in the task's `environment/` folder and remove `docker_image` from that task's `task.toml`. While `docker_image` is set, Harbor uses the image and ignores the Dockerfile.
+
+With its own Dockerfile, a task works a little differently. The `environment/` folder becomes the build context, and nothing is uploaded when the container starts, so the Dockerfile has to `COPY` the case data itself. It also can't start `FROM` an image that only exists in `lmnr.yaml`, so use a public base image instead.
 
 ## Secrets and env vars
 
-Declare every secret and setting as a `${VAR}` placeholder:
+Write every secret and setting as a `${VAR}` placeholder, and `lmnr-cli` fills them in when the run starts. Where you put the placeholder decides who receives the value:
 
-- `agents[].env` in `harbor.yaml`, for the agent and the app it starts.
-- `[verifier.env]` in `task.toml`, for example the key an LLM-graded verifier needs.
-- `[environment.env]` in `task.toml`, for the container.
+```yaml evals/support/harbor.yaml
+agents:
+  - import_path: agent.agent:SupportAgent
+    env:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}   # the agent and the app it starts
+      LOG_LEVEL: ${LOG_LEVEL:-info}             # optional, with a default
+```
 
-`${VAR:-default}` makes one optional. Values come from your shell first, then `.env.local` / `.env` in the current directory. For `--remote` they travel with the run as env vars; files containing secrets are never uploaded. Commit a `.env.example` listing the names so teammates know what to fill in.
+```toml task.toml
+[verifier.env]
+ANTHROPIC_API_KEY = "${ANTHROPIC_API_KEY}"      # the verifier, e.g. for an LLM judge
 
-<Warning>
-Harbor redacts agent env values from its output files. A very short value, like a one-character placeholder `x`, turns every `x` in the job output into `[REDACTED]`. Keep placeholder values long and distinctive.
-</Warning>
+[environment.env]
+TZ = "UTC"                                      # the container itself
+```
+
+Values come from your shell first, then from `.env.local` and `.env` in the current directory. With `--remote` they travel with the run as environment variables, and files that contain secrets are never uploaded. Commit a `.env.example` that lists the names, so teammates know what to fill in.
 
 ## Next steps
 

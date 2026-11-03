@@ -5,13 +5,13 @@ sidebarTitle: Concepts
 
 An [agent evaluation](/agent-evaluations/introduction) suite is a folder of [Harbor](https://www.harborframework.com) tasks with a small amount of Laminar configuration on top. This page defines each piece and shows where it appears in Laminar once you [run the suite](/agent-evaluations/running-evals).
 
-## The pieces of a suite
+## What a suite is made of
 
 Harbor's vocabulary maps onto evals of your own product like this:
 
 - **Task (case)**: one scenario. A directory with a `task.toml` (which image, resources, timeouts), an `instruction.md`, the case's data in `environment/`, and a verifier in `tests/`. In production evals, tasks are variations of the same scenario: same code and services, different data.
-- **Environment**: the container a trial runs in. Here it's one prebuilt image holding your app, its services, and shared scripts. Each task's `environment/` files (for example `case.json`) are copied into it when the trial starts.
-- **Agent**: the code that drives the trial. In Harbor's original use this is a general-purpose agent like Claude Code. In agent evaluations of your product, it's a thin class that starts your stack, seeds the case, and calls your app's entry point. Your AI agent is the app under test, not the Harbor agent.
+- **Environment**: the container where a trial runs. In agent evaluations of your product, it is one prebuilt image that holds your app, its services, and shared scripts. When a trial starts, the files in the task's `environment/` folder (for example `case.json`) are copied into it.
+- **Agent**: the code that drives the trial. In Harbor's original use this is a general-purpose agent like Claude Code. In agent evaluations of your product, it's a thin class that starts your stack, seeds the case, and calls your app's entry point.
 - **Verifier**: `tests/test.sh`, run after the agent finishes. Any language, any grading method (exact match, a rubric, an LLM judge). It writes a reward, such as `1` or `0`, to `/logs/verifier/reward.txt`.
 - **Trial**: one attempt at one task: start the environment, run the agent, run the verifier. Run a task several times with `--n-attempts` to measure variance.
 - **Suite**: a directory in `evals/` with a `harbor.yaml` (a Harbor job config) and its tasks. Most projects have one suite.
@@ -19,7 +19,7 @@ Harbor's vocabulary maps onto evals of your own product like this:
 
 ## Where each piece shows up in Laminar
 
-Each concept maps to something in Laminar:
+Each concept maps to something you can open in Laminar:
 
 | Harbor | Laminar |
 | --- | --- |

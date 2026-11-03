@@ -9,20 +9,35 @@ The trace is only as rich as what the app reports: without a trajectory you see 
 
 ## Instrumented apps
 
-**If the app is instrumented with Laminar** (it calls `Laminar.initialize()`), there's nothing to convert. During a run, the plugin sets `LMNR_TRAJECTORY_PATH=/logs/agent/trajectory.json` in the agent env. With it set, the SDK writes the app's spans to that file instead of sending them to Laminar, and the plugin attaches them to the trial's trace: every LLM call with tokens and cost, and tool calls as `TOOL` spans. The app needs no Laminar API key and no network access to Laminar. This works with the Python SDK (`lmnr` 0.8.4 and later); TypeScript SDK support is in progress. Make sure the app process actually receives `LMNR_TRAJECTORY_PATH`, especially if the start script uses `env -i`.
-
-If the app isn't instrumented yet, adding Laminar is a small production change that also gives you production traces. See [Tracing](/tracing/introduction).
+**If the app is instrumented with Laminar** (it calls `Laminar.initialize()`), there's nothing to convert. During a run, the plugin sets `LMNR_TRAJECTORY_PATH=/logs/agent/trajectory.json` in the agent env. With it set, the SDK writes the app's spans to that file instead of sending them to Laminar, and the plugin attaches them to the trial's trace: every LLM call with tokens and cost, and tool calls as `TOOL` spans. The app needs no Laminar API key and no network access to Laminar. This works with the Python SDK (`lmnr` 0.8.4 and later) and the TypeScript SDK (`@lmnr-ai/lmnr` 0.8.54 and later). Make sure the app process actually receives `LMNR_TRAJECTORY_PATH`, especially if your start script uses `env -i`.
 
 ## Apps without instrumentation
 
-**If it isn't instrumented, reconstruct the trajectory from the app's own history.** Most products already store the conversation for their UI, for audit, or as agent memory: message tables, run and step tables, LangGraph checkpointers, JSONL transcripts. After the driver finishes, including on `failed` and `timeout` since partial trajectories are the most useful, run an exporter that reads this case's history and writes `/logs/agent/trajectory.json` in Harbor's [ATIF](https://docs.harborframework.com/agents/atif) format:
+**If the app isn't instrumented, you can rebuild the trajectory from its own history.** Most products already store the conversation somewhere, for the UI, for audit, or as agent memory: message tables, run and step tables, LangGraph checkpointers, or JSONL transcripts. After the driver finishes, including when it ends as `failed` or `timeout` (a partial trajectory is often the most useful one), run an exporter that reads this case's history and writes `/logs/agent/trajectory.json` in Harbor's [ATIF](https://docs.harborframework.com/agents/atif) format:
 
-- Each message is a step with a sequential `step_id` (1, 2, 3…), a `source` (`system`, `user`, or `agent`), a `message`, and an ISO 8601 `timestamp`.
-- `model_name`, `tool_calls`, and `metrics` are only allowed on `agent` steps. Tool results go in that step's `observation.results`, paired by `source_call_id`.
-- History seeded from `case.json` gets `is_copied_context: true`, so it's shown but not mistaken for the agent's work.
-- Leave `metrics` unset rather than estimating: stored history usually lacks token counts, costs, and the exact prompt of each call. Say where the trajectory came from in `notes`.
+```json /logs/agent/trajectory.json
+{
+  "schema_version": "ATIF-v1.8",
+  "agent": {"name": "support-agent", "version": "1.0", "model_name": "claude-sonnet-5"},
+  "notes": "Rebuilt from the tickets and messages tables after the run.",
+  "steps": [
+    {"step_id": 1, "source": "user", "timestamp": "2026-11-03T10:15:02Z",
+     "message": "I was charged twice for my October invoice. Can you refund one?"},
+    {"step_id": 2, "source": "agent", "timestamp": "2026-11-03T10:15:05Z",
+     "model_name": "claude-sonnet-5",
+     "message": "Let me look at your charges.",
+     "tool_calls": [{"tool_call_id": "call_1", "function_name": "list_charges",
+                     "arguments": {"email": "maria.lopez@example.com"}}],
+     "observation": {"results": [{"source_call_id": "call_1", "content": "3 charges found"}]}}
+  ]
+}
+```
 
+Every message is a step with a sequential `step_id`, a `source` (`user`, `agent`, or `system`), a `message`, and a timestamp. Tool calls and their results belong to the agent step that made them. Stored history usually lacks token counts and costs, so leave `metrics` out instead of estimating it, and use `notes` to say where the trajectory came from.
+
+<Tip>
 Don't write a reconstructed trajectory for an instrumented app, or the agent's steps show up twice.
+</Tip>
 
 ## Next steps
 

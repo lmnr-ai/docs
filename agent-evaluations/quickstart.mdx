@@ -3,7 +3,7 @@ title: Agent Evaluations Quickstart with lmnr-cli
 sidebarTitle: Quickstart
 ---
 
-This quickstart gets a first [agent evaluation](/agent-evaluations/introduction) suite running with `lmnr-cli eval run`. The fastest path is to let your coding agent build it with the Laminar skill. If you'd rather see every file, follow [Get started manually](#get-started-manually) below.
+This quickstart gets a first [agent evaluation](/agent-evaluations/introduction) suite running with `lmnr-cli eval run`. The fastest path is to let your coding agent build it with the Laminar skill. If you would rather see every file, follow [Get started manually](#get-started-manually) below.
 
 ## Set up with your coding agent
 
@@ -13,20 +13,26 @@ You need [Docker](https://docs.docker.com/get-docker/), [uv](https://docs.astral
 npx lmnr-cli@latest setup
 ```
 
-`setup` signs you in, writes `LMNR_PROJECT_API_KEY` to `.env`, and installs the Laminar agent skill, which knows the evals folder layout. In Claude Code, Cursor, or Codex, ask for the suite directly:
+`setup` signs you in, writes `LMNR_PROJECT_API_KEY` to `.env`, and installs the Laminar agent skill, which knows the evals folder layout.
 
-> *Set up agent evaluations for the refund flow with `lmnr-cli eval run`. Use our real Postgres and seed each case from a production trace.*
+Then prompt your coding agent. For example:
+
+> *Set up agent evaluations for the refund flow with `lmnr-cli eval run`. Use our real database and seed each case from a production trace.*
+
+If you don't have production traces yet, describe in plain words what you want to evaluate.
 
 The skill follows the same guidance as these docs: it finds the entry point, builds one image, seeds per-case data, writes the verifier, and runs the suite locally. Review what it wrote against [Build a production harness](/agent-evaluations/production-harness), then open the run in Laminar.
 
 ## Get started manually
 
-This walkthrough evaluates a small support-ticket triage function: it sends a ticket to Claude and returns a category. You'll package it into an image, add a case, and run it. The same layout scales to an app with a database and several services; [Build a production harness](/agent-evaluations/production-harness) covers that.
+This walkthrough evaluates a support agent that handles billing tickets. It looks up a customer's charges in a SQLite database and can refund one. Each case starts with its own copy of the database, and the verifier checks two things: whether the right refund is in the database, and whether the reply to the customer is any good. An LLM judge grades the reply.
 
-The app is one module, instrumented with Laminar:
+The agent is a single module, instrumented with Laminar:
 
-```python app/triage.py
+```python app/support_agent.py
+import json
 import os
+import sqlite3
 
 from anthropic import Anthropic
 from lmnr import Laminar, observe
@@ -34,26 +40,121 @@ from lmnr import Laminar, observe
 Laminar.initialize()
 client = Anthropic()
 
-CATEGORIES = ["billing", "bug", "account", "other"]
+DB_PATH = os.environ.get("APP_DB", "/srv/app/app.db")
+MODEL = os.environ.get("AGENT_MODEL", "claude-sonnet-5")
+
+SYSTEM_PROMPT = """You are a support agent for a subscription software company.
+Customers write in about billing problems. Use the tools to look up their charges
+and issue refunds when a refund is justified. Never refund more than the customer
+is owed. When you are done, write a short, friendly reply to the customer."""
+
+TOOLS = [
+    {
+        "name": "list_charges",
+        "description": "List the charges on a customer's account.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"email": {"type": "string"}},
+            "required": ["email"],
+        },
+    },
+    {
+        "name": "refund_charge",
+        "description": "Refund a single charge in full.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"charge_id": {"type": "string"}},
+            "required": ["charge_id"],
+        },
+    },
+]
+
+
+def db() -> sqlite3.Connection:
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+@observe(span_type="TOOL")
+def list_charges(email: str) -> list[dict]:
+    with db() as conn:
+        rows = conn.execute(
+            "SELECT id, description, amount, created_at FROM charges WHERE email = ?",
+            (email,),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+@observe(span_type="TOOL")
+def refund_charge(charge_id: str) -> dict:
+    with db() as conn:
+        charge = conn.execute(
+            "SELECT amount FROM charges WHERE id = ?", (charge_id,)
+        ).fetchone()
+        if charge is None:
+            return {"error": f"No charge {charge_id}"}
+        conn.execute(
+            "INSERT INTO refunds (charge_id, amount) VALUES (?, ?)",
+            (charge_id, charge["amount"]),
+        )
+    return {"refunded": charge["amount"]}
 
 
 @observe()
-def triage(ticket: str) -> str:
-    response = client.messages.create(
-        model=os.environ.get("TRIAGE_MODEL", "claude-sonnet-5-5"),
-        max_tokens=16,
-        system=f"Classify the support ticket. Reply with one word: {', '.join(CATEGORIES)}.",
-        messages=[{"role": "user", "content": ticket}],
-    )
-    answer = response.content[0].text.strip().lower()
-    return answer if answer in CATEGORIES else "other"
+def handle_ticket(ticket: str) -> str:
+    messages = [{"role": "user", "content": ticket}]
+    for _ in range(8):
+        response = client.messages.create(
+            model=MODEL,
+            max_tokens=1024,
+            system=SYSTEM_PROMPT,
+            tools=TOOLS,
+            messages=messages,
+        )
+        messages.append({"role": "assistant", "content": response.content})
+        if response.stop_reason != "tool_use":
+            return "".join(b.text for b in response.content if b.type == "text")
+
+        results = []
+        for block in response.content:
+            if block.type == "tool_use":
+                fn = {"list_charges": list_charges, "refund_charge": refund_charge}
+                output = fn[block.name](**block.input)
+                results.append(
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": json.dumps(output),
+                    }
+                )
+        messages.append({"role": "user", "content": results})
+    return "Sorry, I could not finish handling this ticket."
 ```
 
-with `anthropic` and `lmnr` in `requirements.txt`.
+If your project doesn't have a `pyproject.toml` yet, create one and add the two dependencies with uv:
+
+```bash
+uv init --bare --python 3.14
+uv add anthropic lmnr
+```
+
+This gives you a `pyproject.toml` like the one below, plus a `uv.lock` that the image build uses:
+
+```toml pyproject.toml
+[project]
+name = "refund-agent"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "anthropic>=2.4.0",
+    "lmnr>=0.8.7",
+]
+```
 
 <Steps>
   <Step title="Install the prerequisites and link the project">
-    You need [Docker](https://docs.docker.com/get-docker/), [uv](https://docs.astral.sh/uv/), and Node.js for `lmnr-cli`. `lmnr-cli eval run` runs a pinned Harbor version with the Laminar plugin through `uvx`, so you don't install Harbor yourself.
+    You need [Docker](https://docs.docker.com/get-docker/), [uv](https://docs.astral.sh/uv/), and Node.js for `lmnr-cli`. `lmnr-cli eval run` runs a pinned version of Harbor with the Laminar plugin through `uvx`, so you don't install Harbor yourself.
 
     From the repo root, link the directory to a Laminar project. Skip this if you already ran it above:
 
@@ -72,56 +173,87 @@ with `anthropic` and `lmnr` in `requirements.txt`.
       image/
         Dockerfile
         shared/
-          run_case.py               # drives the entry point, writes result.json
+          run_case.py               # seeds the database, calls the agent, writes result.json
       support/                      # a suite
         harbor.yaml
         agent/
           __init__.py               # empty
           agent.py
         tasks/
-          refund-double-charge/
+          duplicate-charge/         # a case
             task.toml
             instruction.md
             environment/
-              case.json             # this case's data
+              case.json             # the ticket
+              seed.json             # the database rows for this case
             tests/
               test.sh               # the verifier
+              verify.py
               expected.json         # the reference answer
     ```
   </Step>
   <Step title="Describe the image">
-    `lmnr.yaml` names the image and how to build it. Paths are relative to `evals/`, and `context: ..` makes the repo root the build context, so the image is built from your live source:
+    `lmnr.yaml` names the image and says how to build it. Paths are relative to `evals/`, and `context: ..` makes the repo root the build context, so the image is built from your live source:
 
     ```yaml evals/lmnr.yaml
     images:
-      triage-evals:
+      refund-agent-evals:
         dockerfile: image/Dockerfile
         context: ..
     ```
 
+    The Dockerfile starts from [uv's official image](https://docs.astral.sh/uv/guides/integration/docker/), which already has uv and Python 3.14 on Debian trixie. It installs the locked dependencies first, so they stay cached when only the app code changes:
+
     ```dockerfile evals/image/Dockerfile
-    FROM python:3.12-slim-bookworm
-    COPY requirements.txt /srv/app/
-    RUN pip install --no-cache-dir -r /srv/app/requirements.txt
+    FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim
+
+    ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
+    WORKDIR /srv/app
+
+    # Dependencies first, so they stay cached when only the app code changes.
+    COPY pyproject.toml uv.lock ./
+    RUN uv sync --frozen --no-install-project
+    ENV PATH="/srv/app/.venv/bin:$PATH"
+
     COPY evals/image/shared/ /opt/harness/
-    COPY app/ /srv/app/app/
+    COPY app/ ./app/
+
     WORKDIR /case
     ```
 
-    The driver imports the production function unchanged, runs it on this case's data, and writes the outcome to `/logs/agent/result.json`:
+    The driver creates this case's database from `seed.json`, imports the production function unchanged, calls it with the ticket, and writes the outcome to `/logs/agent/result.json`:
 
     ```python evals/image/shared/run_case.py
     import json
+    import sqlite3
     import sys
     import time
 
     sys.path.insert(0, "/srv/app")
-    from app.triage import triage  # the production code path, unchanged
+    from app.support_agent import DB_PATH, handle_ticket  # the production code path
 
     case = json.load(open("/case/case.json"))
+
+    # Create this case's database from its seed data.
+    conn = sqlite3.connect(DB_PATH)
+    conn.executescript(
+        """
+        CREATE TABLE charges (
+            id TEXT PRIMARY KEY, email TEXT, description TEXT, amount REAL, created_at TEXT
+        );
+        CREATE TABLE refunds (charge_id TEXT, amount REAL);
+        """
+    )
+    for c in json.load(open("/case/seed.json"))["charges"]:
+        conn.execute(
+            "INSERT INTO charges VALUES (:id, :email, :description, :amount, :created_at)", c
+        )
+    conn.commit()
+    conn.close()
+
     started = time.time()
     try:
-        result = {"outcome": triage(case["ticket"])}
+        result = {"outcome": "completed", "reply": handle_ticket(case["ticket"])}
     except Exception as e:
         result = {"outcome": "failed", "error": repr(e)}
     result["duration_s"] = round(time.time() - started, 2)
@@ -131,12 +263,12 @@ with `anthropic` and `lmnr` in `requirements.txt`.
     ```
   </Step>
   <Step title="Write the suite config and the agent">
-    `harbor.yaml` is a Harbor job config. Secrets are `${VAR}` placeholders, never literal values:
+    `harbor.yaml` is a Harbor job config. It refers to the API key as a `${VAR}` placeholder that `lmnr-cli` fills in when the run starts, so the key itself does not end up in a file you commit:
 
     ```yaml evals/support/harbor.yaml
     agents:
-      - import_path: agent.agent:TriageAgent
-        model_name: anthropic/claude-sonnet-5-5
+      - import_path: agent.agent:SupportAgent
+        model_name: anthropic/claude-sonnet-5
         env:
           ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
     datasets:
@@ -144,7 +276,7 @@ with `anthropic` and `lmnr` in `requirements.txt`.
     n_concurrent_trials: 4
     ```
 
-    The agent runs the driver inside the container. Everything it needs is already in the image, so `install()` does nothing. It passes `self.model_name` on so `--model` can override the model for a run:
+    The Harbor agent runs the driver inside the container. Everything it needs is already in the image, so `install()` has nothing to do. It passes `self.model_name` on to the app, which lets `--model` override the model for a run:
 
     ```python evals/support/agent/agent.py
     from harbor.agents.installed.base import BaseInstalledAgent, with_prompt_template
@@ -152,10 +284,10 @@ with `anthropic` and `lmnr` in `requirements.txt`.
     from harbor.models.agent.context import AgentContext
 
 
-    class TriageAgent(BaseInstalledAgent):
+    class SupportAgent(BaseInstalledAgent):
         @staticmethod
         def name() -> str:
-            return "triage"
+            return "support"
 
         async def install(self, environment: BaseEnvironment) -> None:
             pass  # everything the agent needs is already in the image
@@ -164,59 +296,120 @@ with `anthropic` and `lmnr` in `requirements.txt`.
         async def run(
             self, instruction: str, environment: BaseEnvironment, context: AgentContext
         ) -> None:
-            # "anthropic/claude-sonnet-5-5" -> "claude-sonnet-5-5"
+            # "anthropic/claude-sonnet-5" -> "claude-sonnet-5"
             model = (self.model_name or "").split("/", 1)[-1]
             await self.exec_as_agent(
                 environment,
                 command="python /opt/harness/run_case.py",
-                env={"TRIAGE_MODEL": model},
-                timeout_sec=120,
+                env={"AGENT_MODEL": model},
+                timeout_sec=240,
             )
     ```
   </Step>
   <Step title="Add a case">
-    The task points at the image by name and says where its `environment/` files go:
+    The task points at the image by name. Harbor copies everything in the task's `environment/` folder into `workdir` (here `/case`) when the container starts:
 
-    ```toml evals/support/tasks/refund-double-charge/task.toml
+    ```toml evals/support/tasks/duplicate-charge/task.toml
     [environment]
-    docker_image = "triage-evals"
+    docker_image = "refund-agent-evals"
     workdir = "/case"
 
     [agent]
-    timeout_sec = 180
+    timeout_sec = 300
+
+    [verifier.env]
+    ANTHROPIC_API_KEY = "${ANTHROPIC_API_KEY}"
     ```
 
-    ```markdown evals/support/tasks/refund-double-charge/instruction.md
-    Triage the support ticket in case.json.
+    The `[verifier.env]` block gives the verifier the key it needs to call the LLM judge.
+
+    ```markdown evals/support/tasks/duplicate-charge/instruction.md
+    Handle the support ticket in case.json.
     ```
 
-    ```json evals/support/tasks/refund-double-charge/environment/case.json
-    {"ticket": "Hi, I was charged twice for my October invoice (two identical charges of $49 on Oct 3). Can you refund one of them?"}
+    ```json evals/support/tasks/duplicate-charge/environment/case.json
+    {"ticket": "Hi, this is maria.lopez@example.com. I was charged twice for my October invoice, two identical charges of $49 on Oct 3. Can you refund one of them?"}
     ```
 
-    The reference answer and the verifier live in `tests/`, which Harbor uploads only when the verifier runs, so the app never sees them:
-
-    ```json evals/support/tasks/refund-double-charge/tests/expected.json
-    {"category": "billing"}
+    ```json evals/support/tasks/duplicate-charge/environment/seed.json
+    {
+      "charges": [
+        {"id": "ch_8f3a1c", "email": "maria.lopez@example.com", "description": "Team plan, September", "amount": 49.0, "created_at": "2026-09-03T09:12:41Z"},
+        {"id": "ch_2b7d90", "email": "maria.lopez@example.com", "description": "Team plan, October", "amount": 49.0, "created_at": "2026-10-03T09:12:44Z"},
+        {"id": "ch_c41e66", "email": "maria.lopez@example.com", "description": "Team plan, October", "amount": 49.0, "created_at": "2026-10-03T09:12:45Z"}
+      ]
+    }
     ```
 
-    ```bash evals/support/tasks/refund-double-charge/tests/test.sh
+    <Warning>
+      The agent can read everything in `environment/`, so the reference answer must not go there. Put it in `tests/`, which Harbor only uploads when the verifier runs.
+    </Warning>
+
+    ```json evals/support/tasks/duplicate-charge/tests/expected.json
+    {
+      "refund_count": 1,
+      "refund_amount": 49.0,
+      "reply_should": "Confirm that one of the two October charges was refunded, and not promise anything beyond that."
+    }
+    ```
+
+    The verifier first checks the database, which is the hard evidence of what the agent did. It then asks an LLM judge whether the reply is acceptable. It writes one reward per check, and each becomes its own score in Laminar. If the agent run itself failed, both rewards are `0` and the judge is skipped:
+
+    ```bash evals/support/tasks/duplicate-charge/tests/test.sh
     #!/bin/bash
-    expected=$(python3 -c 'import json; print(json.load(open("/tests/expected.json"))["category"])')
-    actual=$(python3 -c 'import json; print(json.load(open("/logs/agent/result.json"))["outcome"])')
-
-    if [ "$expected" = "$actual" ]; then
-      echo 1 > /logs/verifier/reward.txt
-    else
-      echo "expected $expected, got $actual"
-      echo 0 > /logs/verifier/reward.txt
-    fi
+    python /tests/verify.py
     ```
 
-    Make the verifier executable with `chmod +x`. A second case is a copy of this directory with a different `case.json` and `expected.json`.
+    ```python evals/support/tasks/duplicate-charge/tests/verify.py
+    import json
+    import sqlite3
+
+    from anthropic import Anthropic
+
+    expected = json.load(open("/tests/expected.json"))
+    result = json.load(open("/logs/agent/result.json"))
+
+    if result["outcome"] != "completed":
+        print(f"agent run did not complete: {result}")
+        json.dump({"refund": 0, "reply": 0}, open("/logs/verifier/reward.json", "w"))
+        raise SystemExit(0)
+
+    reply = result["reply"]
+
+    # 1. Hard check: what actually happened in the database.
+    conn = sqlite3.connect("/srv/app/app.db")
+    count, total = conn.execute("SELECT COUNT(*), COALESCE(SUM(amount), 0) FROM refunds").fetchone()
+    refund_ok = count == expected["refund_count"] and total == expected["refund_amount"]
+    print(f"refunds: {count} totalling {total}")
+
+    # 2. LLM judge: is the reply to the customer any good?
+    verdict = Anthropic().messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=200,
+        messages=[{
+            "role": "user",
+            "content": (
+                f"A support agent wrote this reply to a customer:\n\n{reply}\n\n"
+                f"The reply should: {expected['reply_should']}\n"
+                'Answer with JSON only: {"pass": true or false, "reason": "..."}'
+            ),
+        }],
+    )
+    judge = json.loads(verdict.content[0].text)
+    print(f"judge: {judge}")
+
+    json.dump(
+        {"refund": int(refund_ok), "reply": int(judge["pass"])},
+        open("/logs/verifier/reward.json", "w"),
+    )
+    ```
+
+    Make the verifier executable with `chmod +x`.
+
+    To add another case, copy the `duplicate-charge` directory, then change `case.json` and `seed.json` to describe a different ticket and account, and change `expected.json` to match. For example, a customer asking for a refund on a charge that should be declined expects `"refund_count": 0`.
   </Step>
   <Step title="Add secrets">
-    Put `ANTHROPIC_API_KEY` in `.env` at the repo root, next to the `LMNR_PROJECT_API_KEY` that `setup` wrote. `lmnr-cli` fills every `${VAR}` from your shell, then `.env.local` / `.env`, and stops before anything starts if one is missing.
+    Put `ANTHROPIC_API_KEY` in `.env` at the repo root, next to the `LMNR_PROJECT_API_KEY` that `setup` wrote. `lmnr-cli` fills every `${VAR}` placeholder from your shell first, then from `.env.local` and `.env`. If one is missing, it stops before anything starts.
 
     Keep secrets and Harbor's job output out of git:
 
@@ -232,12 +425,12 @@ with `anthropic` and `lmnr` in `requirements.txt`.
     npx lmnr-cli@latest eval run
     ```
 
-    `lmnr-cli` builds `triage-evals` with your Docker, runs every task in every suite, and prints a link to the results. The `support` suite becomes an evaluation group in your project, and this run is a new evaluation in it.
+    `lmnr-cli` builds `refund-agent-evals` with your Docker, runs every task in every suite, and prints a link to the results. The `support` suite becomes an evaluation group in your project, and this run is a new evaluation in it.
   </Step>
   <Step title="Read the results">
-    Open the evaluation. Each trial is a datapoint with its reward as the score. Because the app calls `Laminar.initialize()`, the trial's trace shows the Claude call under the `agent` span as a [transcript](/platform/viewing-traces), so a `0` takes one click to explain.
+    Open the evaluation. Each trial is a datapoint, with a `refund` score and a `reply` score. Because the app calls `Laminar.initialize()`, the trial's trace shows the model calls and the `list_charges` / `refund_charge` tool calls as a [transcript](/platform/viewing-traces), so a `0` takes one click to explain.
 
-    Locally, Harbor's raw output is in `evals/support/jobs/<timestamp>/`: each trial has `agent/` (your `result.json` and logs) and `verifier/` (`reward.txt`, `test-stdout.txt`).
+    Locally, Harbor's raw output is in `evals/support/jobs/<timestamp>/`. Each trial has `agent/` (your `result.json` and logs) and `verifier/` (`reward.json` and `test-stdout.txt`, which includes the judge's reasoning).
   </Step>
 </Steps>
 
@@ -251,7 +444,7 @@ with `anthropic` and `lmnr` in `requirements.txt`.
     Reference for `lmnr.yaml`, `harbor.yaml`, `task.toml`, and secrets.
   </Card>
   <Card title="Build a production harness" href="/agent-evaluations/production-harness" icon="server">
-    Grow this single function into a full stack with services and seeded data.
+    Grow this single module into a full stack with services and seeded data.
   </Card>
   <Card title="Read a failing trial" href="/platform/viewing-traces" icon="scroll-text">
     Open a low-scoring datapoint and read the app's run as a transcript.
