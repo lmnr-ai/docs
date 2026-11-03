@@ -3,7 +3,7 @@ title: Helm Configuration Reference for Self-hosted Laminar
 sidebarTitle: Configuration
 ---
 
-Every feature of a self-hosted Laminar is configured through values in `laminar.yaml`, the overrides file you pass to `helm upgrade -i laminar laminar/laminar -f laminar.yaml`. This page covers the settings most deployments need: AI features, Signals, Slack, OAuth login, storage, TLS, PII redaction, secrets, and image pinning. For the full value list, see [`values.yaml`](https://github.com/lmnr-ai/lmnr-helm/blob/main/charts/laminar/values.yaml) in the chart repo.
+Every feature of a self-hosted Laminar is configured through values in `laminar.yaml`, the overrides file you pass to `helm upgrade -i laminar laminar/laminar -f laminar.yaml`. This page covers the settings most deployments need: AI features, Signals, Slack, usage telemetry, OAuth login, storage, TLS, PII redaction, secrets, and image pinning. For the full value list, see [`values.yaml`](https://github.com/lmnr-ai/lmnr-helm/blob/main/charts/laminar/values.yaml) in the chart repo.
 
 Apply any change by re-running the install command:
 
@@ -122,9 +122,9 @@ Signal extraction runs in the `app-server-consumer` pod. For a Signal without a 
 
 ## Slack notifications
 
-Laminar posts [alerts](/signals/alerts) and notifications to Slack through a broker run by Laminar Cloud: your instance uses Laminar Cloud's official Slack app, so you do not register a Slack app of your own. Laminar Cloud runs both legs of the OAuth flow on your behalf; the bot token is returned to your instance server-to-server and encrypted at rest. Your instance authenticates to the broker with an **enterprise license key**.
+Laminar posts [alerts](/signals/alerts) and notifications to Slack through a broker run by Laminar Cloud: your instance uses Laminar Cloud's official Slack app, so you do not register a Slack app of your own. Laminar Cloud runs both legs of the OAuth flow on your behalf; the bot token is returned to your instance server-to-server and encrypted at rest. Your instance authenticates to the broker with an [enterprise license key](/self-hosting/license), so Slack needs a key even during the trial.
 
-Set the license key in `laminar.yaml`:
+Add the key in **Settings → License**, or set it in `laminar.yaml`:
 
 ```yaml
 secrets:
@@ -132,9 +132,32 @@ secrets:
     LMNR_LICENSE_KEY: "your-enterprise-license-key"
 ```
 
-When the license key is set, the "Connect Slack" button in workspace settings uses the brokered flow. `SLACK_BROKER_URL` defaults to Laminar Cloud's origin (`https://laminar.sh`), so you normally only set the license key. To get a license key, contact [founders@lmnr.ai](mailto:founders@lmnr.ai).
+When a valid, unexpired license key is present, the "Connect Slack" button in workspace settings uses the brokered flow. `SLACK_BROKER_URL` defaults to Laminar Cloud's origin (`https://laminar.sh`), so you normally only set the license key. To get a license key, contact [founders@lmnr.ai](mailto:founders@lmnr.ai).
 
 Slack bot tokens are encrypted at rest with `SLACK_ENCRYPTION_KEY`. You do not normally set this: when left empty, the chart defaults it to your `AEAD_SECRET_KEY` so there is one encryption key to manage. Set it explicitly in `secrets.data` only if you want Slack tokens encrypted under a separate key.
+
+## Usage telemetry
+
+Self-hosted Laminar sends a usage heartbeat to Laminar every 6 hours, once per deployment no matter how many replicas run. It contains:
+
+- a random deployment ID, generated on first boot
+- the Laminar version and the `ENVIRONMENT` value
+- row counts per table, and which optional features are enabled
+- the license status (trial, active, or expired), with the trial start and install dates
+- up to 20 domains of your users' email addresses (for example `example.com`, never full addresses)
+
+It never contains trace content or other customer data, and no IP address is stored. See the [privacy notice](https://laminar.sh/policies/privacy) for how Laminar uses it.
+
+To turn it off, set `LAMINAR_TELEMETRY_DISABLED=true` on the frontend. With Helm, use `extraEnv`:
+
+```yaml laminar.yaml
+frontend:
+  extraEnv:
+    - name: LAMINAR_TELEMETRY_DISABLED
+      value: "true"
+```
+
+On Docker Compose, set it on the frontend container.
 
 ## OAuth login
 

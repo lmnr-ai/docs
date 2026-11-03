@@ -236,7 +236,8 @@
           "self-hosting/overview",
           "self-hosting/docker-compose",
           "self-hosting/kubernetes",
-          "self-hosting/configuration"
+          "self-hosting/configuration",
+          "self-hosting/license"
         ]
       },
       {

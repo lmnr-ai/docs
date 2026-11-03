@@ -1,0 +1,77 @@
+---
+title: Enterprise License and Free Trial for Self-hosted Laminar
+sidebarTitle: License and trial
+---
+
+The Laminar Helm chart deploys the Enterprise Edition images. Enterprise features run free for a 30-day trial on every self-hosted install, then need a license key. Tracing and every other open-source feature keep working without one. This page covers what the trial includes, how to add a key, and what happens when a trial or license ends.
+
+## What the license covers
+
+These features need a trial or a license key:
+
+- [Signals](/signals/introduction), including backfills
+- Signal event [clusters](/signals/clusters)
+- [Alerts](/signals/alerts) on signal events
+- [Laminar Agent](/platform/laminar-agent), including chat-with-trace
+
+The [Slack integration](/self-hosting/configuration#slack-notifications) needs a license key from the start, even during the trial, because Laminar Cloud's Slack broker only accepts a license key.
+
+Everything else, including tracing, the transcript view, search, the SQL editor, dashboards, evaluations, datasets, and the debugger, is open source and never needs a key. See the [feature comparison](/self-hosting/overview#feature-comparison) for the full list.
+
+## The 30-day trial
+
+The trial starts the first time Laminar runs its database migrations on a release that includes licensing. An existing install that upgrades gets a fresh 30 days from the upgrade. A banner at the top of every project page shows how many days are left, and **Settings → License** shows the trial end date.
+
+When the trial ends, enterprise features pause:
+
+- Signals stop running on new traces, and new backfills wait until a key is added.
+- Laminar Agent stops answering.
+- Existing signal events, clusters, and all trace data stay where they are. Nothing is deleted.
+
+Add a license key and they resume, including any backfills that were waiting.
+
+## Add a license key
+
+License keys start with `lmnr_lic_`. To get one, or to ask for a longer trial, email [founders@lmnr.ai](mailto:founders@lmnr.ai).
+
+<Tabs>
+  <Tab title="In the app">
+    Open **Settings → License** in any workspace, paste the key, and save. Only workspace owners can add or replace the key. The key applies to the whole instance, across every workspace, and takes effect right away.
+  </Tab>
+  <Tab title="Helm values">
+    Set the key in `laminar.yaml` and run `helm upgrade`:
+
+    ```yaml laminar.yaml
+    secrets:
+      data:
+        LMNR_LICENSE_KEY: "lmnr_lic_..."
+    ```
+
+    `LMNR_LICENSE_KEY` can also come from AWS Secrets Manager, Vault, or an existing Kubernetes Secret, like any other [secret](/self-hosting/configuration#secrets-management). A key set this way takes precedence over one saved in the app, and the app shows it read-only.
+  </Tab>
+</Tabs>
+
+Keys are verified offline. Your instance does not contact Laminar to check a license, so the check works behind a firewall.
+
+## License expiry
+
+Each license key carries an expiry date, shown in **Settings → License**. The project banner warns you as the date gets close. When a license expires, enterprise features pause the same way they do when a trial ends, until you add a renewed key. Contact [founders@lmnr.ai](mailto:founders@lmnr.ai) before the expiry date to renew.
+
+## License terms
+
+The Enterprise Edition images (`app-server-ee`, `frontend-ee`, `frontend-ee-basepath`, and `pii-redactor-ee` on `ghcr.io/lmnr-ai`) are licensed under the [Laminar Enterprise License](https://laminar.sh/policies/ee-license), which is the Elastic License 2.0. Code that is also published in the open-source [lmnr repository](https://github.com/lmnr-ai/lmnr) stays under Apache 2.0.
+
+## Usage telemetry
+
+Self-hosted Laminar sends a small usage heartbeat to Laminar every 6 hours. It never includes trace content or IP addresses. See [Usage telemetry](/self-hosting/configuration#usage-telemetry) for what it contains and how to turn it off.
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Configuration reference" icon="sliders" href="/self-hosting/configuration">
+    Set up AI features, Slack, OAuth, storage, and TLS for your deployment.
+  </Card>
+  <Card title="Signals" icon="radar" href="/signals/introduction">
+    Describe outcomes and failures in plain language and track them across traces.
+  </Card>
+</CardGroup>
