@@ -9,7 +9,12 @@ The trace is only as rich as what the app reports: without a trajectory you see 
 
 ## Instrumented apps
 
-**If the app is instrumented with Laminar** (it calls `Laminar.initialize()`), there's nothing to convert. During a run, the plugin sets `LMNR_TRAJECTORY_PATH=/logs/agent/trajectory.json` in the agent env. With it set, the SDK writes the app's spans to that file instead of sending them to Laminar, and the plugin attaches them to the trial's trace: every LLM call with tokens and cost, and tool calls as `TOOL` spans. The app needs no Laminar API key and no network access to Laminar. This works with the Python SDK (`lmnr` 0.8.4 and later) and the TypeScript SDK (`@lmnr-ai/lmnr` 0.8.54 and later). Make sure the app process actually receives `LMNR_TRAJECTORY_PATH`, especially if your start script uses `env -i`.
+If the app is instrumented with Laminar (it calls `Laminar.initialize()`), there's nothing to convert.
+
+During a run, the Laminar plugin sets `LMNR_TRAJECTORY_PATH=/logs/agent/trajectory.json` in the agent's environment. When this variable is set, the SDK writes the app's spans to that file instead of sending them to Laminar. The plugin then attaches them to the trial's trace: every LLM call with its tokens and cost, and tool calls as `TOOL` spans.
+
+- The app needs no Laminar API key and no network access to Laminar.
+- It works with the Python SDK (`lmnr` 0.8.4 and later) and the TypeScript SDK (`@lmnr-ai/lmnr` 0.8.54 and later).
 
 ## Apps without instrumentation
 
@@ -42,8 +47,8 @@ Don't write a reconstructed trajectory for an instrumented app, or the agent's s
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Write the agent and verifier" href="/agent-evaluations/agent-and-verifier" icon="workflow">
-    Drive the entry point, wait for a terminal state, and grade the result.
+  <Card title="Drive and grade a trial" href="/agent-evaluations/production-harness#drive-the-entry-point" icon="workflow">
+    Write the driver and the verifier, and choose where the verifier runs.
   </Card>
   <Card title="Read a failing trial" href="/platform/viewing-traces" icon="scroll-text">
     Open a low-scoring datapoint and read the app's run as a transcript.

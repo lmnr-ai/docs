@@ -16,7 +16,7 @@ Laminar has two ways to evaluate, based on what the evaluations look at:
 - **Agent evaluations** (this section) set up a working environment for the agent, let it run, and score the whole outcome, including the state changes, and the agent trajectory.
 - **[LLM evaluations](/evaluations/introduction)** call a function in your process with `evaluate()`, then compare its output to target data with evaluator functions.
 
-You can evaluate an agent with LLM evaluations, and for a prompt, a classifier, or a short pipeline that's often the fastest option. Once the agent is large, uses tools, and acts on real systems, the answer to *did it do the right thing* lives in the environment and in the trace. That's where agent evaluations fit.
+LLM evaluations work for agents too, and for a prompt, a classifier, or a short pipeline they are often the fastest option. Agent evaluations fit once the agent uses tools and acts on real systems.
 
 | | LLM evaluations | Agent evaluations |
 | --- | --- | --- |
@@ -36,13 +36,10 @@ Unit tests are a poor fit for agents that act on the world:
 - **The bugs are in the integration.** Downstream services may experience transient issues; agents may or may not self-heal. Fixtures hide these kinds of issues.
 - **Production failures need their exact context.** Reproducing a failure means the same conversation, records, and account state.
 
-Agent evaluations answer all three by giving every case a fresh, complete copy of the stack:
+Agent evaluations answer all three by giving every case a fresh, complete copy of the stack: your real code and services, seeded with the case's data.
 
-- **Production fidelity.** The real code and the real services run in the container, started the way production starts them. You seed the services with data, and mock one only when you can't run it.
-- **Isolation.** Cases can't share a database without interfering with each other, so each case boots its own stack with its own data. That also lets cases run in parallel, in any order.
-- **No or minimal production changes.** The driver calls an existing entry point (e.g. an HTTP route, a CLI command, a queue message, or an exported function), so you test the code path users hit.
+- **Isolation.** Each case boots its own stack with its own data, so cases don't interfere with each other and can run in parallel, in any order.
 - **Local and cloud from one folder.** `lmnr-cli eval run` runs trials on your Docker. Add `--remote` to run the same eval in Laminar sandboxes, one per trial.
-- **Plain Harbor.** The cases are in [Harbor](https://www.harborframework.com)'s format, so tasks, image, agent, and verifier are plain Harbor. Laminar adds the trajectories, run history, comparisons, SQL access, and managed execution.
 
 ## How a run works
 

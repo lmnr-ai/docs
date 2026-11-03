@@ -27,130 +27,35 @@ The skill follows the same guidance as these docs: it finds the entry point, bui
 
 This walkthrough evaluates a support agent that handles billing tickets. It looks up a customer's charges in a SQLite database and can refund one. Each case starts with its own copy of the database, and the verifier checks two things: whether the right refund is in the database, and whether the reply to the customer is any good. An LLM judge grades the reply.
 
-The agent is a single module, instrumented with Laminar:
+The complete project is [`examples/agent-evals`](https://github.com/lmnr-ai/lmnr-python/tree/main/examples/agent-evals) in the `lmnr-python` repo. Clone it to follow along, or copy the files into your own repo as you go.
+
+The agent is a single module, [`app/support_agent.py`](https://github.com/lmnr-ai/lmnr-python/blob/main/examples/agent-evals/app/support_agent.py). It runs an Anthropic tool loop over two tools, `list_charges` and `refund_charge`. It calls `Laminar.initialize()` and wraps the tools in `observe`, so each trial's trace shows the model calls and the tool calls. Trimmed to the parts the harness relies on:
 
 ```python app/support_agent.py
-import json
 import os
-import sqlite3
 
-from anthropic import Anthropic
 from lmnr import Laminar, observe
 
 Laminar.initialize()
-client = Anthropic()
 
 DB_PATH = os.environ.get("APP_DB", "/srv/app/app.db")
 MODEL = os.environ.get("AGENT_MODEL", "claude-sonnet-5")
 
-SYSTEM_PROMPT = """You are a support agent for a subscription software company.
-Customers write in about billing problems. Use the tools to look up their charges
-and issue refunds when a refund is justified. Never refund more than the customer
-is owed. When you are done, write a short, friendly reply to the customer."""
 
-TOOLS = [
-    {
-        "name": "list_charges",
-        "description": "List the charges on a customer's account.",
-        "input_schema": {
-            "type": "object",
-            "properties": {"email": {"type": "string"}},
-            "required": ["email"],
-        },
-    },
-    {
-        "name": "refund_charge",
-        "description": "Refund a single charge in full.",
-        "input_schema": {
-            "type": "object",
-            "properties": {"charge_id": {"type": "string"}},
-            "required": ["charge_id"],
-        },
-    },
-]
-
-
-def db() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+@observe(span_type="TOOL")
+def list_charges(email: str) -> list[dict]: ...
 
 
 @observe(span_type="TOOL")
-def list_charges(email: str) -> list[dict]:
-    with db() as conn:
-        rows = conn.execute(
-            "SELECT id, description, amount, created_at FROM charges WHERE email = ?",
-            (email,),
-        ).fetchall()
-    return [dict(row) for row in rows]
-
-
-@observe(span_type="TOOL")
-def refund_charge(charge_id: str) -> dict:
-    with db() as conn:
-        charge = conn.execute(
-            "SELECT amount FROM charges WHERE id = ?", (charge_id,)
-        ).fetchone()
-        if charge is None:
-            return {"error": f"No charge {charge_id}"}
-        conn.execute(
-            "INSERT INTO refunds (charge_id, amount) VALUES (?, ?)",
-            (charge_id, charge["amount"]),
-        )
-    return {"refunded": charge["amount"]}
+def refund_charge(charge_id: str) -> dict: ...
 
 
 @observe()
 def handle_ticket(ticket: str) -> str:
-    messages = [{"role": "user", "content": ticket}]
-    for _ in range(8):
-        response = client.messages.create(
-            model=MODEL,
-            max_tokens=1024,
-            system=SYSTEM_PROMPT,
-            tools=TOOLS,
-            messages=messages,
-        )
-        messages.append({"role": "assistant", "content": response.content})
-        if response.stop_reason != "tool_use":
-            return "".join(b.text for b in response.content if b.type == "text")
-
-        results = []
-        for block in response.content:
-            if block.type == "tool_use":
-                fn = {"list_charges": list_charges, "refund_charge": refund_charge}
-                output = fn[block.name](**block.input)
-                results.append(
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": block.id,
-                        "content": json.dumps(output),
-                    }
-                )
-        messages.append({"role": "user", "content": results})
-    return "Sorry, I could not finish handling this ticket."
+    ...  # call the model, run the tools it asks for, return its reply
 ```
 
-If your project doesn't have a `pyproject.toml` yet, create one and add the two dependencies with uv:
-
-```bash
-uv init --bare --python 3.14
-uv add anthropic lmnr
-```
-
-This gives you a `pyproject.toml` like the one below, plus a `uv.lock` that the image build uses:
-
-```toml pyproject.toml
-[project]
-name = "refund-agent"
-version = "0.1.0"
-requires-python = ">=3.14"
-dependencies = [
-    "anthropic>=2.4.0",
-    "lmnr>=0.8.7",
-]
-```
+The driver imports `DB_PATH` and `handle_ticket`, and the Harbor agent sets `AGENT_MODEL`. The app's dependencies, `anthropic` and `lmnr`, are in the project's `pyproject.toml` and `uv.lock`, which the image installs.
 
 <Steps>
   <Step title="Install the prerequisites and link the project">
@@ -331,15 +236,17 @@ dependencies = [
     {"ticket": "Hi, this is maria.lopez@example.com. I was charged twice for my October invoice, two identical charges of $49 on Oct 3. Can you refund one of them?"}
     ```
 
-    ```json evals/support/tasks/duplicate-charge/environment/seed.json
-    {
-      "charges": [
-        {"id": "ch_8f3a1c", "email": "maria.lopez@example.com", "description": "Team plan, September", "amount": 49.0, "created_at": "2026-09-03T09:12:41Z"},
-        {"id": "ch_2b7d90", "email": "maria.lopez@example.com", "description": "Team plan, October", "amount": 49.0, "created_at": "2026-10-03T09:12:44Z"},
-        {"id": "ch_c41e66", "email": "maria.lopez@example.com", "description": "Team plan, October", "amount": 49.0, "created_at": "2026-10-03T09:12:45Z"}
-      ]
-    }
-    ```
+    <Accordion title="environment/seed.json: the database rows for this case">
+      ```json evals/support/tasks/duplicate-charge/environment/seed.json
+      {
+        "charges": [
+          {"id": "ch_8f3a1c", "email": "maria.lopez@example.com", "description": "Team plan, September", "amount": 49.0, "created_at": "2026-09-03T09:12:41Z"},
+          {"id": "ch_2b7d90", "email": "maria.lopez@example.com", "description": "Team plan, October", "amount": 49.0, "created_at": "2026-10-03T09:12:44Z"},
+          {"id": "ch_c41e66", "email": "maria.lopez@example.com", "description": "Team plan, October", "amount": 49.0, "created_at": "2026-10-03T09:12:45Z"}
+        ]
+      }
+      ```
+    </Accordion>
 
     <Warning>
       The agent can read everything in `environment/`, so the reference answer must not go there. Put it in `tests/`, which Harbor only uploads when the verifier runs.
@@ -360,51 +267,66 @@ dependencies = [
     python /tests/verify.py
     ```
 
-    ```python evals/support/tasks/duplicate-charge/tests/verify.py
-    import json
-    import sqlite3
+    <Accordion title="tests/verify.py: the database check and the LLM judge">
+      ```python evals/support/tasks/duplicate-charge/tests/verify.py
+      import json
+      import sqlite3
 
-    from anthropic import Anthropic
+      from anthropic import Anthropic
 
-    expected = json.load(open("/tests/expected.json"))
-    result = json.load(open("/logs/agent/result.json"))
+      expected = json.load(open("/tests/expected.json"))
+      result = json.load(open("/logs/agent/result.json"))
 
-    if result["outcome"] != "completed":
-        print(f"agent run did not complete: {result}")
-        json.dump({"refund": 0, "reply": 0}, open("/logs/verifier/reward.json", "w"))
-        raise SystemExit(0)
+      if result["outcome"] != "completed":
+          print(f"agent run did not complete: {result}")
+          json.dump({"refund": 0, "reply": 0}, open("/logs/verifier/reward.json", "w"))
+          raise SystemExit(0)
 
-    reply = result["reply"]
+      reply = result["reply"]
 
-    # 1. Hard check: what actually happened in the database.
-    conn = sqlite3.connect("/srv/app/app.db")
-    count, total = conn.execute("SELECT COUNT(*), COALESCE(SUM(amount), 0) FROM refunds").fetchone()
-    refund_ok = count == expected["refund_count"] and total == expected["refund_amount"]
-    print(f"refunds: {count} totalling {total}")
+      # 1. Hard check: what actually happened in the database.
+      conn = sqlite3.connect("/srv/app/app.db")
+      count, total = conn.execute("SELECT COUNT(*), COALESCE(SUM(amount), 0) FROM refunds").fetchone()
+      refund_ok = count == expected["refund_count"] and total == expected["refund_amount"]
+      print(f"refunds: {count} totalling {total}")
 
-    # 2. LLM judge: is the reply to the customer any good?
-    verdict = Anthropic().messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=200,
-        messages=[{
-            "role": "user",
-            "content": (
-                f"A support agent wrote this reply to a customer:\n\n{reply}\n\n"
-                f"The reply should: {expected['reply_should']}\n"
-                'Answer with JSON only: {"pass": true or false, "reason": "..."}'
-            ),
-        }],
-    )
-    judge = json.loads(verdict.content[0].text)
-    print(f"judge: {judge}")
+      # 2. LLM judge: is the reply to the customer any good?
+      verdict = Anthropic().messages.create(
+          model="claude-haiku-4-5-20251001",
+          max_tokens=200,
+          # Structured output, so the verdict is always valid JSON.
+          output_config={
+              "format": {
+                  "type": "json_schema",
+                  "schema": {
+                      "type": "object",
+                      "properties": {"pass": {"type": "boolean"}, "reason": {"type": "string"}},
+                      "required": ["pass", "reason"],
+                      "additionalProperties": False,
+                  },
+              }
+          },
+          messages=[
+              {
+                  "role": "user",
+                  "content": (
+                      f"A support agent wrote this reply to a customer:\n\n{reply}\n\n"
+                      f"The reply should: {expected['reply_should']}"
+                  ),
+              }
+          ],
+      )
+      judge = json.loads(verdict.content[0].text)
+      print(f"judge: {judge}")
 
-    json.dump(
-        {"refund": int(refund_ok), "reply": int(judge["pass"])},
-        open("/logs/verifier/reward.json", "w"),
-    )
-    ```
+      json.dump(
+          {"refund": int(refund_ok), "reply": int(judge["pass"])},
+          open("/logs/verifier/reward.json", "w"),
+      )
+      ```
+    </Accordion>
 
-    Make the verifier executable with `chmod +x`.
+    Make `test.sh` executable with `chmod +x`.
 
     To add another case, copy the `duplicate-charge` directory, then change `case.json` and `seed.json` to describe a different ticket and account, and change `expected.json` to match. For example, a customer asking for a refund on a charge that should be declined expects `"refund_count": 0`.
   </Step>

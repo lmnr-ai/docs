@@ -3,7 +3,7 @@ title: Build an Agent Evaluation Harness That Matches Production
 sidebarTitle: Build a production harness
 ---
 
-The [quickstart](/agent-evaluations/quickstart)'s app is one module and a SQLite file. Real products have a database, a queue, background workers, and an LLM configured somewhere. This page covers how to run that whole stack inside a trial, so the [agent evaluation](/agent-evaluations/introduction) measures what your agent does in production. The driver and verifier that sit on top of it are covered in [Write the agent and verifier](/agent-evaluations/agent-and-verifier).
+The [quickstart](/agent-evaluations/quickstart)'s app is one module and a SQLite file. Real products have a database, a queue, background workers, and an LLM configured somewhere. This page covers how to run that whole stack inside a trial, so the [agent evaluation](/agent-evaluations/introduction) measures what your agent does in production. It then covers the two pieces of your code that run on top of the stack in every trial: the driver that calls your app, and the verifier that grades what it produced.
 
 ## Guidelines
 
@@ -45,18 +45,58 @@ No ports are published to the host. The driver calls the app from inside the con
 
 Some data is the same for every case, such as reference tables, a default organization and user, and config rows. Seed that in the image build or at startup. Data that reproduces one scenario, such as the conversation or the account state, goes in the task's `environment/` folder and is loaded by one shared seed script, so adding a case means copying a directory and never changing the harness.
 
+<Warning>
+The agent can read everything in a task's `environment/` folder. Keep reference answers in `tests/`, which Harbor only uploads when the verifier runs. An answer placed in `environment/` can end up in the agent's context, making the evaluation useless.
+</Warning>
+
 When creating a record involves encryption or validation, seed it through the app's own API and let the server do the work. For bulk fixtures, insert into the database directly.
 
 <Tip>
 Capable models can tell when they are being tested, and an agent that suspects it may behave differently from production. Make seed data look real. Shift timestamps so the latest event is close to now, generate ids the way the app does, use plausible names instead of `John Doe`, and keep harness files out of anything the agent can see (no `/eval` directory or `EVAL_MODE=1`).
 </Tip>
 
+## Drive the entry point
+
+The Harbor agent is a small `BaseInstalledAgent` subclass that runs commands inside the container, next to your app. The example's [`agent.py`](https://github.com/lmnr-ai/lmnr-python/blob/main/examples/agent-evals/evals/support/agent/agent.py) is a complete one, and Harbor's [custom agents](https://docs.harborframework.com/agents/custom-agents) guide documents the full interface (`lmnr-cli` pins Harbor 0.25.0). Keep its `run()` thin: start the stack, seed the case, and call the driver. A few things to know:
+
+- **Leave `install()` empty** and put dependencies in the image. `install()` runs in every trial.
+- **Read the model from `self.model_name`**, so `--model` works.
+- **Only import `harbor`, the standard library, and modules in the suite directory.** The class itself runs in the Harbor process, on your machine or in Laminar's orchestrator, and not inside the container.
+
+The driver is the script the agent runs inside the container, like the example's [`run_case.py`](https://github.com/lmnr-ai/lmnr-python/blob/main/examples/agent-evals/evals/image/shared/run_case.py). It triggers your entry point and waits for the result. For a synchronous entry point, such as an HTTP call or a function that returns, call it with a timeout and record the response. For an asynchronous one, such as a job on a queue, poll the status the app writes until it reaches a final state, up to a hard timeout.
+
+Turn the result into an outcome the verifier can grade, and write the details to `/logs/agent/result.json`. Use `failed` and `timeout` as their own outcomes, so a crash is never mistaken for a wrong answer from the model:
+
+```python
+try:
+    result = {"outcome": "completed", "reply": handle_ticket(case["ticket"])}
+except TimeoutError:
+    result = {"outcome": "timeout"}
+except Exception as e:
+    result = {"outcome": "failed", "error": repr(e)}
+```
+
+The driver should exit with `0` whenever it produced an outcome, including `failed` and `timeout`. A non-zero exit marks the trial as an error, which should mean the harness itself broke. Keep the driver's timeout shorter than the exec `timeout_sec`, and both shorter than the task's `[agent] timeout_sec`.
+
+## Grade the result
+
+`tests/test.sh` is the verifier's entry point, and it can call anything: a Python script that compares against `expected.json`, a rubric, or an LLM judge with its key in `[verifier.env]`. It writes the reward to `/logs/verifier/reward.txt`, or to `/logs/verifier/reward.json` to report several named rewards, which become separate scores in Laminar. A pass or fail check is the easiest place to start, and an LLM judge works well for things like the tone or completeness of a reply. Where possible, pair the judge with a hard check on the state the agent changed, as the example's [`verify.py`](https://github.com/lmnr-ai/lmnr-python/blob/main/examples/agent-evals/evals/support/tasks/duplicate-charge/tests/verify.py) does.
+
+Where the verifier runs is set by `environment_mode` under `[verifier]` in `task.toml`:
+
+<Frame caption="A shared verifier runs in the agent's container and sees everything. A separate verifier gets a fresh container with only the files the task hands over.">
+  <img
+    src="/images/agent-evaluations/verifier-modes.svg"
+    alt="Where the verifier runs. In shared mode, /tests/test.sh runs in the agent's container next to the app, its database, and /logs/agent/result.json. In separate mode, it runs in a fresh verifier container that receives only a database snapshot taken by verifier.collect commands and the result.json file listed in artifacts."
+  />
+</Frame>
+
+- **`"shared"`** (the default) runs in the agent's container after the agent finishes, and can read anything the run left behind, such as `/logs/agent/result.json` or the database.
+- **`"separate"`** runs in a fresh container that only sees what the task declares: files listed in the top-level `artifacts = [...]`, plus snapshots taken by `[[verifier.collect]]` commands before the environment is torn down. Use it when the verifier needs its own dependencies, or when it shouldn't be able to see the app's internals.
+
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Write the agent and verifier" href="/agent-evaluations/agent-and-verifier" icon="workflow">
-    Drive the entry point, wait for a terminal state, and grade the result.
-  </Card>
   <Card title="Capture the trajectory" href="/agent-evaluations/trajectories" icon="route">
     Get the app's LLM and tool calls into every trial's trace.
   </Card>
@@ -65,5 +105,8 @@ Capable models can tell when they are being tested, and an agent that suspects i
   </Card>
   <Card title="The evals folder" href="/agent-evaluations/evals-folder" icon="folder-tree">
     Reference for `lmnr.yaml`, `harbor.yaml`, `task.toml`, and secrets.
+  </Card>
+  <Card title="Troubleshooting" href="/agent-evaluations/troubleshooting" icon="life-buoy">
+    Fixes for stale images, missing env vars, and empty traces.
   </Card>
 </CardGroup>

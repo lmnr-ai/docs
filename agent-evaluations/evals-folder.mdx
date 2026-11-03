@@ -87,9 +87,9 @@ A full stack per case is heavy, so set `cpus` and `memory_mb`. Locally all trial
 
 An image name that isn't in `lmnr.yaml` is pulled from its registry, so public images work as-is.
 
-If a case really needs a different system setup, give it its own Dockerfile. Put the Dockerfile in the task's `environment/` folder and remove `docker_image` from that task's `task.toml`. While `docker_image` is set, Harbor uses the image and ignores the Dockerfile.
+### A Dockerfile for one task
 
-With its own Dockerfile, a task works a little differently. The `environment/` folder becomes the build context, and nothing is uploaded when the container starts, so the Dockerfile has to `COPY` the case data itself. It also can't start `FROM` an image that only exists in `lmnr.yaml`, so use a public base image instead.
+This is a rare case: most suites never need it. If one case needs a different system setup, put a Dockerfile in that task's `environment/` folder and remove `docker_image` from its `task.toml` (while `docker_image` is set, Harbor ignores the Dockerfile). The `environment/` folder then becomes the build context, and nothing is uploaded when the container starts. So the Dockerfile has to `COPY` the case data itself. It also has to start `FROM` a public base image, because images from `lmnr.yaml` aren't available to it.
 
 ## Secrets and env vars
 
@@ -122,8 +122,8 @@ Values come from your shell first, then from `.env.local` and `.env` in the curr
   <Card title="Build a production harness" href="/agent-evaluations/production-harness" icon="server">
     Run the real services, seed realistic data, and keep the eval honest.
   </Card>
-  <Card title="Write the agent and verifier" href="/agent-evaluations/agent-and-verifier" icon="workflow">
-    Drive the entry point, wait for a terminal state, and grade the result.
+  <Card title="Example project" href="https://github.com/lmnr-ai/lmnr-python/tree/main/examples/agent-evals" icon="github">
+    A complete `evals/` folder for a support agent, ready to run with `lmnr-cli eval run`.
   </Card>
   <Card title="Troubleshooting" href="/agent-evaluations/troubleshooting" icon="life-buoy">
     Fixes for stale images, missing env vars, and empty traces.

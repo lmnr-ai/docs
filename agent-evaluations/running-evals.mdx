@@ -5,17 +5,14 @@ sidebarTitle: Run evals with lmnr-cli
 
 `lmnr-cli eval run` runs every [agent evaluation](/agent-evaluations/introduction) suite in your `evals/` folder, locally on Docker or in Laminar's cloud sandboxes with `--remote`, and records each trial in Laminar with its trace.
 
-`lmnr-cli eval run` has two modes: local and remote. Run it from the repo root, since that is where it looks for `.env` and `.env.local`.
-
-In **local** mode, Harbor runs on your machine and every trial runs in a container on your own Docker. This is the mode to use while you iterate, so run it after every change.
-
-In **remote** mode (`--remote`), `lmnr-cli` builds or pulls the images, uploads only the layers Laminar doesn't have yet, starts the run in Laminar, and returns. Harbor runs in a Laminar sandbox, and every trial gets a sandbox of its own, so you can run many more trials at once. Results appear in the project's evaluations as trials finish. Harbor's job output stays in the sandbox, so if a trial only fails remotely, debug it from its trace in Laminar.
+Run it from the repo root, since that is where it looks for `.env` and `.env.local`. Use **local** mode while you iterate, after every change. Use **`--remote`** to run many more trials at once. `lmnr-cli` uploads the images, starts the run in Laminar, and returns. Results appear in the project as trials finish.
 
 | | Local | `--remote` |
 | --- | --- | --- |
 | Harbor runs | On your machine | In a Laminar sandbox |
 | Trials run | On your Docker | In Laminar sandboxes, one per trial |
 | You need | Docker, uv, `LMNR_PROJECT_API_KEY` | Docker, `lmnr-cli login` (or `LMNR_PROJECT_API_KEY` in CI) |
+| Harbor's job output | `evals/<suite>/jobs/` | Stays in the sandbox: debug from the trial's trace |
 
 <Note>
 Both modes need Docker on the machine where you run `lmnr-cli`, because that is where the images are built. In remote mode the built images are then uploaded.

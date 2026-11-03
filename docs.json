@@ -78,7 +78,6 @@
                   "agent-evaluations/running-evals",
                   "agent-evaluations/evals-folder",
                   "agent-evaluations/production-harness",
-                  "agent-evaluations/agent-and-verifier",
                   "agent-evaluations/trajectories",
                   "agent-evaluations/troubleshooting"
                 ]
@@ -287,6 +286,10 @@
     ]
   },
   "redirects": [
+    {
+      "source": "/agent-evaluations/agent-and-verifier",
+      "destination": "/agent-evaluations/production-harness#drive-the-entry-point"
+    },
     {
       "source": "/agent-versions/introduction",
       "destination": "/tracing/agent-versions"
