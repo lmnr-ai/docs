@@ -67,40 +67,43 @@
             ]
           },
           {
+            "group": "Evaluations",
+            "pages": [
+              {
+                "group": "Agent evaluations",
+                "pages": [
+                  "agent-evaluations/introduction",
+                  "agent-evaluations/quickstart",
+                  "agent-evaluations/concepts",
+                  "agent-evaluations/running-evals",
+                  "agent-evaluations/evals-folder",
+                  "agent-evaluations/production-harness",
+                  "agent-evaluations/trajectories",
+                  "agent-evaluations/troubleshooting"
+                ]
+              },
+              {
+                "group": "LLM evaluations",
+                "pages": [
+                  "evaluations/introduction",
+                  "evaluations/quickstart",
+                  "evaluations/concepts",
+                  "evaluations/comparing-runs",
+                  "evaluations/custom-rendering",
+                  "evaluations/datasets",
+                  "evaluations/manual-evaluation",
+                  "evaluations/self-hosted"
+                ]
+              }
+            ]
+          },
+          {
             "group": "Debugger",
             "pages": [
               "debugger/introduction",
               "debugger/setup",
               "debugger/process",
               "debugger/caching"
-            ]
-          },
-          {
-            "group": "Agent evaluations",
-            "pages": [
-              "agent-evaluations/introduction",
-              "agent-evaluations/quickstart",
-              "agent-evaluations/concepts",
-              "agent-evaluations/running-evals",
-              "agent-evaluations/evals-folder",
-              "agent-evaluations/production-harness",
-              "agent-evaluations/agent-and-verifier",
-              "agent-evaluations/trajectories",
-              "agent-evaluations/production-failures",
-              "agent-evaluations/troubleshooting"
-            ]
-          },
-          {
-            "group": "LLM evaluations",
-            "pages": [
-              "evaluations/introduction",
-              "evaluations/quickstart",
-              "evaluations/concepts",
-              "evaluations/comparing-runs",
-              "evaluations/custom-rendering",
-              "evaluations/datasets",
-              "evaluations/manual-evaluation",
-              "evaluations/self-hosted"
             ]
           },
           {
@@ -283,6 +286,10 @@
     ]
   },
   "redirects": [
+    {
+      "source": "/agent-evaluations/agent-and-verifier",
+      "destination": "/agent-evaluations/production-harness#drive-the-entry-point"
+    },
     {
       "source": "/agent-versions/introduction",
       "destination": "/tracing/agent-versions"

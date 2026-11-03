@@ -5,21 +5,28 @@ sidebarTitle: Concepts
 
 An [agent evaluation](/agent-evaluations/introduction) suite is a folder of [Harbor](https://www.harborframework.com) tasks with a small amount of Laminar configuration on top. This page defines each piece and shows where it appears in Laminar once you [run the suite](/agent-evaluations/running-evals).
 
-## The pieces of a suite
+<Frame caption="Each trial gets a fresh container from your image. The case data goes in when the container starts, the verifier's files only when it runs. The trajectory and the reward come back to Laminar.">
+  <img
+    src="/images/agent-evaluations/trial.svg"
+    alt="One agent evaluation trial. The task folder's task.toml picks the image, and its environment/ files are copied into a fresh container that holds your app and its services. The driver calls the app, and the app writes /logs/agent/result.json and /logs/agent/trajectory.json. The task's tests/ folder arrives only when the verifier runs; /tests/test.sh reads result.json and writes /logs/verifier/reward.json. Laminar records the trajectory as the trial's trace and the reward as its scores."
+  />
+</Frame>
+
+## What a suite is made of
 
 Harbor's vocabulary maps onto evals of your own product like this:
 
 - **Task (case)**: one scenario. A directory with a `task.toml` (which image, resources, timeouts), an `instruction.md`, the case's data in `environment/`, and a verifier in `tests/`. In production evals, tasks are variations of the same scenario: same code and services, different data.
-- **Environment**: the container a trial runs in. Here it's one prebuilt image holding your app, its services, and shared scripts. Each task's `environment/` files (for example `case.json`) are copied into it when the trial starts.
-- **Agent**: the code that drives the trial. In Harbor's original use this is a general-purpose agent like Claude Code. In agent evaluations of your product, it's a thin class that starts your stack, seeds the case, and calls your app's entry point. Your AI agent is the app under test, not the Harbor agent.
-- **Verifier**: `tests/test.sh`, run after the agent finishes. Any language, any grading method (exact match, a rubric, an LLM judge). It writes a reward, such as `1` or `0`, to `/logs/verifier/reward.txt`.
+- **Environment**: the container where a trial runs, started from one image that holds your app and its services. The task's `environment/` files are copied into it at the start.
+- **Agent**: the code that drives the trial. In Harbor's original use this is a general-purpose agent like Claude Code. In agent evaluations of your product, it's a thin class that starts your stack, seeds the case, and calls your app's entry point.
+- **Verifier**: `tests/test.sh`, run after the agent finishes. It grades the result with a check, a rubric, or an LLM judge, and writes a reward, such as `1` or `0`.
 - **Trial**: one attempt at one task: start the environment, run the agent, run the verifier. Run a task several times with `--n-attempts` to measure variance.
 - **Suite**: a directory in `evals/` with a `harbor.yaml` (a Harbor job config) and its tasks. Most projects have one suite.
-- **Trajectory**: what the app did during the trial: its LLM calls and tool calls. Laminar shows it under the trial's trace.
+- **Trajectory**: the app's LLM calls and tool calls during the trial, shown in the trial's trace.
 
 ## Where each piece shows up in Laminar
 
-Each concept maps to something in Laminar:
+Each concept maps to something you can open in Laminar:
 
 | Harbor | Laminar |
 | --- | --- |
