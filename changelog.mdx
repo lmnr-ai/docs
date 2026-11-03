@@ -4,6 +4,10 @@ title: Changelog
 
 New releases and improvements.
 
+## November 2026
+
+- **Self-hosted license keys and 30-day trial** - The Helm chart's Enterprise Edition images now run Signals, clusters, alerts, and Laminar Agent free for 30 days, then need a license key. Add the key in **Settings → License** or as `LMNR_LICENSE_KEY` in your Helm values; keys are verified offline. Tracing and every other open-source feature keep working without one. The images are licensed under the [Laminar Enterprise License](https://laminar.sh/policies/ee-license) (Elastic License 2.0). The self-hosted usage heartbeat now also reports license status and your users' email domains, and you can turn it off with `frontend.env.telemetryDisabled`. See [License and trial](/self-hosting/license).
+
 ## October 2026
 
 - **Agent versions from releases** - [Agent versions](/tracing/agent-versions) (beta) tracks every change to each agent's system prompt and tools as a version, with the models it ran on and how many traces it served. Laminar infers versions from your traces with no setup, and the SDKs now stamp a release (usually your git commit SHA) on every span for exact versions: pass `release` to `Laminar.initialize()`, set `LMNR_RELEASE`, or let the SDK pick it up from GitHub Actions, Vercel, Render, Railway, Heroku, Cloud Run, Fly.io, and other platforms. Each version lists the releases it shipped in, and every trace carries its agent versions in the `agent_versions` SQL column. Ships in `lmnr` 0.8.3 and `@lmnr-ai/lmnr` 0.8.53.

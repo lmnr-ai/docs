@@ -7,11 +7,11 @@ Laminar is [open-source](https://github.com/lmnr-ai/lmnr), so you can run the fu
 
 ## OSS, Helm, or Laminar Cloud
 
-There are four ways to run Laminar, and they differ only in how Signals and Slack are packaged and in the support that comes with them. Everything else (tracing, search, dashboards, evaluations, the debugger, AI features) is identical across all of them.
+There are four ways to run Laminar, and they differ only in how the enterprise features (Signals, clusters, alerts, Laminar Agent, and Slack) are packaged and in the support that comes with them. Everything else (tracing, search, dashboards, evaluations, the debugger, SQL-with-AI) is identical across all of them.
 
 - **OSS**: the [open-source images](https://github.com/lmnr-ai/lmnr), run with [Docker Compose](/self-hosting/docker-compose). Signals and the Slack integration are not included.
-- **Helm**: the [Kubernetes Helm chart](/self-hosting/kubernetes). The same platform as OSS, packaged for production Kubernetes.
-- **Helm + license**: the same chart with an [enterprise license key](mailto:founders@lmnr.ai). Unlocks Signals, signal event clusters, and email and Slack alerts, plus priority support and the option to have the Laminar team run your deployment for you (see [Managed self-hosting](#managed-self-hosting)).
+- **Helm**: the [Kubernetes Helm chart](/self-hosting/kubernetes), packaged for production Kubernetes. It runs the Enterprise Edition images, so every enterprise feature except Slack works free for a [30-day trial](/self-hosting/license). After the trial, it has the same features as OSS.
+- **Helm + license**: the same chart with an [enterprise license key](/self-hosting/license). Unlocks Signals, signal event clusters, email and Slack alerts, and Laminar Agent, plus priority support and the option to have the Laminar team run your deployment for you (see [Managed self-hosting](#managed-self-hosting)).
 - **Laminar Cloud**: the fully managed service at [laminar.sh](https://laminar.sh). Everything is included and kept up to date for you.
 
 ### Feature comparison
@@ -32,8 +32,8 @@ There are four ways to run Laminar, and they differ only in how Signals and Slac
 
 | AI features | OSS | Helm | Helm + license | Laminar Cloud |
 |---|:---:|:---:|:---:|:---:|
-| Chat-with-trace | ✓ | ✓ | ✓ | ✓ |
 | SQL-with-AI | ✓ | ✓ | ✓ | ✓ |
+| [Laminar Agent](/platform/laminar-agent) (chat-with-trace) | - | - | ✓ | ✓ |
 | [Signals](/signals/introduction) | - | - | ✓ | ✓ |
 | Signal event clusters | - | - | ✓ | ✓ |
 
@@ -56,7 +56,7 @@ There are four ways to run Laminar, and they differ only in how Signals and Slac
 | Operated for you by the Laminar team | - | - | ✓ | - |
 
 <Note>
-Signals, signal event clusters, and email and Slack alerts require an enterprise license key (`LMNR_LICENSE_KEY`). The Slack integration additionally uses Laminar Cloud's brokered OAuth flow. See the [configuration reference](/self-hosting/configuration#slack-notifications) for details.
+The **Helm** column shows a Helm install after its 30-day trial. During the trial, a Helm install also has every **Helm + license** feature except Slack. Signals, signal event clusters, alerts, and Laminar Agent need a trial or a license key; the Slack integration always needs a license key, because it uses Laminar Cloud's brokered OAuth flow. See [License and trial](/self-hosting/license) and the [Slack configuration](/self-hosting/configuration#slack-notifications).
 
 AI features (chat-with-trace, SQL-with-AI, and Signals) need an LLM provider key on self-hosted deployments; on Laminar Cloud they are included. See [AI features and LLM provider](/self-hosting/configuration#ai-features-and-llm-provider).
 </Note>
@@ -86,6 +86,7 @@ The Helm chart exposes every paid and optional feature through values in `lamina
 
 - **[AI features](/self-hosting/configuration#ai-features-and-llm-provider)**: chat-with-trace, SQL-with-AI, and Signals all run through one LLM provider (Gemini, OpenAI, or Bedrock).
 - **[Signals](/self-hosting/configuration#signals)**: natural-language outcome and failure extraction, on by default once an LLM key is set.
+- **[License and trial](/self-hosting/license)**: how the 30-day trial works and where to add a license key.
 - **[Slack notifications](/self-hosting/configuration#slack-notifications)**: brokered through Laminar Cloud with an enterprise license key.
 - **[OAuth login](/self-hosting/configuration#oauth-login)**: GitHub, Google, Azure AD, Okta, and Keycloak.
 - **[Storage](/self-hosting/configuration#storage)**, **[TLS and ingress](/self-hosting/configuration#tls-and-ingress)**, **[PII redaction](/self-hosting/configuration#pii-redaction)**, **[secrets management](/self-hosting/configuration#secrets-management)**, and **[image pinning](/self-hosting/configuration#container-images)**.
