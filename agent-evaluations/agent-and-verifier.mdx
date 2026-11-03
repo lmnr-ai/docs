@@ -41,6 +41,13 @@ The driver should exit with `0` whenever it produced an outcome, including `fail
 
 Where the verifier runs is set by `environment_mode` under `[verifier]` in `task.toml`:
 
+<Frame caption="A shared verifier runs in the agent's container and sees everything. A separate verifier gets a fresh container with only the files the task hands over.">
+  <img
+    src="/images/agent-evaluations/verifier-modes.svg"
+    alt="Where the verifier runs. In shared mode, /tests/test.sh runs in the agent's container next to the app, its database, and /logs/agent/result.json. In separate mode, it runs in a fresh verifier container that receives only a database snapshot taken by verifier.collect commands and the result.json file listed in artifacts."
+  />
+</Frame>
+
 - **`"shared"`** (the default) runs in the agent's container after the agent finishes, and can read anything the run left behind, such as `/logs/agent/result.json` or the database.
 - **`"separate"`** runs in a fresh container that only sees what the task declares: files listed in the top-level `artifacts = [...]`, plus snapshots taken by `[[verifier.collect]]` commands before the environment is torn down. Use it when the verifier needs its own dependencies, or when it shouldn't be able to see the app's internals.
 

@@ -5,6 +5,13 @@ sidebarTitle: Concepts
 
 An [agent evaluation](/agent-evaluations/introduction) suite is a folder of [Harbor](https://www.harborframework.com) tasks with a small amount of Laminar configuration on top. This page defines each piece and shows where it appears in Laminar once you [run the suite](/agent-evaluations/running-evals).
 
+<Frame caption="Each trial gets a fresh container from your image. The case data goes in when the container starts, the verifier's files only when it runs. The trajectory and the reward come back to Laminar.">
+  <img
+    src="/images/agent-evaluations/trial.svg"
+    alt="One agent evaluation trial. The task folder's task.toml picks the image, and its environment/ files are copied into a fresh container that holds your app and its services. The driver calls the app, and the app writes /logs/agent/result.json and /logs/agent/trajectory.json. The task's tests/ folder arrives only when the verifier runs; /tests/test.sh reads result.json and writes /logs/verifier/reward.json. Laminar records the trajectory as the trial's trace and the reward as its scores."
+  />
+</Frame>
+
 ## What a suite is made of
 
 Harbor's vocabulary maps onto evals of your own product like this:

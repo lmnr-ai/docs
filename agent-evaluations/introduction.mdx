@@ -9,10 +9,6 @@ Agent evaluations test your agent end to end, the way it runs in production. Eve
 Agent evaluations are in beta. The `lmnr-cli eval run` command, its flags, and the folder layout may still change.
 </Note>
 
-<Frame caption="A trial in Laminar: the score, the agent's model calls and commands, and the verifier output explaining the failure.">
-<img src="/images/integrations/harbor-evaluation.png" alt="Evaluation in Laminar with a failed trial's trace and verifier output open" />
-</Frame>
-
 ## Agent evaluations and LLM evaluations
 
 Laminar has two ways to evaluate, based on what the evaluations look at:
@@ -57,7 +53,7 @@ You keep an `evals/` folder next to your code. Each case in it is a Harbor task:
 3. Runs the verifier over what the app produced and records its reward as the score.
 4. Attaches the app's LLM and tool calls to the trial's trace, so you can investigate failing scores.
 
-Every run of a suite is charted in one evaluation group. [Concepts](/agent-evaluations/concepts) maps each piece to what you see in Laminar.
+Every run of a suite is charted in one evaluation group. [Concepts](/agent-evaluations/concepts) shows what goes into a trial's container and what comes out, and maps each piece to what you see in Laminar.
 
 ## Next steps
 
