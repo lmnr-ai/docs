@@ -148,15 +148,16 @@ Self-hosted Laminar sends a usage heartbeat to Laminar every 6 hours, once per d
 
 It never contains trace content or other customer data, and no IP address is stored. See the [privacy notice](https://laminar.sh/policies/privacy) for how Laminar uses it.
 
-To turn it off, set `telemetryDisabled` on the frontend:
+To turn it off, set `LAMINAR_TELEMETRY_DISABLED=true` on the frontend. With Helm, use `extraEnv`:
 
-```yaml
+```yaml laminar.yaml
 frontend:
-  env:
-    telemetryDisabled: "true"
+  extraEnv:
+    - name: LAMINAR_TELEMETRY_DISABLED
+      value: "true"
 ```
 
-On Docker Compose, set `LAMINAR_TELEMETRY_DISABLED=true` on the frontend container instead.
+On Docker Compose, set it on the frontend container.
 
 ## OAuth login
 
