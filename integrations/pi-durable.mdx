@@ -1,0 +1,271 @@
+---
+title: Pi Durable observability
+sidebarTitle: Pi Durable
+description: "Trace Pi Durable Harness runs: one trace per run with every model request and tool call, continued in the same trace after a restart."
+---
+
+import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
+
+## Overview
+
+Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. Trace, debug, and monitor every [Pi Durable](https://www.npmjs.com/package/@earendil-works/pi-durable) run, model request, and tool call with `laminarPiDurable()` from the Laminar TypeScript SDK. Self-host via Helm or use managed cloud.
+
+Pi Durable (`@earendil-works/pi-durable`) is a durable agent harness built on `@earendil-works/pi-ai`. Conversations, model turns, and tool calls are committed to storage before they run, so a process that dies mid-run picks the work up where it stopped when it reopens the storage. Laminar follows the run across that restart: the resumed work lands in the trace the run started in, even when it finishes in a different process.
+
+What Laminar captures:
+
+- One trace per run, with a root span (`pi.run`) holding the user's input and the final answer, or the error when the run ends unanswered.
+- An LLM span (`pi.chat`) per model request: the messages as sent, including the system prompt, the tool definitions, the model, token counts, and cost.
+- A TOOL span per tool call, named after the tool, with its arguments and result.
+- The session ID (Pi's per-conversation session ID by default), user ID, and metadata you set.
+
+<Note>
+This page covers the Pi Durable SDK you embed in your own app. To trace the Pi coding agent in your terminal, see [Pi](/integrations/pi).
+</Note>
+
+## Getting started
+
+<Steps>
+<Step title="Install">
+
+Requires `@lmnr-ai/lmnr >= 0.8.57` and `@earendil-works/pi-durable >= 1.4.0` (1.x).
+
+```bash
+npm install @lmnr-ai/lmnr @earendil-works/pi-durable @earendil-works/pi-ai @earendil-works/chord
+```
+
+</Step>
+<Step title="Set environment variables">
+
+```bash
+# .env
+LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+OPENAI_API_KEY=your-openai-api-key
+```
+
+<GetProjectApiKey />
+
+</Step>
+<Step title="Pass Laminar's telemetry and extension to the Harness">
+
+`laminarPiDurable()` returns two things, and the Harness needs both:
+
+- `lmnr.telemetry` goes to `Harness.open({ telemetry })`. It gives every run its trace and carries that trace across restarts.
+- `lmnr.extension` goes into the registry. Its hooks record the LLM and TOOL spans.
+
+```typescript {7,9,32-35,39,46,65}
+import 'dotenv/config';
+import { BACKGROUND_CONTEXT } from '@earendil-works/chord/context';
+import { createModels } from '@earendil-works/pi-ai/models';
+import { openaiProvider } from '@earendil-works/pi-ai/providers/openai';
+import { AssistantEntry, createRegistry, Harness } from '@earendil-works/pi-durable';
+import { openNodeSqliteStorage } from '@earendil-works/pi-durable/storage/sqlite/node';
+import { Laminar, laminarPiDurable } from '@lmnr-ai/lmnr';
+
+Laminar.initialize();
+
+const context = BACKGROUND_CONTEXT;
+
+const weather = {
+  name: 'get_weather',
+  description: 'Get the current weather in a city',
+  parameters: {
+    type: 'object',
+    properties: { city: { type: 'string' } },
+    required: ['city'],
+  },
+  execute: async ({ city }) => ({
+    output: [{ type: 'text', text: `Sunny and 22°C in ${city}` }],
+  }),
+};
+
+const app = {
+  name: 'weather-app',
+  tools: [weather],
+  sections: [{ key: 'preamble', render: () => 'You are a concise weather assistant.', tag: false }],
+};
+
+const lmnr = laminarPiDurable({
+  userId: 'user-123',
+  metadata: { app: 'weather-bot' },
+});
+
+const registry = createRegistry();
+registry.install(app);
+registry.install(lmnr.extension); // install Laminar's extension last
+
+const models = createModels();
+models.setProvider(openaiProvider());
+
+const harness = await Harness.open(
+  await openNodeSqliteStorage('./session.sqlite'),
+  { models, registry, telemetry: lmnr.telemetry },
+  context,
+);
+
+const root = await harness.root(context, {
+  agent: { model: { provider: 'openai', modelId: 'gpt-5.6-terra' } },
+});
+
+const submission = await root.submit(
+  { type: 'input', content: "What's the weather in Paris?" },
+  context,
+);
+const settled = await submission.wait(context);
+if (settled.status === 'done' && settled.type === 'input') {
+  const answer = await root.commit((tx) => tx.entry(AssistantEntry, settled.answer), context);
+  console.log(answer?.model?.[0]);
+}
+
+await harness.close(context);
+await Laminar.shutdown();
+```
+
+This run produces one trace: a `pi.run` root with the question and the answer, a `pi.chat` span for the request that called `get_weather`, a `get_weather` TOOL span, and a second `pi.chat` span for the final answer.
+
+</Step>
+</Steps>
+
+### Install order
+
+Install `lmnr.extension` after every other extension, or list it last. Pi passes each `beforeRequest` hook the messages as the hooks before it changed them, so the LLM span shows exactly what was sent to the model only when Laminar's hook runs last.
+
+If a conversation selects its extensions explicitly (`settings.extensions` or `configure({ extensions: [...] })`), include `lmnr.extension` in that list.
+
+The extension is named `@lmnr-ai/lmnr`. Pi's `registry.install` replaces an installed extension with the same name, so don't give one of your own extensions that name.
+
+## Instrument without code changes
+
+Instead of wiring `laminarPiDurable()` yourself, pass the pi-durable module to `Laminar.initialize()`. Laminar patches `Harness.open` so every Harness gets Laminar's telemetry, and installs the extension after the extensions already in its registry:
+
+```typescript
+import * as piDurable from '@earendil-works/pi-durable';
+import { Laminar } from '@lmnr-ai/lmnr';
+
+Laminar.initialize({ instrumentModules: { piDurable } });
+
+// Open Harnesses as usual, without telemetry or lmnr.extension.
+```
+
+- pi-durable is ESM-only, so Laminar can't patch it on import: pass the module as above, and call `Laminar.initialize()` before the first `Harness.open()`.
+- If you open the Harness with your own `telemetry`, Laminar leaves that Harness alone.
+- If the registry already has an extension named `@lmnr-ai/lmnr` that isn't Laminar's, Laminar logs a warning and leaves it in place.
+- With Next.js, add `@earendil-works/pi-durable` to `serverExternalPackages`. When it's bundled, the copy your app runs isn't the one Laminar patched.
+
+When in doubt, use `laminarPiDurable()`: it works in every setup.
+
+## Runs that resume after a restart
+
+When the process stops mid-run and a new one reopens the storage, Pi resumes the run from its last checkpoint. Laminar's telemetry stores the run's trace context with every submission and task Pi saves, so the resumed model requests and tool calls land in the original trace, and the trace has a single `pi.run` root whichever process finishes the run. Spans whose work was cut off by the stop are dropped rather than exported half done; a request that Pi sends again appears as a new `pi.chat` span.
+
+The new process needs `laminarPiDurable()` (or `instrumentModules`) on its Harness too.
+
+## Options
+
+```typescript
+const lmnr = laminarPiDurable({
+  sessionId: (conversation) => `chat-${conversation.conversationId}`, // default: Pi's session ID
+  userId: 'user-123',
+  metadata: { app: 'support-bot', env: 'prod' },
+  spanNames: { run: 'support.run', llm: 'support.llm' },
+  systemPrompt: 'You are a support assistant.',
+});
+```
+
+- `sessionId`: a string, or a function of the conversation. Defaults to the session ID Pi keeps per conversation, so every run in a conversation lands in the same Laminar [session](/tracing/structure/sessions).
+- `userId`: a string, or a function of the conversation.
+- `metadata`: key-value pairs added to every trace. See [metadata](/tracing/structure/metadata).
+- `spanNames`: `{ run, llm, tool }`. Defaults are `pi.run`, `pi.chat`, and the tool's name.
+- `systemPrompt`: report this system prompt on LLM spans instead of the one Pi sent.
+- `projectApiKey` or `tracerProvider`: send Pi Durable traces to a different project than the rest of your app. `Laminar.initialize()` isn't needed in that case; call `await lmnr.shutdown()` before the process exits.
+
+Pi's own `pi.durable.*` telemetry spans are not exported. Model requests run with tracing suppressed, so Laminar's OpenAI, Anthropic, and Google GenAI instrumentations don't record a second LLM span for the SDK calls pi-ai makes.
+
+## See what happened in a trace
+
+Open the trace in Laminar and the default view is the transcript: the user's input at the top, each model turn with a preview of its response, and every tool call with its arguments and result, in the order the run made them. Switch to tree view when you want span-by-span structure.
+
+More on the trace UX: [Viewing traces](/platform/viewing-traces).
+
+## Track outcomes with Signals
+
+Traces answer *what happened on this run*. **[Signals](/signals/introduction) answer the cross-trace question**: *how often does the agent answer without calling the tool it needs, which runs end unanswered, which conversations loop on the same tool call*. A Signal pairs a plain-language instruction with a JSON output schema. Laminar runs it live on new traces (Triggers) or backfills it across history (Jobs), and records a structured event every time it matches. From there you **[query](/platform/sql-editor), [cluster](/signals/clusters), and [alert](/signals/alerts)** on events across every trace.
+
+<Note>
+Every new project ships with a **Failure Detector** Signal that categorizes issues on any trace over 1000 tokens. Open it from the Signals sidebar to see events as soon as your Pi Durable traces arrive.
+</Note>
+
+## Query across traces
+
+- **[SQL editor](/platform/sql-editor)** for ad-hoc queries across traces, spans, signals, and evals.
+- **SQL API** for programmatic access from scripts and pipelines.
+- **[CLI](/platform/cli)** (`lmnr-cli sql query`) for terminal-driven queries.
+- **[MCP server](/platform/mcp)** to query Laminar from Claude Code, Cursor, or Codex.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="I see a pi.run root but no LLM or TOOL spans">
+    The telemetry is wired but the extension isn't. Install `lmnr.extension` in the registry, and include it in `settings.extensions` if the conversation selects its extensions explicitly.
+  </Accordion>
+  <Accordion title="I don't see any traces">
+    - Confirm `LMNR_PROJECT_API_KEY` is set in the process that opens the Harness.
+    - Pass `telemetry: lmnr.telemetry` to `Harness.open()`. Without it, Laminar's hooks log a warning once and record nothing.
+    - With `instrumentModules`, call `Laminar.initialize()` before the first `Harness.open()`, and check that your bundler doesn't bundle `@earendil-works/pi-durable`.
+    - Call `await Laminar.shutdown()` (or `await lmnr.shutdown()` with `projectApiKey`) before the process exits so buffered spans are sent.
+  </Accordion>
+  <Accordion title="LLM spans don't show a change another extension makes to the request">
+    Laminar's extension runs before that extension. Install `lmnr.extension` last.
+  </Accordion>
+  <Accordion title="Self-hosting Laminar">
+    Set `baseUrl` and the ports of your instance when initializing. For a local OSS deployment:
+
+    ```typescript
+    Laminar.initialize({
+      baseUrl: 'http://localhost',
+      httpPort: 8000,
+      grpcPort: 8001,
+    });
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Viewing traces" href="/platform/viewing-traces">
+    Read the transcript view, filter, and search across traces.
+  </Card>
+  <Card title="Signals" href="/signals/introduction">
+    Detect behaviors and failures across every run, then query, cluster, and alert on them.
+  </Card>
+  <Card title="SQL editor and MCP server" href="/platform/sql-editor">
+    Query traces programmatically from the UI, API, or your IDE.
+  </Card>
+  <Card title="Tracing structure" href="/tracing/structure/overview">
+    Sessions, user IDs, metadata, and tags.
+  </Card>
+</CardGroup>
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="Pi" href="/integrations/pi">
+    Trace the Pi coding agent in your terminal with a one-command extension install.
+  </Card>
+  <Card title="eve" href="/integrations/eve">
+    Trace eve durable agents, their turns, and tool calls.
+  </Card>
+  <Card title="Mastra" href="/integrations/mastra">
+    Trace Mastra agents and workflows in TypeScript.
+  </Card>
+  <Card title="Temporal" href="/integrations/temporal">
+    Trace agents that run as Temporal workflows.
+  </Card>
+  <Card title="Vercel AI SDK" href="/integrations/vercel-ai-sdk">
+    Trace `generateText` and `streamText` in Next.js and Node.js.
+  </Card>
+  <Card title="All integrations" href="/integrations">
+    Browse every provider, framework, coding agent, and browser integration Laminar supports.
+  </Card>
+</CardGroup>

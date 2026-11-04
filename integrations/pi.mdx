@@ -10,6 +10,10 @@ The Pi extension traces every local [Pi](https://pi.dev) coding agent session: e
 
 The extension subscribes to Pi's own lifecycle events, so spans open and close in process. Traces appear in Laminar while the run is still going.
 
+<Note>
+This page covers the Pi coding agent. To trace an app built on the Pi Durable SDK (`@earendil-works/pi-durable`), see [Pi Durable](/integrations/pi-durable).
+</Note>
+
 ## Install
 
 <Steps>
@@ -112,8 +116,8 @@ Set `LMNR_DEBUG=true` and each run also joins a Laminar [debugger session](/debu
   <Card title="Claude Agent SDK" href="/integrations/claude-agent-sdk">
     Trace Claude Agent SDK runs and their subagents.
   </Card>
-  <Card title="Anthropic" href="/integrations/anthropic">
-    Trace the Anthropic SDK directly in TypeScript and Python.
+  <Card title="Pi Durable" href="/integrations/pi-durable">
+    Trace Pi Durable Harness runs, model requests, and tool calls, across restarts.
   </Card>
   <Card title="All integrations" href="/integrations">
     Browse every provider, framework, coding agent, and browser integration Laminar supports.
