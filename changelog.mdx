@@ -6,7 +6,7 @@ New releases and improvements.
 
 ## November 2026
 
-- **Pi Durable instrumentation** - The TypeScript SDK now traces [Pi Durable](/integrations/pi-durable) (`@earendil-works/pi-durable`) Harnesses. Each run becomes one trace: a root span with the user's input and the final answer, an LLM span per model request with the system prompt, tool definitions, tokens, and cost, and a TOOL span per tool call. A run that resumes after a restart, even in a new process, continues in the trace it started in. Pass `laminarPiDurable()`'s telemetry and extension to the Harness, or `instrumentModules: { piDurable }` to `Laminar.initialize()`. Ships in `@lmnr-ai/lmnr` 0.8.57.
+- **Pi Durable instrumentation** - The TypeScript SDK now traces [Pi Durable](/integrations/pi-durable) (`@earendil-works/pi-durable`) Harnesses. Each run becomes one trace: a root span with the user's input and the final answer, an LLM span per model request with the system prompt, tool definitions, tokens, and cost, and a TOOL span per tool call. A run that resumes after a restart, even in a new process, continues in the trace it started in. Pass `instrumentModules: { piDurable }` to `Laminar.initialize()`, or wire `laminarPiDurable()` into the Harness to set a user ID, metadata, or span names. Ships in `@lmnr-ai/lmnr` 0.8.57.
 
 ## October 2026
 

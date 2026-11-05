@@ -8,7 +8,7 @@ import GetProjectApiKey from '/snippets/get-project-api-key.mdx';
 
 ## Overview
 
-Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. Trace, debug, and monitor every [Pi Durable](https://www.npmjs.com/package/@earendil-works/pi-durable) run, model request, and tool call with `laminarPiDurable()` from the Laminar TypeScript SDK. Self-host via Helm or use managed cloud.
+Laminar is an open-source, OpenTelemetry-native observability platform for AI agents. Trace, debug, and monitor every [Pi Durable](https://www.npmjs.com/package/@earendil-works/pi-durable) run, model request, and tool call with one `Laminar.initialize()` call in the Laminar TypeScript SDK. Self-host via Helm or use managed cloud.
 
 Pi Durable (`@earendil-works/pi-durable`) is a durable agent harness built on `@earendil-works/pi-ai`. Conversations, model turns, and tool calls are committed to storage before they run, so a process that dies mid-run picks the work up where it stopped when it reopens the storage. Laminar follows the run across that restart: the resumed work lands in the trace the run started in, even when it finishes in a different process.
 
@@ -46,23 +46,21 @@ OPENAI_API_KEY=your-openai-api-key
 <GetProjectApiKey />
 
 </Step>
-<Step title="Pass Laminar's telemetry and extension to the Harness">
+<Step title="Initialize Laminar with the pi-durable module">
 
-`laminarPiDurable()` returns two things, and the Harness needs both:
+Pass the pi-durable module to `Laminar.initialize()` before the first `Harness.open()`. Laminar patches `Harness.open`, so every Harness you open gets Laminar's telemetry, and Laminar's extension is installed after the extensions already in its registry. The rest of your code stays as it is.
 
-- `lmnr.telemetry` goes to `Harness.open({ telemetry })`. It gives every run its trace and carries that trace across restarts.
-- `lmnr.extension` goes into the registry. Its hooks record the LLM and TOOL spans.
-
-```typescript {7,9,32-35,39,46,65}
+```typescript {5,8,10,60}
 import 'dotenv/config';
 import { BACKGROUND_CONTEXT } from '@earendil-works/chord/context';
 import { createModels } from '@earendil-works/pi-ai/models';
 import { openaiProvider } from '@earendil-works/pi-ai/providers/openai';
+import * as piDurable from '@earendil-works/pi-durable';
 import { AssistantEntry, createRegistry, Harness } from '@earendil-works/pi-durable';
 import { openNodeSqliteStorage } from '@earendil-works/pi-durable/storage/sqlite/node';
-import { Laminar, laminarPiDurable } from '@lmnr-ai/lmnr';
+import { Laminar } from '@lmnr-ai/lmnr';
 
-Laminar.initialize();
+Laminar.initialize({ instrumentModules: { piDurable } });
 
 const context = BACKGROUND_CONTEXT;
 
@@ -85,21 +83,15 @@ const app = {
   sections: [{ key: 'preamble', render: () => 'You are a concise weather assistant.', tag: false }],
 };
 
-const lmnr = laminarPiDurable({
-  userId: 'user-123',
-  metadata: { app: 'weather-bot' },
-});
-
 const registry = createRegistry();
 registry.install(app);
-registry.install(lmnr.extension); // install Laminar's extension last
 
 const models = createModels();
 models.setProvider(openaiProvider());
 
 const harness = await Harness.open(
   await openNodeSqliteStorage('./session.sqlite'),
-  { models, registry, telemetry: lmnr.telemetry },
+  { models, registry },
   context,
 );
 
@@ -126,41 +118,47 @@ This run produces one trace: a `pi.run` root with the question and the answer, a
 </Step>
 </Steps>
 
-### Install order
+pi-durable is ESM-only, so Laminar can't patch it when it's imported: pass the module to `instrumentModules` as above. A few cases where the patch steps aside:
 
-Install `lmnr.extension` after every other extension, or list it last. Pi passes each `beforeRequest` hook the messages as the hooks before it changed them, so the LLM span shows exactly what was sent to the model only when Laminar's hook runs last.
-
-If a conversation selects its extensions explicitly (`settings.extensions` or `configure({ extensions: [...] })`), include `lmnr.extension` in that list.
-
-The extension is named `@lmnr-ai/lmnr`. Pi's `registry.install` replaces an installed extension with the same name, so don't give one of your own extensions that name.
-
-## Instrument without code changes
-
-Instead of wiring `laminarPiDurable()` yourself, pass the pi-durable module to `Laminar.initialize()`. Laminar patches `Harness.open` so every Harness gets Laminar's telemetry, and installs the extension after the extensions already in its registry:
-
-```typescript
-import * as piDurable from '@earendil-works/pi-durable';
-import { Laminar } from '@lmnr-ai/lmnr';
-
-Laminar.initialize({ instrumentModules: { piDurable } });
-
-// Open Harnesses as usual, without telemetry or lmnr.extension.
-```
-
-- pi-durable is ESM-only, so Laminar can't patch it on import: pass the module as above, and call `Laminar.initialize()` before the first `Harness.open()`.
-- If you open the Harness with your own `telemetry`, Laminar leaves that Harness alone.
+- If you open a Harness with your own `telemetry`, Laminar leaves that Harness alone.
 - If the registry already has an extension named `@lmnr-ai/lmnr` that isn't Laminar's, Laminar logs a warning and leaves it in place.
 - With Next.js, add `@earendil-works/pi-durable` to `serverExternalPackages`. When it's bundled, the copy your app runs isn't the one Laminar patched.
 
-When in doubt, use `laminarPiDurable()`: it works in every setup.
+If a conversation selects its extensions explicitly (`settings.extensions` or `configure({ extensions: [...] })`), Laminar's extension isn't in that list, so its LLM and TOOL spans are missing. Use `laminarPiDurable()` below and include `lmnr.extension` in the list.
 
-## Runs that resume after a restart
+## Set a user ID, metadata, or span names with laminarPiDurable()
 
-When the process stops mid-run and a new one reopens the storage, Pi resumes the run from its last checkpoint. Laminar's telemetry stores the run's trace context with every submission and task Pi saves, so the resumed model requests and tool calls land in the original trace, and the trace has a single `pi.run` root whichever process finishes the run. Spans whose work was cut off by the stop are dropped rather than exported half done; a request that Pi sends again appears as a new `pi.chat` span.
+`instrumentModules` traces every Harness with default settings. To set a user ID or metadata on your traces, rename spans, or control where Laminar's extension goes, wire Laminar in yourself with `laminarPiDurable()`. It returns two things, and the Harness needs both:
 
-The new process needs `laminarPiDurable()` (or `instrumentModules`) on its Harness too.
+- `lmnr.telemetry` goes to `Harness.open({ telemetry })`. It gives every run its trace and carries that trace across restarts.
+- `lmnr.extension` goes into the registry. Its hooks record the LLM and TOOL spans.
 
-## Options
+```typescript {1,3-6,10,14}
+import { Laminar, laminarPiDurable } from '@lmnr-ai/lmnr';
+
+const lmnr = laminarPiDurable({
+  userId: 'user-123',
+  metadata: { app: 'weather-bot' },
+});
+
+const registry = createRegistry();
+registry.install(app);
+registry.install(lmnr.extension); // install Laminar's extension last
+
+const harness = await Harness.open(
+  await openNodeSqliteStorage('./session.sqlite'),
+  { models, registry, telemetry: lmnr.telemetry },
+  context,
+);
+```
+
+Call `Laminar.initialize()` as usual, without `instrumentModules`. If you keep `instrumentModules` too, Laminar sees its own telemetry on this Harness and doesn't patch it again.
+
+Install `lmnr.extension` after every other extension, or list it last. Pi passes each `beforeRequest` hook the messages as the hooks before it changed them, so the LLM span shows exactly what was sent to the model only when Laminar's hook runs last.
+
+The extension is named `@lmnr-ai/lmnr`. Pi's `registry.install` replaces an installed extension with the same name, so don't give one of your own extensions that name.
+
+### Options
 
 ```typescript
 const lmnr = laminarPiDurable({
@@ -178,6 +176,12 @@ const lmnr = laminarPiDurable({
 - `spanNames`: `{ run, llm, tool }`. Defaults are `pi.run`, `pi.chat`, and the tool's name.
 - `systemPrompt`: report this system prompt on LLM spans instead of the one Pi sent.
 - `projectApiKey` or `tracerProvider`: send Pi Durable traces to a different project than the rest of your app. `Laminar.initialize()` isn't needed in that case; call `await lmnr.shutdown()` before the process exits.
+
+## Runs that resume after a restart
+
+When the process stops mid-run and a new one reopens the storage, Pi resumes the run from its last checkpoint. Laminar's telemetry stores the run's trace context with every submission and task Pi saves, so the resumed model requests and tool calls land in the original trace, and the trace has a single `pi.run` root whichever process finishes the run. Spans whose work was cut off by the stop are dropped rather than exported half done; a request that Pi sends again appears as a new `pi.chat` span.
+
+The new process needs Laminar on its Harness too, through `instrumentModules` or `laminarPiDurable()`.
 
 Pi's own `pi.durable.*` telemetry spans are not exported. Model requests run with tracing suppressed, so Laminar's OpenAI, Anthropic, and Google GenAI instrumentations don't record a second LLM span for the SDK calls pi-ai makes.
 
@@ -205,17 +209,19 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="I see a pi.run root but no LLM or TOOL spans">
-    The telemetry is wired but the extension isn't. Install `lmnr.extension` in the registry, and include it in `settings.extensions` if the conversation selects its extensions explicitly.
-  </Accordion>
   <Accordion title="I don't see any traces">
     - Confirm `LMNR_PROJECT_API_KEY` is set in the process that opens the Harness.
-    - Pass `telemetry: lmnr.telemetry` to `Harness.open()`. Without it, Laminar's hooks log a warning once and record nothing.
     - With `instrumentModules`, call `Laminar.initialize()` before the first `Harness.open()`, and check that your bundler doesn't bundle `@earendil-works/pi-durable`.
+    - With `laminarPiDurable()`, pass `telemetry: lmnr.telemetry` to `Harness.open()`. Without it, Laminar's hooks log a warning once and record nothing.
     - Call `await Laminar.shutdown()` (or `await lmnr.shutdown()` with `projectApiKey`) before the process exits so buffered spans are sent.
   </Accordion>
+  <Accordion title="I see a pi.run root but no LLM or TOOL spans">
+    Laminar's telemetry is on the Harness but its extension doesn't run.
+    - If the conversation selects its extensions explicitly (`settings.extensions` or `configure({ extensions: [...] })`), switch to `laminarPiDurable()` and include `lmnr.extension` in that list.
+    - With `laminarPiDurable()`, check that `lmnr.extension` is installed in the registry.
+  </Accordion>
   <Accordion title="LLM spans don't show a change another extension makes to the request">
-    Laminar's extension runs before that extension. Install `lmnr.extension` last.
+    Laminar's extension runs before that extension. With `instrumentModules`, install your extensions before `Harness.open()`. With `laminarPiDurable()`, install `lmnr.extension` last.
   </Accordion>
   <Accordion title="Self-hosting Laminar">
     Set `baseUrl` and the ports of your instance when initializing. For a local OSS deployment:
