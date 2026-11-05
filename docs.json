@@ -169,6 +169,7 @@
               "integrations/langchain",
               "integrations/deepagents",
               "integrations/mastra",
+              "integrations/pi-durable",
               "integrations/pydantic-ai",
               "integrations/microsoft-agent-framework",
               "integrations/openai-agents-sdk",

@@ -4,6 +4,10 @@ title: Changelog
 
 New releases and improvements.
 
+## November 2026
+
+- **Pi Durable instrumentation** - The TypeScript SDK now traces [Pi Durable](/integrations/pi-durable) (`@earendil-works/pi-durable`) Harnesses. Each run becomes one trace: a root span with the user's input and the final answer, an LLM span per model request with the system prompt, tool definitions, tokens, and cost, and a TOOL span per tool call. A run that resumes after a restart, even in a new process, continues in the trace it started in. Pass `instrumentModules: { piDurable }` to `Laminar.initialize()`, or wire `laminarPiDurable()` into the Harness to set a user ID, metadata, or span names. Ships in `@lmnr-ai/lmnr` 0.8.57.
+
 ## October 2026
 
 - **Agent versions from releases** - [Agent versions](/tracing/agent-versions) (beta) tracks every change to each agent's system prompt and tools as a version, with the models it ran on and how many traces it served. Laminar infers versions from your traces with no setup, and the SDKs now stamp a release (usually your git commit SHA) on every span for exact versions: pass `release` to `Laminar.initialize()`, set `LMNR_RELEASE`, or let the SDK pick it up from GitHub Actions, Vercel, Render, Railway, Heroku, Cloud Run, Fly.io, and other platforms. Each version lists the releases it shipped in, and every trace carries its agent versions in the `agent_versions` SQL column. Ships in `lmnr` 0.8.3 and `@lmnr-ai/lmnr` 0.8.53.
