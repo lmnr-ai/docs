@@ -158,6 +158,7 @@
               "integrations/cohere",
               "integrations/litellm",
               "integrations/openrouter",
+              "integrations/popnow",
               "integrations/typesafe"
             ]
           },

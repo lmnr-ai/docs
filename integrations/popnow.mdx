@@ -1,0 +1,121 @@
+---
+title: PopNow observability
+sidebarTitle: PopNow
+description: "Trace Claude, GPT, Gemini, DeepSeek and Kimi calls made through PopNow's OpenAI-compatible API with prompts, token usage, and latency in Laminar."
+---
+
+## Overview
+
+[PopNow](https://popnow.ai/api) is a pay-as-you-go API that serves Claude, GPT, Gemini, DeepSeek, Kimi and other chat models through one OpenAI-compatible endpoint. Because PopNow works with the official OpenAI SDK, Laminar's OpenAI instrumentation traces every call: point the client at PopNow and keep the rest of your code.
+
+## Getting Started
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ### 1. Install Laminar and OpenAI
+
+    ```bash
+    npm install @lmnr-ai/lmnr@latest openai@latest
+    ```
+
+    ### 2. Set up your environment variables
+
+    Create an API key in the [PopNow API console](https://popnow.ai/api/console/keys), then store your keys in a `.env` file:
+
+    ```bash
+    # .env file
+    LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+    POPNOW_API_KEY=your-popnow-api-key
+    ```
+
+    ### 3. Initialize Laminar
+
+    ```typescript
+    import { Laminar } from '@lmnr-ai/lmnr';
+    import OpenAI from 'openai';
+    import 'dotenv/config';
+
+    Laminar.initialize({
+      instrumentModules: { OpenAI: OpenAI }
+    });
+
+    const client = new OpenAI.OpenAI({
+      apiKey: process.env.POPNOW_API_KEY,
+      baseURL: 'https://api.popnow.ai/v1',
+    });
+    ```
+
+    ### 4. Call a PopNow model
+
+    ```typescript
+    const response = await client.chat.completions.create({
+      model: "anthropic/claude-sonnet-5.5/chat",
+      messages: [{ role: "user", content: "Hello, how are you?" }],
+    });
+
+    console.log(response.choices[0].message.content);
+    ```
+  </Tab>
+  <Tab title="Python">
+    ### 1. Install Laminar and OpenAI
+
+    ```bash
+    pip install -U 'lmnr[all]' openai python-dotenv
+    ```
+
+    ### 2. Set up your environment variables
+
+    Create an API key in the [PopNow API console](https://popnow.ai/api/console/keys), then store your keys in a `.env` file:
+
+    ```bash
+    # .env file
+    LMNR_PROJECT_API_KEY=your-laminar-project-api-key
+    POPNOW_API_KEY=your-popnow-api-key
+    ```
+
+    ### 3. Initialize Laminar
+
+    ```python
+    from lmnr import Laminar
+    from openai import OpenAI
+    import os
+    from dotenv import load_dotenv
+
+    load_dotenv()
+
+    Laminar.initialize()
+
+    client = OpenAI(
+        api_key=os.environ["POPNOW_API_KEY"],
+        base_url="https://api.popnow.ai/v1",
+    )
+    ```
+
+    ### 4. Call a PopNow model
+
+    ```python
+    response = client.chat.completions.create(
+        model="anthropic/claude-sonnet-5.5/chat",
+        messages=[{"role": "user", "content": "Hello, how are you?"}],
+    )
+
+    print(response.choices[0].message.content)
+    ```
+  </Tab>
+</Tabs>
+
+PopNow model IDs follow the `<lab>/<model>/chat` format, for example `openai/gpt-6.1-terra/chat` or `deepseek/v4-flash/chat`. The [PopNow chat API docs](https://popnow.ai/docs/chat) list every model and price.
+
+## Related integrations
+
+<CardGroup cols={2}>
+  <Card title="OpenAI" href="/integrations/openai">
+    Trace the OpenAI SDK directly in TypeScript and Python.
+  </Card>
+  <Card title="OpenRouter" href="/integrations/openrouter">
+    Trace OpenRouter requests with model and cost attribution.
+  </Card>
+  <Card title="All integrations" href="/integrations">
+    Browse every provider, framework, coding agent, and browser integration Laminar supports.
+  </Card>
+</CardGroup>
