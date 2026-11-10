@@ -8,19 +8,19 @@ Laminar meters two things per workspace: **data ingestion**, the trace data your
 Configure both from **Settings > Usage**, under **Workspace settings**. The top of the page shows the estimated bill for the current billing cycle, how many days are left before it resets, and a daily chart per meter. **Email warnings** and **Hard limits** are below.
 
 <Note>
-  Usage warnings and hard limits are available on Laminar Cloud for workspace owners on the Starter, Pro, and Enterprise plans. The Free plan has fixed limits that you can't change: see [Free plan limits](#free-plan-limits).
+  Usage warnings and hard limits are available on Laminar Cloud for workspace owners on the Pro, Scale, and Enterprise plans. The Free plan has fixed limits that you can't change: see [Free plan limits](#free-plan-limits).
 </Note>
 
 ## What counts toward usage
 
 | Meter | Unit | Counts | Included |
 |---|---|---|---|
-| **Data ingestion** | GB | Trace data ingested by every project in the workspace this billing cycle. | 1 GB on Free, 3 GB on Starter, 10 GB on Pro. Paid plans bill usage above that at the overage rate on the [pricing page](https://laminar.sh/pricing). |
+| **Data ingestion** | GB | Trace data ingested by every project in the workspace this billing cycle. | 1 GB on Free, 3 GB on Pro, 10 GB on Scale. Paid plans bill usage above that at the overage rate on the [pricing page](https://laminar.sh/pricing). |
 | **Signals usage** | USD | The token cost of every Signal run this billing cycle: live triggers and backfills. | Every new workspace gets a one-time \$5 Signals credit, on any plan. Paid plans bill usage beyond the credit per token. |
 
 The estimated bill on the Usage page shows how much of the included data and of the one-time credit is left.
 
-Thresholds and limits always count **total usage from zero** for the billing cycle. Included data and the one-time Signals credit don't shift them: a 10 GB warning on Pro fires at 10 GB of total ingestion, not at 10 GB beyond the included amount.
+Thresholds and limits always count **total usage from zero** for the billing cycle. Included data and the one-time Signals credit don't shift them: a 10 GB warning on Scale fires at 10 GB of total ingestion, not at 10 GB beyond the included amount.
 
 ## Email warnings
 
@@ -54,7 +54,7 @@ Each threshold on a meter must be unique. To remove a warning, click the **X** o
 
 When usage crosses a threshold, every workspace owner gets an email with a subject like **Usage warning: Signals cost reached \$50.00 – Acme** or **Usage warning: Data ingestion reached 8.00 GB – Acme**. The email shows the threshold, current usage, and plan, and links to the Usage page through **View usage**.
 
-When you upgrade to Starter or Pro, Laminar adds a data warning at the plan's included amount: 3 GB on Starter, 10 GB on Pro. That email says the workspace has used all data included in the plan and that additional usage is now billed at the overage rate. Starter workspaces also get warnings at 40 GB of data and \$100 of Signals usage, so a large overage doesn't build up unnoticed. You can remove or change any of these like any other warning.
+When you upgrade to Pro or Scale, Laminar adds a data warning at the plan's included amount: 3 GB on Pro, 10 GB on Scale. That email says the workspace has used all data included in the plan and that additional usage is now billed at the overage rate. Pro workspaces also get warnings at 40 GB of data and \$100 of Signals usage, so a large overage doesn't build up unnoticed. You can remove or change any of these like any other warning.
 
 A warning only notifies. To stop usage, set a hard limit.
 
@@ -62,11 +62,11 @@ A warning only notifies. To stop usage, set a hard limit.
 
 A hard limit caps usage for the billing cycle. **When usage reaches the limit, Laminar rejects new data ingestion or new Signal runs until the next billing cycle starts, or until you raise or remove the limit.**
 
-<Frame caption="Settings > Usage > Hard limits: a 25 GB data cap on a Pro workspace and a 100 USD Signals cap">
+<Frame caption="Settings > Usage > Hard limits: a 25 GB data cap on a Scale workspace and a 100 USD Signals cap">
   <img src="/images/usage/hard-limits.png" alt="Hard limits section with Data ingestion set to 25 GB, labeled Included: 10 GB, and Signals usage set to 100 USD with a remove button" />
 </Frame>
 
-Paid plans have no hard limit by default, except Starter, which starts with a \$100 Signals usage limit. Without a limit, usage above the included amount is billed at the overage rate.
+Paid plans have no hard limit by default, except Pro, which starts with a \$100 Signals usage limit. Without a limit, usage above the included amount is billed at the overage rate.
 
 ### Set a limit
 
@@ -79,7 +79,7 @@ To remove a limit, click the red **X** next to the field. Changes take effect wi
 
 A hard limit counts from zero, like a warning. If you set a data limit below your plan's included amount, ingestion stops before you've used all the data your plan covers. The form tells you when that's the case:
 
-<Frame caption="A 5 GB data limit on Pro is below the 10 GB the plan includes, so the form notes that covered usage will be blocked">
+<Frame caption="A 5 GB data limit on Scale is below the 10 GB the plan includes, so the form notes that covered usage will be blocked">
   <img src="/images/usage/hard-limit-below-included.png" alt="Data ingestion hard limit field set to 5 GB with a Save button and a note that the limit is below the 10 GB included in the plan" />
 </Frame>
 

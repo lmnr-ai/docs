@@ -6,6 +6,7 @@ New releases and improvements.
 
 ## November 2026
 
+- **Pro and Scale plans** - The paid plans have new names: Starter is now **Pro** and Pro is now **Scale**, with the same base prices and included data. Pro now includes 3 months of data access and bills data above its included 3 GB at \$1.45 per GB. Scale includes 1 year of data access and bills data above its included 10 GB at \$0.45 per GB. See the [pricing page](https://laminar.sh/pricing) and [Usage limits](/platform/usage-limits).
 - **Pi Durable instrumentation** - The TypeScript SDK now traces [Pi Durable](/integrations/pi-durable) (`@earendil-works/pi-durable`) Harnesses. Each run becomes one trace: a root span with the user's input and the final answer, an LLM span per model request with the system prompt, tool definitions, tokens, and cost, and a TOOL span per tool call. A run that resumes after a restart, even in a new process, continues in the trace it started in. Pass `instrumentModules: { piDurable }` to `Laminar.initialize()`, or wire `laminarPiDurable()` into the Harness to set a user ID, metadata, or span names. Ships in `@lmnr-ai/lmnr` 0.8.57.
 
 ## October 2026
