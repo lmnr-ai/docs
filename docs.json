@@ -132,6 +132,7 @@
               "platform/custom-model-costs",
               "platform/usage-limits",
               "platform/pii-redaction",
+              "platform/audit-log",
               "platform/dashboards",
               "queues/quickstart",
               "platform/llm-profiles",

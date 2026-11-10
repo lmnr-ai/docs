@@ -6,6 +6,7 @@ New releases and improvements.
 
 ## November 2026
 
+- **Audit log** - Workspace owners and admins can see who changed what in a workspace, and who read trace data and how, in **Settings > Audit log**. Every event records the user or API key, the resource, the source (UI, API, CLI, MCP, or Laminar Agent), and whether it succeeded, with SQL queries recorded alongside their text. Filter by any column and export to CSV. Available on Pro and Enterprise on Laminar Cloud, and on self-hosted deployments. See [Audit log](/platform/audit-log).
 - **Pi Durable instrumentation** - The TypeScript SDK now traces [Pi Durable](/integrations/pi-durable) (`@earendil-works/pi-durable`) Harnesses. Each run becomes one trace: a root span with the user's input and the final answer, an LLM span per model request with the system prompt, tool definitions, tokens, and cost, and a TOOL span per tool call. A run that resumes after a restart, even in a new process, continues in the trace it started in. Pass `instrumentModules: { piDurable }` to `Laminar.initialize()`, or wire `laminarPiDurable()` into the Harness to set a user ID, metadata, or span names. Ships in `@lmnr-ai/lmnr` 0.8.57.
 
 ## October 2026
