@@ -275,7 +275,7 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
   <Accordion title="I don't see any traces in Laminar">
     - Confirm `LMNR_PROJECT_API_KEY` is set in the same process that runs the agent.
     - The bridge is opt-in. Installing `langfuse` doesn't enable it: pass `bridges=["langfuse"]` (Python) or `bridges: ["langfuse"]` (TypeScript) to `Laminar.initialize()`.
-    - Check the supported versions in the note at the top of this page. Laminar logs a warning when the installed Langfuse SDK is too old for the bridge.
+    - Check the supported versions in the note at the top of this page. In Python, Laminar logs a warning when the installed Langfuse SDK is too old for the bridge.
     - In TypeScript, Langfuse only records spans when an OpenTelemetry tracer provider is set up, for example the `NodeSDK` with `LangfuseSpanProcessor` above.
   </Accordion>
   <Accordion title="The same call shows up twice in Laminar">
