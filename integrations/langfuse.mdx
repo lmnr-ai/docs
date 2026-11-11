@@ -21,8 +21,12 @@ Laminar is an open-source, OpenTelemetry-native observability platform for AI ag
 - Correct nesting when Laminar spans and Langfuse spans call each other.
 
 <Note>
-Supported versions: Python `langfuse` 3.x, 4.x, and 5.x with `lmnr` 0.9.0 or later, and the TypeScript `@langfuse/*` packages 4.x, 5.x, and 6.x with the latest `@lmnr-ai/lmnr`. The legacy `langfuse` npm package and Python `langfuse` 2.x are not OpenTelemetry-based and are not supported.
+Supported versions: Python `langfuse` 3.x, 4.x, and 5.x with `lmnr` 0.9.0 or later, and the TypeScript `@langfuse/*` packages 4.x, 5.x, and 6.x with `@lmnr-ai/lmnr` 0.9.1 or later. The legacy `langfuse` npm package and Python `langfuse` 2.x are not OpenTelemetry-based and are not supported.
 </Note>
+
+<Tip>
+**Tracing the Vercel AI SDK with Langfuse?** The bridge doesn't forward AI SDK calls. Add [Laminar's AI SDK integration](/integrations/vercel-ai-sdk) next to your Langfuse setup instead, as shown in [Vercel AI SDK](#vercel-ai-sdk-typescript) below.
+</Tip>
 
 ## Getting started
 
@@ -35,7 +39,7 @@ Supported versions: Python `langfuse` 3.x, 4.x, and 5.x with `lmnr` 0.9.0 or lat
 You already have the Langfuse packages and an OpenTelemetry setup with `LangfuseSpanProcessor`. Add Laminar:
 
 ```bash
-npm install @lmnr-ai/lmnr
+npm install "@lmnr-ai/lmnr@>=0.9.1"
 ```
 
 </Step>
@@ -54,18 +58,21 @@ export LANGFUSE_SECRET_KEY=sk-lf-...
 </Step>
 <Step title="Initialize Laminar with the Langfuse bridge">
 
-Call `Laminar.initialize()` with `bridges: ["langfuse"]` next to your existing OpenTelemetry setup:
+Call `Laminar.initialize()` with `bridges: ["langfuse"]` after your existing OpenTelemetry setup starts:
 
-```typescript {3,8}
+```typescript {3,9}
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import { LangfuseSpanProcessor } from "@langfuse/otel";
 import { Laminar } from "@lmnr-ai/lmnr";
 
 // Your existing Langfuse setup, unchanged.
-new NodeSDK({ spanProcessors: [new LangfuseSpanProcessor()] }).start();
+const sdk = new NodeSDK({ spanProcessors: [new LangfuseSpanProcessor()] });
+sdk.start();
 
 Laminar.initialize({ bridges: ["langfuse"] });
 ```
+
+Calling `Laminar.initialize()` before `sdk.start()` works too, but OpenTelemetry then logs a harmless `Attempted duplicate registration of API: context` error.
 
 </Step>
 <Step title="Run your agent as usual">
@@ -92,6 +99,19 @@ const agent = observe(
 
 console.log(await agent("What's the capital of France?"));
 ```
+
+</Step>
+<Step title="Flush Laminar before your script exits">
+
+Laminar sends spans in batches in the background, so a long-running server needs nothing extra. A script, CLI, or serverless function that exits right after the agent finishes must flush Laminar first. `sdk.shutdown()` flushes only your OpenTelemetry setup, which exports to Langfuse. Laminar has its own exporter.
+
+```typescript {2}
+// At the end of your script:
+await Laminar.shutdown();
+await sdk.shutdown();
+```
+
+If the process keeps running after this point, for example between serverless invocations, call `await Laminar.flush()` instead: it sends pending spans and keeps Laminar running.
 
 </Step>
 </Steps>
@@ -234,6 +254,67 @@ print(agent("What's the weather in Tokyo, and how much is 100 USD in JPY?"))
 - **Laminar spans nest under Langfuse spans.** Code you trace with Laminar's own `observe` inside a Langfuse-observed function appears as a child of that function in Laminar, and Langfuse spans inside a Laminar `observe` appear under it.
 - **In Python, Laminar keeps its tracer provider separate from Langfuse's**, so Langfuse builds its OpenTelemetry setup exactly as it would without Laminar.
 
+## Vercel AI SDK (TypeScript)
+
+The bridge forwards spans that the Langfuse SDK creates: `observe`, `startActiveObservation`, the OpenAI wrapper, and the LangChain callback handler. The Vercel AI SDK reports to Langfuse through its own OpenTelemetry telemetry, so the bridge doesn't see those calls. To get AI SDK calls into Laminar, add [Laminar's AI SDK integration](/integrations/vercel-ai-sdk) next to your Langfuse setup.
+
+If the AI SDK is all you trace with Langfuse, you don't need the `bridges` option. If you also use the Langfuse SDK, for example `observe` around your agent, you can use both: the bridge forwards the Langfuse spans, and AI SDK calls nest under them in Laminar.
+
+<Tabs>
+<Tab title="AI SDK v7">
+
+Register Laminar's telemetry next to Langfuse's. The AI SDK calls every registered integration, so each call reaches both Langfuse and Laminar:
+
+```typescript {4,12}
+import { NodeSDK } from "@opentelemetry/sdk-node";
+import { LangfuseSpanProcessor } from "@langfuse/otel";
+import { LangfuseVercelAiSdkIntegration } from "@langfuse/vercel-ai-sdk";
+import { LaminarAiSdkTelemetry } from "@lmnr-ai/lmnr";
+import { registerTelemetry } from "ai";
+
+// Your existing Langfuse setup, unchanged.
+const sdk = new NodeSDK({ spanProcessors: [new LangfuseSpanProcessor()] });
+sdk.start();
+registerTelemetry(new LangfuseVercelAiSdkIntegration());
+
+registerTelemetry(new LaminarAiSdkTelemetry());
+```
+
+Your `generateText` and `streamText` calls stay as they are. `LaminarAiSdkTelemetry` initializes Laminar for you. To also bridge Langfuse SDK spans, call `Laminar.initialize({ bridges: ["langfuse"] })` before it.
+
+A script that exits right after the agent finishes still needs `await Laminar.shutdown()` before `sdk.shutdown()`, as in [the setup above](#getting-started).
+
+</Tab>
+<Tab title="AI SDK v5 and v6">
+
+On v5 and v6, each call sends its spans to a single tracer. With Langfuse, that's the global tracer (`experimental_telemetry: { isEnabled: true }`). Add Laminar's span processor to the same OpenTelemetry setup, so those spans go to both Langfuse and Laminar:
+
+```typescript {3,8}
+import { NodeSDK } from "@opentelemetry/sdk-node";
+import { LangfuseSpanProcessor } from "@langfuse/otel";
+import { LaminarSpanProcessor } from "@lmnr-ai/lmnr";
+
+const sdk = new NodeSDK({
+  spanProcessors: [
+    new LangfuseSpanProcessor(),
+    new LaminarSpanProcessor(),
+  ],
+});
+sdk.start();
+```
+
+Keep `experimental_telemetry: { isEnabled: true }` on your calls. `LaminarSpanProcessor` reads `LMNR_PROJECT_API_KEY` from the environment, and `sdk.shutdown()` flushes it along with Langfuse's processor.
+
+This setup has two side effects:
+
+- Laminar's processor receives every span on this provider, including the Langfuse SDK's own observations, which arrive without the bridge's translation. Don't add `bridges: ["langfuse"]` here, or those observations reach Laminar twice.
+- Langfuse's copy of each span carries a few extra `lmnr.span.*` attributes that Laminar's processor adds.
+
+On AI SDK v7, each backend has its own integration and neither side effect applies.
+
+</Tab>
+</Tabs>
+
 ## See what happened in a trace
 
 Open a bridged run in Laminar and you land on the transcript view: the user prompt at the top, each model turn as a conversation line, and every tool call inline with its arguments and result. The bridge rewrites Langfuse's observations into Laminar's message format, so an LLM turn with tool calls reads as a conversation rather than a raw attribute blob. The span tree tells you the shape of the run; the transcript tells you what actually happened.
@@ -277,12 +358,26 @@ Every new project ships with a **Failure Detector** Signal that categorizes issu
     - The bridge is opt-in. Installing `langfuse` doesn't enable it: pass `bridges=["langfuse"]` (Python) or `bridges: ["langfuse"]` (TypeScript) to `Laminar.initialize()`.
     - Check the supported versions in the note at the top of this page. In Python, Laminar logs a warning when the installed Langfuse SDK is too old for the bridge.
     - In TypeScript, Langfuse only records spans when an OpenTelemetry tracer provider is set up, for example the `NodeSDK` with `LangfuseSpanProcessor` above.
+    - In TypeScript, a script that exits right after the agent finishes must flush Laminar first. See the next entry.
+  </Accordion>
+  <Accordion title="Traces from a short script never reach Laminar (TypeScript)">
+    Laminar exports spans in batches in the background, and `sdk.shutdown()` flushes only your OpenTelemetry setup, which exports to Langfuse. If the process exits before Laminar's next batch goes out, those spans are lost, even though Langfuse shows the run. Add this at the end of the script:
+
+    ```typescript
+    await Laminar.shutdown();
+    await sdk.shutdown();
+    ```
+
+    Use `await Laminar.flush()` instead when the process keeps running, for example at the end of each serverless invocation.
+  </Accordion>
+  <Accordion title="Attempted duplicate registration of API: context (TypeScript)">
+    OpenTelemetry logs this error when `Laminar.initialize()` runs before `sdk.start()`: both register a context manager, and the first one stays. It doesn't stop either export. To avoid the message, call `Laminar.initialize()` after `sdk.start()`.
   </Accordion>
   <Accordion title="The same call shows up twice in Laminar">
     The bridge turns off Laminar's overlapping instrumentations only when you don't pass `instruments` (Python) or `instrumentModules` (TypeScript). If you pass them, remove the providers that you call through Langfuse's wrappers.
   </Accordion>
   <Accordion title="AI SDK calls don't appear in Laminar (TypeScript)">
-    The TypeScript bridge forwards spans created through the Langfuse SDK. Vercel AI SDK spans that only reach Langfuse through `LangfuseSpanProcessor` are not forwarded. Trace the AI SDK with [Laminar's AI SDK integration](/integrations/vercel-ai-sdk) instead.
+    The bridge forwards spans created through the Langfuse SDK. The AI SDK reports to Langfuse through its own telemetry, so the bridge doesn't see those calls. Add Laminar's AI SDK integration next to your Langfuse setup, as shown in [Vercel AI SDK](#vercel-ai-sdk-typescript).
   </Accordion>
   <Accordion title="LLM inputs and outputs look like raw JSON, not a conversation">
     The bridge translates Langfuse generations into Laminar's message format. If a span still shows a raw blob, it's likely a non-LLM observation, which keeps its raw input and output. Make sure LLM calls go through the Langfuse OpenAI wrapper, the LangChain callback handler, or a generation observation.
