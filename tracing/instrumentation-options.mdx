@@ -1,0 +1,104 @@
+---
+title: Configure What Automatic Instrumentation Records
+sidebarTitle: Instrumentation options
+---
+
+Laminar's automatic instrumentation records LangChain, LangGraph, and Temporal runs with sensible defaults. Instrumentation options let you change what an individual integration records, for example to stop recording LangGraph's nodes and edges or to drop Temporal activity arguments from spans. Set them in `Laminar.initialize()` or with environment variables.
+
+## Set options in code
+
+Pass the options to `Laminar.initialize()`, keyed by the integration's name:
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    import { Laminar } from '@lmnr-ai/lmnr';
+
+    Laminar.initialize({
+      instrumentOptions: {
+        langchain: { recordMetadata: true },
+        langgraph: { recordGraph: false },
+        temporal: { recordActivityArgs: false },
+      },
+    });
+    ```
+
+    The `InstrumentOptions` type is exported from `@lmnr-ai/lmnr`.
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from lmnr import Laminar
+
+    Laminar.initialize(
+        instrument_options={
+            "langchain": {"record_metadata": True},
+            "langgraph": {"record_graph": False},
+            "temporal": {"record_activity_args": False},
+        },
+    )
+    ```
+
+    The `InstrumentOptions` type is exported from `lmnr`, so your type checker flags a misspelled integration or option name.
+  </Tab>
+</Tabs>
+
+Options you leave out keep their defaults. An unknown integration or option name is ignored, and the SDK logs a warning.
+
+## Set options with environment variables
+
+Every option also has an environment variable named `LMNR_<INTEGRATION>_<OPTION>`, in upper snake case. For example, `langgraph.record_graph` is `LMNR_LANGGRAPH_RECORD_GRAPH`:
+
+```bash
+export LMNR_LANGGRAPH_RECORD_GRAPH=false
+```
+
+Boolean variables accept `true`, `1`, `yes`, and `on`, or `false`, `0`, `no`, and `off`. When an option is set in more than one place, the value passed to `Laminar.initialize()` wins over the environment variable, and the environment variable wins over the default.
+
+## Available options
+
+Option names are `camelCase` in TypeScript and `snake_case` in Python.
+
+| Integration | Option | Default | Environment variable | What it controls |
+|---|---|---|---|---|
+| `langchain` | `recordMetadata` / `record_metadata` | `false` | `LMNR_LANGCHAIN_RECORD_METADATA` | Record LangChain's run metadata as the `langchain.metadata` span attribute. |
+| `langgraph` | `recordGraph` / `record_graph` | `true` | `LMNR_LANGGRAPH_RECORD_GRAPH` | Record the graph's nodes and edges on the run's root span. |
+| `temporal` | `createActivitySpan` / `create_activity_span` | `true` | `LMNR_TEMPORAL_CREATE_ACTIVITY_SPAN` | Wrap each activity execution in a span named after the activity type. |
+| `temporal` | `recordActivityArgs` / `record_activity_args` | `true` | `LMNR_TEMPORAL_RECORD_ACTIVITY_ARGS` | Record the activity's arguments as the span input. |
+| `temporal` | `recordActivityOutput` / `record_activity_output` | `true` | `LMNR_TEMPORAL_RECORD_ACTIVITY_OUTPUT` | Record the activity's return value as the span output. |
+
+### LangChain metadata
+
+LangChain passes run metadata to every chain, tool, and LLM call: the `metadata` you set in a run's config, plus keys LangGraph adds for each step, such as `langgraph_node` and `langgraph_step`. The same metadata repeats on almost every span, so Laminar no longer records it by default. Set `recordMetadata` / `record_metadata` to `true` to record it as the `langchain.metadata` attribute again.
+
+<Note>
+Earlier SDK versions recorded `langchain.metadata` on every span. If you filter or query on this attribute, turn the option on.
+</Note>
+
+A LangGraph `thread_id` from the run's config is recorded either way. See [Group a LangGraph thread into a session](/integrations/langchain#group-a-langgraph-thread-into-a-session).
+
+### LangGraph graph
+
+With `recordGraph` / `record_graph` set to `false`, Laminar doesn't record the graph's nodes and edges, so the trace has no [LangGraph visualization](/tracing/langgraph-visualization). The graph's runs, nodes, tool calls, and LLM calls are still traced.
+
+### Temporal activities
+
+`recordActivityArgs` and `recordActivityOutput` are ignored when `createActivitySpan` is `false`. With `createActivitySpan` set to `false`, the activity still runs in the propagated trace context, so your own spans and LLM calls inside it stay in the workflow's trace. See [Control what activity spans record](/integrations/temporal#control-what-activity-spans-record).
+
+The places where these options could be set before still work: `instrumentModules.temporal` and the options of `ActivityInterceptorFactory` in TypeScript, and `LaminarTemporalInterceptorOptions` in Python. When an option is set both there and in instrument options (in code or with an environment variable), the instrument options value is used.
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="LangChain and LangGraph" href="/integrations/langchain">
+    Trace every chain step, graph node, tool call, and LLM call.
+  </Card>
+  <Card title="Temporal" href="/integrations/temporal">
+    Stitch workflows and activities across processes into one trace.
+  </Card>
+  <Card title="Python SDK reference" href="/sdk/python/instrumentation">
+    Every `Laminar.initialize()` parameter in Python.
+  </Card>
+  <Card title="TypeScript SDK reference" href="/sdk/typescript/instrumentation">
+    Every `Laminar.initialize()` option in TypeScript.
+  </Card>
+</CardGroup>

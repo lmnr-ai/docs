@@ -273,6 +273,39 @@ Each invocation of a chain or graph is one trace:
 | `vector_db_retrieve <name>` | The retriever's query and the documents it returned. |
 | An LLM span for every model call | The messages, the response with any tool calls, the model, token usage, and cost. |
 
+### Choose what LangChain and LangGraph spans record
+
+Two [instrumentation options](/tracing/instrumentation-options) change what this integration records:
+
+- `langchain.recordMetadata` / `record_metadata` (default `false`): record LangChain's run metadata as the `langchain.metadata` attribute on every span. Earlier SDK versions always recorded it.
+- `langgraph.recordGraph` / `record_graph` (default `true`): record the graph's nodes and edges for the [LangGraph view](/tracing/langgraph-visualization). Set it to `false` to keep the graph out of your traces.
+
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript
+    Laminar.initialize({
+      instrumentModules: { /* ... */ },
+      instrumentOptions: {
+        langchain: { recordMetadata: true },
+        langgraph: { recordGraph: false },
+      },
+    });
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    Laminar.initialize(
+        instrument_options={
+            "langchain": {"record_metadata": True},
+            "langgraph": {"record_graph": False},
+        },
+    )
+    ```
+  </Tab>
+</Tabs>
+
+You can also set `LMNR_LANGCHAIN_RECORD_METADATA=true` or `LMNR_LANGGRAPH_RECORD_GRAPH=false` in the environment.
+
 ### Which integration records each LLM call
 
 - **OpenAI (including Azure OpenAI) and Anthropic chat models** are recorded by Laminar's provider integrations, as `openai.chat`, `openai.response`, or `anthropic.chat` spans. In Python, Google GenAI (`langchain-google-genai` 4 or later) and Groq models are handed off the same way.

@@ -46,6 +46,7 @@
               "tracing/cost-tracking",
               "tracing/browser-agent-observability",
               "tracing/langgraph-visualization",
+              "tracing/instrumentation-options",
               {
                 "group": "Troubleshooting",
                 "pages": [

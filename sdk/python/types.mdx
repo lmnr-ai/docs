@@ -63,6 +63,26 @@ SessionRecordingOptions = TypedDict(
 
 ---
 
+## InstrumentOptions
+
+Passed as `instrument_options` to `Laminar.initialize()`. Every key is optional. See [Instrumentation options](/tracing/instrumentation-options).
+
+```python
+from lmnr import InstrumentOptions
+
+options: InstrumentOptions = {
+    "langchain": {"record_metadata": True},
+    "langgraph": {"record_graph": False},
+    "temporal": {
+        "create_activity_span": True,
+        "record_activity_args": False,
+        "record_activity_output": True,
+    },
+}
+```
+
+---
+
 ## SessionBlock
 
 One block in a [debugger](/debugger/introduction) session, as returned by `client.rollout_sessions.list_blocks(...)`.

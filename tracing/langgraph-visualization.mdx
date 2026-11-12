@@ -56,6 +56,8 @@ Graph visualization comes with the [LangChain and LangGraph integration](/integr
 
 Then invoke or stream any compiled graph as usual. For a complete agent with a tool node, see the [LangChain and LangGraph getting started](/integrations/langchain#getting-started).
 
+To keep the graph out of your traces, set the `langgraph` [instrumentation option](/tracing/instrumentation-options) `recordGraph: false` (TypeScript) or `record_graph: False` (Python), or set `LMNR_LANGGRAPH_RECORD_GRAPH=false`. The graph's runs are still traced.
+
 ## What the trace contains
 
 - The graph is recorded on the run's root span, so a trace has one graph view. A subgraph run inside a node doesn't replace the outer graph.
