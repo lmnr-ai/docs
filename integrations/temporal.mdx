@@ -400,27 +400,48 @@ Production workflows rarely run two neat activities back to back. They fan out a
 
 More on the trace UX: [Viewing traces](/platform/viewing-traces).
 
-## Control what activity spans record (TypeScript)
+## Control what activity spans record
 
-In TypeScript, `ActivityInterceptorFactory` accepts three options, all defaulting to `true`:
+These three options control the activity spans, all defaulting to `true`. Set them in `Laminar.initialize()` in the worker:
 
-```typescript
-interceptors: {
-  activity: [
-    LaminarTemporalInterceptors.ActivityInterceptorFactory({
-      createActivitySpan: true,
-      recordActivityArgs: true,
-      recordActivityOutput: true,
-    }),
-  ],
-}
-```
+<Tabs items={['TypeScript', 'Python']}>
+  <Tab title="TypeScript">
+    ```typescript worker.ts
+    Laminar.initialize({
+      disableBatch: true,
+      instrumentOptions: {
+        temporal: {
+          createActivitySpan: true,
+          recordActivityArgs: false,
+          recordActivityOutput: true,
+        },
+      },
+    });
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python worker.py
+    Laminar.initialize(
+        disable_batch=True,
+        instrument_options={
+            "temporal": {
+                "create_activity_span": True,
+                "record_activity_args": False,
+                "record_activity_output": True,
+            },
+        },
+    )
+    ```
+  </Tab>
+</Tabs>
 
-- `createActivitySpan`: wrap each activity execution in a span named after the activity type. Set to `false` to only restore the trace context (so your own `observe()` calls inside the activity act as roots) without an extra wrapper span.
-- `recordActivityArgs`: record the activity's arguments as the span input. Set to `false` to omit large or sensitive arguments.
-- `recordActivityOutput`: record the activity's return value as the span output. Set to `false` to omit large or sensitive results.
+- `createActivitySpan` / `create_activity_span`: wrap each activity execution in a span named after the activity type. Set to `false` to skip the wrapper span. The activity still runs in the propagated trace context, so your own spans and the LLM calls inside it stay in the workflow's trace.
+- `recordActivityArgs` / `record_activity_args`: record the activity's arguments as the span input. Set to `false` to omit large or sensitive arguments.
+- `recordActivityOutput` / `record_activity_output`: record the activity's return value as the span output. Set to `false` to omit large or sensitive results.
 
-`recordActivityArgs` and `recordActivityOutput` are ignored when `createActivitySpan` is `false`.
+`recordActivityArgs` and `recordActivityOutput` are ignored when `createActivitySpan` is `false`. Each option also has an environment variable, for example `LMNR_TEMPORAL_RECORD_ACTIVITY_ARGS=false`.
+
+In TypeScript, the same three options are still accepted by `ActivityInterceptorFactory({ ... })` and `instrumentModules.temporal`. When an option is set both there and in `instrumentOptions`, the `instrumentOptions` value is used.
 
 The three client interceptors map to Temporal's three client surfaces:
 

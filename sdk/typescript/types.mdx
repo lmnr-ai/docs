@@ -117,6 +117,24 @@ interface SessionRecordingOptions {
 
 ---
 
+## InstrumentOptions
+
+Passed as `instrumentOptions` to `Laminar.initialize()`. See the [LangChain and LangGraph](/integrations/langchain) and [Temporal](/integrations/temporal) guides for the available options.
+
+```typescript
+interface InstrumentOptions {
+  langchain?: { recordMetadata?: boolean };
+  langgraph?: { recordGraph?: boolean };
+  temporal?: {
+    createActivitySpan?: boolean;
+    recordActivityArgs?: boolean;
+    recordActivityOutput?: boolean;
+  };
+}
+```
+
+---
+
 ## MaskInputOptions
 
 ```typescript
