@@ -6,11 +6,12 @@ sidebarTitle: Quickstart
 This quickstart walks through the full Signals loop: _generate traces, write a Signal that reads them, run it, and look at the events_.
 
 <Note>
-  Every new Laminar project ships with an **Issues** Signal pre-created. It runs automatically on
-  traces with more than 1000 tokens and records each error the agent made in a `description` field:
-  what went wrong, the evidence, and the impact on the run. You don't need to build this one
-  yourself. Open it from the Signals section of the sidebar to see its clusters as soon as your
-  traces start arriving.
+  New projects start with the Signals you pick during onboarding, named after their templates:
+  **Issues** (selected by default), **Intent**, and **Friction**. Issues records each error the
+  agent made in a `description` field: what went wrong, the evidence, and the impact on the run.
+  Intent classifies what the user was trying to accomplish, and Friction looks for signs of user
+  frustration. They run automatically on traces with more than 1000 tokens, so you don't need to
+  build them yourself. On a self-hosted deployment, every new project starts with the Issues Signal.
 </Note>
 
 ## Prerequisites
@@ -67,7 +68,7 @@ Run it, then refresh the Laminar traces page to confirm the `quickstart_agent` t
 
 ## 2. Open Signals
 
-Click **Signals** in the project sidebar to expand the list of Signals in the project. If this is a new project, the **Issues** Signal is already there, ready to run on any trace over 1000 tokens. Click a Signal to open its [clusters](/signals/clusters): similar events grouped into named problems, each with a frequency chart and a report.
+Click **Signals** in the project sidebar to expand the list of Signals in the project. If this is a new project, the Signals you picked during onboarding are already there, such as **Issues**, **Intent**, and **Friction**, ready to run on any trace over 1000 tokens. Click a Signal to open its [clusters](/signals/clusters): similar events grouped into named problems, each with a frequency chart and a report.
 
 <Frame caption="The Signals section of the sidebar lists every Signal; opening one shows its clusters">
   <img
@@ -99,7 +100,7 @@ To write your own, click **Create signal** at the bottom of the Signals list in 
 </Step>
 
 <Step title="Template (optional)">
-  Templates prefill the instruction and schema. **Issues** finds errors the agent made (it is the same definition as the Signal every new project starts with), **Intent** classifies what the user was trying to accomplish, and **Friction** looks for signs of user frustration. **Blank** starts from an empty definition.
+  Templates prefill the instruction and schema. **Issues** finds errors the agent made, **Intent** classifies what the user was trying to accomplish, and **Friction** looks for signs of user frustration. **Blank** starts from an empty definition. These are the same definitions as the Signals onboarding creates.
 </Step>
 
 <Step title="Instruction">
