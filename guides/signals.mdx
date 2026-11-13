@@ -38,13 +38,13 @@ much more high-level, and feature clustering of their outputs. This can perfectl
 when you know very well what you are looking for and the cases where you want Signals to help
 you find what to look for.
 
-To get started, head to the signals section, create a new signal, and click the "Failure" card to select
-the "Failure Detector" template. You can edit
+To get started, expand **Signals** in the project sidebar, click **Create signal**, and select
+the **Issues** template. It is the same definition as the Issues Signal every new project starts with. You can edit
 the instruction and the schema definition, but for our example, we'll keep it at default
 settings.
 
-<Frame caption="Default instruction and structured output schema for Failure Detector signal">
-    ![Instruction for Failure Detector and one output field `description`](/images/guides/signals/failure-detector-definition.png)
+<Frame caption="Default instruction and structured output schema of the Issues template">
+    ![Instruction of the Issues template and one output field `description`](/images/guides/signals/issues-definition.png)
 </Frame>
 
 In our structured output, we choose one field, `description` of type string, where Laminar Signals
@@ -155,11 +155,16 @@ minimal requirements list for the trace to be analyzed well by Signals:
 ### Clustering
 
 When similar signal events accumulate creating groups of a certain size, we start clustering them together. This
-is the highest-level overview of what's going on in traces inside your project.
+is the highest-level overview of what's going on in traces inside your project. Opening a Signal from the sidebar
+opens its list of clusters.
 
-Clusters will depend a lot on the signal definition. For example, Failure Detector signal will classify /
-cluster different kinds of failures, while User Intent signal will show the distribution of usage patterns of your
-agent.
+Clusters will depend a lot on the signal definition. For example, the Issues signal will cluster different kinds
+of failures, while an Intent signal will show the distribution of usage patterns of your agent.
+
+Treat each cluster like an issue in a tracker. When a new cluster forms, Laminar Agent writes a report on it: an
+overview of the problem, its consequences, example traces, and a recommended fix. Once you've shipped the fix,
+resolve the cluster. If events keep arriving after that, the cluster shows up as unread again. Archive clusters
+you don't want to track. See [Clusters](/signals/clusters) for the full workflow.
 
 Clustering is fully automatic, so no additional configuration is needed. You can also be [alerted on new clusters](#alerts).
 
@@ -175,14 +180,14 @@ critical event, as there will still be hundreds. For those cases, we suggest get
 which is also enabled by default. As with new event alerts, you can set who on your team gets notified about new clusters.
 
 Alerts are sent to all members that are in the workspace at the time the signal was created. New users can sign
-up for alerts in the signal settings page. Each alert can be subscribed to by one or more destinations
+up for alerts in the **Alerts** section of the signal's **Overview** tab. Each alert can be subscribed to by one or more destinations
 (email addresses or Slack channels), so you can have fine-grained control over who on your team gets notified
 about what. [Learn more about alerts](/signals/alerts).
 
 ## Narrowing down your signal
 
 Unless you already know how your agent will fail (and why would you release such an agent to production before
-fixing it?), the best practice is to start with a general signal, such as our predefined Failure Detector
+fixing it?), the best practice is to start with a general signal, such as our predefined Issues
 template, let it run for a few days or weeks in production, and then create more specialized signals based
 on the clusters and patterns you see in the general signal. The more complex your agent is, the more diverse
 and unpredictable the findings will be, and thus, the more value you will get from using this approach. It
@@ -190,25 +195,24 @@ does not mean that this is not the right approach for simpler agents: all agents
 LLMs are non-deterministic by nature, so there is no way to foresee all the quirky ways in which your agent could
 fail.
 
-For example, Failure Detector cluster could split the clustering space into 2 high-level clusters:
+For example, the clusters of the Issues signal could fall into two broad groups:
 - API 400 and request shape errors
 - Hallucinated final report details
 
-And then inside each of these clusters, there will be many specific sub-clusters that will each show
-an individual finding.
+Each group holds many specific clusters, each describing an individual finding.
 
-The errors inside the first cluster are most likely very mechanical coding
+The errors inside the first group are most likely very mechanical coding
 errors unrelated to the actual LLM inside your agent, but potentially still cause longer processing, LLM
 retries, and ultimately failed runs. The fixes are low-hanging fruits in terms of resource investment,
-so it makes sense to fix these first. You can then keep running your agent to make sure no new events join
-these clusters.
+so it makes sense to fix these first. Resolve the clusters once the fix ships, and keep running your agent
+to make sure no new events join them.
 
-Errors in the second cluster are much less trivial to fix. To get a more granular view of why each error
-happens and what are potential fixes, we recommend creating an additional signal. You can start from our
-Hallucination Detector template, but add some more specifics based on what you see in the original clusters.
+Errors in the second group are much less trivial to fix. To get a more granular view of why each error
+happens and what are potential fixes, we recommend creating an additional signal. You can start from the
+Blank template and add specifics based on what you see in the original clusters and their reports.
 You can then either run a
 [backfill](/signals/quickstart#backfill-historical)
-only selecting the historical traces that the original Failure Detector signal had already flagged, or let
+only selecting the historical traces that the original Issues signal had already flagged, or let
 the new signal run in production.
 
 ## End-to-end example. Travel Planner agent
@@ -227,7 +231,7 @@ adhere to a specific format.
 
 ### Configuring and running a broad signal
 
-At first, we did not anticipate any specific kind of error, so we created a general "Failure Detector" signal.
+At first, we did not anticipate any specific kind of error, so we used the general "Issues" signal.
 The definition is intentionally broad, and set to catch any kinds of errors.
 
 Since we already had the traces handy, and this is not our real production traffic, we ran the backfill
@@ -235,16 +239,13 @@ selecting all 1,304 traces in the project.
 
 ### Looking at the result clusters and individual events
 
-Once the results are ready, let's look at the clusters hierarchy.
+Once the results are ready, open the signal from the sidebar to see its clusters.
 
-<Frame caption="Cluster distribution for the traces of the travel agent">
-    ![Screenshot of clusters in the travel agent](/images/guides/signals/clusters-example.png)
-</Frame>
-
-The distribution shows a clear hierarchy: the bottom-level clusters are the most fine-grained, such as
-"Smoking Accommodation Requirement Violations" with just 23 events. Above it, there are broader clusters,
-such as "Accommodation Rule and Constraint Violations" that has 202 events, including the smoking requirement
-violation. An example Signal event in this cluster looks like this:
+The cluster list holds the most fine-grained clusters, such as "Smoking Accommodation Requirement Violations"
+with just 23 events. Laminar also groups related clusters into broader parents, such as "Accommodation Rule and
+Constraint Violations" with 202 events, including the smoking requirement violation. Parent clusters don't
+appear in the list, but you can query them in the [SQL editor](/platform/sql-editor#clusters-on-traces).
+An example Signal event in this cluster looks like this:
 
  > The agent produced a complete 7-day plan via Finish, but the final
  > deliverable contains an error. [...] The user's request states: "We would prefer accommodations with
@@ -267,8 +268,8 @@ call, or calls the same action twice, this can be caught by deterministic checks
 
 ### Creating a narrower Signal after analyzing clusters
 
-The more high-level issues — such as failure to follow instructions, failure to include all requirements in
-the final itinerary, or malformed final itinerary — are much harder to catch in place.
+The more high-level issues (such as failure to follow instructions, failure to include all requirements in
+the final itinerary, or malformed final itinerary) are much harder to catch in place.
 
 Now that we've had a look at the cluster distribution, it may make sense to create a more specific Signal that
 looks into a specific class of issues.
@@ -281,5 +282,5 @@ Let's create a signal called "Constraint Violation". The instruction is
 
 The structured output schema will include two fields:
 
-description: String — what went wrong, the evidence with span references.
+description: String: what went wrong, the evidence with span references.
 error_type: Enum: MINIMUM_NIGHTS, SMOKING_RULES, HOUSE_RULES, TOTAL_BUDGET, ROOM_OCCUPANCY, MEAL_DIVERSITY, TRANSPORTATION, HALLUCINATION, OTHER

@@ -35,7 +35,7 @@ To set when Signals agent starts processing your trace you can configure **trigg
 
 Once a signal event is created, its structured fields are available to **[query in SQL](/platform/sql-editor)**. You can filter events, count how often a behavior occurs, and compare outcomes across traces.
 
-Laminar automatically groups similar events into **[clusters](/signals/clusters)** based on the meaning of their findings. Clusters help you spot patterns across thousands of events, see which issues recur, and understand how common they are.
+Laminar automatically groups similar events into **[clusters](/signals/clusters)** based on the meaning of their findings. Clusters help you spot patterns across thousands of events, see which issues recur, and understand how common they are. Laminar Agent writes a report on each new cluster with example traces and a recommended fix, and you resolve or archive clusters as you work through them, like issues in a tracker.
 
 On top of that, you can configure **[alerts](/signals/alerts)** to notify you in Slack or by email when a new signal event matches your conditions or a new cluster forms.
 
@@ -115,7 +115,7 @@ Leave out what the Signals agent already handles:
 - **The output format.** Don't ask for JSON or describe the response shape. Put the fields you want in the output schema, and use each field's description to say what goes in it.
 - **When to stay quiet.** A trace with no match already returns no event.
 
-Add detail only when the results need it. If events include cases you don't consider matches, say what does and doesn't count, as in _Report tool calls with invalid arguments. Do not report tool calls that failed because of a network error._ The **Failure Detector** template in the Create Signal drawer is a longer example: it spells out what is reportable and what is not, and still leaves the role and output format to the Signals agent. [Clusters](/signals/clusters#when-clusters-earn-their-keep) show you where an instruction is too broad.
+Add detail only when the results need it. If events include cases you don't consider matches, say what does and doesn't count, as in _Report tool calls with invalid arguments. Do not report tool calls that failed because of a network error._ The **Issues** template in the Create Signal drawer is a longer example: it spells out what is reportable and what is not, and still leaves the role and output format to the Signals agent. [Clusters](/signals/clusters#when-clusters-earn-their-keep) show you where an instruction is too broad.
 
 ## How Signals are billed
 
@@ -128,7 +128,7 @@ On Laminar Cloud, Signals run on Laminar's own model, so you don't bring a model
 
 ## Get started
 
-If you're new to Laminar, start by [sending your agent's traces](/getting-started). Every new project includes a **Failure Detector** Signal. Open **Signals** in your project to inspect its findings.
+If you're new to Laminar, start by [sending your agent's traces](/getting-started). Every new project includes an **Issues** Signal that records the errors your agent makes. Expand **Signals** in the project sidebar and open it to inspect its findings.
 
 When you create your own Signal, review its findings on representative traces before relying on its alerts. The results are model judgments, and the linked evidence lets you check them.
 
@@ -140,7 +140,7 @@ When you create your own Signal, review its findings on representative traces be
     Define and manage Signals from your terminal.
   </Card>
   <Card title="Clusters" icon="boxes" href="/signals/clusters">
-    Explore recurring patterns across traces.
+    Triage recurring problems with agent-written reports.
   </Card>
   <Card title="Alerts" icon="bell" href="/signals/alerts">
     Get notified when a Signal finds an issue or a new event cluster forms.
