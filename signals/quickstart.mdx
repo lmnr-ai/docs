@@ -6,11 +6,12 @@ sidebarTitle: Quickstart
 This quickstart walks through the full Signals loop: _generate traces, write a Signal that reads them, run it, and look at the events_.
 
 <Note>
-  Every new Laminar project ships with a **Failure Detector** signal pre-created. It runs
-  automatically on traces with more than 1000 tokens, and categorizes issues as `tool_error`,
-  `api_error`, `logic_error`, `looping`, `wrong_tool`, `timeout`, or `other`. You don't need to
-  build this one yourself. Open it from the Signals list to see events as soon as your traces start
-  arriving.
+  New projects start with the Signals you pick during onboarding, named after their templates:
+  **Issues** (selected by default), **Intent**, and **Friction**. Issues records each error the
+  agent made in a `description` field: what went wrong, the evidence, and the impact on the run.
+  Intent classifies what the user was trying to accomplish, and Friction looks for signs of user
+  frustration. They run automatically on traces with more than 1000 tokens, so you don't need to
+  build them yourself. On a self-hosted deployment, every new project starts with the Issues Signal.
 </Note>
 
 ## Prerequisites
@@ -67,30 +68,30 @@ Run it, then refresh the Laminar traces page to confirm the `quickstart_agent` t
 
 ## 2. Open Signals
 
-Click **Signals** in the project sidebar. If this is a new project, the **Failure Detector** signal is already there, ready to run on any trace over 1000 tokens.
+Click **Signals** in the project sidebar to expand the list of Signals in the project. If this is a new project, the Signals you picked during onboarding are already there, such as **Issues**, **Intent**, and **Friction**, ready to run on any trace over 1000 tokens. Click a Signal to open its [clusters](/signals/clusters): similar events grouped into named problems, each with a frequency chart and a report.
 
-<Frame caption="Signals list: one card per Signal with its event and cluster counts">
+<Frame caption="The Signals section of the sidebar lists every Signal; opening one shows its clusters">
   <img
-    src="/images/signals/signals-list.png"
-    alt="Signals list view with cards for each Signal and recent event counts"
+    src="/images/signals/signal-clusters.png"
+    alt="Project sidebar with the Signals section expanded to show each Signal and a Create signal row, next to a Signal's cluster list and the selected cluster's report"
   />
 </Frame>
 
-To write your own, click **+ Signal**. The Create Signal drawer opens with the definition at the top and the trigger, filters, and sampling below it.
+To write your own, click **Create signal** at the bottom of the Signals list in the sidebar. The Create Signal drawer opens with the definition at the top and the trigger, filters, and additional settings below it.
 
 <Frame caption="Create Signal drawer: name, template, instruction, and output schema on top, trigger and filters below">
   <img
     src="/images/signals/create-signal-empty.png"
-    alt="Empty Create Signal drawer showing the trigger options and the default total tokens filter"
+    alt="Empty Create Signal drawer with the Issues, Intent, Friction, and Blank templates and the default total tokens filter"
   />
 </Frame>
 
 ## 3. Write the Signal
 
-<Frame caption="Create Signal drawer filled in from the Task template: the instruction and output schema come prefilled">
+<Frame caption="Create Signal drawer filled in from the Friction template: the instruction and output schema come prefilled">
   <img
     src="/images/signals/create-signal-filled.png"
-    alt="Create Signal drawer populated with a name, the Task template, an instruction, and two output schema fields"
+    alt="Create Signal drawer populated with a name, the Friction template, an instruction, and output schema fields"
   />
 </Frame>
 
@@ -98,7 +99,9 @@ To write your own, click **+ Signal**. The Create Signal drawer opens with the d
 <Step title="Name">
 </Step>
 
-<Step title="Template (optional)">Templates prefill the instruction and schema</Step>
+<Step title="Template (optional)">
+  Templates prefill the instruction and schema. **Issues** finds errors the agent made, **Intent** classifies what the user was trying to accomplish, and **Friction** looks for signs of user frustration. **Blank** starts from an empty definition. These are the same definitions as the Signals onboarding creates.
+</Step>
 
 <Step title="Instruction">
   Describe what the Signal should detect or extract from the trace in plain English. This is an instruction to the Signals agent, not a full LLM prompt: skip the role (_You are a judge..._) and the output format, and say what to look for. One or two sentences is often enough. See [Write the instruction](/signals/introduction#write-the-instruction).
@@ -112,13 +115,13 @@ To write your own, click **+ Signal**. The Create Signal drawer opens with the d
 <Step title="Trigger">
 *When* the Signal evaluates a trace. A Signal has exactly one trigger.
 
-- **When a trace finishes** — fires once the trace's root span ends. The default, and right for most agents.
-- **When a specific span finishes** — fires when any span you name ends. Use this when the work is spread across services and spans keep arriving after the root span closes (distributed tracing).
+- **When a trace finishes**: fires once the trace's root span ends. The default, and right for most agents.
+- **When a specific span finishes**: fires when any span you name ends. Use this when the work is spread across services and spans keep arriving after the root span closes (distributed tracing).
 
 </Step>
 
 <Step title="Filters">
-*Which* traces actually run once the trigger fires. Filters are **AND-combined** — a trace runs only if every filter passes. The default is `total tokens > 1000`.
+*Which* traces actually run once the trigger fires. Filters are **AND-combined**: a trace runs only if every filter passes. The default is `total tokens > 1000`.
 
 | Filter           | Type   | Matches against                                                       |
 | ---------------- | ------ | --------------------------------------------------------------------- |
@@ -132,22 +135,33 @@ To write your own, click **+ Signal**. The Create Signal drawer opens with the d
 <Step title="Sampling (optional)">
 Evaluate only a percentage of matching traces (5–95%). Sampling is applied **per user**, so coverage stays spread across your user base instead of concentrating on whoever is noisiest. Useful when a broad filter would otherwise fan out across every trace.
 </Step>
+
+<Step title="Additional settings">
+**Cluster reports** has Laminar Agent write a report on each new cluster: what the problem is, its consequences, example traces, and a recommended fix. It is on by default, except for the Intent template. See [Cluster reports](/signals/clusters#cluster-reports). On a self-hosted deployment, this is also where you pick the Signal's [LLM profile](/platform/llm-profiles) and model.
+</Step>
 </Steps>
 
-Click **Create**. The Signal is live from this point on: the trigger starts processing new traces that match the filters.
+Click **Create**. The Signal is live from this point on: the trigger starts processing new traces that match the filters, and the Signal appears in the sidebar.
 
 <Note>
-By default, Signals will notify the creator of critical events through the platform notifications panel and email. Open the Signal's **Settings > Alerts** section to change channels, connect Slack, or add additional filters. See [Alerts](/signals/alerts).
+By default, Signals will notify the creator of critical events and new clusters through the platform notifications panel and email. Open the Signal's **Overview** tab and select **Alerts** to change channels, connect Slack, or add additional filters. See [Alerts](/signals/alerts).
 </Note>
 
 ## 4. Manage the Signal
 
-A Signal can evaluate new traces as they arrive, or a historical slice. Open a Signal and click **Settings** to manage both from a sidebar with four sections: **General** (definition, trigger, and filters), **Versions** (the history of the Signal's definition), **Alerts**, and **Backfill**. Every evaluation the Signal performs is listed on the **Runs** tab, next to **Events** and **Settings**.
+A Signal page has two tabs in its top-left corner: **Events**, where the Signal opens and its [clusters](/signals/clusters) live, and **Overview**, where you manage the Signal itself. The Overview tab has a sidebar with six sections:
 
-<Frame caption="Signal Settings > General: instruction, output schema, trigger, filters, and sampling">
+- **Settings**: the definition, trigger, filters, sampling, and additional settings. When you edit them, a **Save** bar appears at the bottom of the page.
+- **Runs**: every evaluation the Signal performed.
+- **Feedback**: the reasons you gave when you [discarded events](#teach-the-signal-with-feedback).
+- **Versions**: the history of the Signal's definition.
+- **Alerts**: the Signal's [alerts](/signals/alerts).
+- **Backfill**: run the Signal on historical traces.
+
+<Frame caption="A Signal's Overview tab, Settings section: instruction, output schema, trigger, filters, and sampling">
   <img
     src="/images/signals/signal-settings.png"
-    alt="Signal settings General section with the trigger options and the filters bar"
+    alt="Signal Overview tab with the Settings, Runs, Feedback, Versions, Alerts, and Backfill sections in its sidebar and the Settings section open"
   />
 </Frame>
 
@@ -162,31 +176,42 @@ Use **Backfill** to run a Signal across historical traces, for example to evalua
   />
 </Frame>
 
-1. Open the Signal's **Settings > Backfill** section.
+1. Open the Signal's **Overview** tab and select **Backfill**.
 2. Pick a **time range** (defaults to the last 24 hours).
 3. Optionally narrow with **filters** or **search**.
 4. Choose **specific traces** or **all traces matching your filters**.
-5. Click **Start backfill**. Laminar enqueues one Run per trace.
+5. Click **Create backfill**. Laminar enqueues one Run per trace.
 
 Backfills count toward your workspace's Signals usage. If the workspace has reached its Signals hard limit, the backfill is rejected: see [Usage limits](/platform/usage-limits).
 
-Runs appear on the **Runs** tab with a status (Pending, Processing, Completed, Failed), a source that distinguishes backfilled Runs from the ones a live trigger produced, and the token cost of the evaluation. Each Run that detected the Signal links to the event it created.
+Runs appear in the **Runs** section of the Overview tab with a status (Pending, Processing, Completed, Failed), a source that distinguishes backfilled Runs from the ones a live trigger produced, and the token cost of the evaluation. Each Run that detected the Signal links to the event it created.
 
-<Frame caption="The Runs tab: one row per evaluated trace with its source, status, cost, and the event it produced">
+<Frame caption="Overview > Runs: one row per evaluated trace with its source, status, cost, and the event it produced">
   <img
     src="/images/signals/signal-activity.png"
     alt="Signal runs table listing runs with status, source, event, clusters, cost, and event id"
   />
 </Frame>
 
+### Version history
+
+The **Versions** section lists every version of the Signal, newest first, with what changed: the instruction, the output schema, settings, or feedback (shown as **Notes changed**). Expand a version to compare it side by side with the one before it.
+
+<Frame caption="Overview > Versions: v5 changed the instruction, and the diff shows the lines it added">
+  <img
+    src="/images/signals/signal-versions.png"
+    alt="Versions section of a Signal's Overview tab with v5 expanded to a side-by-side instruction diff, and older Notes changed versions below"
+  />
+</Frame>
+
 ### Pause and resume a Signal
 
-A Signal you're not ready to delete can be paused. Open the Signal's **Settings > General** section and flip the **Active** switch off.
+A Signal you're not ready to delete can be paused. Open the Signal's **Overview** tab, select **Settings**, flip the **Active** switch off, and click **Save**.
 
-<Frame caption="The Active switch at the top of Settings > General; flipped off, the Signal reads Inactive">
+<Frame caption="The Active switch at the top of the Settings section; flipped off, the Signal reads Inactive">
   <img
     src="/images/signals/signal-active-switch.png"
-    alt="Signal settings General section with the Active switch flipped off and the signal marked Inactive"
+    alt="Settings section of a Signal's Overview tab with the Active switch flipped off and the signal marked Inactive"
   />
 </Frame>
 
@@ -197,34 +222,44 @@ While a Signal is paused:
 - Existing events and clusters are kept, and stay queryable in SQL and the UI.
 - Alerts on the Signal stay configured but have nothing to fire on.
 
-Paused Signals show a **Disabled** badge on the Signals list and are grouped separately from active ones. Flip the switch back on and the Signal resumes evaluating new traces immediately.
-
-<Frame caption="The Signals list groups paused Signals under a Disabled section">
-  <img
-    src="/images/signals/signals-list-disabled.png"
-    alt="Signals list with an Active section and a Disabled section, the disabled Signal card dimmed with a Disabled badge"
-  />
-</Frame>
+Paused Signals move to the bottom of the Signals list in the sidebar. Flip the switch back on and the Signal resumes evaluating new traces immediately.
 
 You can also pause a single [alert](/signals/alerts#enable-or-disable-an-alert) instead of the whole Signal, to keep collecting events while silencing notifications.
 
 ## 5. Inspect events
 
-Open the Signal detail page and switch to the **Events** tab. Each row is one detected event, linked back to the trace that produced it.
+Open the Signal from the sidebar. Its **Events** tab lists the Signal's clusters, and a cluster's **Events** tab lists the events in it, each linked back to the trace that produced it. Events that haven't joined a cluster yet are under **Unclustered events** at the top of the list.
 
-<Frame caption="Events tab: structured payloads, timestamps, and jump-to-trace links">
+<Frame caption="A cluster's Events tab: daily event counts above the table of its events">
   <img
-    src="/images/signals/signal-detail.png"
-    alt="Signal events view with chart, event list, and per-event payload"
+    src="/images/signals/cluster-events.png"
+    alt="Cluster Events tab with a bar chart of daily events and a table of signal events with timestamps, severity, and payload"
   />
 </Frame>
 
 From here you can:
 
-- Filter events by any field you defined in the structured output schema.
+- Filter events by any field you defined in the structured output schema, or search them by payload, severity, and trace ID.
 - Click any row to open the corresponding trace.
-- Use the clusters view above the events table to see similar events grouped together. See [Clusters](/signals/clusters).
+- Switch to the cluster's **Report** tab to read what Laminar Agent found about the cluster, then resolve or archive it. See [Clusters](/signals/clusters).
 - Query the raw events in the [SQL Editor](/platform/sql-editor) via the `signal_events` table.
+
+## Teach the Signal with feedback
+
+When a Signal flags something you don't consider a match, discard the event and say why. Laminar deletes the event and adds your reason, together with the event it refers to, to the Signal's instruction on every future run, so the Signal stops flagging cases like it.
+
+1. Open the trace that produced the event, for example by clicking the event's row in a cluster's Events tab. Click **Signals** in the trace view's header to open the Signals panel, and find the event there.
+2. Click **Discard** on the event.
+3. Write why it isn't a match, for example *Short answers are not a sign of user frustration*, and click **Discard event**.
+
+Each reason is listed in the Signal's **Overview > Feedback** section with its author and the event it came from. Edit or delete a reason there. Every change to the feedback creates a new version of the Signal.
+
+<Frame caption="Overview > Feedback: the reasons given for discarded events, each with the event it refers to">
+  <img
+    src="/images/signals/signal-feedback.png"
+    alt="Signal Overview tab with the Feedback section open, listing feedback notes with their authors and source events"
+  />
+</Frame>
 
 ## Querying signal events in SQL
 
