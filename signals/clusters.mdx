@@ -117,7 +117,7 @@ If your Signal has a small, well-defined set of payload fields (say, a category 
 
 ## Querying clusters with SQL
 
-Clusters are queryable in the [SQL Editor](/platform/sql-editor) from three directions:
+Clusters are queryable in the [SQL Editor](/platform/sql-editor), via [MCP](/platform/mcp), and via [CLI](/platform/cli) in three places:
 
 - **From traces.** `traces.clusters` carries the clusters a trace's signal events landed in, names and counts already resolved. The shortest path to *which runs are in this cluster*, and the only one that puts cluster names next to trace cost, duration, and metadata.
 - **From events.** `signal_events` has `clusters` (every cluster an event belongs to, from its most specific one up through its parents), `leaf_clusters` (only the most specific ones), and `cluster_details` (the same clusters with their names and levels resolved).
