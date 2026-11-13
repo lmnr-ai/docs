@@ -109,9 +109,9 @@ Clusters are a view over the underlying events, not a copy. Deleting a Signal or
 
 Clusters pay off when you have hundreds or thousands of events and an open-ended question:
 
-- **Triage**: *"Of the 4,000 traces flagged by `agent_failure` this week, which handful of failure modes account for most of them?"* Sort through the Active list, read each cluster's report, and resolve or archive as you go.
-- **Regression detection**: a new cluster, or a resolved one that starts collecting events again, is a new or returning failure mode. Pair it with a [New cluster alert](/signals/alerts#alert-types) to hear about it as soon as it forms.
-- **Instruction tuning**: if a cluster contains events you don't consider matches, your [instruction](/signals/introduction#write-the-instruction) is too broad. Archive the cluster, and [discard](/signals/quickstart#teach-the-signal-with-feedback) its events with a reason so future runs stop flagging them. If expected events split across unrelated clusters, your payload schema isn't capturing the discriminating fields.
+- **Triage**: *"Of the 4,000 traces flagged by `agent_failure` this week, which handful of failure modes account for most of them?"*
+- **Regression detection**: a cluster that was empty yesterday and full today is a new failure mode.
+- **Instruction tuning**: if a cluster contains events you don't consider matches, your [instruction](/signals/introduction#write-the-instruction) is too broad. If expected events split across unrelated clusters, your payload schema isn't capturing the discriminating fields.
 
 If your Signal has a small, well-defined set of payload fields (say, a category enum with five values), grouping in the [SQL Editor](/platform/sql-editor) or a custom dashboard is usually enough. Reach for clusters when the events are free-form or when you don't yet know what categories exist.
 
