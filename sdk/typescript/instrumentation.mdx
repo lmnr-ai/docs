@@ -24,7 +24,7 @@ Initialize Laminar tracing and auto-instrumentation.
 | `forceHttp` | `boolean` | `false` | Force OTLP HTTP exporter |
 | `logLevel` | `'error'` &#124; `'warn'` &#124; `'info'` &#124; `'debug'` | `'error'` | SDK log level |
 | `sessionRecordingOptions` | `SessionRecordingOptions` | — | Browser session recording options |
-| `instrumentOptions` | `InstrumentOptions` | — | Per-instrumentation options, keyed by integration name. See [Instrumentation options](/tracing/instrumentation-options) |
+| `instrumentOptions` | `InstrumentOptions` | — | Per-instrumentation options, keyed by integration name. See the [LangChain and LangGraph](/integrations/langchain) and [Temporal](/integrations/temporal) guides |
 | `metadata` | `Record<string, any>` | — | Global metadata merged with per-span metadata |
 | `inheritGlobalContext` | `boolean` | `false` | Inherit existing OTEL context instead of forcing Laminar context |
 | `spanProcessor` | `SpanProcessor` | — | Provide a custom OTEL span processor |
@@ -82,7 +82,7 @@ Laminar.initialize({
 
 ## instrumentOptions
 
-Change what individual integrations record, keyed by integration name. Each option also has an `LMNR_<INTEGRATION>_<OPTION>` environment variable. See [Instrumentation options](/tracing/instrumentation-options) for every option.
+Change what individual integrations record, keyed by integration name. Each option also has an `LMNR_<INTEGRATION>_<OPTION>` environment variable. See the [LangChain and LangGraph](/integrations/langchain) and [Temporal](/integrations/temporal) guides for the available options.
 
 ```typescript
 import { Laminar } from '@lmnr-ai/lmnr';

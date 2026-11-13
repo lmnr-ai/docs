@@ -25,7 +25,7 @@ Initialize Laminar tracing and auto-instrumentation.
 | `set_global_tracer_provider` | `bool` | `True` | Set global OTEL tracer provider |
 | `otel_logger_level` | `int` | `logging.ERROR` | OTEL logger level |
 | `session_recording_options` | `SessionRecordingOptions` | `None` | Browser session recording options |
-| `instrument_options` | `InstrumentOptions` | `None` | Per-instrumentation options, keyed by integration name. See [Instrumentation options](/tracing/instrumentation-options) |
+| `instrument_options` | `InstrumentOptions` | `None` | Per-instrumentation options, keyed by integration name. See the [LangChain and LangGraph](/integrations/langchain) and [Temporal](/integrations/temporal) guides |
 | `force_http` | `bool` | `False` | Force OTLP HTTP exporter |
 | `metadata` | `dict[str, AttributeValue]` | `None` | Global trace metadata |
 | `release` | `str` &#124; `None` | `None` | Release stamped on every span, usually the git commit SHA. When `None`, read from `LMNR_RELEASE`, then deploy platform variables, then `.git`. See [Agent versions](/tracing/agent-versions#attach-a-release) |
@@ -57,7 +57,7 @@ Laminar.initialize(
 
 ## InstrumentOptions
 
-Change what individual integrations record. Each option also has an `LMNR_<INTEGRATION>_<OPTION>` environment variable. See [Instrumentation options](/tracing/instrumentation-options) for every option.
+Change what individual integrations record. Each option also has an `LMNR_<INTEGRATION>_<OPTION>` environment variable. See the [LangChain and LangGraph](/integrations/langchain) and [Temporal](/integrations/temporal) guides for the available options.
 
 ```python
 from lmnr import Laminar
