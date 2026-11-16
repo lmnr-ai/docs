@@ -15,12 +15,14 @@ Configure both from **Settings > Usage**, under **Workspace settings**. The top 
 
 | Meter | Unit | Counts | Included |
 |---|---|---|---|
-| **Data ingestion** | GB | Trace data ingested by every project in the workspace this billing cycle. | 1 GB on Free, 3 GB on Pro, 10 GB on Scale. Paid plans bill usage above that at the overage rate on the [pricing page](https://laminar.sh/pricing). |
-| **Signals usage** | USD | The token cost of every Signal run this billing cycle: live triggers and backfills. | Every new workspace gets a one-time \$5 Signals credit, on any plan. Paid plans bill usage beyond the credit per token. |
+| **Data ingestion** | GB | Trace data ingested by every project in the workspace this billing cycle. | 1 GB on Free, 3 GB on Pro, 100 GB on Scale, measured after compression. Paid plans bill usage above that at the overage rate: \$2 per GB on Pro and \$1 per GB on Scale. |
+| **Signals usage** | USD | The token cost of every Signal run this billing cycle: live triggers and backfills. | \$50 every billing cycle on Scale. Pro bills Signals per token from the first token, and Free doesn't include Signals. Token rates are on the [pricing page](https://laminar.sh/pricing). |
 
-The estimated bill on the Usage page shows how much of the included data and of the one-time credit is left.
+The estimated bill on the Usage page shows how much of the included data is left, and on Scale, how much of the included Signals usage.
 
-Thresholds and limits always count **total usage from zero** for the billing cycle. Included data and the one-time Signals credit don't shift them: a 10 GB warning on Scale fires at 10 GB of total ingestion, not at 10 GB beyond the included amount.
+Thresholds and limits always count **total usage from zero** for the billing cycle. Included usage doesn't shift them: a 50 GB warning on Scale fires at 50 GB of total ingestion, not at 50 GB beyond the included amount.
+
+During the 14-day Pro trial, data ingestion and Signals usage aren't capped and aren't billed. Only hard limits you set yourself stop usage.
 
 ## Email warnings
 
@@ -54,7 +56,7 @@ Each threshold on a meter must be unique. To remove a warning, click the **X** o
 
 When usage crosses a threshold, every workspace owner gets an email with a subject like **Usage warning: Signals cost reached \$50.00 – Acme** or **Usage warning: Data ingestion reached 8.00 GB – Acme**. The email shows the threshold, current usage, and plan, and links to the Usage page through **View usage**.
 
-When you upgrade to Pro or Scale, Laminar adds a data warning at the plan's included amount: 3 GB on Pro, 10 GB on Scale. That email says the workspace has used all data included in the plan and that additional usage is now billed at the overage rate. Pro workspaces also get warnings at 40 GB of data and \$100 of Signals usage, so a large overage doesn't build up unnoticed. You can remove or change any of these like any other warning.
+When you upgrade to Pro or Scale, Laminar adds warnings at the plan's included amounts: 3 GB of data on Pro, and 100 GB of data and \$50 of Signals usage on Scale. These emails say the workspace has used everything the plan includes and that additional usage is now billed at the overage rate. Pro workspaces also get warnings at 40 GB of data and \$25 of Signals usage, so a large overage doesn't build up unnoticed. You can remove or change any of these like any other warning.
 
 A warning only notifies. To stop usage, set a hard limit.
 
@@ -66,7 +68,7 @@ A hard limit caps usage for the billing cycle. **When usage reaches the limit, L
   <img src="/images/usage/hard-limits.png" alt="Hard limits section with Data ingestion set to 25 GB, labeled Included: 10 GB, and Signals usage set to 100 USD with a remove button" />
 </Frame>
 
-Paid plans have no hard limit by default, except Pro, which starts with a \$100 Signals usage limit. Without a limit, usage above the included amount is billed at the overage rate.
+Paid plans have no hard limit by default. Without a limit, usage above the included amount is billed at the overage rate.
 
 ### Set a limit
 
@@ -79,7 +81,7 @@ To remove a limit, click the red **X** next to the field. Changes take effect wi
 
 A hard limit counts from zero, like a warning. If you set a data limit below your plan's included amount, ingestion stops before you've used all the data your plan covers. The form tells you when that's the case:
 
-<Frame caption="A 5 GB data limit on Scale is below the 10 GB the plan includes, so the form notes that covered usage will be blocked">
+<Frame caption="A data limit below the plan's included data: the form notes that covered usage will be blocked">
   <img src="/images/usage/hard-limit-below-included.png" alt="Data ingestion hard limit field set to 5 GB with a Save button and a note that the limit is below the 10 GB included in the plan" />
 </Frame>
 
@@ -106,9 +108,9 @@ Usage resumes on its own when the next billing cycle starts. To resume sooner, r
 The Free plan is never billed, so it has fixed hard limits in place of configurable ones:
 
 - **Data ingestion** stops when the workspace reaches the included 1 GB for the billing cycle, with the same `403` and `RESOURCE_EXHAUSTED` errors as a paid-plan limit.
-- **Signals** stop when the one-time \$5 credit is used up. The credit doesn't renew each cycle. Backfills fail with `One-time Signals credit exhausted. This workspace has used its $5.00 sign-up credit. Please upgrade your plan.`, and owners get a single email saying the credit is used up.
+- **Signals** aren't included. Signals don't run on new traces, and starting a backfill fails with `Signals aren't included in the Free plan. Upgrade to Pro or Scale to use Signals.`
 
-To keep ingesting or running Signals, upgrade the workspace on the [pricing page](https://laminar.sh/pricing). Paid plans let you set your own warnings and limits.
+To ingest more than 1 GB or run Signals, upgrade the workspace on the [pricing page](https://laminar.sh/pricing). Paid plans let you set your own warnings and limits.
 
 ## What's next
 
