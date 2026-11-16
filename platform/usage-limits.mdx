@@ -87,7 +87,7 @@ A hard limit counts from zero, like a warning. If you set a data limit below you
 
 **Data ingestion.** Laminar rejects new trace exports from every project in the workspace. OTLP over HTTP returns `403` and gRPC returns `RESOURCE_EXHAUSTED`, both with the message `Workspace data limit exceeded`. Spans sent while the limit is reached are not stored.
 
-**Signals usage.** Signals stop evaluating new traces, so live triggers produce no new runs or events. Runs that were queued but hadn't started show as **Failed** on the Signal's **Runs** tab. Runs already in progress finish, so usage can end slightly above the limit. Starting a [backfill](/signals/quickstart#backfill-historical) fails with:
+**Signals usage.** Signals stop evaluating new traces, so live triggers produce no new runs or events. Runs that were queued but hadn't started show as **Failed** in the **Runs** section of the Signal's **Overview** tab. Runs already in progress finish, so usage can end slightly above the limit. Starting a [backfill](/signals/quickstart#backfill-historical) fails with:
 
 ```
 Signal cost limit exceeded. Your workspace has used $100.00 of the $100.00 signal budget allowed this billing period.

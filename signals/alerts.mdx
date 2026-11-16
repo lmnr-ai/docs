@@ -5,11 +5,11 @@ sidebarTitle: Alerts
 
 **Alerts turn signal activity into notifications.** When an alert fires, Laminar drops the notification into the in-app notification center and, if configured, sends it to Slack and email.
 
-<Frame caption="Signal settings: the Alerts section, with the Slack connection card and the Signal's alerts">
-  <img src="/images/signals/alerts.png" alt="Alerts section of a Signal's settings page showing the Slack connection card, the + Alert button, and three alert cards" />
+<Frame caption="A Signal's Overview tab, Alerts section: the Slack connection card, the Signal's alerts, and the New alert card">
+  <img src="/images/signals/alerts.png" alt="Alerts section of a Signal's Overview tab showing the Slack connection card, alert cards, and a New alert card" />
 </Frame>
 
-Alerts live on the Signal they watch. Open the Signal, click the **Settings** tab, and select **Alerts** in the sidebar to see every alert for that Signal, create a new one, or connect Slack.
+Alerts live on the Signal they watch. Open the Signal from the Signals section of the sidebar, click the **Overview** tab, and select **Alerts** to see every alert for that Signal, create a new one, or connect Slack.
 
 ## Defaults on signal creation
 
@@ -18,16 +18,16 @@ Creating a new Signal in the UI auto-creates two alerts so you start receiving n
 1. A **New event** alert on the new Signal, scoped to **Critical** severity, with [*skip similar events*](#skip-notifications-for-similar-events) on by default.
 2. A **New cluster** alert.
 
-The alerts default to in-app notifications, and the Signal's creator is subscribed by email. To change channels or route an alert to Slack, open the Signal's **Settings > Alerts** section and edit it.
+The alerts default to in-app notifications, and the Signal's creator is subscribed by email. To change channels or route an alert to Slack, open the Signal's **Overview** tab, select **Alerts**, and edit it.
 
 ## Alert types
 
 Each alert has one of two triggers:
 
 - **New event**: fires when a new event is extracted for the selected Signal. Filter by severity and, optionally, skip semantically similar events.
-- **New cluster**: fires when a new [cluster](/signals/clusters) is created for the selected Signal. Useful for spotting failure modes that did not exist yesterday.
+- **New cluster**: fires when a new [cluster](/signals/clusters) is created for the selected Signal. Useful for spotting failure modes that did not exist yesterday. The notification links to the cluster's page, where its [report](/signals/clusters#cluster-reports) appears once Laminar Agent has written it.
 
-Both trigger types are scoped to a single Signal. To cover multiple Signals, create one alert in each Signal's **Settings > Alerts** section.
+Both trigger types are scoped to a single Signal. To cover multiple Signals, create one alert in each Signal's **Overview > Alerts** section.
 
 ## Severity levels
 
@@ -37,7 +37,7 @@ Both trigger types are scoped to a single Signal. To cover multiple Signals, cre
 - **Warning**: mid-severity events.
 - **Critical**: the highest severity. This is the default for alerts auto-created with a Signal.
 
-The severity of each individual event is set by the Signal's extractor based on the Signal's instruction. A good way to learn what each level looks like on your data is to inspect a few events on the Signal detail page.
+The severity of each individual event is set by the Signal's extractor based on the Signal's instruction. A good way to learn what each level looks like on your data is to inspect a few events in the Signal's clusters.
 
 ## Output schema filters
 
@@ -72,7 +72,7 @@ Every alert posts to the in-app notification center by default. Alerts auto-crea
 
 Slack messages contain the signal name, the extracted payload fields, and a link to the trace. Connect Slack once per workspace, from either place:
 
-- **Signal settings**: the **Slack** card at the top of any Signal's **Settings > Alerts** section. Click **Connect to Slack** and you land back on the same page after authorizing.
+- **Signal Overview**: the **Slack** card at the top of any Signal's **Overview > Alerts** section. Click **Connect to Slack** and you land back on the same page after authorizing.
 - **Workspace settings**: **Settings > Integrations** under *Workspace settings*. See [Slack integration](/platform/integrations).
 
 Both cards manage the same connection, and it covers every project in the workspace. Once Slack is connected, the alert form shows a **Slack channels** picker.
@@ -83,7 +83,7 @@ Email alerts go to the subscribed user's address. Each user manages their own em
 
 ## Create an alert
 
-1. Open the Signal, click the **Settings** tab, select **Alerts**, and click **+ Alert**.
+1. Open the Signal, click the **Overview** tab, select **Alerts**, and click the **New alert** card after the existing alerts.
 2. Fill in the form. The alert is bound to the Signal you opened it from:
    - **Name**: a descriptive label (*"Checkout failures, #eng-oncall"*).
    - **Trigger**: *New event* or *New cluster*.
@@ -97,14 +97,14 @@ Email alerts go to the subscribed user's address. Each user manages their own em
 
 ### Edit or delete
 
-In the Signal's **Settings > Alerts** section, click an alert card to open its edit form, or hover the card and click the trash icon to delete it. Edits take effect on the next matching event; deletes are immediate.
+In the Signal's **Overview > Alerts** section, click an alert card to open its edit form, or hover the card and click the trash icon to delete it. Edits take effect on the next matching event; deletes are immediate.
 
 ## Enable or disable an alert
 
-Every alert card in the Signal's **Settings > Alerts** section has a switch that turns the alert on or off in place. Turn it off to pause notifications without losing the alert's configuration: the trigger, severity set, filters, and channels are all kept, and the card moves to a dimmed state with the switch off. Turn it back on and notifications resume on the next matching event.
+Every alert card in the Signal's **Overview > Alerts** section has a switch that turns the alert on or off in place. Turn it off to pause notifications without losing the alert's configuration: the trigger, severity set, filters, and channels are all kept, and the card moves to a dimmed state with the switch off. Turn it back on and notifications resume on the next matching event.
 
 <Frame caption="Each alert card has an on/off switch; disabled alerts render dimmed">
-  <img src="/images/signals/alerts-toggle.png" alt="Alerts section of a Signal's settings with three alert cards, one toggled off and dimmed" />
+  <img src="/images/signals/alerts-toggle.png" alt="Alerts section of a Signal's Overview tab with alert cards, one toggled off and dimmed" />
 </Frame>
 
 The same control is available as an **Active** switch at the top of the alert's edit form.
