@@ -1025,7 +1025,15 @@ components:
       required: [data]
       properties:
         data: { $ref: "#/components/schemas/JsonValue" }
-        index: { type: integer, format: int32, default: 0 }
+        taskId:
+          type: [string, "null"]
+          description: Test case id. Points sharing a taskId are Trials of one Task; runs are compared by taskId. Falls back to `index` when omitted.
+        index:
+          type: integer
+          format: int32
+          default: 0
+          deprecated: true
+          description: Deprecated. Use taskId.
         id: { $ref: "#/components/schemas/Uuid" }
         target: { $ref: "#/components/schemas/JsonValue" }
         metadata: { type: [object, "null"], additionalProperties: true }
@@ -1033,6 +1041,7 @@ components:
         traceId: { $ref: "#/components/schemas/Uuid" }
         scores:
           type: object
+          description: Score name to number. A null or omitted score is not stored, so it is left out of averages instead of counting as 0.
           additionalProperties: { type: [number, "null"], format: double }
         datasetLink:
           oneOf:
