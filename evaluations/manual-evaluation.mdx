@@ -400,7 +400,7 @@ Fields you leave out are unchanged, so you can rename a run without touching its
 | `points` | array | yes | One or more datapoints. Batch them rather than sending one request per row. |
 | `points[].data` | any JSON | yes | The executor input, shown in the datapoint table. |
 | `points[].id` | UUID | no | Datapoint id. Mint it yourself so you can update the row later; otherwise the server generates one and does not return it. |
-| `points[].taskId` | string | no | The test case this row belongs to, e.g. `"PS-05"`. Points that share a `taskId` are Trials of one Task: the table groups them and shows their averages. Also the key rows are matched on when comparing two runs. Always send it. |
+| `points[].taskId` | string | no | Points that share a `taskId` are Trials of one Task: the table groups them and shows their averages. Also the key rows are matched on when comparing two runs. Always send it. |
 | `points[].index` | integer | no | **Deprecated.** Use `taskId`. A point without a `taskId` falls back to `index` as its task id. |
 | `points[].target` | any JSON | no | Expected output, for evaluators and side-by-side diffing. |
 | `points[].executorOutput` | any JSON | no | Skip the update phase and write the output now. |
