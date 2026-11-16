@@ -1041,7 +1041,6 @@ components:
         traceId: { $ref: "#/components/schemas/Uuid" }
         scores:
           type: object
-          description: Score name to number. A null or omitted score is not stored, so it is left out of averages instead of counting as 0.
           additionalProperties: { type: [number, "null"], format: double }
         datasetLink:
           oneOf:

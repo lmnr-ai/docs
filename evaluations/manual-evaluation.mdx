@@ -404,7 +404,7 @@ Fields you leave out are unchanged, so you can rename a run without touching its
 | `points[].index` | integer | no | **Deprecated.** Use `taskId`. A point without a `taskId` falls back to `index` as its task id. |
 | `points[].target` | any JSON | no | Expected output, for evaluators and side-by-side diffing. |
 | `points[].executorOutput` | any JSON | no | Skip the update phase and write the output now. |
-| `points[].scores` | object | no | Score name → number. Same shortcut as `executorOutput`. Leave a score out, or send `null`, when that grader didn't run: it shows as `-` and is left out of averages, rather than counting as `0`. |
+| `points[].scores` | object | no | Score name → number. Same shortcut as `executorOutput`. |
 | `points[].metadata` | object | no | Arbitrary JSON on the datapoint. |
 | `points[].traceId` | UUID | no | Trace that owns this row. Clicking the row opens that trace's transcript. |
 | `groupName` | string | no | Group written onto these datapoints. Pass the evaluation's group name: it defaults to `default` per request, and a mismatch leaves the rows out of the group's progression chart. |
@@ -433,16 +433,7 @@ curl -sS -X POST "${LMNR_BASE_URL}/v1/evals/${EVAL_ID}/datapoints" \
 
 Returns `200` with the evaluation id.
 
-To run each case several times, send one point per run with the same `taskId` and its own `id` and `traceId`. Five runs of one case are five points:
-
-```json
-{
-  "points": [
-    { "id": "<uuid>", "taskId": "PS-05", "data": { "case": "PS-05" }, "scores": { "pass": 1 }, "traceId": "<trace-1>" },
-    { "id": "<uuid>", "taskId": "PS-05", "data": { "case": "PS-05" }, "scores": { "pass": 0 }, "traceId": "<trace-2>" }
-  ]
-}
-```
+To run each case several times, send one point per run with the same `taskId` and its own `id` and `traceId`.
 
 <Warning>
 Two fields the SDKs fill in for you and the API does not:
