@@ -39,12 +39,20 @@ If someone else pushed the task set since your copy's version, `push` merges the
 `lmnr-cli eval pull` brings Laminar's latest version into your evals folder:
 
 ```bash
-lmnr-cli eval pull support               # the agent's scripts and every task set
 lmnr-cli eval pull support/billing       # one task set
 lmnr-cli eval pull support/billing@3     # a specific version
+lmnr-cli eval pull support --all         # every task set of the agent
 ```
 
-The pull merges with your local copy the same way a push does, so local edits you haven't pushed yet are kept. You don't need a local copy to run a task set: `lmnr-cli eval run` downloads any task set the evals folder doesn't have.
+The pull merges with your local copy the same way a push does, so local edits you haven't pushed yet are kept. `--all` also fetches the agent scripts, but only when `evals/<agent>/` has no `agent.yaml`: if your repo has the scripts, its copy wins. You don't need a local copy to run a task set: `lmnr-cli eval run` downloads any task set the evals folder doesn't have.
+
+To fetch only the agent scripts, for example ones the [Laminar agent](/platform/laminar-agent) wrote and stored in Laminar, pull the agent and commit the result to your repo:
+
+```bash
+lmnr-cli eval pull support
+```
+
+If a script you have locally differs from Laminar's copy, the pull stops with exit code `22` (`merge_conflict`) and lists the files, without writing anything. Commit or move your changes aside first, or pass `--force` to overwrite them.
 
 To see what Laminar has, run `lmnr-cli eval list`:
 
