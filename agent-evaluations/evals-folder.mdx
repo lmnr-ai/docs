@@ -5,14 +5,15 @@ sidebarTitle: The evals folder
 
 This page is the reference for the files `lmnr-cli eval run` reads. For a guided first eval, start with the [quickstart](/agent-evaluations/quickstart).
 
-The evals folder holds one directory per agent you evaluate. Everything in an agent's directory except `task_sets/` is its **agent scripts**: the image, the Harbor agent class, and the scripts that start your stack and seed a case. They change together with your code, so they live in your repo. The `task_sets/` folder holds the cases. [Task sets](/agent-evaluations/task-sets) are stored and versioned in Laminar, and the copies in your repo are working copies you pull and push.
+The evals folder holds one directory per agent you evaluate. Everything in an agent's directory except `task_sets/` is its **agent scripts**: the image, the Harbor agent class, and the scripts that start your stack and seed a case. They change together with your code, so they live in your repo, and `lmnr-cli eval run` only uses your repo's copy. The `task_sets/` folder holds the cases. [Task sets](/agent-evaluations/task-sets) are stored and versioned in Laminar, `agent.yaml` pins the version each one runs at, and the copies in `task_sets/` are working copies you pull and push, ignored by git.
 
 A fuller layout, for an app with services and a database:
 
 ```
 evals/
   support/                          # an agent
-    agent.yaml                      # images and the Harbor job config
+    agent.yaml                      # images, the Harbor job config, task set pins
+    .gitignore                      # task_sets/ (written by eval pull)
     adapter.py                      # the Harbor agent class
     README.md                       # how to run, how to add a case
     image/
@@ -23,7 +24,7 @@ evals/
         seed_case.*                 # load this case's data from environment/
         run_case.*                  # drive the entry point, write result files
         export_trajectory.*         # (optional) rebuild the trajectory if the app isn't instrumented
-    task_sets/
+    task_sets/                      # working copies, not committed
       billing/                      # a task set
         .lmnr.json                  # the Laminar version this copy is based on
         duplicate-charge/           # a task (case)
@@ -40,7 +41,7 @@ Agent and task set names can use letters, digits, `.`, `_`, and `-`, and start w
 
 ## agent.yaml
 
-`agent.yaml` has two keys: `images`, the images tasks can use, and `job`, a Harbor job config.
+`agent.yaml` has three keys: `images`, the images tasks can use, `job`, a Harbor job config, and `task_sets`, the version each task set runs at.
 
 ```yaml evals/support/agent.yaml
 images:
@@ -57,6 +58,8 @@ job:
       env:
         ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
   n_concurrent_trials: 4
+task_sets:
+  billing: 7                    # run version 7 of the billing task set
 ```
 
 | Key | Required | What it does |
@@ -65,6 +68,7 @@ job:
 | `images.<name>.dockerfile` | Yes | Path to the Dockerfile, relative to the agent directory. |
 | `images.<name>.context` | No | Docker build context, relative to the agent directory. Defaults to the Dockerfile's directory. |
 | `job` | No | A Harbor job config without `datasets` or `tasks`: `agents`, `n_attempts`, `n_concurrent_trials`, `environment`, and so on. `lmnr-cli` adds the task set being run as the dataset. |
+| `task_sets.<name>` | No | The [pinned version](/agent-evaluations/task-sets#pin-task-set-versions) of a task set. `lmnr-cli` never changes it: bump it by hand after a push. |
 
 Harbor runs from the agent directory, which is also on `PYTHONPATH`, so `import_path: adapter:SupportAgent` points at `SupportAgent` in `evals/support/adapter.py`. Relative paths in `job` resolve from the agent directory too.
 
@@ -105,7 +109,7 @@ Tasks can't build their own image: `lmnr-cli eval push` rejects a task that has 
 
 ## .lmnr.json
 
-`lmnr-cli eval pull` and `lmnr-cli eval push` write `.lmnr.json` into each task set directory. It records the Laminar version your copy is based on, and the next pull or push uses it to merge task by task. Leave it in place, and commit it if you commit the task set.
+`lmnr-cli eval pull` and `lmnr-cli eval push` write `.lmnr.json` into each task set directory. It records the Laminar version your copy is based on, and the next pull or push uses it to merge task by task. Leave it in place. Like the rest of `task_sets/`, it stays out of git.
 
 ## Secrets and env vars
 

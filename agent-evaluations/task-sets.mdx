@@ -3,7 +3,7 @@ title: Task Sets - Version Agent Evaluation Cases in Laminar
 sidebarTitle: Task sets
 ---
 
-A task set is a named, versioned group of [agent evaluation](/agent-evaluations/introduction) cases that Laminar stores for you. You define the cases once, then run the same version against every new version of your agent, so a score change means the agent changed rather than the test. Anyone on the project can add cases with `lmnr-cli eval push`, and every run records exactly which version of the cases it used.
+A task set is a named, versioned group of [agent evaluation](/agent-evaluations/introduction) cases that Laminar stores for you. You define the cases once, then run the same version against every new version of your agent, so a score change means the agent changed rather than the test. Anyone on the project can add cases with `lmnr-cli eval push`, your repo pins the version it runs, and every run records exactly which version of the cases it used.
 
 ## Where task sets live
 
@@ -13,24 +13,43 @@ Each agent in your [evals folder](/agent-evaluations/evals-folder) has two parts
 | --- | --- | --- |
 | What | `agent.yaml`, the Harbor agent class, Dockerfiles, start and seed scripts | The cases: `task.toml`, `instruction.md`, per-case data, verifier |
 | Changes when | Your code changes | Someone adds or edits a case |
-| Source of truth | Your repo | Laminar |
+| Lives in | Your repo | Laminar, versioned |
 
-Laminar stores each pushed version of both, plus a snapshot of whatever each run used.
+Agent scripts depend on your code: a new database schema or a different start command changes them. Keeping them in the repo means they change in the same commit as the code, and your coding agent can update them alongside it. `lmnr-cli eval run` always uses the agent scripts in your repo: if `evals/<agent>/agent.yaml` is missing, the run fails with exit code `23` (`not_found`).
 
-Agent scripts depend on your code: a new database schema or a different start command changes them. Keeping them in the repo means they change in the same commit as the code, and your coding agent can update them alongside it. Task sets are data, so Laminar stores them, and anyone with access to the project can add cases without write access to your repo.
+Task sets are data, so Laminar stores them, and anyone with access to the project can add cases without write access to your repo. Each change you push becomes a new version, and your repo pins the version each task set runs at.
 
-If your repo has no `evals/<agent>/` directory, `lmnr-cli eval run` uses the latest copy of the agent scripts stored in Laminar instead.
+## Pin task set versions
+
+Add a `task_sets` map to the agent's `agent.yaml`, with the version of each task set your runs and CI should use:
+
+```yaml evals/support/agent.yaml
+task_sets:
+  billing: 7
+  refunds: 2
+```
+
+Pins change only when you edit them, so a case someone adds in Laminar doesn't change what your CI runs until a commit bumps the pin. For each task set, a run uses the first of these that applies:
+
+1. A version you name on the command line: `--task-set billing@8`, or `--task-set billing@latest` for the latest version.
+2. Your local copy in `evals/<agent>/task_sets/<set>/`, as is, including edits you haven't pushed. If it's based on a different version than the pin, the run warns you.
+3. The pinned version.
+4. The latest version, only when you name the task set with `--task-set billing`.
+
+A plain `lmnr-cli eval run support` runs the pinned task sets plus any local copies, and skips the task sets that are only in Laminar and not pinned, naming them.
+
+Local copies are working copies, not part of your repo. `lmnr-cli eval pull` writes an `evals/<agent>/.gitignore` that ignores `task_sets/`, so a CI checkout has no local copies and runs the pinned versions. Commit that `.gitignore`.
 
 ## Publish a task set
 
 `lmnr-cli eval push` uploads your local copy and makes it the latest version:
 
 ```bash
-lmnr-cli eval push support            # the agent's scripts and every local task set
 lmnr-cli eval push support/billing    # one task set
+lmnr-cli eval push support            # every local task set of the agent
 ```
 
-Each push gets the next version number. `push` also writes `.lmnr.json` into the task set directory, which records the version your copy is now based on.
+Each push gets the next version number, which the command prints. `push` also writes `.lmnr.json` into the task set directory, which records the version your copy is now based on. Bump the pin in `agent.yaml` to that number when you want runs and CI to use it.
 
 If someone else pushed the task set since your copy's version, `push` merges their version in first, task by task: tasks only they changed are taken, tasks only you changed are kept, and then your push goes through. A task that both of you changed stops the push with exit code `22` (`merge_conflict`) and changes nothing. Move your copy of that task aside, pull, and re-apply your edit.
 
@@ -44,24 +63,19 @@ lmnr-cli eval pull support/billing@3     # a specific version
 lmnr-cli eval pull support --all         # every task set of the agent
 ```
 
-The pull merges with your local copy the same way a push does, so local edits you haven't pushed yet are kept. `--all` also fetches the agent scripts, but only when `evals/<agent>/` has no `agent.yaml`: if your repo has the scripts, its copy wins. You don't need a local copy to run a task set: `lmnr-cli eval run` downloads any task set the evals folder doesn't have.
+The pull merges with your local copy the same way a push does, so local edits you haven't pushed yet are kept. You don't need a local copy to run a task set: `lmnr-cli eval run` downloads the pinned version.
 
-To fetch only the agent scripts, for example ones the [Laminar agent](/platform/laminar-agent) wrote and stored in Laminar, pull the agent and commit the result to your repo:
+To see what Laminar has, run `lmnr-cli eval list`. It lists each agent's task sets with their latest version.
+
+## Recover agent scripts
+
+Every run stores a copy of the agent scripts it used. If your repo doesn't have them yet, for example because the [Laminar agent](/platform/laminar-agent) wrote them in its sandbox, fetch the ones the last run used and commit them:
 
 ```bash
 lmnr-cli eval pull support
 ```
 
-If a script you have locally differs from Laminar's copy, the pull stops with exit code `22` (`merge_conflict`) and lists the files, without writing anything. Commit or move your changes aside first, or pass `--force` to overwrite them.
-
-To see what Laminar has, run `lmnr-cli eval list`:
-
-```
-Agent    Task set   Head
-support  (scripts)  v4
-support  billing    v7
-support  refunds    v2
-```
+`--all` also fetches them when `evals/<agent>/` has no `agent.yaml`. If a script you have locally differs from Laminar's copy, the pull stops with exit code `22` (`merge_conflict`) and lists the files, without writing anything. Commit or move your changes aside first, or pass `--force` to overwrite them.
 
 ## Every run records the versions it used
 
@@ -77,7 +91,7 @@ Each run of a task set is charted in the evaluation group `<agent>/<task set>`, 
 
 ## The Task sets page
 
-The **Task sets** page in your Laminar project lists each agent's task sets with their latest version. Open a task set to browse its tasks and their files, see each version and which tasks it added, removed, or changed, and find the evaluations that ran it. The **Agent scripts** tab shows the scripts each version of the agent ran with, next to the git commit of your repo at the time. An evaluation run from a task set links back to the task set and the version it ran.
+The **Task sets** page in your Laminar project lists each agent's task sets with their latest version. Open a task set to browse its tasks and their files, see each version and which tasks it added, removed, or changed, and find the evaluations that ran it. The **Agent scripts** tab shows the scripts the agent's last run used, with the git commit of your repo at the time, and the command to fetch them into your repo. An evaluation run from a task set links back to the task set and the version it ran.
 
 ## Next steps
 

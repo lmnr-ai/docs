@@ -354,7 +354,16 @@ The driver imports `DB_PATH` and `handle_ticket`, and the Harbor agent sets `AGE
     npx lmnr-cli@latest eval push support
     ```
 
-    This publishes the agent scripts and the `billing` task set as version 1, and writes `evals/support/task_sets/billing/.lmnr.json` to record the version your copy is based on. Your teammates and CI now run the same cases, and the task set appears on the **Task sets** page in Laminar. See [Task sets](/agent-evaluations/task-sets) for pulling, versions, and merging.
+    This publishes the `billing` task set as version 1, and writes `evals/support/task_sets/billing/.lmnr.json` to record the version your copy is based on. The task set appears on the **Task sets** page in Laminar.
+
+    Pin that version in `evals/support/agent.yaml`, so your teammates and CI run the same cases:
+
+    ```yaml evals/support/agent.yaml
+    task_sets:
+      billing: 1
+    ```
+
+    Then commit `evals/support/` without its task sets, which now live in Laminar: add `task_sets/` to `evals/support/.gitignore` (`lmnr-cli eval pull` writes this file for you). See [Task sets](/agent-evaluations/task-sets) for pulling, versions, and merging.
   </Step>
 </Steps>
 

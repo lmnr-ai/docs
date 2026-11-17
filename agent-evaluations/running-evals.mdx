@@ -31,7 +31,7 @@ lmnr-cli eval run --remote --model anthropic/claude-sonnet-5
 | --- | --- |
 | `[agents...]` | Run only these agents. Defaults to every agent directory in the evals folder. |
 | `--dir <dir>` | The evals folder. Defaults to `evals`. |
-| `--task-set <name[@version]>` | Run only this task set. Repeatable. `@version` runs that version from Laminar. |
+| `--task-set <name[@version]>` | Run only this task set. Repeatable. `@version` (or `@latest`) runs that version from Laminar instead of the pin. |
 | `--task <glob>` | Run only tasks matching the glob. Repeatable. |
 | `--n-attempts <n>` | Trials per task. Overrides `agent.yaml`. |
 | `--n-concurrent <n>` | Concurrent trials. Overrides `agent.yaml`. |
@@ -41,11 +41,12 @@ lmnr-cli eval run --remote --model anthropic/claude-sonnet-5
 
 ## What a run uses
 
-Each agent directory in `evals/` is one agent, and with no arguments `eval run` runs all of them. For each agent it runs every task set in the agent's `task_sets/` folder, plus the agent's task sets in Laminar that you don't have locally. Pass agent names to run only those, and `--task-set` to pick task sets.
+Each agent directory in `evals/` with an `agent.yaml` is one agent, and with no arguments `eval run` runs all of them. For each agent it runs the task sets pinned in `agent.yaml` plus the local copies in its `task_sets/` folder. Pass agent names to run only those, and `--task-set` to pick task sets.
 
-- **A local copy of a task set is run as is**, including edits you haven't pushed. The run stores a snapshot of it in Laminar, but only [`lmnr-cli eval push`](/agent-evaluations/task-sets#publish-a-task-set) makes it the latest version. If your copy is based on an older version than the latest, the run warns you.
-- **A task set without a local copy, or one named with `@version`,** runs Laminar's version of it.
-- **An agent without a local directory** runs the latest agent scripts pushed to Laminar.
+- **A version named with `--task-set <set>@<version>`** (or `@latest`) runs that version from Laminar.
+- **A local copy of a task set is run as is**, including edits you haven't pushed. The run stores a snapshot of it in Laminar, but only [`lmnr-cli eval push`](/agent-evaluations/task-sets#publish-a-task-set) makes it the latest version. If your copy is based on a different version than the pin, the run warns you.
+- **A pinned task set without a local copy** runs the [pinned version](/agent-evaluations/task-sets#pin-task-set-versions). A task set that is neither pinned nor local runs its latest version only when you name it with `--task-set`; otherwise the run skips it and says so.
+- **The agent scripts always come from your repo.** An agent without `agent.yaml` fails the run with exit code `23`; `lmnr-cli eval pull <agent>` [fetches the scripts the last run used](/agent-evaluations/task-sets#recover-agent-scripts).
 
 Harbor runs once per task set, and each run of a task set becomes one evaluation in the group `<agent>/<task set>`, linked to the task set version and the agent scripts it used.
 
@@ -63,7 +64,7 @@ To compare every pull request against the same cases, pin the task set version, 
 | `19` | A `${VAR}` placeholder or `LMNR_PROJECT_API_KEY` is unset |
 | `20` | A Docker build, pull, or save failed, or an image isn't `linux/amd64` |
 | `21` | A `--remote` run failed before its task sets ran, or its sandbox was lost |
-| `23` | An agent, task set, or version that Laminar doesn't have |
+| `23` | An agent, task set, or version that Laminar doesn't have, or an agent without `agent.yaml` |
 
 ## Remote limits and image requirements
 

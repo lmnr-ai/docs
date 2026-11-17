@@ -31,8 +31,14 @@ Fixes for the most common problems when running [agent evaluations](/agent-evalu
   <Accordion title="A task is rejected because it has environment/Dockerfile">
     Tasks can't build their own image. Move the Dockerfile into the agent directory, add it to `images` in `agent.yaml`, and set `docker_image` in the task's `task.toml`. Keep only the case's data in `environment/`. See [the evals folder](/agent-evaluations/evals-folder).
   </Accordion>
-  <Accordion title="The run warns that my copy is based on an older version">
-    Someone pushed a newer version of the task set since you last pulled or pushed. The run still uses your local copy. Run `lmnr-cli eval pull <agent>/<task set>` to merge their changes in.
+  <Accordion title="The run warns that my copy is based on a different version than the pin">
+    Your local copy of the task set and the version `agent.yaml` pins have drifted apart. The run still uses your local copy. Run `lmnr-cli eval pull <agent>/<task set>` to merge the latest version in, or bump the pin in `agent.yaml` after you push.
+  </Accordion>
+  <Accordion title="The run fails because the agent has no agent.yaml (exit code 23)">
+    `lmnr-cli eval run` only uses agent scripts from your repo. If they were written elsewhere, for example by the Laminar agent, run `lmnr-cli eval pull <agent>` to fetch the scripts the last run used, then commit them. See [Recover agent scripts](/agent-evaluations/task-sets#recover-agent-scripts).
+  </Accordion>
+  <Accordion title="A task set in Laminar is skipped">
+    A plain run only runs the task sets `agent.yaml` pins and the ones you have locally. Pin it in `agent.yaml`, or name it with `--task-set <set>` to run its latest version.
   </Accordion>
 </AccordionGroup>
 

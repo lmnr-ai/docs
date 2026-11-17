@@ -44,7 +44,7 @@ Agent evaluations answer all three by giving every case a fresh, complete copy o
 
 ## How a run works
 
-You keep an `evals/` folder next to your code, with one directory per agent you evaluate. It holds the agent's scripts, which build the image and drive your app, and its task sets. Each case in a task set is a Harbor task: the image to use, the data for this scenario, and a verifier. You publish task sets to Laminar with `lmnr-cli eval push`, and anyone on the project can run or pull them. When you run `lmnr-cli eval run`, Laminar:
+You keep an `evals/` folder next to your code, with one directory per agent you evaluate. It holds the agent's scripts, which build the image and drive your app, and its task sets. Each case in a task set is a Harbor task: the image to use, the data for this scenario, and a verifier. You publish task sets to Laminar with `lmnr-cli eval push`, pin the version your runs use in `agent.yaml`, and anyone on the project can run or pull them. When you run `lmnr-cli eval run`, Laminar:
 
 1. Builds your image from the live source tree.
 2. Starts one container per trial, uploads the case's data, and runs the driver against your app.
