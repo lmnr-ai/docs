@@ -26,6 +26,7 @@ Query all your Laminar data directly with SQL. Find patterns, debug issues, and 
 | datasets | Datasets: name and creation time |
 | dashboards | Dashboards: name and creation time |
 | dashboard_charts | Dashboard charts: title, SQL query, and settings (chart type, layout) |
+| table_views | Saved table views: the table they belong to, name, and config (columns, filters, sort, project default) |
 
 Only `SELECT` queries are allowed.
 
@@ -237,7 +238,7 @@ LIMIT 10
 |------|----------|
 | `UUID` | Most ID columns (`trace_id`, `span_id`, `id`) |
 | `DateTime64(9, 'UTC')` | Timestamps (always UTC) |
-| `DateTime64(6)` | `created_at` on `signals`, `evaluations`, `datasets`, `dashboards`, and `dashboard_charts` |
+| `DateTime64(6)` | `created_at` on `signals`, `evaluations`, `datasets`, `dashboards`, `dashboard_charts`, and `table_views` (plus `table_views.updated_at`) |
 | `String` | Text, JSON stored as strings, and enum-like columns (`span_type`, `trace_type`, `status`) |
 | `Nullable(String)` | Optional text on `signals`, `evaluations`, and `datasets` (for example, `signals.llm_model`) |
 | `LowCardinality(String)` | Low-cardinality enums |
@@ -912,6 +913,31 @@ SELECT d.name AS dashboard, c.name AS chart,
 FROM dashboard_charts c
 JOIN dashboards d ON d.id = c.dashboard_id
 ORDER BY dashboard, grid_row, grid_col
+```
+
+### table_views
+
+One row per saved [table view](/platform/table-views).
+
+| Column | Type | Example value |
+|--------|------|---------------|
+| `id` | `UUID` | `"44444444-5555-4666-a777-888888888888"` |
+| `resource` | `String` | `"traces"` |
+| `name` | `String` | `"High-cost traces"` |
+| `config` | `String` | `"{\"sortBy\": \"cost\", \"isDefault\": true, \"sortDirection\": \"desc\", \"columnVisibility\": {\"id\": true, ...}}"` |
+| `created_at` | `DateTime64(6)` | `"2021-01-01 00:00:00.000000"` |
+| `updated_at` | `DateTime64(6)` | `"2021-01-01 00:00:00.000000"` |
+
+`resource` is the table the view belongs to: `traces`, `spans`, `sessions`, `evaluations`, `evaluation-v1.1` (an evaluation's datapoints), `datasets`, `dataset` (a dataset's datapoints), `queues`, `playgrounds`, `debugger-sessions`, `signal-runs`, or `signal-events:<signal id>` for one Signal's events table.
+
+`config` is JSON stored as a string. Its keys are `columnOrder`, `columnVisibility`, `columnSizing`, `customColumns`, `filters`, `search`, `sortBy`, and `sortDirection`, plus `isDefault`, which is `true` on the [project default view](/platform/table-views#set-a-project-default-view) of each table:
+
+```sql
+-- The project default view of each table
+SELECT resource, name, updated_at
+FROM table_views
+WHERE JSONExtractBool(config, 'isDefault')
+ORDER BY resource
 ```
 
 ## Example Queries
