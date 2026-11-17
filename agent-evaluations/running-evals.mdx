@@ -3,73 +3,72 @@ title: Run Agent Evaluations with lmnr-cli eval run
 sidebarTitle: Run evals with lmnr-cli
 ---
 
-`lmnr-cli eval run` runs your agents' [task sets](/agent-evaluations/task-sets), locally on Docker or in Laminar's cloud sandboxes with `--remote`, and records each trial of an [agent evaluation](/agent-evaluations/introduction) in Laminar with its trace.
+`lmnr-cli eval run` runs your [task sets](/agent-evaluations/task-sets), locally on Docker or in Laminar's cloud sandboxes with `--remote`, and records each trial of an [agent evaluation](/agent-evaluations/introduction) in Laminar with its trace.
 
-Run it from the repo root, since that is where it looks for `.env` and `.env.local`. Use **local** mode while you iterate, after every change. Use **`--remote`** to run many more trials at once: `lmnr-cli` uploads the images, starts the run in Laminar, and prints the run's log until it ends. Press Ctrl-C to stop following the log; the run keeps going, and its results appear in the project as trials finish.
+Run it from the repo root, since that is where it looks for `.env` and `.env.local`. Use **local** mode while you iterate, after every change. Use **`--remote`** to run many more trials at once: `lmnr-cli` uploads the images, starts one run in Laminar for all the task sets you picked, and prints the run's log until it ends. Press Ctrl-C to stop following the log; the run keeps going, and its results appear in the project as trials finish.
 
 | | Local | `--remote` |
 | --- | --- | --- |
 | Harbor runs | On your machine | In a Laminar sandbox |
 | Trials run | On your Docker | In Laminar sandboxes, one per trial |
 | You need | Docker, uv, `LMNR_PROJECT_API_KEY` | Docker, `lmnr-cli login` (or `LMNR_PROJECT_API_KEY` in CI) |
-| Harbor's job output | `evals/<agent>/jobs/` | The **Log** tab of each trial, once its task set finishes |
+| Harbor's job output | `evals/<set>/jobs/` | The **Log** tab of each trial, once its task set finishes |
 
 <Note>
 Both modes need Docker on the machine where you run `lmnr-cli`, because that is where the images are built. In remote mode the built images are then uploaded.
 </Note>
 
 ```bash
-lmnr-cli eval run                                    # every agent and task set
-lmnr-cli eval run support --task-set billing --task "duplicate-*" --n-attempts 3
-lmnr-cli eval run support --task duplicate-charge    # one case
-lmnr-cli eval run support --task-set billing@7       # version 7 from Laminar
+lmnr-cli eval run                                    # every task set in evals/
+lmnr-cli eval run billing --task "duplicate-*" --n-attempts 3
+lmnr-cli eval run billing --task duplicate-charge    # one case
+lmnr-cli eval run billing@7                          # version 7 from Laminar
 lmnr-cli eval run --remote --n-concurrent 20
 lmnr-cli eval run --remote --model anthropic/claude-sonnet-5
 ```
 
 | Flag | What it does |
 | --- | --- |
-| `[agents...]` | Run only these agents. Defaults to every agent directory in the evals folder. |
+| `[sets...]` | Run only these task sets. `<set>@<version>` (or `<set>@latest`) runs that version from Laminar instead of the pin. Defaults to every task set directory in the evals folder. |
 | `--dir <dir>` | The evals folder. Defaults to `evals`. |
-| `--task-set <name[@version]>` | Run only this task set. Repeatable. `@version` (or `@latest`) runs that version from Laminar instead of the pin. |
 | `--task <glob>` | Run only tasks matching the glob. Repeatable. |
-| `--n-attempts <n>` | Trials per task. Overrides `agent.yaml`. |
-| `--n-concurrent <n>` | Concurrent trials. Overrides `agent.yaml`. |
-| `--model <name>` | Agent model. Overrides `agent.yaml`. |
+| `--n-attempts <n>` | Trials per task. Overrides `eval.yaml`. |
+| `--n-concurrent <n>` | Concurrent trials. Overrides `eval.yaml`. |
+| `--model <name>` | Agent model. Overrides `eval.yaml`. |
 | `--env KEY[=VALUE]` | Extra agent env var. Repeatable. A bare `KEY` is read from your environment. |
 | `--json` | Print a JSON summary instead of logs. |
 
 ## What a run uses
 
-Each agent directory in `evals/` with an `agent.yaml` is one agent, and with no arguments `eval run` runs all of them. For each agent it runs the task sets pinned in `agent.yaml` plus the local copies in its `task_sets/` folder. Pass agent names to run only those, and `--task-set` to pick task sets.
+Each directory in `evals/` with an `eval.yaml` is one task set, and with no arguments `eval run` runs all of them. Pass task set names to run only those. For each task set:
 
-- **A version named with `--task-set <set>@<version>`** (or `@latest`) runs that version from Laminar.
-- **A local copy of a task set is run as is**, including edits you haven't pushed. The evaluation keeps its files, but links to a task set version only when the copy matches a pushed one exactly: only [`lmnr-cli eval push`](/agent-evaluations/task-sets#publish-a-task-set) creates versions. If your copy is based on a different version than the pin, the run warns you.
-- **A pinned task set without a local copy** runs the [pinned version](/agent-evaluations/task-sets#pin-task-set-versions). Any other task set in the project runs its latest version only when you name it with `--task-set`.
-- **The agent scripts always come from your repo.** An agent without `agent.yaml` fails the run with exit code `23`; `lmnr-cli eval pull <agent>` [fetches the scripts the last run used](/agent-evaluations/task-sets#recover-agent-scripts).
+- **A version named on the command line** (`billing@7` or `billing@latest`) runs that version from Laminar.
+- **A local copy in `tasks/` is run as is**, including edits you haven't pushed. The evaluation keeps its files, but links to a task set version only when the copy matches a pushed one exactly: only [`lmnr-cli eval push`](/agent-evaluations/task-sets#publish-a-task-set) creates versions. If your copy is based on a different version than the pin, the run warns you.
+- **Without a local copy**, the run uses the [pinned version](/agent-evaluations/task-sets#pin-task-set-versions), or the latest version with a warning when `eval.yaml` has no `version`.
+- **The scripts always come from your repo.** A task set without `eval.yaml` fails the run with exit code `23`; `lmnr-cli eval pull <set>` [fetches the scripts the last run used](/agent-evaluations/task-sets#recover-scripts).
 
-Harbor runs once per task set, and each run of a task set becomes one evaluation in the group `<agent>/<task set>`. It keeps the task files and agent scripts it used, and links to the task set version it ran when that version was pushed.
+Harbor runs once per task set, and each run of a task set becomes one evaluation in the group named after the task set. It keeps the task files and scripts it used, and links to the task set version it ran when that version was pushed.
 
 ## In CI
 
-Use `--json` and the exit code. A local run prints `{mode: "local", taskSets, failed, url}`. A `--remote` run prints `{mode: "remote", runs, url}` when the run ends, with one entry per agent: `{agent, runId, sandboxId, evaluations, exitCode}`. Set `LMNR_PROJECT_API_KEY` and the secrets your `agent.yaml` and `task.toml` files reference as CI secrets.
+Use `--json` and the exit code. A local run prints `{mode: "local", taskSets, failed, url}`. A `--remote` run prints its summary, with the run's evaluations and exit code, when the run ends. Set `LMNR_PROJECT_API_KEY` and the secrets your `eval.yaml` and `task.toml` files reference as CI secrets.
 
-To compare every pull request against the same cases, pin the task set version, for example `--task-set billing@7`. Without a pin, CI runs the copy of the task set committed to your repo, or Laminar's latest version if the repo has none.
+To compare every pull request against the same cases, pin the task set version with `version` in its `eval.yaml`. A CI checkout has no local copies (`tasks/` is gitignored), so it runs the pinned version, or Laminar's latest version, with a warning, when there's no pin.
 
 | Exit code | Meaning |
 | --- | --- |
-| `16` | Invalid evals folder, or agent scripts or a task set over the upload limit |
+| `16` | Invalid evals folder, or the scripts or a task set over the upload limit |
 | `17` | `uv` or Docker isn't installed |
 | `18` | A task set's `harbor run` failed. The other task sets still run. |
 | `19` | A `${VAR}` placeholder or `LMNR_PROJECT_API_KEY` is unset |
 | `20` | A Docker build, pull, or save failed, or an image isn't `linux/amd64` |
 | `21` | A `--remote` run failed before its task sets ran, or its sandbox was lost |
-| `23` | An agent, task set, or version that Laminar doesn't have, or an agent without `agent.yaml` |
+| `23` | A task set or version that Laminar doesn't have, or a task set without `eval.yaml` |
 
 ## Remote limits and image requirements
 
 - **One container per trial.** `cpus` and `memory_mb` above the sandbox limit are clamped, and a run that exceeds the time limit is stopped.
-- **Agent scripts and each task set are capped at 1 GiB each.** Symlinks, `.git`, `node_modules`, virtualenvs, caches, and `jobs/` directories are skipped, and `.env*` files are never uploaded. This applies to every run, since every run stores what it used. Keep large fixtures out of `evals/`.
+- **The scripts and each task set are capped at 1 GiB each.** Symlinks, `.git`, `node_modules`, virtualenvs, caches, and `jobs/` directories are skipped, and `.env*` files are never uploaded. This applies to every run, since every run stores what it used. Keep large fixtures out of `evals/`.
 - **Images need `tar`, `gzip`, and `bash`**, plus `su` if a task runs as a non-root user. They're built for `linux/amd64` (emulated on Apple silicon), so architecture-specific downloads should use `ARG TARGETARCH`.
 - **Concurrency is capped per project** (50 sandboxes by default). A higher `--n-concurrent` queues rather than running more at once.
 - **Large images** may need a higher `build_timeout_sec` under `[environment]` in `task.toml` (default 600 seconds), which bounds image preparation plus sandbox start.

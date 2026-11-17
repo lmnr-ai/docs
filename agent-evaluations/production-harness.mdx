@@ -18,7 +18,7 @@ Everything the entry point touches runs inside the one container, with no docker
 
 Harbor starts the container with its own keep-alive command, so the image's `CMD` and entrypoint never run. Put the startup in a script that your agent calls, which launches each service in the background, sends its output to `/logs/agent/`, and waits until the app is ready:
 
-```bash evals/support/image/shared/start_stack.sh
+```bash evals/billing/image/shared/start_stack.sh
 #!/bin/bash
 pg_ctlcluster 17 main start >> /logs/agent/postgres.log 2>&1
 /srv/app/migrate.sh >> /logs/agent/migrate.log 2>&1
@@ -43,7 +43,7 @@ No ports are published to the host. The driver calls the app from inside the con
 
 ## Seed the data
 
-Some data is the same for every case, such as reference tables, a default organization and user, and config rows. Seed that in the image build or at startup. Data that reproduces one scenario, such as the conversation or the account state, goes in the task's `environment/` folder and is loaded by one shared seed script in the agent scripts, so adding a case means copying a task directory and never changing the harness. Because cases are only data, anyone can add one to the [task set](/agent-evaluations/task-sets) without touching your code.
+Some data is the same for every case, such as reference tables, a default organization and user, and config rows. Seed that in the image build or at startup. Data that reproduces one scenario, such as the conversation or the account state, goes in the task's `environment/` folder and is loaded by one shared seed script in the task set's scripts, so adding a case means copying a task directory and never changing the harness. Because cases are only data, anyone can add one to the [task set](/agent-evaluations/task-sets) without touching your code.
 
 <Warning>
 The agent can read everything in a task's `environment/` folder. Keep reference answers in `tests/`, which Harbor only uploads when the verifier runs. An answer placed in `environment/` can end up in the agent's context, making the evaluation useless.
@@ -57,13 +57,13 @@ Capable models can tell when they are being tested, and an agent that suspects i
 
 ## Drive the entry point
 
-The Harbor agent is a small `BaseInstalledAgent` subclass that runs commands inside the container, next to your app. The example's [`adapter.py`](https://github.com/lmnr-ai/lmnr-python/blob/main/examples/agent-evals/evals/support/adapter.py) is a complete one, and Harbor's [custom agents](https://docs.harborframework.com/agents/custom-agents) guide documents the full interface (`lmnr-cli` pins Harbor 0.25.0). Keep its `run()` thin: start the stack, seed the case, and call the driver. A few things to know:
+The Harbor agent is a small `BaseInstalledAgent` subclass that runs commands inside the container, next to your app. The example's [`adapter.py`](https://github.com/lmnr-ai/lmnr-python/blob/main/examples/agent-evals/evals/billing/adapter.py) is a complete one, and Harbor's [custom agents](https://docs.harborframework.com/agents/custom-agents) guide documents the full interface (`lmnr-cli` pins Harbor 0.25.0). Keep its `run()` thin: start the stack, seed the case, and call the driver. A few things to know:
 
 - **Leave `install()` empty** and put dependencies in the image. `install()` runs in every trial.
 - **Read the model from `self.model_name`**, so `--model` works.
 - **Only import `harbor`, the standard library, and modules in the agent directory.** The class itself runs in the Harbor process, on your machine or in Laminar's orchestrator, and not inside the container.
 
-The driver is the script the agent runs inside the container, like the example's [`run_case.py`](https://github.com/lmnr-ai/lmnr-python/blob/main/examples/agent-evals/evals/support/image/run_case.py). It triggers your entry point and waits for the result. For a synchronous entry point, such as an HTTP call or a function that returns, call it with a timeout and record the response. For an asynchronous one, such as a job on a queue, poll the status the app writes until it reaches a final state, up to a hard timeout.
+The driver is the script the agent runs inside the container, like the example's [`run_case.py`](https://github.com/lmnr-ai/lmnr-python/blob/main/examples/agent-evals/evals/billing/image/run_case.py). It triggers your entry point and waits for the result. For a synchronous entry point, such as an HTTP call or a function that returns, call it with a timeout and record the response. For an asynchronous one, such as a job on a queue, poll the status the app writes until it reaches a final state, up to a hard timeout.
 
 Turn the result into an outcome the verifier can grade, and write the details to `/logs/agent/result.json`. Use `failed` and `timeout` as their own outcomes, so a crash is never mistaken for a wrong answer from the model:
 
@@ -80,7 +80,7 @@ The driver should exit with `0` whenever it produced an outcome, including `fail
 
 ## Grade the result
 
-`tests/test.sh` is the verifier's entry point, and it can call anything: a Python script that compares against `expected.json`, a rubric, or an LLM judge with its key in `[verifier.env]`. It writes the reward to `/logs/verifier/reward.txt`, or to `/logs/verifier/reward.json` to report several named rewards, which become separate scores in Laminar. A pass or fail check is the easiest place to start, and an LLM judge works well for things like the tone or completeness of a reply. Where possible, pair the judge with a hard check on the state the agent changed, as the example's [`verify.py`](https://github.com/lmnr-ai/lmnr-python/blob/main/examples/agent-evals/evals/support/task_sets/billing/duplicate-charge/tests/verify.py) does.
+`tests/test.sh` is the verifier's entry point, and it can call anything: a Python script that compares against `expected.json`, a rubric, or an LLM judge with its key in `[verifier.env]`. It writes the reward to `/logs/verifier/reward.txt`, or to `/logs/verifier/reward.json` to report several named rewards, which become separate scores in Laminar. A pass or fail check is the easiest place to start, and an LLM judge works well for things like the tone or completeness of a reply. Where possible, pair the judge with a hard check on the state the agent changed, as the example's [`verify.py`](https://github.com/lmnr-ai/lmnr-python/blob/main/examples/agent-evals/evals/billing/tasks/duplicate-charge/tests/verify.py) does.
 
 Where the verifier runs is set by `environment_mode` under `[verifier]` in `task.toml`:
 
@@ -104,7 +104,7 @@ Where the verifier runs is set by `environment_mode` under `[verifier]` in `task
     Find production traces worth turning into cases.
   </Card>
   <Card title="The evals folder" href="/agent-evaluations/evals-folder" icon="folder-tree">
-    Reference for `agent.yaml`, `task.toml`, and secrets.
+    Reference for `eval.yaml`, `task.toml`, and secrets.
   </Card>
   <Card title="Troubleshooting" href="/agent-evaluations/troubleshooting" icon="life-buoy">
     Fixes for stale images, missing env vars, and empty traces.

@@ -70,34 +70,33 @@ The driver imports `DB_PATH` and `handle_ticket`, and the Harbor agent sets `AGE
     `setup` signs you in and writes `LMNR_PROJECT_API_KEY` to `.env`. See [Laminar CLI](/platform/cli) for details.
   </Step>
   <Step title="Lay out the evals folder">
-    Create this structure next to your code. `evals/` holds one directory per agent you evaluate. Everything in it except `task_sets/` is the agent's scripts, which change with your code, and `task_sets/` holds the cases:
+    Create this structure next to your code. `evals/` holds one directory per task set. Everything in it except `tasks/` is the task set's scripts, which change with your code, and `tasks/` holds the cases:
 
     ```
     evals/
-      support/                      # an agent
-        agent.yaml                  # the image tasks use, and the Harbor job config
+      billing/                      # a task set
+        eval.yaml                   # the image tasks use, and the Harbor job config
         adapter.py                  # the Harbor agent class
         image/
           Dockerfile
           run_case.py               # seeds the database, calls the agent, writes result.json
-        task_sets/
-          billing/                  # a task set
-            duplicate-charge/       # a task (case)
-              task.toml
-              instruction.md
-              environment/
-                case.json           # the ticket
-                seed.json           # the database rows for this case
-              tests/
-                test.sh             # the verifier
-                verify.py
-                expected.json       # the reference answer
+        tasks/
+          duplicate-charge/         # a task (case)
+            task.toml
+            instruction.md
+            environment/
+              case.json             # the ticket
+              seed.json             # the database rows for this case
+            tests/
+              test.sh               # the verifier
+              verify.py
+              expected.json         # the reference answer
     ```
   </Step>
   <Step title="Build the image">
     The Dockerfile starts from [uv's official image](https://docs.astral.sh/uv/guides/integration/docker/), which already has uv and Python 3.14 on Debian trixie. It installs the locked dependencies first, so they stay cached when only the app code changes:
 
-    ```dockerfile evals/support/image/Dockerfile
+    ```dockerfile evals/billing/image/Dockerfile
     FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim
 
     ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
@@ -108,7 +107,7 @@ The driver imports `DB_PATH` and `handle_ticket`, and the Harbor agent sets `AGE
     RUN uv sync --frozen --no-install-project
     ENV PATH="/srv/app/.venv/bin:$PATH"
 
-    COPY evals/support/image/run_case.py /opt/harness/
+    COPY evals/billing/image/run_case.py /opt/harness/
     COPY app/ ./app/
 
     WORKDIR /case
@@ -116,7 +115,7 @@ The driver imports `DB_PATH` and `handle_ticket`, and the Harbor agent sets `AGE
 
     The driver creates this case's database from `seed.json`, imports the production function unchanged, calls it with the ticket, and writes the outcome to `/logs/agent/result.json`:
 
-    ```python evals/support/image/run_case.py
+    ```python evals/billing/image/run_case.py
     import json
     import sqlite3
     import sys
@@ -155,10 +154,10 @@ The driver imports `DB_PATH` and `handle_ticket`, and the Harbor agent sets `AGE
     print(json.dumps(result))
     ```
   </Step>
-  <Step title="Write agent.yaml and the adapter">
-    `agent.yaml` has two parts. `images` names the image and says how to build it: paths are relative to the agent directory, and `context: ../..` makes the repo root the build context, so the image is built from your live source. `job` is a Harbor job config. It refers to the API key as a `${VAR}` placeholder that `lmnr-cli` fills in when the run starts, so the key itself does not end up in a file you commit:
+  <Step title="Write eval.yaml and the adapter">
+    `eval.yaml` has two parts. `images` names the image and says how to build it: paths are relative to the task set directory, and `context: ../..` makes the repo root the build context, so the image is built from your live source. `job` is a Harbor job config. It refers to the API key as a `${VAR}` placeholder that `lmnr-cli` fills in when the run starts, so the key itself does not end up in a file you commit:
 
-    ```yaml evals/support/agent.yaml
+    ```yaml evals/billing/eval.yaml
     images:
       refund-agent-evals:
         dockerfile: image/Dockerfile
@@ -172,9 +171,9 @@ The driver imports `DB_PATH` and `handle_ticket`, and the Harbor agent sets `AGE
       n_concurrent_trials: 4
     ```
 
-    Harbor runs from the agent directory, so `adapter:SupportAgent` is the `SupportAgent` class in `evals/support/adapter.py`. The adapter runs the driver inside the container. Everything it needs is already in the image, so `install()` has nothing to do. It passes `self.model_name` on to the app, which lets `--model` override the model for a run:
+    Harbor runs from the task set directory, so `adapter:SupportAgent` is the `SupportAgent` class in `evals/billing/adapter.py`. The adapter runs the driver inside the container. Everything it needs is already in the image, so `install()` has nothing to do. It passes `self.model_name` on to the app, which lets `--model` override the model for a run:
 
-    ```python evals/support/adapter.py
+    ```python evals/billing/adapter.py
     from harbor.agents.installed.base import BaseInstalledAgent, with_prompt_template
     from harbor.environments.base import BaseEnvironment
     from harbor.models.agent.context import AgentContext
@@ -205,7 +204,7 @@ The driver imports `DB_PATH` and `handle_ticket`, and the Harbor agent sets `AGE
   <Step title="Add a case">
     The task points at the image by name. Harbor copies everything in the task's `environment/` folder into `workdir` (here `/case`) when the container starts:
 
-    ```toml evals/support/task_sets/billing/duplicate-charge/task.toml
+    ```toml evals/billing/tasks/duplicate-charge/task.toml
     [environment]
     docker_image = "refund-agent-evals"
     workdir = "/case"
@@ -219,16 +218,16 @@ The driver imports `DB_PATH` and `handle_ticket`, and the Harbor agent sets `AGE
 
     The `[verifier.env]` block gives the verifier the key it needs to call the LLM judge.
 
-    ```markdown evals/support/task_sets/billing/duplicate-charge/instruction.md
+    ```markdown evals/billing/tasks/duplicate-charge/instruction.md
     Handle the support ticket in case.json.
     ```
 
-    ```json evals/support/task_sets/billing/duplicate-charge/environment/case.json
+    ```json evals/billing/tasks/duplicate-charge/environment/case.json
     {"ticket": "Hi, this is maria.lopez@example.com. I was charged twice for my October invoice, two identical charges of $49 on Oct 3. Can you refund one of them?"}
     ```
 
     <Accordion title="environment/seed.json: the database rows for this case">
-      ```json evals/support/task_sets/billing/duplicate-charge/environment/seed.json
+      ```json evals/billing/tasks/duplicate-charge/environment/seed.json
       {
         "charges": [
           {"id": "ch_8f3a1c", "email": "maria.lopez@example.com", "description": "Team plan, September", "amount": 49.0, "created_at": "2026-09-03T09:12:41Z"},
@@ -243,7 +242,7 @@ The driver imports `DB_PATH` and `handle_ticket`, and the Harbor agent sets `AGE
       The agent can read everything in `environment/`, so the reference answer must not go there. Put it in `tests/`, which Harbor only uploads when the verifier runs.
     </Warning>
 
-    ```json evals/support/task_sets/billing/duplicate-charge/tests/expected.json
+    ```json evals/billing/tasks/duplicate-charge/tests/expected.json
     {
       "refund_count": 1,
       "refund_amount": 49.0,
@@ -253,13 +252,13 @@ The driver imports `DB_PATH` and `handle_ticket`, and the Harbor agent sets `AGE
 
     The verifier first checks the database, which is the hard evidence of what the agent did. It then asks an LLM judge whether the reply is acceptable. It writes one reward per check, and each becomes its own score in Laminar. If the agent run itself failed, both rewards are `0` and the judge is skipped:
 
-    ```bash evals/support/task_sets/billing/duplicate-charge/tests/test.sh
+    ```bash evals/billing/tasks/duplicate-charge/tests/test.sh
     #!/bin/bash
     python /tests/verify.py
     ```
 
     <Accordion title="tests/verify.py: the database check and the LLM judge">
-      ```python evals/support/task_sets/billing/duplicate-charge/tests/verify.py
+      ```python evals/billing/tasks/duplicate-charge/tests/verify.py
       import json
       import sqlite3
 
@@ -338,32 +337,31 @@ The driver imports `DB_PATH` and `handle_ticket`, and the Harbor agent sets `AGE
     npx lmnr-cli@latest eval run
     ```
 
-    `lmnr-cli` builds `refund-agent-evals` with your Docker, runs every task in the `billing` task set, and prints a link to the results. The run becomes an evaluation in the group `support/billing`, and each later run of the task set is charted next to it.
+    `lmnr-cli` builds `refund-agent-evals` with your Docker, runs every task in the `billing` task set, and prints a link to the results. The run becomes an evaluation in the group `billing`, and each later run of the task set is charted next to it.
 
     The run uses your local files as they are. The evaluation keeps a copy of them, so you can see exactly which cases it ran, but the run doesn't publish them.
   </Step>
   <Step title="Read the results">
     Open the evaluation. Each trial is a datapoint, with a `refund` score and a `reply` score. Because the app calls `Laminar.initialize()`, the trial's trace shows the model calls and the `list_charges` / `refund_charge` tool calls as a [transcript](/platform/viewing-traces), so a `0` takes one click to explain.
 
-    Locally, Harbor's raw output is in `evals/support/jobs/<timestamp>/`. Each trial has `agent/` (your `result.json` and logs) and `verifier/` (`reward.json` and `test-stdout.txt`, which includes the judge's reasoning).
+    Locally, Harbor's raw output is in `evals/billing/jobs/<timestamp>/`. Each trial has `agent/` (your `result.json` and logs) and `verifier/` (`reward.json` and `test-stdout.txt`, which includes the judge's reasoning).
   </Step>
   <Step title="Publish the task set">
     When the cases look right, push them to Laminar:
 
     ```bash
-    npx lmnr-cli@latest eval push support
+    npx lmnr-cli@latest eval push billing
     ```
 
-    This publishes the `billing` task set as version 1, and writes `evals/support/task_sets/billing/.lmnr.json` to record the version your copy is based on. The task set appears on the **Task sets** page in Laminar.
+    This publishes the `billing` task set as version 1, writes `evals/billing/tasks/.lmnr.json` to record the version your copy is based on, and adds `tasks/` to `evals/billing/.gitignore`. The task set appears on the **Task sets** page in Laminar.
 
-    Pin that version in `evals/support/agent.yaml`, so your teammates and CI run the same cases:
+    Pin that version in `evals/billing/eval.yaml`, so your teammates and CI run the same cases:
 
-    ```yaml evals/support/agent.yaml
-    task_sets:
-      billing: 1
+    ```yaml evals/billing/eval.yaml
+    version: 1
     ```
 
-    Then commit `evals/support/` without its task sets, which now live in Laminar: add `task_sets/` to `evals/support/.gitignore` (`lmnr-cli eval pull` writes this file for you). See [Task sets](/agent-evaluations/task-sets) for pulling, versions, and merging.
+    Then commit `evals/billing/`. Its tasks now live in Laminar, and the `.gitignore` keeps them out of git. See [Task sets](/agent-evaluations/task-sets) for pulling, versions, and merging.
   </Step>
 </Steps>
 
