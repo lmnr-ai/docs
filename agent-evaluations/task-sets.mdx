@@ -19,6 +19,8 @@ Agent scripts depend on your code: a new database schema or a different start co
 
 Task sets are data, so Laminar stores them, and anyone with access to the project can add cases without write access to your repo. Each change you push becomes a new version, and your repo pins the version each task set runs at.
 
+Task set names are unique within a Laminar project. The agent's folder isn't part of the name, so two agents can't both have a task set called `smoke`: name them `support-smoke` and `billing-smoke` instead.
+
 ## Pin task set versions
 
 Add a `task_sets` map to the agent's `agent.yaml`, with the version of each task set your runs and CI should use:
@@ -36,9 +38,9 @@ Pins change only when you edit them, so a case someone adds in Laminar doesn't c
 3. The pinned version.
 4. The latest version, only when you name the task set with `--task-set billing`.
 
-A plain `lmnr-cli eval run support` runs the pinned task sets plus any local copies, and skips the task sets that are only in Laminar and not pinned, naming them.
+A plain `lmnr-cli eval run support` runs the pinned task sets plus any local copies. Other task sets in the project run only when you name them with `--task-set`.
 
-Local copies are working copies, not part of your repo. `lmnr-cli eval pull` writes an `evals/<agent>/.gitignore` that ignores `task_sets/`, so a CI checkout has no local copies and runs the pinned versions. Commit that `.gitignore`.
+Local copies are working copies, not part of your repo. `lmnr-cli eval pull` and `lmnr-cli eval push` write an `evals/<agent>/.gitignore` that ignores `task_sets/`, so a CI checkout has no local copies and runs the pinned versions. Commit that `.gitignore`.
 
 ## Publish a task set
 
@@ -60,16 +62,16 @@ If someone else pushed the task set since your copy's version, `push` merges the
 ```bash
 lmnr-cli eval pull support/billing       # one task set
 lmnr-cli eval pull support/billing@3     # a specific version
-lmnr-cli eval pull support --all         # every task set of the agent
+lmnr-cli eval pull support --all         # every task set agent.yaml pins
 ```
 
 The pull merges with your local copy the same way a push does, so local edits you haven't pushed yet are kept. You don't need a local copy to run a task set: `lmnr-cli eval run` downloads the pinned version.
 
-To see what Laminar has, run `lmnr-cli eval list`. It lists each agent's task sets with their latest version.
+To see what Laminar has, run `lmnr-cli eval list`. It lists the project's task sets with their latest version.
 
 ## Recover agent scripts
 
-Every run stores a copy of the agent scripts it used. If your repo doesn't have them yet, for example because the [Laminar agent](/platform/laminar-agent) wrote them in its sandbox, fetch the ones the last run used and commit them:
+Every evaluation keeps a copy of the agent scripts its run used. If your repo doesn't have them yet, for example because the [Laminar agent](/platform/laminar-agent) wrote them in its sandbox, fetch the ones the agent's latest run used and commit them:
 
 ```bash
 lmnr-cli eval pull support
@@ -77,9 +79,9 @@ lmnr-cli eval pull support
 
 `--all` also fetches them when `evals/<agent>/` has no `agent.yaml`. If a script you have locally differs from Laminar's copy, the pull stops with exit code `22` (`merge_conflict`) and lists the files, without writing anything. Commit or move your changes aside first, or pass `--force` to overwrite them.
 
-## Every run records the versions it used
+## Every run keeps the files it used
 
-When you run evals, `lmnr-cli` records exactly which task set version and which agent scripts the run used, and links the run's [evaluation](/evaluations/concepts) to them. If your local copy has changes you haven't pushed, the run stores them as a snapshot: it is kept with the run, but it doesn't become the latest version. Only `push` changes the latest version, so a CI job on a pull request branch or a local experiment can't replace the cases everyone else runs.
+Each run's [evaluation](/evaluations/concepts) keeps the task files and the agent scripts it ran, so you can open them from the evaluation later. When the task files match a pushed version exactly, the evaluation also links to that task set version. A task set you haven't pushed yet, or a local copy with unpushed changes, runs without that link: the evaluation still shows its files, but no version is created. Only `push` creates versions, so a CI job on a pull request branch or a local experiment can't change the cases everyone else runs.
 
 This makes runs repeatable. To compare a new version of your agent against an older run, run the same task set version:
 
@@ -91,7 +93,9 @@ Each run of a task set is charted in the evaluation group `<agent>/<task set>`, 
 
 ## The Task sets page
 
-The **Task sets** page in your Laminar project lists each agent's task sets with their latest version. Open a task set to browse its tasks and their files, see each version and which tasks it added, removed, or changed, and find the evaluations that ran it. The **Agent scripts** tab shows the scripts the agent's last run used, with the git commit of your repo at the time, and the command to fetch them into your repo. An evaluation run from a task set links back to the task set and the version it ran.
+The **Task sets** page in your Laminar project lists the project's task sets with their latest version. Open a task set to browse its tasks and their files, see each version and which tasks it added, removed, or changed, and find the evaluations that ran it.
+
+On an evaluation, the **Task** tab shows each trial's task files and the **Scripts** tab shows the agent scripts the run used, with the git commit of your repo at the time. An evaluation that ran a pushed version links back to that task set version.
 
 ## Next steps
 

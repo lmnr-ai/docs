@@ -44,11 +44,11 @@ lmnr-cli eval run --remote --model anthropic/claude-sonnet-5
 Each agent directory in `evals/` with an `agent.yaml` is one agent, and with no arguments `eval run` runs all of them. For each agent it runs the task sets pinned in `agent.yaml` plus the local copies in its `task_sets/` folder. Pass agent names to run only those, and `--task-set` to pick task sets.
 
 - **A version named with `--task-set <set>@<version>`** (or `@latest`) runs that version from Laminar.
-- **A local copy of a task set is run as is**, including edits you haven't pushed. The run stores a snapshot of it in Laminar, but only [`lmnr-cli eval push`](/agent-evaluations/task-sets#publish-a-task-set) makes it the latest version. If your copy is based on a different version than the pin, the run warns you.
-- **A pinned task set without a local copy** runs the [pinned version](/agent-evaluations/task-sets#pin-task-set-versions). A task set that is neither pinned nor local runs its latest version only when you name it with `--task-set`; otherwise the run skips it and says so.
+- **A local copy of a task set is run as is**, including edits you haven't pushed. The evaluation keeps its files, but links to a task set version only when the copy matches a pushed one exactly: only [`lmnr-cli eval push`](/agent-evaluations/task-sets#publish-a-task-set) creates versions. If your copy is based on a different version than the pin, the run warns you.
+- **A pinned task set without a local copy** runs the [pinned version](/agent-evaluations/task-sets#pin-task-set-versions). Any other task set in the project runs its latest version only when you name it with `--task-set`.
 - **The agent scripts always come from your repo.** An agent without `agent.yaml` fails the run with exit code `23`; `lmnr-cli eval pull <agent>` [fetches the scripts the last run used](/agent-evaluations/task-sets#recover-agent-scripts).
 
-Harbor runs once per task set, and each run of a task set becomes one evaluation in the group `<agent>/<task set>`, linked to the task set version and the agent scripts it used.
+Harbor runs once per task set, and each run of a task set becomes one evaluation in the group `<agent>/<task set>`. It keeps the task files and agent scripts it used, and links to the task set version it ran when that version was pushed.
 
 ## In CI
 

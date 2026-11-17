@@ -35,10 +35,10 @@ Fixes for the most common problems when running [agent evaluations](/agent-evalu
     Your local copy of the task set and the version `agent.yaml` pins have drifted apart. The run still uses your local copy. Run `lmnr-cli eval pull <agent>/<task set>` to merge the latest version in, or bump the pin in `agent.yaml` after you push.
   </Accordion>
   <Accordion title="The run fails because the agent has no agent.yaml (exit code 23)">
-    `lmnr-cli eval run` only uses agent scripts from your repo. If they were written elsewhere, for example by the Laminar agent, run `lmnr-cli eval pull <agent>` to fetch the scripts the last run used, then commit them. See [Recover agent scripts](/agent-evaluations/task-sets#recover-agent-scripts).
+    `lmnr-cli eval run` only uses agent scripts from your repo. If they were written elsewhere, for example by the Laminar agent, run `lmnr-cli eval pull <agent>` to fetch the scripts the agent's latest run used, then commit them. See [Recover agent scripts](/agent-evaluations/task-sets#recover-agent-scripts).
   </Accordion>
-  <Accordion title="A task set in Laminar is skipped">
-    A plain run only runs the task sets `agent.yaml` pins and the ones you have locally. Pin it in `agent.yaml`, or name it with `--task-set <set>` to run its latest version.
+  <Accordion title="A task set in Laminar doesn't run">
+    A plain run only runs the task sets `agent.yaml` pins and the ones you have locally. Pin it in `agent.yaml`, or name it with `--task-set <set>` to run its latest version. `lmnr-cli eval list` shows every task set in the project.
   </Accordion>
 </AccordionGroup>
 

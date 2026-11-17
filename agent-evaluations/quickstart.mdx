@@ -340,7 +340,7 @@ The driver imports `DB_PATH` and `handle_ticket`, and the Harbor agent sets `AGE
 
     `lmnr-cli` builds `refund-agent-evals` with your Docker, runs every task in the `billing` task set, and prints a link to the results. The run becomes an evaluation in the group `support/billing`, and each later run of the task set is charted next to it.
 
-    The run uses your local files as they are. It stores a snapshot of them in Laminar with the evaluation, so you can see exactly which cases it ran, but it doesn't publish them.
+    The run uses your local files as they are. The evaluation keeps a copy of them, so you can see exactly which cases it ran, but the run doesn't publish them.
   </Step>
   <Step title="Read the results">
     Open the evaluation. Each trial is a datapoint, with a `refund` score and a `reply` score. Because the app calls `Laminar.initialize()`, the trial's trace shows the model calls and the `list_charges` / `refund_charge` tool calls as a [transcript](/platform/viewing-traces), so a `0` takes one click to explain.
