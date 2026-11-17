@@ -40,23 +40,24 @@ Agent evaluations answer all three by giving every case a fresh, complete copy o
 
 - **Isolation.** Each case boots its own stack with its own data, so cases don't interfere with each other and can run in parallel, in any order.
 - **Local and cloud from one folder.** `lmnr-cli eval run` runs trials on your Docker. Add `--remote` to run the same eval in Laminar sandboxes, one per trial.
+- **Versioned cases.** The cases are stored and versioned in Laminar as [task sets](/agent-evaluations/task-sets), so you can run the same version against every new version of your agent.
 
 ## How a run works
 
-You keep an `evals/` folder next to your code. Each case in it is a Harbor task: image definition, the data for this scenario, and a verifier. When you run `lmnr-cli eval run`, Laminar:
+You keep an `evals/` folder next to your code, with one directory per agent you evaluate. It holds the agent's scripts, which build the image and drive your app, and its task sets. Each case in a task set is a Harbor task: the image to use, the data for this scenario, and a verifier. You publish task sets to Laminar with `lmnr-cli eval push`, and anyone on the project can run or pull them. When you run `lmnr-cli eval run`, Laminar:
 
 1. Builds your image from the live source tree.
 2. Starts one container per trial, uploads the case's data, and runs the driver against your app.
 3. Runs the verifier over what the app produced and records its reward as the score.
 4. Attaches the app's LLM and tool calls to the trial's trace, so you can investigate failing scores.
 
-Every run of a suite is charted in one evaluation group. [Concepts](/agent-evaluations/concepts) shows what goes into a trial's container and what comes out, and maps each piece to what you see in Laminar.
+Each run of a task set becomes an evaluation that records the exact task set version and agent scripts it used, and every run of the task set is charted in one evaluation group. [Concepts](/agent-evaluations/concepts) shows what goes into a trial's container and what comes out, and maps each piece to what you see in Laminar.
 
 ## Next steps
 
 <CardGroup cols={2}>
   <Card title="Quickstart" href="/agent-evaluations/quickstart" icon="play">
-    Have your coding agent set it up, or build a two-case suite by hand.
+    Have your coding agent set it up, or build your first eval by hand.
   </Card>
   <Card title="Concepts" href="/agent-evaluations/concepts" icon="boxes">
     Tasks, environments, agents, verifiers, and trials, and how they map to Laminar.

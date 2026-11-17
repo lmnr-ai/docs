@@ -9,10 +9,10 @@ Fixes for the most common problems when running [agent evaluations](/agent-evalu
 
 <AccordionGroup>
   <Accordion title="A change to the app or the image doesn't show up">
-    `lmnr-cli` rebuilds the `lmnr.yaml` images on every run, but Docker's layer cache can still hide a change, for example a `RUN` step that downloads "latest". Check the file inside a running container, then clear the cache with `docker builder prune` or bump a cache-busting `ARG` placed before the stale step.
+    `lmnr-cli` rebuilds the `agent.yaml` images on every run, but Docker's layer cache can still hide a change, for example a `RUN` step that downloads "latest". Check the file inside a running container, then clear the cache with `docker builder prune` or bump a cache-busting `ARG` placed before the stale step.
   </Accordion>
-  <Accordion title="The app can't see an env var from harbor.yaml">
-    `agents[].env` reaches every command the agent runs. If the start script launches the app with `env -i`, it must forward each name explicitly.
+  <Accordion title="The app can't see an env var from agent.yaml">
+    `job.agents[].env` reaches every command the agent runs. If the start script launches the app with `env -i`, it must forward each name explicitly.
   </Accordion>
   <Accordion title="The trial trace has no LLM or tool calls">
     Either the app isn't instrumented with Laminar, or it didn't receive `LMNR_TRAJECTORY_PATH`. See [Capture the trajectory](/agent-evaluations/trajectories).
@@ -21,9 +21,18 @@ Fixes for the most common problems when running [agent evaluations](/agent-evalu
     A secret's value is very short, so every occurrence of it in the output is redacted. Use long, distinctive placeholder values.
   </Accordion>
   <Accordion title="Where are the logs for a failed trial?">
-    For local runs, in `evals/<suite>/jobs/<timestamp>/`. For `--remote` runs, Harbor's job output stays in the sandbox: open the trial's trace in Laminar instead.
+    For local runs, in `evals/<agent>/jobs/<timestamp>/`. For `--remote` runs, open the trial in Laminar and switch to its **Log** tab, which shows Harbor's output for the trial once its task set finishes.
 
-    Each local trial has `agent/` (your logs and `result.json`), `verifier/` (`reward.txt`, `test-stdout.txt`), and `exception.txt` with the agent's traceback if it raised.
+    Each trial has `agent/` (your logs and `result.json`), `verifier/` (`reward.txt`, `test-stdout.txt`), and `exception.txt` with the agent's traceback if it raised.
+  </Accordion>
+  <Accordion title="Push or pull fails with exit code 22 (merge_conflict)">
+    Someone else changed a task that you also changed locally, so `lmnr-cli` can't merge it, and it stopped before writing anything. Move your copy of that task out of the task set, run `lmnr-cli eval pull <agent>/<task set>`, then re-apply your edit and push again. See [Task sets](/agent-evaluations/task-sets#publish-a-task-set).
+  </Accordion>
+  <Accordion title="A task is rejected because it has environment/Dockerfile">
+    Tasks can't build their own image. Move the Dockerfile into the agent directory, add it to `images` in `agent.yaml`, and set `docker_image` in the task's `task.toml`. Keep only the case's data in `environment/`. See [the evals folder](/agent-evaluations/evals-folder).
+  </Accordion>
+  <Accordion title="The run warns that my copy is based on an older version">
+    Someone pushed a newer version of the task set since you last pulled or pushed. The run still uses your local copy. Run `lmnr-cli eval pull <agent>/<task set>` to merge their changes in.
   </Accordion>
 </AccordionGroup>
 

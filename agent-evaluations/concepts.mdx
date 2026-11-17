@@ -3,7 +3,7 @@ title: Agent Evaluation Concepts - Tasks, Trials, and Verifiers
 sidebarTitle: Concepts
 ---
 
-An [agent evaluation](/agent-evaluations/introduction) suite is a folder of [Harbor](https://www.harborframework.com) tasks with a small amount of Laminar configuration on top. This page defines each piece and shows where it appears in Laminar once you [run the suite](/agent-evaluations/running-evals).
+[Agent evaluations](/agent-evaluations/introduction) are built from [Harbor](https://www.harborframework.com) tasks, grouped into task sets that Laminar stores and versions. This page defines each piece and shows where it appears in Laminar once you [run your evals](/agent-evaluations/running-evals).
 
 <Frame caption="Each trial gets a fresh container from your image. The case data goes in when the container starts, the verifier's files only when it runs. The trajectory and the reward come back to Laminar.">
   <img
@@ -12,16 +12,16 @@ An [agent evaluation](/agent-evaluations/introduction) suite is a folder of [Har
   />
 </Frame>
 
-## What a suite is made of
+## What an agent evaluation is made of
 
 Harbor's vocabulary maps onto evals of your own product like this:
 
 - **Task (case)**: one scenario. A directory with a `task.toml` (which image, resources, timeouts), an `instruction.md`, the case's data in `environment/`, and a verifier in `tests/`. In production evals, tasks are variations of the same scenario: same code and services, different data.
 - **Environment**: the container where a trial runs, started from one image that holds your app and its services. The task's `environment/` files are copied into it at the start.
-- **Agent**: the code that drives the trial. In Harbor's original use this is a general-purpose agent like Claude Code. In agent evaluations of your product, it's a thin class that starts your stack, seeds the case, and calls your app's entry point.
+- **Agent**: a directory in `evals/` for one agent you evaluate, such as `evals/support/`. It holds `agent.yaml` (the images and a Harbor job config) and the agent's **scripts**: the Dockerfile, the scripts that start your stack and seed a case, and the Harbor agent class. That class drives the trial. In Harbor's original use it's a general-purpose agent like Claude Code; in agent evaluations of your product, it's a thin adapter that starts your stack, seeds the case, and calls your app's entry point.
 - **Verifier**: `tests/test.sh`, run after the agent finishes. It grades the result with a check, a rubric, or an LLM judge, and writes a reward, such as `1` or `0`.
 - **Trial**: one attempt at one task: start the environment, run the agent, run the verifier. Run a task several times with `--n-attempts` to measure variance.
-- **Suite**: a directory in `evals/` with a `harbor.yaml` (a Harbor job config) and its tasks. Most projects have one suite.
+- **Task set**: a named group of tasks for one agent, such as `support/billing`. Laminar stores every version you [push](/agent-evaluations/task-sets#publish-a-task-set), so you can run the same cases against each new version of your agent.
 - **Trajectory**: the app's LLM calls and tool calls during the trial, shown in the trial's trace.
 
 ## Where each piece shows up in Laminar
@@ -30,8 +30,8 @@ Each concept maps to something you can open in Laminar:
 
 | Harbor | Laminar |
 | --- | --- |
-| Suite | Evaluation [group](/evaluations/comparing-runs#group-runs-to-compare-them). Every run of the suite is charted together, local and remote. |
-| One `lmnr-cli eval run` of a suite | Evaluation |
+| Task set | Evaluation [group](/evaluations/comparing-runs#group-runs-to-compare-them) named `<agent>/<task set>`. Every run of the task set is charted together, local and remote. It's also listed on the **Task sets** page with its versions. |
+| One run of a task set | Evaluation, linked to the task set version and the agent scripts it used |
 | Trial | Datapoint, with its own trace |
 | Verifier rewards | Scores, one per reward key |
 | Trajectory | `LLM` and `TOOL` spans under the trial's `agent` span |
@@ -42,13 +42,13 @@ The trace shape and how retries, crashes, and cancellations are counted are the 
 
 <CardGroup cols={2}>
   <Card title="Quickstart" href="/agent-evaluations/quickstart" icon="play">
-    Have your coding agent set up a suite, or build one by hand.
+    Have your coding agent set up your first agent eval, or build one by hand.
   </Card>
-  <Card title="The evals folder" href="/agent-evaluations/evals-folder" icon="folder-tree">
-    Reference for `lmnr.yaml`, `harbor.yaml`, `task.toml`, and secrets.
+  <Card title="Task sets" href="/agent-evaluations/task-sets" icon="layers">
+    Push, pull, and version the cases in Laminar.
   </Card>
   <Card title="Compare runs" href="/evaluations/comparing-runs" icon="chart-line">
-    Every run of a suite is charted in its group. Diff two runs side by side to see which cases regressed.
+    Every run of a task set is charted in its group. Diff two runs side by side to see which cases regressed.
   </Card>
   <Card title="Harbor integration" href="/integrations/harbor" icon="ship">
     Already running `harbor run` on a benchmark? Add the Laminar plugin directly.
