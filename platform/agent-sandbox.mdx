@@ -11,15 +11,27 @@ A sandbox keeps your work between conversations. When it has been idle for 30 mi
 
 The agent sandbox is a per-project setting that decides which repositories the agent clones and which LLM keys it gets. Only workspace owners and admins can change it.
 
+<Frame caption="Settings > Agent sandbox: two repositories cloned into the sandbox, each at its own branch, and the LLM profiles whose keys the sandbox gets">
+  <img src="/images/platform/agent-sandbox-settings.png" alt="Agent sandbox settings page with a Repositories list of four GitHub repositories, two turned on with branch pickers set to staging and main, and an LLM profiles list with two of three profiles turned on" />
+</Frame>
+
 <Steps>
   <Step title="Connect GitHub">
     Go to **Settings > Integrations**, under **Workspace settings**, and connect GitHub. Install the Laminar GitHub App on the organization or account that owns your repositories, and give it access to the repositories you want the agent to work in. A GitHub account can be connected to one Laminar workspace.
+
+    <Frame caption="Once GitHub is connected, the card shows the GitHub account and links to the Agent sandbox settings">
+      <img src="/images/platform/agent-sandbox-github.png" alt="Workspace Integrations page with a connected GitHub card for the acme-ai account and an Agent sandbox settings button" />
+    </Frame>
   </Step>
   <Step title="Pick the repositories">
-    In the project, go to **Settings > Agent sandbox** and turn on each repository you want cloned into the sandbox.
+    In the project, go to **Settings > Agent sandbox** and turn on each repository you want cloned into the sandbox. The list shows every repository the GitHub App can access. To add a repository that isn't listed, click **Manage access on GitHub** and grant the app access to it.
   </Step>
   <Step title="Pick a branch for each repository">
     Each selected repository has a branch picker. Leave it on the repository's default branch, or search for and pick another branch. A new sandbox clones each repository at that branch, and pull requests from the agent target it.
+
+    <Frame caption="The branch picker lists the repository's branches, with the default branch first">
+      <img src="/images/platform/agent-sandbox-branch-picker.png" alt="Branch picker open on the acme-ai/support-bot repository, with a branch search box, main marked as default, and staging selected" />
+    </Frame>
   </Step>
   <Step title="Pick the LLM profiles">
     Under **LLM profiles**, select the [LLM profiles](/platform/llm-profiles) whose API keys the sandbox should get. Do this when the code in your repositories calls an LLM and you want the agent to run it, for example to check that a change produces the trace you expect.
