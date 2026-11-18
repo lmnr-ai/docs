@@ -1,0 +1,104 @@
+---
+title: "Laminar Agent Sandbox: Work in Your GitHub Repositories"
+sidebarTitle: Agent sandbox
+---
+
+[Laminar Agent](/platform/laminar-agent) can work in your project's GitHub repositories inside a **sandbox**: a private Linux VM with your repositories cloned into it. In the sandbox the agent reads code, edits files, runs commands, and opens pull requests. Use it to trace a failure back to the code that caused it, add or fix Laminar instrumentation and check that the traces arrive, or write [agent evaluations](/agent-evaluations/introduction) and run them.
+
+A sandbox keeps your work between conversations. When it has been idle for 30 minutes it stops, and its files are saved. The next time the agent needs it, the sandbox comes back as it was, for up to 30 days.
+
+## Set up the sandbox environment
+
+The sandbox environment is a per-project setting that decides which repositories the agent clones and which LLM keys it gets. Only workspace owners and admins can change it.
+
+<Steps>
+  <Step title="Connect GitHub">
+    Go to **Settings > Integrations**, under **Workspace settings**, and connect GitHub. Install the Laminar GitHub App on the organization or account that owns your repositories, and give it access to the repositories you want the agent to work in. A GitHub account can be connected to one Laminar workspace.
+  </Step>
+  <Step title="Pick the repositories">
+    In the project, go to **Settings > Sandbox environment** and turn on each repository you want cloned into the sandbox.
+  </Step>
+  <Step title="Pick a branch for each repository">
+    Each selected repository has a branch picker. Leave it on the repository's default branch, or search for and pick another branch. A new sandbox clones each repository at that branch, and pull requests from the agent target it.
+  </Step>
+  <Step title="Pick the LLM profiles">
+    Under **LLM profiles**, select the [LLM profiles](/platform/llm-profiles) whose API keys the sandbox should get. Do this when the code in your repositories calls an LLM and you want the agent to run it, for example to check that a change produces the trace you expect.
+  </Step>
+</Steps>
+
+The branch setting applies when a sandbox is created. A sandbox that already exists keeps the branch it has, so start a new chat to work from a branch you changed.
+
+## What is in a sandbox
+
+Each sandbox is a Linux VM with git, Node.js, Python, and Docker. Every repository in the environment is cloned into `~/repos/<repository name>`, and the agent installs dependencies itself when it needs them.
+
+Commands in the sandbox get these environment variables:
+
+- **LLM keys** from the selected profiles, under each provider's usual names: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `MISTRAL_API_KEY`, the `AWS_*` variables for Bedrock, and the `AZURE_*` variables for Azure. Custom gateway profiles get variables prefixed with `CUSTOM_LLM_`.
+- **`LMNR_PROJECT_API_KEY`**, a project API key that belongs to this sandbox only. The agent uses it to send traces from your code to the project and to run evaluations. A new key is created every time the sandbox starts. It is revoked after the sandbox stops, and expires after 24 hours at the latest. These keys don't appear on the project's API keys page.
+- **`LMNR_BASE_URL`**, the Laminar API the key works with.
+
+The sandbox has no GitHub credentials. The agent pushes through Laminar, which only pushes to `laminar/` branches and opens pull requests (see [Review the agent's pull requests](#review-the-agents-pull-requests)).
+
+## Ask the agent to work in your code
+
+Ask from the **Agent** panel in the Laminar app, or from your terminal with [`lmnr-cli ask`](/platform/cli#ask-the-agent). Only workspace owners and admins can use the sandbox. The agent doesn't open a sandbox when you ask from [Slack](/platform/integrations#laminar-agent) or the [MCP server](/platform/mcp).
+
+The agent opens the sandbox when a question needs your code, so you don't have to ask for it. Some things to ask:
+
+- "Find the cause of the errors in the latest failed trace and fix it."
+- "Add Laminar tracing to the support agent in `support-bot`, run it once, and check that the trace looks right."
+- "Write evals for the cluster about invented hotel prices and run them."
+- "Continue the eval work in the sandbox from my teammate's chat."
+
+On a Signal's cluster, the **Create Evals** button starts a chat that asks the agent to write evals from that cluster and run them. The agent runs evals with [`lmnr-cli eval run --remote`](/agent-evaluations/running-evals), so each run shows up in the project's evaluations, with a trace for every trial.
+
+Laminar Agent also reads your code when it writes [cluster reports](/signals/clusters), once the project has repositories in its sandbox environment. That sandbox is read-only for the agent: it gets no LLM keys or project API key, and it can't push or open pull requests.
+
+## Review the agent's pull requests
+
+When the work is done, the agent commits its changes and pushes them to a new `laminar/` branch in your repository, then opens a pull request against the branch the sandbox cloned. It replies with the pull request link. Later pushes from the same sandbox add commits to the same pull request.
+
+Commits arrive signed by GitHub, so they show as **Verified**. The agent can't push changes to `.github/workflows/`.
+
+The agent can also pull the latest commits of that branch into the sandbox, rebasing its own commits on top. If it had already pushed, its next push opens a new pull request from the updated branch.
+
+## Sandboxes stop when idle and resume where they left off
+
+A sandbox stops after 30 minutes with no commands running. A command that is still running counts as activity, so a long build or eval run keeps the sandbox up. A sandbox also stops after running for 24 hours.
+
+When a sandbox stops, Laminar saves its whole filesystem:
+
+- the repositories, including commits and uncommitted changes
+- installed dependencies, build output, and Docker images
+
+Running processes, such as dev servers, watchers, and Docker containers, are not saved. Docker itself starts again when the sandbox resumes.
+
+The next time the agent needs the sandbox, in the same chat or from another one, it starts a new VM from the saved files and carries on. You don't need to do anything for this. A restored sandbox gets a new `LMNR_PROJECT_API_KEY`.
+
+A saved sandbox is kept for 30 days after it was last used. After that, the chat's next request starts a fresh sandbox, cloned again from the environment's branches, and any work in the old sandbox that wasn't pushed is gone. Ask the agent to open a pull request for work you want to keep.
+
+## Sandboxes are shared across the project
+
+Sandboxes belong to the project, not to one chat. The agent can list the project's running and saved sandboxes, including the ones your teammates' chats created, and switch your chat to one of them. It only opens a teammate's sandbox when you ask it to, since the work in it is theirs. Sandboxes used for cluster reports are not listed.
+
+A project can have up to 10 sandboxes running at the same time. Stopped sandboxes don't count toward this limit.
+
+Deleting a chat doesn't delete its sandbox right away: the sandbox stops when it goes idle, and its saved files are deleted 30 days after it was last used.
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Laminar Agent" href="/platform/laminar-agent">
+    Everything the agent can do, and where you can ask it.
+  </Card>
+  <Card title="Agent evaluations" href="/agent-evaluations/introduction">
+    How the evals the agent writes and runs are structured.
+  </Card>
+  <Card title="Clusters" href="/signals/clusters">
+    The groups of Signal events the agent writes reports and evals from.
+  </Card>
+  <Card title="LLM profiles" href="/platform/llm-profiles">
+    Add the provider keys the sandbox environment hands to your code.
+  </Card>
+</CardGroup>

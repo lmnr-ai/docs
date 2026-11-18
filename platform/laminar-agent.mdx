@@ -32,6 +32,7 @@ The agent works by calling a set of tools against your project:
 - **Fetch full span content.** When a preview is truncated, it pulls the complete input and output for specific spans.
 - **Build dashboards.** It creates, renames, and deletes [dashboards](/platform/dashboards), and adds, edits, rearranges, or deletes their charts. Every chart query is test-run before anything is saved, a batch of chart changes is saved all at once or not at all, and the agent replies with a link to the dashboard.
 - **Set up table views.** It creates, edits, and deletes saved [table views](/platform/table-views) (columns, custom columns, filters, search, and sort) on the traces, spans, sessions, evaluations, datasets, and other tables, and can make a view the [project default view](/platform/table-views#set-a-project-default-view) that teammates land on. It changes the project default only when you ask, and for most tables it replies with a link that opens the view.
+- **Work in your code.** In a [sandbox](/platform/agent-sandbox) with your GitHub repositories cloned, it reads code, makes changes, runs commands and evals, and opens pull requests. Sandboxes save their files when idle and resume where they left off. Available from the Agent panel and the CLI.
 
 ## Example questions
 
@@ -87,5 +88,11 @@ With `--json`, the conversation id is returned as `conversationId` in the output
   </Card>
   <Card title="MCP server" href="/platform/mcp">
     Call the agent from Claude Code, Cursor, or Codex.
+  </Card>
+  <Card title="Agent sandbox" href="/platform/agent-sandbox">
+    Let the agent work in your GitHub repositories and open pull requests.
+  </Card>
+  <Card title="Agent evaluations" href="/agent-evaluations/introduction">
+    Run the evals the agent writes from your clusters.
   </Card>
 </CardGroup>
