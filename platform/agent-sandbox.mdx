@@ -7,16 +7,16 @@ sidebarTitle: Agent sandbox
 
 A sandbox keeps your work between conversations. When it has been idle for 30 minutes it stops, and its files are saved. The next time the agent needs it, the sandbox comes back as it was, for up to 30 days.
 
-## Set up the sandbox environment
+## Set up the agent sandbox
 
-The sandbox environment is a per-project setting that decides which repositories the agent clones and which LLM keys it gets. Only workspace owners and admins can change it.
+The agent sandbox is a per-project setting that decides which repositories the agent clones and which LLM keys it gets. Only workspace owners and admins can change it.
 
 <Steps>
   <Step title="Connect GitHub">
     Go to **Settings > Integrations**, under **Workspace settings**, and connect GitHub. Install the Laminar GitHub App on the organization or account that owns your repositories, and give it access to the repositories you want the agent to work in. A GitHub account can be connected to one Laminar workspace.
   </Step>
   <Step title="Pick the repositories">
-    In the project, go to **Settings > Sandbox environment** and turn on each repository you want cloned into the sandbox.
+    In the project, go to **Settings > Agent sandbox** and turn on each repository you want cloned into the sandbox.
   </Step>
   <Step title="Pick a branch for each repository">
     Each selected repository has a branch picker. Leave it on the repository's default branch, or search for and pick another branch. A new sandbox clones each repository at that branch, and pull requests from the agent target it.
@@ -53,7 +53,7 @@ The agent opens the sandbox when a question needs your code, so you don't have t
 
 On a Signal's cluster, the **Create Evals** button starts a chat that asks the agent to write evals from that cluster and run them. The agent runs evals with [`lmnr-cli eval run --remote`](/agent-evaluations/running-evals), so each run shows up in the project's evaluations, with a trace for every trial.
 
-Laminar Agent also reads your code when it writes [cluster reports](/signals/clusters), once the project has repositories in its sandbox environment. That sandbox is read-only for the agent: it gets no LLM keys or project API key, and it can't push or open pull requests.
+Laminar Agent also reads your code when it writes [cluster reports](/signals/clusters), once the project has repositories in its agent sandbox settings. That sandbox is read-only for the agent: it gets no LLM keys or project API key, and it can't push or open pull requests.
 
 ## Review the agent's pull requests
 
@@ -99,6 +99,6 @@ Deleting a chat doesn't delete its sandbox right away: the sandbox stops when it
     The groups of Signal events the agent writes reports and evals from.
   </Card>
   <Card title="LLM profiles" href="/platform/llm-profiles">
-    Add the provider keys the sandbox environment hands to your code.
+    Add the provider keys the agent sandbox hands to your code.
   </Card>
 </CardGroup>
