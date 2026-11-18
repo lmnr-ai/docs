@@ -21,9 +21,27 @@ Fixes for the most common problems when running [agent evaluations](/agent-evalu
     A secret's value is very short, so every occurrence of it in the output is redacted. Use long, distinctive placeholder values.
   </Accordion>
   <Accordion title="Where are the logs for a failed trial?">
-    For local runs, in `evals/<suite>/jobs/<timestamp>/`. For `--remote` runs, Harbor's job output stays in the sandbox: open the trial's trace in Laminar instead.
+    For local runs, in `evals/<dataset>/jobs/<timestamp>/`. For `--remote` runs, open the evaluation in Laminar, select the trial, and open its **Files** tab: Harbor's output for the trial is in `trial output/`, uploaded when the dataset's run ends.
 
-    Each local trial has `agent/` (your logs and `result.json`), `verifier/` (`reward.txt`, `test-stdout.txt`), and `exception.txt` with the agent's traceback if it raised.
+    Each trial has `agent/` (your logs and `result.json`), `verifier/` (`reward.txt`, `test-stdout.txt`), and `exception.txt` with the agent's traceback if it raised.
+  </Accordion>
+  <Accordion title="harbor.yaml sets datasets or tasks (exit code 16)">
+    An eval dataset always runs the tasks in its own `tasks/` folder, so remove `datasets` and `tasks` from its `harbor.yaml`. To run some of the tasks, pass `--task <glob>`. For another set of tasks, create a second dataset folder next to the first.
+  </Accordion>
+  <Accordion title="evals/lmnr.yaml is no longer read (exit code 16)">
+    `lmnr.yaml` belongs in each dataset folder, next to `harbor.yaml`. Move its images into the `lmnr.yaml` of every dataset that uses them, rewrite `dockerfile` and `context` relative to that dataset's folder (for example, `context: ..` becomes `context: ../..`), and delete the file at the root of `evals/`.
+  </Accordion>
+  <Accordion title="The run warns that tasks differ from lmnr.lock">
+    You edited tasks since the last pull or push, so the run reports to `<dataset> unversioned` instead of the version's group. Run `lmnr-cli eval status` to list the changes. Version them with `lmnr-cli eval push`, or go back to the pinned version with `lmnr-cli eval pull --force`, which discards the edits.
+  </Accordion>
+  <Accordion title="eval pull refuses to overwrite local changes (exit code 22)">
+    `tasks/` changed since the last pull or push, and the pull would overwrite those changes. Nothing was touched, in any dataset. Push the changes with `lmnr-cli eval push`, or discard them with `lmnr-cli eval pull --force`.
+  </Accordion>
+  <Accordion title="eval push says tasks/ is older than lmnr.lock (exit code 23)">
+    `lmnr.lock` pins a newer version than the one `tasks/` was synced to, usually because a teammate pushed and their `lmnr.lock` came in with `git pull`. Pushing would drop their changes. Run `lmnr-cli eval pull` first. If you have edited tasks too, copy the changed task folders somewhere else, run `lmnr-cli eval pull --force`, copy them back, and push. See [Work on a dataset as a team](/agent-evaluations/eval-datasets#work-on-a-dataset-as-a-team).
+  </Accordion>
+  <Accordion title="The eval dataset or version isn't in Laminar (exit code 24)">
+    The version `lmnr.lock` pins doesn't exist in the project `lmnr-cli` talks to. Check that `LMNR_PROJECT_API_KEY`, or the project linked with `lmnr-cli setup`, belongs to the project where the dataset was pushed.
   </Accordion>
 </AccordionGroup>
 
@@ -39,7 +57,7 @@ Fixes for the most common problems when running [agent evaluations](/agent-evalu
   <Card title="Drive and grade a trial" href="/agent-evaluations/production-harness#drive-the-entry-point" icon="workflow">
     Write the driver and the verifier, and choose where the verifier runs.
   </Card>
-  <Card title="Harbor integration" href="/integrations/harbor" icon="ship">
-    Already running `harbor run` on a benchmark? Add the Laminar plugin directly.
+  <Card title="Eval datasets" href="/agent-evaluations/eval-datasets" icon="git-branch">
+    Push and pull versions of the tasks, and resolve `lmnr.lock` conflicts.
   </Card>
 </CardGroup>

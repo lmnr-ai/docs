@@ -3,7 +3,7 @@ title: Agent Evaluations Quickstart with lmnr-cli
 sidebarTitle: Quickstart
 ---
 
-This quickstart gets a first [agent evaluation](/agent-evaluations/introduction) suite running with `lmnr-cli eval run`. The fastest path is to let your coding agent build it with the Laminar skill. If you would rather see every file, follow [Get started manually](#get-started-manually) below.
+This quickstart gets a first [agent evaluation](/agent-evaluations/introduction) running with `lmnr-cli eval run`, then versions its cases in Laminar as an [eval dataset](/agent-evaluations/eval-datasets). The fastest path is to let your coding agent build it with the Laminar skill. If you would rather see every file, follow [Get started manually](#get-started-manually) below.
 
 ## Set up with your coding agent
 
@@ -21,7 +21,7 @@ Then prompt your coding agent. For example:
 
 If you don't have production traces yet, describe in plain words what you want to evaluate.
 
-The skill follows the same guidance as these docs: it finds the entry point, builds one image, seeds per-case data, writes the verifier, and runs the suite locally. Review what it wrote against [Build a production harness](/agent-evaluations/production-harness), then open the run in Laminar.
+The skill follows the same guidance as these docs: it finds the entry point, builds one image, seeds per-case data, writes the verifier, and runs the evals locally. Review what it wrote against [Build a production harness](/agent-evaluations/production-harness), then open the run in Laminar.
 
 ## Get started manually
 
@@ -74,13 +74,13 @@ The driver imports `DB_PATH` and `handle_ticket`, and the Harbor agent sets `AGE
 
     ```
     evals/
-      lmnr.yaml                     # the image tasks use, and how to build it
-      image/
-        Dockerfile
-        shared/
-          run_case.py               # seeds the database, calls the agent, writes result.json
-      support/                      # a suite
+      support/                      # an eval dataset
         harbor.yaml
+        lmnr.yaml                   # the image tasks use, and how to build it
+        image/
+          Dockerfile
+          shared/
+            run_case.py             # seeds the database, calls the agent, writes result.json
         agent/
           __init__.py               # empty
           agent.py
@@ -96,20 +96,22 @@ The driver imports `DB_PATH` and `handle_ticket`, and the Harbor agent sets `AGE
               verify.py
               expected.json         # the reference answer
     ```
+
+    Everything for one eval dataset lives in its folder, here `support/`. The setup is committed with your code. The cases in `tasks/` are committed too until you version them in Laminar in the last step.
   </Step>
   <Step title="Describe the image">
-    `lmnr.yaml` names the image and says how to build it. Paths are relative to `evals/`, and `context: ..` makes the repo root the build context, so the image is built from your live source:
+    `lmnr.yaml` names the image and says how to build it. Paths are relative to the dataset folder, and `context: ../..` makes the repo root the build context, so the image is built from your live source:
 
-    ```yaml evals/lmnr.yaml
+    ```yaml evals/support/lmnr.yaml
     images:
       refund-agent-evals:
         dockerfile: image/Dockerfile
-        context: ..
+        context: ../..
     ```
 
     The Dockerfile starts from [uv's official image](https://docs.astral.sh/uv/guides/integration/docker/), which already has uv and Python 3.14 on Debian trixie. It installs the locked dependencies first, so they stay cached when only the app code changes:
 
-    ```dockerfile evals/image/Dockerfile
+    ```dockerfile evals/support/image/Dockerfile
     FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim
 
     ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
@@ -120,7 +122,7 @@ The driver imports `DB_PATH` and `handle_ticket`, and the Harbor agent sets `AGE
     RUN uv sync --frozen --no-install-project
     ENV PATH="/srv/app/.venv/bin:$PATH"
 
-    COPY evals/image/shared/ /opt/harness/
+    COPY evals/support/image/shared/ /opt/harness/
     COPY app/ ./app/
 
     WORKDIR /case
@@ -128,7 +130,7 @@ The driver imports `DB_PATH` and `handle_ticket`, and the Harbor agent sets `AGE
 
     The driver creates this case's database from `seed.json`, imports the production function unchanged, calls it with the ticket, and writes the outcome to `/logs/agent/result.json`:
 
-    ```python evals/image/shared/run_case.py
+    ```python evals/support/image/shared/run_case.py
     import json
     import sqlite3
     import sys
@@ -167,8 +169,8 @@ The driver imports `DB_PATH` and `handle_ticket`, and the Harbor agent sets `AGE
     print(json.dumps(result))
     ```
   </Step>
-  <Step title="Write the suite config and the agent">
-    `harbor.yaml` is a Harbor job config. It refers to the API key as a `${VAR}` placeholder that `lmnr-cli` fills in when the run starts, so the key itself does not end up in a file you commit:
+  <Step title="Write the dataset config and the agent">
+    `harbor.yaml` is a Harbor job config. It refers to the API key as a `${VAR}` placeholder that `lmnr-cli` fills in when the run starts, so the key itself does not end up in a file you commit. It doesn't list the tasks: `lmnr-cli` runs the ones in the dataset's `tasks/` folder.
 
     ```yaml evals/support/harbor.yaml
     agents:
@@ -176,8 +178,6 @@ The driver imports `DB_PATH` and `handle_ticket`, and the Harbor agent sets `AGE
         model_name: anthropic/claude-sonnet-5
         env:
           ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-    datasets:
-      - path: tasks
     n_concurrent_trials: 4
     ```
 
@@ -347,12 +347,29 @@ The driver imports `DB_PATH` and `handle_ticket`, and the Harbor agent sets `AGE
     npx lmnr-cli@latest eval run
     ```
 
-    `lmnr-cli` builds `refund-agent-evals` with your Docker, runs every task in every suite, and prints a link to the results. The `support` suite becomes an evaluation group in your project, and this run is a new evaluation in it.
+    `lmnr-cli` builds `refund-agent-evals` with your Docker, runs every task in every dataset, and prints a link to the results. The `support` dataset hasn't been versioned yet, so this run is a new evaluation in the `support unversioned` evaluation group.
   </Step>
   <Step title="Read the results">
     Open the evaluation. Each trial is a datapoint, with a `refund` score and a `reply` score. Because the app calls `Laminar.initialize()`, the trial's trace shows the model calls and the `list_charges` / `refund_charge` tool calls as a [transcript](/platform/viewing-traces), so a `0` takes one click to explain.
 
     Locally, Harbor's raw output is in `evals/support/jobs/<timestamp>/`. Each trial has `agent/` (your `result.json` and logs) and `verifier/` (`reward.json` and `test-stdout.txt`, which includes the judge's reasoning).
+  </Step>
+  <Step title="Version the cases">
+    Once the cases are right, push them to Laminar as version 1 of the `support` eval dataset:
+
+    ```bash
+    npx lmnr-cli@latest eval push -m "First refund cases"
+    ```
+
+    `eval push` uploads the tasks, writes `evals/support/lmnr.lock`, which pins version 1, and adds `/tasks/` to `evals/support/.gitignore`. Commit both files, and untrack `tasks/` if you committed it earlier:
+
+    ```bash
+    git rm -r --cached evals/support/tasks
+    git add evals/support/lmnr.lock evals/support/.gitignore
+    git commit -m "Version the support eval dataset"
+    ```
+
+    From now on, runs of these tasks report to the `support v1` group. A teammate's clone or a CI job gets the tasks from Laminar: `eval run` pulls the version `lmnr.lock` pins before it runs. When you change the cases, push again to create version 2. See [Eval datasets](/agent-evaluations/eval-datasets) for the whole workflow.
   </Step>
 </Steps>
 
@@ -360,7 +377,7 @@ The driver imports `DB_PATH` and `handle_ticket`, and the Harbor agent sets `AGE
 
 <CardGroup cols={2}>
   <Card title="Run evals with lmnr-cli" href="/agent-evaluations/running-evals" icon="terminal">
-    Filter suites and tasks, run trials in Laminar sandboxes, and wire it into CI.
+    Filter datasets and tasks, run trials in Laminar sandboxes, and wire it into CI.
   </Card>
   <Card title="The evals folder" href="/agent-evaluations/evals-folder" icon="folder-tree">
     Reference for `lmnr.yaml`, `harbor.yaml`, `task.toml`, and secrets.

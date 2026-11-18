@@ -6,7 +6,7 @@ sidebarTitle: Introduction
 Agent evaluations test your agent end to end, the way it runs in production. Every eval case gets its own isolated container: your real application with its real services (database, queue, cache) and the data that reproduces one specific scenario. A driver calls the app through an entry point it already has, and a verifier scores the artefacts of the run. You run the evals with [`lmnr-cli eval run`](/agent-evaluations/running-evals), locally on Docker or in Laminar's cloud sandboxes, and every trial lands in Laminar with its score next to the [full trace](/platform/viewing-traces) of the agent run.
 
 <Note>
-Agent evaluations are in beta. The `lmnr-cli eval run` command, its flags, and the folder layout may still change.
+Agent evaluations are in beta. The `lmnr-cli eval` commands, their flags, and the folder layout may still change.
 </Note>
 
 ## Agent evaluations and LLM evaluations
@@ -43,23 +43,23 @@ Agent evaluations answer all three by giving every case a fresh, complete copy o
 
 ## How a run works
 
-You keep an `evals/` folder next to your code. Each case in it is a Harbor task: image definition, the data for this scenario, and a verifier. When you run `lmnr-cli eval run`, Laminar:
+You keep an `evals/` folder next to your code, with one folder per [eval dataset](/agent-evaluations/eval-datasets). Each case in a dataset is a Harbor task: image definition, the data for this scenario, and a verifier. When you run `lmnr-cli eval run`, Laminar:
 
 1. Builds your image from the live source tree.
 2. Starts one container per trial, uploads the case's data, and runs the driver against your app.
 3. Runs the verifier over what the app produced and records its reward as the score.
 4. Attaches the app's LLM and tool calls to the trial's trace, so you can investigate failing scores.
 
-Every run of a suite is charted in one evaluation group. [Concepts](/agent-evaluations/concepts) shows what goes into a trial's container and what comes out, and maps each piece to what you see in Laminar.
+The dataset's setup stays in your repo, and its tasks are versioned in Laminar with `lmnr-cli eval push`. Every run of one version is charted in one evaluation group, so score changes between those runs come from your agent and its setup. [Concepts](/agent-evaluations/concepts) shows what goes into a trial's container and what comes out, and maps each piece to what you see in Laminar.
 
 ## Next steps
 
 <CardGroup cols={2}>
   <Card title="Quickstart" href="/agent-evaluations/quickstart" icon="play">
-    Have your coding agent set it up, or build a two-case suite by hand.
+    Have your coding agent set it up, or build a first eval dataset by hand.
   </Card>
-  <Card title="Concepts" href="/agent-evaluations/concepts" icon="boxes">
-    Tasks, environments, agents, verifiers, and trials, and how they map to Laminar.
+  <Card title="Eval datasets" href="/agent-evaluations/eval-datasets" icon="git-branch">
+    Version the tasks in Laminar, pin a version in `lmnr.lock`, and run it in CI.
   </Card>
   <Card title="Build a production harness" href="/agent-evaluations/production-harness" icon="server">
     Run the real services, seed realistic data, and keep the eval honest.
