@@ -63,7 +63,7 @@ The Harbor agent is a small `BaseInstalledAgent` subclass that runs commands ins
 - **Read the model from `self.model_name`**, so `--model` works.
 - **Only import `harbor`, the standard library, and modules in the dataset folder.** The class itself runs in the Harbor process, on your machine or in Laminar's orchestrator, and not inside the container.
 
-The driver is the script the agent runs inside the container, like the example's [`run_case.py`](https://github.com/lmnr-ai/lmnr-python/blob/main/examples/agent-evals/evals/image/shared/run_case.py). It triggers your entry point and waits for the result. For a synchronous entry point, such as an HTTP call or a function that returns, call it with a timeout and record the response. For an asynchronous one, such as a job on a queue, poll the status the app writes until it reaches a final state, up to a hard timeout.
+The driver is the script the agent runs inside the container, like the example's [`run_case.py`](https://github.com/lmnr-ai/lmnr-python/blob/main/examples/agent-evals/evals/support/image/shared/run_case.py). It triggers your entry point and waits for the result. For a synchronous entry point, such as an HTTP call or a function that returns, call it with a timeout and record the response. For an asynchronous one, such as a job on a queue, poll the status the app writes until it reaches a final state, up to a hard timeout.
 
 Turn the result into an outcome the verifier can grade, and write the details to `/logs/agent/result.json`. Use `failed` and `timeout` as their own outcomes, so a crash is never mistaken for a wrong answer from the model:
 
