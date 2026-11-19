@@ -7,6 +7,8 @@ Laminar ships an MCP (Model Context Protocol) server so AI assistants can query 
 
 ## Available Tools
 
+- `list_projects`  
+  List the Laminar projects you can access. When you sign in with OAuth, the agent calls this first and passes a project's `id` as `projectId` to every other tool.
 - `ask_agent`  
   Ask [Laminar Agent](/platform/laminar-agent) a question in plain language and get a grounded answer back. The agent runs read-only SQL and reads trace context for you, so you do not have to write the queries yourself. Pass a `prompt`; the response returns a `conversationId` you can pass back on the next call to continue the conversation.
 - `query_laminar_sql`  
@@ -15,7 +17,7 @@ Laminar ships an MCP (Model Context Protocol) server so AI assistants can query 
   Get an LLM-optimized summary of a single trace: span tree, timings, LLM inputs/outputs, and errors. Use this to quickly understand what happened in a specific run once you have a trace ID.
 
 <Note>
-  The SQL tool is read-only (`SELECT` only) and automatically scoped to your project. If trace context truncates long inputs or outputs, use SQL to fetch full fields.
+  Every tool acts on one project. With a project API key, that is the key's project. With OAuth, it is the `projectId` the agent passes, and Laminar checks that you are a member of that project on every call. The SQL tool is read-only (`SELECT` only). If trace context truncates long inputs or outputs, use SQL to fetch full fields.
 </Note>
 
 <Tip>
@@ -24,7 +26,28 @@ Laminar ships an MCP (Model Context Protocol) server so AI assistants can query 
 
 ## Connect Your Client
 
-First, grab a project API key from the Laminar dashboard. Then connect your MCP client.
+There are two ways to authenticate:
+
+- **Sign in with OAuth.** Add the server with no header. Your client opens a browser, you sign in to Laminar and approve access, and the tools run as you, across every project you belong to.
+- **Project API key.** Grab a key from the Laminar dashboard and send it as a bearer token. The tools are bound to that key's project.
+
+### Sign in with OAuth
+
+<Tabs items={['Claude Code', 'Other clients']}>
+  <Tab title="Claude Code">
+    ```bash
+    claude mcp add --transport http laminar https://api.lmnr.ai/v1/mcp
+    claude mcp login laminar
+    ```
+
+    `claude mcp login` opens the browser. After you approve, `claude mcp list` shows the server as connected. Claude Code refreshes the token on its own, so you only sign in once.
+  </Tab>
+  <Tab title="Other clients">
+    Point the client at `https://api.lmnr.ai/v1/mcp` without an `Authorization` header. Clients that support MCP OAuth (dynamic client registration with PKCE) discover Laminar's authorization server from the server's `401` response and prompt you to sign in. If your client doesn't support OAuth, use a project API key.
+  </Tab>
+</Tabs>
+
+### Project API key
 
 <Tabs items={['Claude Code', 'Cursor', 'Codex']}>
   <Tab title="Claude Code">
@@ -82,7 +105,7 @@ First, grab a project API key from the Laminar dashboard. Then connect your MCP 
   </Tab>
 </Tabs>
 
-For self-hosted deployments, replace the base URL with your instance (for example, `https://laminar.example.com/v1/mcp`).
+For self-hosted deployments, replace the base URL with your instance (for example, `https://laminar.example.com/v1/mcp`). To enable OAuth sign-in on a self-hosted instance, set `MCP_RESOURCE_URL` to that same URL on **both** the frontend and the app-server. Without it, the MCP server accepts project API keys only.
 
 ## Example Questions You Can Ask Your LLM
 
