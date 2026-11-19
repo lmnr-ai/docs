@@ -1,27 +1,78 @@
 ---
 title: MCP Server
-description: "Connect MCP clients to Laminar to query traces with SQL and summarize trace context."
+description: "Connect MCP clients to Laminar to query traces with SQL, manage signals and LLM profiles, and tag traces."
 ---
-
-Laminar ships an MCP (Model Context Protocol) server so AI assistants can query trace data directly. These are **tools your agent can call**. You ask questions in the chat, the agent invokes the Laminar tools under the hood, and you get answers grounded in your trace data. This closes the dev loop: the agent that wrote the code can pull the exact traces it produced, investigate failures, and propose fixes without context switching.
 
 ## Available Tools
 
-- `list_projects`  
-  List the Laminar projects you can access. When you sign in with OAuth, the agent calls this first and passes a project's `id` as `projectId` to every other tool.
-- `ask_agent`  
-  Ask [Laminar Agent](/platform/laminar-agent) a question in plain language and get a grounded answer back. The agent runs read-only SQL and reads trace context for you, so you do not have to write the queries yourself. Pass a `prompt`; the response returns a `conversationId` you can pass back on the next call to continue the conversation.
+### Query
+
 - `query_laminar_sql`  
   Run read-only ClickHouse SQL across Laminar data and get JSON back. Use this to find trace IDs, filter by time/session/status, or pull raw span fields (`input`, `output`, `attributes`).
+- `list_projects`  
+  List the Laminar projects you can access, with their workspaces. When you sign in with OAuth, the agent calls this first and passes a project's `id` as `projectId` to every other tool.
+
+### Signals
+
+- `list_signals`  
+  List the project's [signals](/signals/introduction) with their prompt, payload schema, trigger, filters and mode. Signal events are queryable with `query_laminar_sql` (`signal_events`).
+- `get_signal`  
+  Get one signal with its trigger, filters and mode.
+- `list_signal_versions`  
+  List a signal's definition (prompt and payload schema) versions, oldest first.
+- `create_signal`  
+  Create a signal: an LLM judge that runs a prompt on matching traces and extracts a structured payload. Like the UI, it also creates a critical-severity alert subscribed to your email.
+- `update_signal`  
+  Update a signal. Only the fields you pass change. Changing the prompt or payload schema adds a definition version.
+- `delete_signal`  
+  Delete a signal with its triggers, alerts and events. This is irreversible.
+
+<Note>
+  `create_signal`, `update_signal` and `delete_signal` need OAuth sign-in. With a project API key,
+  they return an error.
+</Note>
+
+### LLM profiles
+
+- `list_llm_profiles`  
+  List the workspace's LLM profiles: the provider credentials and models that signals and the playground run on. Secrets come back masked.
+- `get_llm_profile`  
+  Get one LLM profile. Secrets come back masked.
+- `create_llm_profile`  
+  Create a workspace LLM profile. Secrets you pass are stored encrypted and never returned.
+- `update_llm_profile`  
+  Update an LLM profile. Only the fields you pass change; `models` replaces the whole list.
+- `delete_llm_profile`  
+  Delete an LLM profile. Refused while a signal or feature route uses it.
+
+### Traces
+
+- `add_trace_tags`  
+  Add tags to a trace, for example to mark traces you reviewed. Tags the trace already has are kept. Tags are queryable with `query_laminar_sql` (`traces.tags`).
 - `get_trace_context`  
   Get an LLM-optimized summary of a single trace: span tree, timings, LLM inputs/outputs, and errors. Use this to quickly understand what happened in a specific run once you have a trace ID.
 
+### Agent
+
+- `ask_agent`  
+  Ask [Laminar Agent](/platform/laminar-agent) a question in plain language and get a grounded answer back. The agent runs read-only SQL and reads trace context for you, so you do not have to write the queries yourself. Pass a `prompt`; the response returns a `conversationId` you can pass back on the next call to continue the conversation.
+
 <Note>
-  Every tool acts on one project. With a project API key, that is the key's project. With OAuth, it is the `projectId` the agent passes, and Laminar checks that you are a member of that project on every call. The SQL tool is read-only (`SELECT` only). If trace context truncates long inputs or outputs, use SQL to fetch full fields.
+  `get_trace_context` and `ask_agent` are available on Laminar Cloud. Self-hosted open-source builds
+  don't list them.
+</Note>
+
+<Note>
+  Every tool acts on one project. With a project API key, that is the key's project. With OAuth, it
+  is the `projectId` the agent passes, and Laminar checks that you are a member of that project on
+  every call. The SQL tool is read-only (`SELECT` only). If trace context truncates long inputs or
+  outputs, use SQL to fetch full fields.
 </Note>
 
 <Tip>
-  Use `ask_agent` when you want a quick answer without writing SQL; use `query_laminar_sql` and `get_trace_context` when your assistant should pull raw rows or trace structure to reason over itself.
+  Use `ask_agent` when you want a quick answer without writing SQL; use `query_laminar_sql` and
+  `get_trace_context` when your assistant should pull raw rows or trace structure to reason over
+  itself.
 </Tip>
 
 ## Connect Your Client
@@ -33,7 +84,7 @@ There are two ways to authenticate:
 
 ### Sign in with OAuth
 
-<Tabs items={['Claude Code', 'Other clients']}>
+<Tabs items={['Claude Code', 'Codex', 'Cursor', 'Other clients']}>
   <Tab title="Claude Code">
     ```bash
     claude mcp add --transport http laminar https://api.lmnr.ai/v1/mcp
@@ -41,6 +92,40 @@ There are two ways to authenticate:
     ```
 
     `claude mcp login` opens the browser. After you approve, `claude mcp list` shows the server as connected. Claude Code refreshes the token on its own, so you only sign in once.
+
+  </Tab>
+  <Tab title="Codex">
+    Add the server to `~/.codex/config.toml` with no token:
+
+    ```toml
+    [mcp_servers.laminar]
+    url = "https://api.lmnr.ai/v1/mcp"
+    ```
+
+    Then sign in:
+
+    ```bash
+    codex mcp login laminar
+    ```
+
+    `codex mcp login` opens the browser. On a machine without a browser, add `--no-browser`, open the printed URL, and paste the redirect URL back into the terminal.
+
+  </Tab>
+  <Tab title="Cursor">
+    Add the server to `~/.cursor/mcp.json` (all projects) or `.cursor/mcp.json` (one project) with no headers:
+
+    ```json
+    {
+      "mcpServers": {
+        "laminar": {
+          "url": "https://api.lmnr.ai/v1/mcp"
+        }
+      }
+    }
+    ```
+
+    Cursor discovers Laminar's authorization server, registers itself, and asks you to sign in to Laminar in the browser. It renews the token on its own.
+
   </Tab>
   <Tab title="Other clients">
     Point the client at `https://api.lmnr.ai/v1/mcp` without an `Authorization` header. Clients that support MCP OAuth (dynamic client registration with PKCE) discover Laminar's authorization server from the server's `401` response and prompt you to sign in. If your client doesn't support OAuth, use a project API key.
@@ -60,13 +145,13 @@ There are two ways to authenticate:
     claude mcp add --transport http laminar http://localhost:8000/v1/mcp \
       --header "Authorization: Bearer <YOUR_PROJECT_API_KEY>"
     ```
+
   </Tab>
   <Tab title="Cursor">
     ```json
     {
       "mcpServers": {
         "laminar": {
-          "type": "http",
           "url": "https://api.lmnr.ai/v1/mcp",
           "headers": {
             "Authorization": "Bearer <YOUR_PROJECT_API_KEY>"
@@ -77,6 +162,7 @@ There are two ways to authenticate:
     ```
 
     To use a local server, change `url` to `http://localhost:8000/v1/mcp`.
+
   </Tab>
   <Tab title="Codex">
     ```toml
@@ -102,6 +188,7 @@ There are two ways to authenticate:
     url = "http://localhost:8000/v1/mcp"
     bearer_token_env_var = "LMNR_PROJECT_API_KEY"
     ```
+
   </Tab>
 </Tabs>
 
