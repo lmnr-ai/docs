@@ -77,11 +77,6 @@ description: "Connect MCP clients to Laminar to query traces with SQL, manage si
 
 ## Connect Your Client
 
-The server URL is `https://api.lmnr.ai/v1/mcp`. It speaks Streamable HTTP, so there is nothing to install. There are two ways to authenticate:
-
-- **Sign in with OAuth.** Add the server with no header. Your client opens a browser, you sign in to Laminar and approve access, and the tools run as you, across every project you belong to.
-- **Project API key.** Create a key in the Laminar dashboard and send it as `Authorization: Bearer <key>`. The tools are bound to that key's project.
-
 <Tabs items={['Claude Code', 'Codex', 'Claude', 'ChatGPT', 'Cursor', 'Other']}>
   <Tab title="Claude Code">
     **Sign in with OAuth**
