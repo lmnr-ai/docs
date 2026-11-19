@@ -123,6 +123,7 @@
               "platform/integrations",
               "platform/live-tracing",
               "platform/laminar-agent",
+              "platform/agent-sandbox",
               "platform/mcp",
               "platform/sql-editor",
               "platform/cli",
