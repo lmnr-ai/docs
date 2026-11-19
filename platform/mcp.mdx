@@ -21,16 +21,11 @@ description: "Connect MCP clients to Laminar to query traces with SQL, manage si
 - `list_signal_versions`  
   List a signal's definition (prompt and payload schema) versions, oldest first.
 - `create_signal`  
-  Create a signal: an LLM judge that runs a prompt on matching traces and extracts a structured payload. Like the UI, it also creates a critical-severity alert subscribed to your email.
+  Create a signal: an LLM judge that runs a prompt on matching traces and extracts a structured payload. Like the UI, it also creates a critical-severity alert. When you sign in with OAuth, the alert is subscribed to your email.
 - `update_signal`  
   Update a signal. Only the fields you pass change. Changing the prompt or payload schema adds a definition version.
 - `delete_signal`  
   Delete a signal with its triggers, alerts and events. This is irreversible.
-
-<Note>
-  `create_signal`, `update_signal` and `delete_signal` need OAuth sign-in. With a project API key,
-  they return an error.
-</Note>
 
 ### LLM profiles
 
