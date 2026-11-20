@@ -1,78 +1,102 @@
 ---
-title: The Evals Folder Reference for lmnr.yaml, harbor.yaml, and task.toml
+title: The Evals Folder Reference for harbor.yaml, dataset.toml, and task.toml
 sidebarTitle: The evals folder
 ---
 
-This page is the reference for the files `lmnr-cli eval run` reads. For a guided first suite, start with the [quickstart](/agent-evaluations/quickstart).
+This page is the reference for the files `lmnr-cli eval run` reads. For a guided first dataset, start with the [quickstart](/agent-evaluations/quickstart).
 
-`lmnr-cli eval run` treats every directory directly inside `evals/` that has a `harbor.yaml` as a suite. A fuller layout, for an app with services and a database:
+`lmnr-cli eval run` treats every directory directly inside `evals/` that has a `harbor.yaml` as a dataset. A fuller layout, for an app with services and a database:
 
 ```
 evals/
   README.md                       # how to run, how to add a case
-  lmnr.yaml
-  image/
-    Dockerfile                    # services, app, shared scripts, baseline data
-    shared/
-      start_stack.sh              # boot dependencies + the app, wait for readiness
-      seed_baseline.*             # (optional) data every case shares
-      seed_case.*                 # load this case's data from environment/
-      run_case.*                  # drive the entry point, write result files
-      export_trajectory.*         # (optional) rebuild the trajectory if the app isn't instrumented
-  <suite>/
-    harbor.yaml
+  <dataset>/
+    harbor.yaml                   # Harbor job config, plus the images tasks use
     agent/
-      __init__.py
-      agent.py
+      Dockerfile                  # services, app, scripts, baseline data
+      agent.py                    # the Harbor agent
+      start_stack.sh              # boot dependencies + the app, wait for readiness
+      seed.*                      # load this case's data from /case
+      run.*                       # drive the entry point, write result files
+      verify.*                    # the verifier every case runs
+      export_trajectory.*         # (optional) rebuild the trajectory if the app isn't instrumented
     tasks/
+      dataset.toml                # the dataset's name and its pinned task versions
       <case>/
         task.toml
         instruction.md
         environment/
-          case.json               # any format seed_case reads
+          case.json               # any format seed reads
         tests/
-          test.sh
+          test.sh                 # runs verify.*
           expected.json           # (optional) reference answer
 ```
 
-## lmnr.yaml and the image
+Once you push the tasks to Laminar with [`lmnr-cli eval dataset push`](/datasets/overview), git keeps only `tasks/dataset.toml` and the task folders are git-ignored.
 
-`lmnr.yaml` lists the images tasks can use, keyed by the name a task puts in `docker_image`:
+## harbor.yaml
 
-```yaml evals/lmnr.yaml
+A dataset's `harbor.yaml` is a Harbor job config (`agents`, `datasets`, `n_concurrent_trials`, and so on) with one extra key, `images`, that `lmnr-cli` reads. Relative paths resolve from the dataset folder, and the dataset folder is on `PYTHONPATH`, so `import_path: agent.agent:ClassName` points at `ClassName` in `<dataset>/agent/agent.py`.
+
+```yaml evals/support/harbor.yaml
+agents:
+  - import_path: agent.agent:SupportAgent
+    model_name: anthropic/claude-sonnet-5
+datasets:
+  - path: tasks
+n_concurrent_trials: 4
+
 images:
   myapp-evals:                  # referenced as docker_image = "myapp-evals"
-    dockerfile: image/Dockerfile
-    context: ..                 # the repo root, so COPY can reach the app's source
+    dockerfile: agent/Dockerfile
+    context: ../..              # the repo root, so COPY can reach the app's source
   myapp-evals-browser:          # a second image, e.g. with a headless browser
-    dockerfile: image/browser/Dockerfile
-    # no context: builds from image/browser/
+    dockerfile: agent/browser/Dockerfile
+    # no context: builds from agent/browser/
 ```
 
 | Key | Required | What it does |
 | --- | --- | --- |
 | `images.<name>` | Yes | The image name tasks reference with `docker_image`. |
-| `images.<name>.dockerfile` | Yes | Path to the Dockerfile, relative to `evals/`. |
-| `images.<name>.context` | No | Docker build context, relative to `evals/`. Defaults to the Dockerfile's directory. |
+| `images.<name>.dockerfile` | Yes | Path to the Dockerfile, relative to the dataset folder. |
+| `images.<name>.context` | No | Docker build context, relative to the dataset folder. Defaults to the Dockerfile's directory. |
 
-A run builds only the images its selected tasks reference. Entries that no selected task uses are skipped. `lmnr-cli` rebuilds them on every run. When nothing changed, Docker reuses the cached build from earlier runs, so there are no tags to bump and no registry to push to. `lmnr.yaml` is optional: without it, tasks pull `docker_image` from a registry or build their own `environment/Dockerfile`.
+Harbor ignores `images`, so `harbor run -c harbor.yaml` still works on its own once the images exist.
+
+A run builds only the images its selected tasks reference. `lmnr-cli` rebuilds them on every run. When nothing changed, Docker reuses the cached build from earlier runs, so there are no tags to bump and no registry to push to. `images` is optional: without it, tasks pull `docker_image` from a registry or build their own `environment/Dockerfile`.
 
 Two things matter when you write the Dockerfile:
 
 - **Build from your live source**, so the evals exercise your production code.
-- **`COPY` the specific paths you need instead of `COPY . .`.** A broad copy from the repo root would bake every suite's `tests/` folder, including the reference answers, into the image where the agent can read them. From `evals/`, copy only `image/shared/`.
+- **`COPY` the specific paths you need instead of `COPY . .`.** A broad copy from the repo root would bake every task's `tests/` folder, including the reference answers, into the image where the agent can read them. From `evals/`, copy only the scripts in `agent/`.
 
-It also helps to order layers from rarely to often changing (system packages, dependencies, shared scripts, app code), so an app change rebuilds one small layer. `.dockerignore` applies, and builds started by `lmnr-cli` never receive `.git` or `.env*` files.
+It also helps to order layers from rarely to often changing (system packages, dependencies, scripts, app code), so an app change rebuilds one small layer. `.dockerignore` applies, and builds started by `lmnr-cli` never receive `.git` or `.env*` files.
 
-## harbor.yaml
+## dataset.toml
 
-A suite's `harbor.yaml` is a plain Harbor job config: `agents`, `datasets`, `n_concurrent_trials`, etc. Relative paths resolve from the suite directory, and the suite directory is on `PYTHONPATH`, so `import_path: agent.entry:ClassName` points at `ClassName` in `<suite>/agent/entry.py`.
+`tasks/dataset.toml` is [Harbor's dataset manifest](https://www.harborframework.com/docs/datasets). `[dataset] name` is the dataset's name in Laminar, in Harbor's `org/name` form. `lmnr-cli eval dataset push` adds a `[[tasks]]` entry for each task, which pins the version of the task the dataset uses:
+
+```toml evals/support/tasks/dataset.toml
+[dataset]
+name = "myapp/support"
+
+[[tasks]]
+name = "myapp/duplicate-charge"
+digest = "sha256:..."
+```
+
+The dataset name is also the default evaluation group for its runs. Without a `dataset.toml`, the dataset is named after its folder. See [Datasets](/datasets/overview) for how pins are pushed, pulled, and merged.
 
 ## task.toml
 
-Set `docker_image` to an image name from `lmnr.yaml` and leave the Dockerfile out of `environment/`. Every trial then starts from the same built image, and Harbor uploads the contents of `environment/` into `workdir` after the container starts. That is how `case.json` reaches a shared image.
+Give each task its own `[task] name`, in the same `org/name` form. Datasets know a task by this name, not by its folder.
+
+Set `docker_image` to an image name from `harbor.yaml` and leave the Dockerfile out of `environment/`. Every trial then starts from the same built image, and Harbor uploads the contents of `environment/` into `workdir` after the container starts. That is how `case.json` reaches a shared image.
 
 ```toml task.toml
+[task]
+name = "myapp/duplicate-charge"
+
 [environment]
 docker_image = "myapp-evals"
 workdir = "/case"          # where environment/ is uploaded; defaults to the image's WORKDIR
@@ -85,11 +109,11 @@ timeout_sec = 600
 
 A full stack per case is heavy, so set `cpus` and `memory_mb`. Locally all trials share your machine, so keep `n_concurrent_trials` low. Remotely, each trial gets its own sandbox, so you can raise concurrency for that run with `--n-concurrent`.
 
-An image name that isn't in `lmnr.yaml` is pulled from its registry, so public images work as-is.
+An image name that isn't in `harbor.yaml` is pulled from its registry, so public images work as-is.
 
 ### A Dockerfile for one task
 
-This is a rare case: most suites never need it. If one case needs a different system setup, put a Dockerfile in that task's `environment/` folder and remove `docker_image` from its `task.toml` (while `docker_image` is set, Harbor ignores the Dockerfile). The `environment/` folder then becomes the build context, and nothing is uploaded when the container starts. So the Dockerfile has to `COPY` the case data itself. It also has to start `FROM` a public base image, because images from `lmnr.yaml` aren't available to it.
+This is a rare case: most datasets never need it. If one case needs a different system setup, put a Dockerfile in that task's `environment/` folder and remove `docker_image` from its `task.toml` (while `docker_image` is set, Harbor ignores the Dockerfile). The `environment/` folder then becomes the build context, and nothing is uploaded when the container starts. So the Dockerfile has to `COPY` the case data itself. It also has to start `FROM` a public base image, because the images from `harbor.yaml` aren't available to it.
 
 ## Secrets and env vars
 
@@ -116,6 +140,9 @@ Values come from your shell first, then from `.env.local` and `.env` in the curr
 ## Next steps
 
 <CardGroup cols={2}>
+  <Card title="Datasets" href="/datasets/overview" icon="database">
+    Push the tasks to Laminar, pin their versions, and pull them on other machines.
+  </Card>
   <Card title="Run evals with lmnr-cli" href="/agent-evaluations/running-evals" icon="terminal">
     Local and remote modes, flags, CI, and sandbox limits.
   </Card>
@@ -124,8 +151,5 @@ Values come from your shell first, then from `.env.local` and `.env` in the curr
   </Card>
   <Card title="Example project" href="https://github.com/lmnr-ai/lmnr-python/tree/main/examples/agent-evals" icon="github">
     A complete `evals/` folder for a support agent, ready to run with `lmnr-cli eval run`.
-  </Card>
-  <Card title="Troubleshooting" href="/agent-evaluations/troubleshooting" icon="life-buoy">
-    Fixes for stale images, missing env vars, and empty traces.
   </Card>
 </CardGroup>

@@ -214,9 +214,27 @@ lmnr-cli llm-profile delete <profile-id>
 
 Secrets are write-only: reads return a mask, and an update that omits a secret keeps the stored value. See [LLM profiles from the CLI](/platform/llm-profiles#manage-profiles-from-the-cli) for the per-provider flags and the update rules.
 
-## Manage datasets
+## Run agent evaluations
 
-Create, list, inspect, rename, delete, push, and pull datasets. File operations support `.jsonl`, `.json`, and `.csv`. Like `sql`, these commands run against the linked project.
+`eval run` runs the [agent evaluation](/agent-evaluations/introduction) datasets in your `evals/` folder, on local Docker or in Laminar sandboxes. `eval dataset push` and `eval dataset pull` store the datasets' tasks in Laminar and pin their versions in `dataset.toml`.
+
+```bash
+lmnr-cli eval run
+lmnr-cli eval run support --remote --n-concurrent 20
+
+lmnr-cli eval dataset push
+lmnr-cli eval dataset pull
+```
+
+See [Run evals with lmnr-cli](/agent-evaluations/running-evals) and [Datasets](/datasets/overview) for the flags and exit codes.
+
+## Manage legacy datasets
+
+<Note>
+`lmnr-cli dataset` is deprecated as of `lmnr-cli` 0.5.8. For agent evaluations, use the new [datasets](/datasets/overview) and `lmnr-cli eval dataset`.
+</Note>
+
+Create, list, inspect, rename, delete, push, and pull [legacy datasets](/datasets/introduction). File operations support `.jsonl`, `.json`, and `.csv`. Like `sql`, these commands run against the linked project.
 
 ```bash
 # List all datasets in the project
@@ -237,7 +255,7 @@ lmnr-cli dataset pull output.jsonl -n my-dataset
 lmnr-cli dataset create my-dataset data.jsonl -o my-dataset.jsonl
 ```
 
-See [Datasets CLI](/datasets/cli) for the full dataset workflow including versioning semantics.
+See [Legacy datasets CLI](/datasets/cli) for the full workflow including versioning semantics.
 
 ## Annotate debug sessions
 
@@ -382,7 +400,7 @@ lmnr-cli debug session open --help
   <Card title="MCP Server" href="/platform/mcp">
     Connect Claude Code, Cursor, or any MCP client to Laminar directly.
   </Card>
-  <Card title="Datasets CLI workflow" href="/datasets/cli">
+  <Card title="Legacy datasets CLI" href="/datasets/cli">
     End-to-end example of pulling, editing, and pushing a dataset.
   </Card>
   <Card title="Debugger" href="/debugger/introduction">

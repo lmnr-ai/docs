@@ -9,7 +9,7 @@ Fixes for the most common problems when running [agent evaluations](/agent-evalu
 
 <AccordionGroup>
   <Accordion title="A change to the app or the image doesn't show up">
-    `lmnr-cli` rebuilds the `lmnr.yaml` images on every run, but Docker's layer cache can still hide a change, for example a `RUN` step that downloads "latest". Check the file inside a running container, then clear the cache with `docker builder prune` or bump a cache-busting `ARG` placed before the stale step.
+    `lmnr-cli` rebuilds the images listed under `images` in `harbor.yaml` on every run, but Docker's layer cache can still hide a change, for example a `RUN` step that downloads "latest". Check the file inside a running container, then clear the cache with `docker builder prune` or bump a cache-busting `ARG` placed before the stale step.
   </Accordion>
   <Accordion title="The app can't see an env var from harbor.yaml">
     `agents[].env` reaches every command the agent runs. If the start script launches the app with `env -i`, it must forward each name explicitly.
@@ -21,9 +21,21 @@ Fixes for the most common problems when running [agent evaluations](/agent-evalu
     A secret's value is very short, so every occurrence of it in the output is redacted. Use long, distinctive placeholder values.
   </Accordion>
   <Accordion title="Where are the logs for a failed trial?">
-    For local runs, in `evals/<suite>/jobs/<timestamp>/`. For `--remote` runs, Harbor's job output stays in the sandbox: open the trial's trace in Laminar instead.
+    For local runs, in `evals/<dataset>/jobs/<timestamp>/`. For `--remote` runs, open the trial in Laminar and switch to its **Files** view, which has the same files under `logs/` once the run finishes.
 
-    Each local trial has `agent/` (your logs and `result.json`), `verifier/` (`reward.txt`, `test-stdout.txt`), and `exception.txt` with the agent's traceback if it raised.
+    Each trial has `agent/` (your logs and `result.json`), `verifier/` (`reward.txt`, `test-stdout.txt`), and `exception.txt` with the agent's traceback if it raised.
+  </Accordion>
+  <Accordion title="eval run says the dataset has no tasks, or that tasks differ from dataset.toml">
+    `eval run` runs the tasks on disk and never downloads them. After a fresh clone, or after a `git pull` that changed `dataset.toml`, run `lmnr-cli eval dataset pull` first. If a task differs because you edited it, `lmnr-cli eval dataset push` stores the edit and pins it. See [Datasets](/datasets/overview#how-push-and-pull-treat-each-task).
+  </Accordion>
+  <Accordion title="pull exits with code 22">
+    `pull` would overwrite a task you edited, and Laminar doesn't have that version. Push the edit to keep it, or run `lmnr-cli eval dataset pull --force` to discard it.
+  </Accordion>
+  <Accordion title="push skips a task with a warning">
+    Laminar already has the version on disk, but `dataset.toml` pins a different one (`outdated`) or none at all (`unpinned`). This usually means your tasks are behind `dataset.toml`: run `lmnr-cli eval dataset pull`.
+  </Accordion>
+  <Accordion title="push or pull fails with storage_not_configured">
+    The Laminar deployment has no storage for datasets. On a self-hosted deployment, set `S3_DATASETS_BUCKET` and AWS credentials for the app server and the frontend.
   </Accordion>
 </AccordionGroup>
 

@@ -98,20 +98,26 @@
             ]
           },
           {
+            "group": "Datasets",
+            "pages": [
+              "datasets/overview",
+              {
+                "group": "Legacy datasets",
+                "pages": [
+                  "datasets/introduction",
+                  "datasets/adding-data",
+                  "datasets/cli"
+                ]
+              }
+            ]
+          },
+          {
             "group": "Debugger",
             "pages": [
               "debugger/introduction",
               "debugger/setup",
               "debugger/process",
               "debugger/caching"
-            ]
-          },
-          {
-            "group": "Datasets",
-            "pages": [
-              "datasets/introduction",
-              "datasets/adding-data",
-              "datasets/cli"
             ]
           },
           {
