@@ -77,6 +77,7 @@
                   "agent-evaluations/concepts",
                   "agent-evaluations/running-evals",
                   "agent-evaluations/evals-folder",
+                  "agent-evaluations/eval-datasets",
                   "agent-evaluations/production-harness",
                   "agent-evaluations/trajectories",
                   "agent-evaluations/troubleshooting"

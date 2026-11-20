@@ -5,6 +5,10 @@ title: Laminar datasets CLI
 
 The `lmnr-cli dataset` command manages datasets in Laminar from your terminal: list and inspect them, create new ones from local files, push or pull datapoints, rename a dataset, and delete one. It ships in the standalone [`lmnr-cli`](/platform/cli) npm package, so you do not need the `@lmnr-ai/lmnr` SDK installed to use it.
 
+<Warning>
+`lmnr-cli dataset` is deprecated as of `lmnr-cli` 0.6.0 and will be removed in a future release. For agent evaluations, use `lmnr-cli eval dataset` and [eval datasets](/agent-evaluations/eval-datasets).
+</Warning>
+
 <Note>
 `lmnr-cli` replaces the dataset commands that used to ship with the `@lmnr-ai/lmnr` SDK (`lmnr datasets ...`). The old SDK-bundled CLI is deprecated; use `lmnr-cli dataset` instead.
 </Note>

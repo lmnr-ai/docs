@@ -214,7 +214,25 @@ lmnr-cli llm-profile delete <profile-id>
 
 Secrets are write-only: reads return a mask, and an update that omits a secret keeps the stored value. See [LLM profiles from the CLI](/platform/llm-profiles#manage-profiles-from-the-cli) for the per-provider flags and the update rules.
 
+## Run agent evaluations
+
+`eval run` runs the [agent evaluation](/agent-evaluations/introduction) datasets in your `evals/` folder, on local Docker or in Laminar sandboxes. `eval dataset push` and `eval dataset pull` store the datasets' tasks in Laminar and pin their versions in `dataset.toml`.
+
+```bash
+lmnr-cli eval run
+lmnr-cli eval run support --remote --n-concurrent 20
+
+lmnr-cli eval dataset push
+lmnr-cli eval dataset pull
+```
+
+See [Run evals with lmnr-cli](/agent-evaluations/running-evals) and [Eval datasets](/agent-evaluations/eval-datasets) for the flags and exit codes.
+
 ## Manage datasets
+
+<Note>
+`lmnr-cli dataset` is deprecated as of `lmnr-cli` 0.6.0. For agent evaluations, use [eval datasets](/agent-evaluations/eval-datasets) and `lmnr-cli eval dataset`.
+</Note>
 
 Create, list, inspect, rename, delete, push, and pull datasets. File operations support `.jsonl`, `.json`, and `.csv`. Like `sql`, these commands run against the linked project.
 

@@ -43,20 +43,20 @@ Agent evaluations answer all three by giving every case a fresh, complete copy o
 
 ## How a run works
 
-You keep an `evals/` folder next to your code. Each case in it is a Harbor task: image definition, the data for this scenario, and a verifier. When you run `lmnr-cli eval run`, Laminar:
+You keep an `evals/` folder next to your code. Each case in it is a Harbor task: image definition, the data for this scenario, and a verifier. The tasks can live in git, or in Laminar as an [eval dataset](/agent-evaluations/eval-datasets), with only a file of pinned versions in git. When you run `lmnr-cli eval run`, Laminar:
 
 1. Builds your image from the live source tree.
 2. Starts one container per trial, uploads the case's data, and runs the driver against your app.
 3. Runs the verifier over what the app produced and records its reward as the score.
 4. Attaches the app's LLM and tool calls to the trial's trace, so you can investigate failing scores.
 
-Every run of a suite is charted in one evaluation group. [Concepts](/agent-evaluations/concepts) shows what goes into a trial's container and what comes out, and maps each piece to what you see in Laminar.
+Every run of a dataset is charted in one evaluation group. [Concepts](/agent-evaluations/concepts) shows what goes into a trial's container and what comes out, and maps each piece to what you see in Laminar.
 
 ## Next steps
 
 <CardGroup cols={2}>
   <Card title="Quickstart" href="/agent-evaluations/quickstart" icon="play">
-    Have your coding agent set it up, or build a two-case suite by hand.
+    Have your coding agent set it up, or build a dataset by hand.
   </Card>
   <Card title="Concepts" href="/agent-evaluations/concepts" icon="boxes">
     Tasks, environments, agents, verifiers, and trials, and how they map to Laminar.
