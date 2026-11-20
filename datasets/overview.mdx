@@ -1,14 +1,14 @@
 ---
-title: Eval Datasets - Version Agent Evaluation Tasks in Laminar
-sidebarTitle: Eval datasets
+title: Datasets - Version Agent Evaluation Tasks in Laminar
+sidebarTitle: Overview
 ---
 
-An eval dataset is the set of tasks behind an [agent evaluation](/agent-evaluations/introduction), stored and versioned in Laminar. Your repo keeps one small file per dataset, `tasks/dataset.toml`, which pins one version of each task. The task folders themselves, with their case data and reference answers, live in Laminar. `lmnr-cli eval dataset push` uploads your tasks and pins them, and `lmnr-cli eval dataset pull` downloads the versions that `dataset.toml` pins.
+A dataset is the set of tasks behind an [agent evaluation](/agent-evaluations/introduction), stored and versioned in Laminar. Your repo keeps one small file per dataset, `tasks/dataset.toml`, which pins one version of each task. The task folders themselves, with their case data and reference answers, live in Laminar. `lmnr-cli eval dataset push` uploads your tasks and pins them, and `lmnr-cli eval dataset pull` downloads the versions that `dataset.toml` pins.
 
 Cases built from production traces often hold customer data and large fixtures, which you may not want in your git history. With the tasks in Laminar, every trial also records which version of its task it ran, so you can open that exact version from the evaluation.
 
 <Note>
-Eval datasets need `lmnr-cli` 0.6.0 or later.
+Datasets need `lmnr-cli` 0.5.8 or later. Datasets created before it are now [legacy datasets](/datasets/introduction).
 </Note>
 
 ## What lives in git and what lives in Laminar
@@ -150,7 +150,7 @@ npx lmnr-cli@latest eval dataset push --json           # a JSON report on stdout
 | --- | --- |
 | `16` | Invalid evals folder: a missing or malformed `dataset.toml`, a task without its own `[task] name`, or a task with `.env*` files |
 | `22` | `pull` would overwrite local edits that Laminar doesn't have |
-| `1` | A pinned version isn't in Laminar, or the deployment has no storage for eval datasets |
+| `1` | A pinned version isn't in Laminar, or the deployment has no storage for datasets |
 
 ## Run a dataset
 
@@ -174,10 +174,10 @@ npx lmnr-cli@latest eval run --json
 
 ## Browse datasets in Laminar
 
-The project's **Datasets** page lists your eval datasets. Open one to see its tasks and every version of each task, and open a version to browse its files.
+The project's **Datasets** page lists your datasets. Open one to see its tasks and every version of each task, and open a version to browse its files.
 
-<Frame caption="A task in an eval dataset: every version Laminar stores, and the files of the selected version.">
-  <img src="/images/agent-evaluations/eval-dataset-page.png" alt="The refund-agent/support dataset in Laminar with the refund-agent/duplicate-charge task open. Two versions, v2 and v1, are listed; v1 is selected and its task.toml is shown next to its environment and tests folders." />
+<Frame caption="A task in a dataset: every version Laminar stores, and the files of the selected version.">
+  <img src="/images/datasets/task-versions.png" alt="The refund-agent/support dataset in Laminar with the refund-agent/duplicate-charge task open. Two versions, v2 and v1, are listed; v1 is selected and its task.toml is shown next to its environment and tests folders." />
 </Frame>
 
 An evaluation of a dataset links to the dataset from its header. Each trial records the name and version of the task it ran, so the trial's **Files** view shows the task at that exact version under `task/`, with a link to it in the dataset. For `--remote` runs, the Files view also has the dataset's `agent/` folder and the trial's Harbor output under `logs/`.
@@ -187,7 +187,7 @@ An evaluation of a dataset links to the dataset from its header. Each trial reco
 </Frame>
 
 <Note>
-On a self-hosted deployment, eval datasets need an S3 bucket. Set `S3_DATASETS_BUCKET`, with AWS credentials, for both the app server and the frontend. Without it, `push` and `pull` fail with `storage_not_configured`.
+On a self-hosted deployment, datasets need an S3 bucket. Set `S3_DATASETS_BUCKET`, with AWS credentials, for both the app server and the frontend. Without it, `push` and `pull` fail with `storage_not_configured`.
 </Note>
 
 ## Next steps

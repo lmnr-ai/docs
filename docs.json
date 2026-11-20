@@ -77,7 +77,6 @@
                   "agent-evaluations/concepts",
                   "agent-evaluations/running-evals",
                   "agent-evaluations/evals-folder",
-                  "agent-evaluations/eval-datasets",
                   "agent-evaluations/production-harness",
                   "agent-evaluations/trajectories",
                   "agent-evaluations/troubleshooting"
@@ -99,20 +98,26 @@
             ]
           },
           {
+            "group": "Datasets",
+            "pages": [
+              "datasets/overview",
+              {
+                "group": "Legacy datasets",
+                "pages": [
+                  "datasets/introduction",
+                  "datasets/adding-data",
+                  "datasets/cli"
+                ]
+              }
+            ]
+          },
+          {
             "group": "Debugger",
             "pages": [
               "debugger/introduction",
               "debugger/setup",
               "debugger/process",
               "debugger/caching"
-            ]
-          },
-          {
-            "group": "Datasets",
-            "pages": [
-              "datasets/introduction",
-              "datasets/adding-data",
-              "datasets/cli"
             ]
           },
           {
@@ -321,6 +326,10 @@
     {
       "source": "/tracing/integrations/:slug*",
       "destination": "/integrations/:slug*"
+    },
+    {
+      "source": "/agent-evaluations/eval-datasets",
+      "destination": "/datasets/overview"
     }
   ],
   "logo": "/logo/laminar-wordmark.svg",

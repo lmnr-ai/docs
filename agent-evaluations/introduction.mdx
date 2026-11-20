@@ -43,7 +43,7 @@ Agent evaluations answer all three by giving every case a fresh, complete copy o
 
 ## How a run works
 
-You keep an `evals/` folder next to your code. Each case in it is a Harbor task: image definition, the data for this scenario, and a verifier. The tasks can live in git, or in Laminar as an [eval dataset](/agent-evaluations/eval-datasets), with only a file of pinned versions in git. When you run `lmnr-cli eval run`, Laminar:
+You keep an `evals/` folder next to your code. Each case in it is a Harbor task: image definition, the data for this scenario, and a verifier. The tasks can live in git, or in Laminar as a [dataset](/datasets/overview), with only a file of pinned versions in git. When you run `lmnr-cli eval run`, Laminar:
 
 1. Builds your image from the live source tree.
 2. Starts one container per trial, uploads the case's data, and runs the driver against your app.

@@ -383,7 +383,7 @@ The driver imports `DB_PATH` and `handle_ticket`, and the Harbor agent sets `AGE
     npx lmnr-cli@latest eval dataset push
     ```
 
-    `push` uploads each task, pins its version in `tasks/dataset.toml`, and git-ignores the task folders. Commit `dataset.toml` and `evals/.gitignore`. If you already committed the task folders, untrack them with `git rm -r --cached evals/support/tasks` and re-add `dataset.toml` in the same commit. Teammates and CI then run `npx lmnr-cli@latest eval dataset pull` to get the pinned tasks before `eval run`. See [Eval datasets](/agent-evaluations/eval-datasets) for how versions, edits, and merges work.
+    `push` uploads each task, pins its version in `tasks/dataset.toml`, and git-ignores the task folders. Commit `dataset.toml` and `evals/.gitignore`. If you already committed the task folders, untrack them with `git rm -r --cached evals/support/tasks` and re-add `dataset.toml` in the same commit. Teammates and CI then run `npx lmnr-cli@latest eval dataset pull` to get the pinned tasks before `eval run`. See [Datasets](/datasets/overview) for how versions, edits, and merges work.
   </Step>
 </Steps>
 
@@ -393,7 +393,7 @@ The driver imports `DB_PATH` and `handle_ticket`, and the Harbor agent sets `AGE
   <Card title="Run evals with lmnr-cli" href="/agent-evaluations/running-evals" icon="terminal">
     Filter datasets and tasks, run trials in Laminar sandboxes, and wire it into CI.
   </Card>
-  <Card title="Eval datasets" href="/agent-evaluations/eval-datasets" icon="database">
+  <Card title="Datasets" href="/datasets/overview" icon="database">
     Version the tasks in Laminar and keep only `dataset.toml` in git.
   </Card>
   <Card title="Build a production harness" href="/agent-evaluations/production-harness" icon="server">

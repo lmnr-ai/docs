@@ -26,7 +26,7 @@ Fixes for the most common problems when running [agent evaluations](/agent-evalu
     Each trial has `agent/` (your logs and `result.json`), `verifier/` (`reward.txt`, `test-stdout.txt`), and `exception.txt` with the agent's traceback if it raised.
   </Accordion>
   <Accordion title="eval run says the dataset has no tasks, or that tasks differ from dataset.toml">
-    `eval run` runs the tasks on disk and never downloads them. After a fresh clone, or after a `git pull` that changed `dataset.toml`, run `lmnr-cli eval dataset pull` first. If a task differs because you edited it, `lmnr-cli eval dataset push` stores the edit and pins it. See [Eval datasets](/agent-evaluations/eval-datasets#how-push-and-pull-treat-each-task).
+    `eval run` runs the tasks on disk and never downloads them. After a fresh clone, or after a `git pull` that changed `dataset.toml`, run `lmnr-cli eval dataset pull` first. If a task differs because you edited it, `lmnr-cli eval dataset push` stores the edit and pins it. See [Datasets](/datasets/overview#how-push-and-pull-treat-each-task).
   </Accordion>
   <Accordion title="pull exits with code 22">
     `pull` would overwrite a task you edited, and Laminar doesn't have that version. Push the edit to keep it, or run `lmnr-cli eval dataset pull --force` to discard it.
@@ -35,7 +35,7 @@ Fixes for the most common problems when running [agent evaluations](/agent-evalu
     Laminar already has the version on disk, but `dataset.toml` pins a different one (`outdated`) or none at all (`unpinned`). This usually means your tasks are behind `dataset.toml`: run `lmnr-cli eval dataset pull`.
   </Accordion>
   <Accordion title="push or pull fails with storage_not_configured">
-    The Laminar deployment has no storage for eval datasets. On a self-hosted deployment, set `S3_DATASETS_BUCKET` and AWS credentials for the app server and the frontend.
+    The Laminar deployment has no storage for datasets. On a self-hosted deployment, set `S3_DATASETS_BUCKET` and AWS credentials for the app server and the frontend.
   </Accordion>
 </AccordionGroup>
 

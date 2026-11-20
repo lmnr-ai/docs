@@ -226,15 +226,15 @@ lmnr-cli eval dataset push
 lmnr-cli eval dataset pull
 ```
 
-See [Run evals with lmnr-cli](/agent-evaluations/running-evals) and [Eval datasets](/agent-evaluations/eval-datasets) for the flags and exit codes.
+See [Run evals with lmnr-cli](/agent-evaluations/running-evals) and [Datasets](/datasets/overview) for the flags and exit codes.
 
-## Manage datasets
+## Manage legacy datasets
 
 <Note>
-`lmnr-cli dataset` is deprecated as of `lmnr-cli` 0.6.0. For agent evaluations, use [eval datasets](/agent-evaluations/eval-datasets) and `lmnr-cli eval dataset`.
+`lmnr-cli dataset` is deprecated as of `lmnr-cli` 0.5.8. For agent evaluations, use the new [datasets](/datasets/overview) and `lmnr-cli eval dataset`.
 </Note>
 
-Create, list, inspect, rename, delete, push, and pull datasets. File operations support `.jsonl`, `.json`, and `.csv`. Like `sql`, these commands run against the linked project.
+Create, list, inspect, rename, delete, push, and pull [legacy datasets](/datasets/introduction). File operations support `.jsonl`, `.json`, and `.csv`. Like `sql`, these commands run against the linked project.
 
 ```bash
 # List all datasets in the project
@@ -255,7 +255,7 @@ lmnr-cli dataset pull output.jsonl -n my-dataset
 lmnr-cli dataset create my-dataset data.jsonl -o my-dataset.jsonl
 ```
 
-See [Datasets CLI](/datasets/cli) for the full dataset workflow including versioning semantics.
+See [Legacy datasets CLI](/datasets/cli) for the full workflow including versioning semantics.
 
 ## Annotate debug sessions
 
@@ -400,7 +400,7 @@ lmnr-cli debug session open --help
   <Card title="MCP Server" href="/platform/mcp">
     Connect Claude Code, Cursor, or any MCP client to Laminar directly.
   </Card>
-  <Card title="Datasets CLI workflow" href="/datasets/cli">
+  <Card title="Legacy datasets CLI" href="/datasets/cli">
     End-to-end example of pulling, editing, and pushing a dataset.
   </Card>
   <Card title="Debugger" href="/debugger/introduction">

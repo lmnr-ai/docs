@@ -32,7 +32,7 @@ evals/
           expected.json           # (optional) reference answer
 ```
 
-Once you push the tasks to Laminar with [`lmnr-cli eval dataset push`](/agent-evaluations/eval-datasets), git keeps only `tasks/dataset.toml` and the task folders are git-ignored.
+Once you push the tasks to Laminar with [`lmnr-cli eval dataset push`](/datasets/overview), git keeps only `tasks/dataset.toml` and the task folders are git-ignored.
 
 ## harbor.yaml
 
@@ -85,11 +85,11 @@ name = "myapp/duplicate-charge"
 digest = "sha256:..."
 ```
 
-The dataset name is also the default evaluation group for its runs. Without a `dataset.toml`, the dataset is named after its folder. See [Eval datasets](/agent-evaluations/eval-datasets) for how pins are pushed, pulled, and merged.
+The dataset name is also the default evaluation group for its runs. Without a `dataset.toml`, the dataset is named after its folder. See [Datasets](/datasets/overview) for how pins are pushed, pulled, and merged.
 
 ## task.toml
 
-Give each task its own `[task] name`, in the same `org/name` form. Eval datasets know a task by this name, not by its folder.
+Give each task its own `[task] name`, in the same `org/name` form. Datasets know a task by this name, not by its folder.
 
 Set `docker_image` to an image name from `harbor.yaml` and leave the Dockerfile out of `environment/`. Every trial then starts from the same built image, and Harbor uploads the contents of `environment/` into `workdir` after the container starts. That is how `case.json` reaches a shared image.
 
@@ -140,7 +140,7 @@ Values come from your shell first, then from `.env.local` and `.env` in the curr
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Eval datasets" href="/agent-evaluations/eval-datasets" icon="database">
+  <Card title="Datasets" href="/datasets/overview" icon="database">
     Push the tasks to Laminar, pin their versions, and pull them on other machines.
   </Card>
   <Card title="Run evals with lmnr-cli" href="/agent-evaluations/running-evals" icon="terminal">

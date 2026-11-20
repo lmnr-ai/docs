@@ -18,7 +18,7 @@ Run it from the repo root, since that is where it looks for `.env` and `.env.loc
 Both modes need Docker on the machine where you run `lmnr-cli`, because that is where the images are built. In remote mode the built images are then uploaded.
 </Note>
 
-`eval run` runs the tasks in `tasks/` as they are on disk, including edits you haven't pushed. If the dataset's tasks are stored in Laminar, run [`lmnr-cli eval dataset pull`](/agent-evaluations/eval-datasets#pull-tasks-from-laminar) first on a fresh clone or after `dataset.toml` changes: `eval run` never pulls. It warns when a pinned task is missing or differs from its pin.
+`eval run` runs the tasks in `tasks/` as they are on disk, including edits you haven't pushed. If the dataset's tasks are stored in Laminar, run [`lmnr-cli eval dataset pull`](/datasets/overview#pull-tasks-from-laminar) first on a fresh clone or after `dataset.toml` changes: `eval run` never pulls. It warns when a pinned task is missing or differs from its pin.
 
 ```bash
 lmnr-cli eval run                                    # every dataset in ./evals
@@ -50,7 +50,7 @@ Each trial is a datapoint in the evaluation, with its verifier's scores and the 
 
 Open a trial and switch to its **Files** view to read the files behind it:
 
-- `task/`: the task the trial ran. For a pushed version it links to the version in the [eval dataset](/agent-evaluations/eval-datasets). A `--remote` run that uploaded an unpushed task shows that copy.
+- `task/`: the task the trial ran. For a pushed version it links to the version in the [dataset](/datasets/overview). A `--remote` run that uploaded an unpushed task shows that copy.
 - `agent/` (`--remote` only): the dataset's `agent/` folder as it was uploaded with the run.
 - `logs/` (`--remote` only): the trial's folder from Harbor, with the agent's `result.json` and logs under `agent/`, the verifier's `reward.json` and output under `verifier/`, and `trial.log`. It arrives when the whole run finishes.
 
@@ -70,7 +70,7 @@ Use `--json` and the exit code. A local run prints `{mode: "local", datasets, fa
 ## Remote limits and image requirements
 
 - **One container per trial.** docker-compose tasks don't run remotely. `cpus` and `memory_mb` above the sandbox limit are clamped, and a run that exceeds the time limit is stopped.
-- **The folder upload is capped at 1 GiB.** Symlinks, `.git`, `node_modules`, virtualenvs, caches, and `jobs/` directories are skipped, and `.env*` files are never uploaded. Tasks whose version is already stored in an [eval dataset](/agent-evaluations/eval-datasets) aren't uploaded: the run downloads them from Laminar.
+- **The folder upload is capped at 1 GiB.** Symlinks, `.git`, `node_modules`, virtualenvs, caches, and `jobs/` directories are skipped, and `.env*` files are never uploaded. Tasks whose version is already stored in an [dataset](/datasets/overview) aren't uploaded: the run downloads them from Laminar.
 - **Images need `tar`, `gzip`, and `bash`**, plus `su` if a task runs as a non-root user. They're built for `linux/amd64` (emulated on Apple silicon), so architecture-specific downloads should use `ARG TARGETARCH`.
 - **Concurrency is capped per project** (50 sandboxes by default). A higher `--n-concurrent` queues rather than running more at once.
 - **Large images** may need a higher `build_timeout_sec` under `[environment]` in `task.toml` (default 600 seconds), which bounds image preparation plus sandbox start.
@@ -79,7 +79,7 @@ Use `--json` and the exit code. A local run prints `{mode: "local", datasets, fa
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Eval datasets" href="/agent-evaluations/eval-datasets" icon="database">
+  <Card title="Datasets" href="/datasets/overview" icon="database">
     Store the tasks in Laminar, pin their versions, and pull them in CI.
   </Card>
   <Card title="Compare runs" href="/evaluations/comparing-runs" icon="chart-line">
