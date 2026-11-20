@@ -326,10 +326,6 @@
     {
       "source": "/tracing/integrations/:slug*",
       "destination": "/integrations/:slug*"
-    },
-    {
-      "source": "/agent-evaluations/eval-datasets",
-      "destination": "/datasets/overview"
     }
   ],
   "logo": "/logo/laminar-wordmark.svg",
