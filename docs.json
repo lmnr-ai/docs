@@ -216,7 +216,8 @@
           {
             "group": "Other platforms",
             "pages": [
-              "integrations/langfuse"
+              "integrations/langfuse",
+              "integrations/langsmith"
             ]
           },
           {
