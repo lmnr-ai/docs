@@ -21,7 +21,7 @@ Laminar is an open-source, OpenTelemetry-native observability platform for AI ag
 - Runs that start inside a Laminar `observe` span nest under it.
 
 <Note>
-Supported versions: Python `langsmith` 0.4.15 or later with `lmnr` 0.9.3 or later, and the TypeScript `langsmith` package 0.10 or later with `@lmnr-ai/lmnr` 0.9.7 or later.
+Supported versions: Python `langsmith` 0.4.15 or later with `lmnr` 0.9.3 or later, and the TypeScript `langsmith` package 0.3.60 or later with `@lmnr-ai/lmnr` 0.9.7 or later.
 </Note>
 
 ## Getting started
@@ -314,7 +314,7 @@ Laminar records the runs as LangSmith sends them, after LangSmith's own settings
 - **Sampling carries over.** Runs that `LANGSMITH_TRACING_SAMPLING_RATE` drops are not recorded in Laminar either.
 - **Tracing must be on.** With `LANGSMITH_TRACING` unset or `false`, LangSmith creates no runs, so Laminar has nothing to record.
 - **Attachments are not recorded.** Files attached to a run go to LangSmith only.
-- **A run appears in Laminar when it ends.** A run that never finishes, for example because the process exits mid-run, is not recorded.
+- **A run appears in Laminar when it ends.** A run that fails with an exception ends with an error and is recorded (in Python this includes Ctrl-C and `sys.exit()`). A run that never finishes, for example because the process is killed mid-run, is not recorded, while LangSmith shows it as still running. Its child runs that finished before the exit are recorded.
 
 LangChain and LangGraph runs are recorded the way [Laminar's LangChain integration](/integrations/langchain#what-laminar-records) records them:
 
@@ -376,8 +376,17 @@ Every new project ships with an **Issues** Signal that records the errors your a
   <Accordion title="The same call shows up twice in Laminar">
     The bridge turns off Laminar's overlapping instrumentations only when you don't pass `instruments` (Python) or `instrumentModules` (TypeScript). If you pass them, remove the providers that you call through LangSmith's wrappers or LangChain.
   </Accordion>
-  <Accordion title="The first run of a script has no input (TypeScript with tsx)">
-    When your code runs through tsx, Laminar starts recording the LangSmith runs a few milliseconds after `Laminar.initialize()`. A run that starts in that window, for example an agent a script calls right after initializing, still appears in Laminar, but without its input. Runs that start later, such as every request a server handles, are recorded in full. Running the script with plain `node`, which runs TypeScript files directly on current Node.js versions, avoids the delay.
+  <Accordion title="The first LangChain run of a script has no input (TypeScript with tsx)">
+    When your code runs through tsx, Laminar can record LangChain and LangGraph runs only after one turn of the Node.js event loop has passed since `Laminar.initialize()`. If a script invokes a model or a graph immediately after initializing, its first runs can appear in Laminar without their input. `traceable` functions and LangSmith's OpenAI and Anthropic wrappers are recorded in full either way, and so is every run in a server, which starts long after initialization.
+
+    Run the script with plain `node`, which runs TypeScript files directly on current Node.js versions, or let the event loop turn once before the first call:
+
+    ```typescript
+    Laminar.initialize({ bridges: ["langsmith"] });
+    await new Promise((resolve) => setImmediate(resolve));
+
+    await graph.invoke({ messages: [{ role: "user", content: "Hi" }] });
+    ```
   </Accordion>
   <Accordion title="Laminar spans inside a LangSmith run appear next to it, not under it">
     Laminar records a LangSmith run when the run ends, so spans that Laminar's own `observe` creates inside a `traceable` function nest under the closest Laminar span instead of under the run. Runs started inside a Laminar span nest correctly.
