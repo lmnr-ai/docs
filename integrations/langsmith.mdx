@@ -314,7 +314,7 @@ Laminar records the runs as LangSmith sends them, after LangSmith's own settings
 - **Sampling carries over.** Runs that `LANGSMITH_TRACING_SAMPLING_RATE` drops are not recorded in Laminar either.
 - **Tracing must be on.** With `LANGSMITH_TRACING` unset or `false`, LangSmith creates no runs, so Laminar has nothing to record.
 - **Attachments are not recorded.** Files attached to a run go to LangSmith only.
-- **A run appears in Laminar when it ends.** A run that fails with an exception ends with an error and is recorded (in Python this includes Ctrl-C and `sys.exit()`). A run that never finishes, for example because the process is killed mid-run, is not recorded, while LangSmith shows it as still running. Its child runs that finished before the exit are recorded.
+- **A run appears in Laminar when it ends.** A run that fails with an exception ends with an error (in Python this includes Ctrl-C and `sys.exit()`). A run that is still open when you call `Laminar.shutdown()` or when the process exits, for example a generator the caller stopped reading, is recorded at that moment with the span attribute `langsmith.run.incomplete` set to `true`. LangSmith shows the same run as still running. In TypeScript this also covers Ctrl-C and `SIGTERM` when your app doesn't handle them; if it does, call `await Laminar.shutdown()` in the handler. A process killed outright (`kill -9`, out of memory, `os._exit()` in Python, `SIGTERM` without a handler in Python) or ended with `process.exit()` in TypeScript can't record its open runs.
 
 LangChain and LangGraph runs are recorded the way [Laminar's LangChain integration](/integrations/langchain#what-laminar-records) records them:
 
